@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -31,7 +30,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +89,14 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
           }
           FileSystem walFs = mfs.getWALFileSystem();
           // Cleanup the directories on WAL filesystem also
-          Path regionWALDir = FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+          Path regionWALDir = CommonFSUtils.getWALRegionDir(env.getMasterConfiguration(),
             getRegion().getTable(), getRegion().getEncodedName());
           if (walFs.exists(regionWALDir)) {
             if (!walFs.delete(regionWALDir, true)) {
               LOG.debug("Failed to delete {}", regionWALDir);
             }
           }
-          Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(env.getMasterConfiguration(),
+          Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(env.getMasterConfiguration(),
             getRegion().getTable(), getRegion().getEncodedName());
           if (walFs.exists(wrongRegionWALDir)) {
             if (!walFs.delete(wrongRegionWALDir, true)) {
@@ -115,7 +114,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
               am.getRegionStates().deleteRegion(getRegion());
             }
           }
-          MetaTableAccessor.deleteRegionInfo(masterServices.getConnection(), getRegion());
+          env.getAssignmentManager().getRegionStateStore().deleteRegion(getRegion());
           masterServices.getServerManager().removeRegion(getRegion());
           FavoredNodesManager fnm = masterServices.getFavoredNodesManager();
           if (fnm != null) {

@@ -47,11 +47,18 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   protected void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
-      final FileDetails fd, final boolean shouldDropBehind) {
+      final FileDetails fd, final boolean shouldDropBehind, boolean major) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        return createTmpWriter(fd, shouldDropBehind);
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind, major);
+      }
+
+      @Override
+      public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
+        throws IOException {
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
+          fileStoragePolicy, major);
       }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.
@@ -61,7 +68,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   @Override
-  protected void abortWriter(T writer) throws IOException {
+  protected void abortWriter() throws IOException {
     FileSystem fs = store.getFileSystem();
     for (Path leftoverFile : writer.abortWriters()) {
       try {
@@ -72,5 +79,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
           e);
       }
     }
+    //this step signals that the target file is no longer writen and can be cleaned up
+    writer = null;
   }
 }

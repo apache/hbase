@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
 
 /**
  * An interface for RPC request scheduling algorithm.
@@ -65,7 +63,7 @@ public abstract class RpcScheduler {
    *
    * @param task the request to be dispatched
    */
-  public abstract boolean dispatch(CallRunner task) throws IOException, InterruptedException;
+  public abstract boolean dispatch(CallRunner task);
 
   /** Get call queue information **/
   public abstract CallQueueInfo getCallQueueInfo();

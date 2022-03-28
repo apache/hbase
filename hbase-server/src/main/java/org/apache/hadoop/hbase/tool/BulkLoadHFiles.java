@@ -85,6 +85,18 @@ public interface BulkLoadHFiles {
       throws TableNotFoundException, IOException;
 
   /**
+   * Disables replication for all bulkloads done via this instance,
+   * when bulkload replication is configured.
+   */
+  void disableReplication();
+
+  /**
+   *
+   * @return true if replication has been disabled.
+   */
+  boolean isReplicationDisabled();
+
+  /**
    * Perform a bulk load of the given directory into the given pre-existing table.
    * @param tableName the table to load into
    * @param dir the directory that was provided as the output path of a job using
@@ -97,4 +109,6 @@ public interface BulkLoadHFiles {
   static BulkLoadHFiles create(Configuration conf) {
     return new BulkLoadHFilesTool(conf);
   }
+
+
 }

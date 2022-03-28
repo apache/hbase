@@ -41,9 +41,6 @@ class RemoteProcedureResultReporter extends Thread {
 
   private static final Logger LOG = LoggerFactory.getLogger(RemoteProcedureResultReporter.class);
 
-  // Time to pause if master says 'please hold'. Make configurable if needed.
-  private static final int INIT_PAUSE_TIME_MS = 1000;
-
   private static final int MAX_BATCH = 100;
 
   private final HRegionServer server;
@@ -57,11 +54,11 @@ class RemoteProcedureResultReporter extends Thread {
   public void complete(long procId, Throwable error) {
     RemoteProcedureResult.Builder builder = RemoteProcedureResult.newBuilder().setProcId(procId);
     if (error != null) {
-      LOG.debug("Failed to complete execution of proc pid={}", procId, error);
+      LOG.debug("Failed to complete execution of pid={}", procId, error);
       builder.setStatus(RemoteProcedureResult.Status.ERROR).setError(
         ForeignExceptionUtil.toProtoForeignException(server.getServerName().toString(), error));
     } else {
-      LOG.debug("Successfully complete execution of proc pid={}", procId);
+      LOG.debug("Successfully complete execution of pid={}", procId);
       builder.setStatus(RemoteProcedureResult.Status.SUCCESS);
     }
     results.add(builder.build());
@@ -98,11 +95,11 @@ class RemoteProcedureResultReporter extends Thread {
         long pauseTime;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(INIT_PAUSE_TIME_MS, tries);
+          pauseTime = ConnectionUtils.getPauseTime(server.getRetryPauseTime(), tries);
         } else {
-          pauseTime = INIT_PAUSE_TIME_MS; // Reset.
+          pauseTime = server.getRetryPauseTime(); // Reset.
         }
-        LOG.info("Failed report procedure " + TextFormat.shortDebugString(request) + "; retry (#" +
+        LOG.info("Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" +
           tries + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."
             : " immediately."),
           e);

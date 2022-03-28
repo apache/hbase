@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -75,6 +74,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
@@ -85,7 +86,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
-  protected static HBaseTestingUtility util = new HBaseTestingUtility();
+  protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
    * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
@@ -319,7 +320,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     util.deleteTable(tableName);
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
       String[] args, int valueMultiplier) throws Exception {
     return doMROnTableTest(util, family, data, args, valueMultiplier, -1);
   }
@@ -337,7 +338,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    *
    * @return The Tool instance used to run the test.
    */
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
       String[] args, int valueMultiplier,int expectedKVCount) throws Exception {
     TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());
@@ -484,8 +485,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(conf, false, false);
     scanner.seekTo();
     int count = 0;
     do {

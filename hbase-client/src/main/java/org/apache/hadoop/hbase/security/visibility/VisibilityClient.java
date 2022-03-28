@@ -19,13 +19,9 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.util.Map;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
@@ -33,18 +29,22 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 
 
 /**
@@ -100,7 +100,7 @@ public class VisibilityClient {
           for (String label : labels) {
             if (label.length() > 0) {
               VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-              newBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+              newBuilder.setLabel(UnsafeByteOperations.unsafeWrap((Bytes.toBytes(label))));
               builder.addVisLabel(newBuilder.build());
             }
           }
@@ -151,7 +151,7 @@ public class VisibilityClient {
         @Override
         public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
           GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
-          getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+          getAuthReqBuilder.setUser(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(user)));
           service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
           GetAuthsResponse response = rpcCallback.get();
           if (controller.failedOnException()) {
@@ -235,7 +235,7 @@ public class VisibilityClient {
         @Override
         public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
           SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
-          setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+          setAuthReqBuilder.setUser(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(user)));
           for (String auth : auths) {
             if (auth.length() > 0) {
               setAuthReqBuilder.addAuth((ByteString.copyFromUtf8(auth)));

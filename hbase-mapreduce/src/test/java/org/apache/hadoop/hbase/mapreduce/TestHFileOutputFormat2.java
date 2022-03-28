@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.client.ConnectionFactory.createAsyncConnection;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -38,7 +39,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -53,29 +59,37 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -89,11 +103,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -137,7 +154,7 @@ public class TestHFileOutputFormat2  {
   private static final TableName[] TABLE_NAMES = Stream.of("TestTable", "TestTable2",
           "TestTable3").map(TableName::valueOf).toArray(TableName[]::new);
 
-  private HBaseTestingUtility util = new HBaseTestingUtility();
+  private HBaseTestingUtil util = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileOutputFormat2.class);
 
@@ -190,14 +207,13 @@ public class TestHFileOutputFormat2  {
 
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
-      Random random = new Random();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -260,14 +276,13 @@ public class TestHFileOutputFormat2  {
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
 
-      Random random = new Random();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -401,7 +416,7 @@ public class TestHFileOutputFormat2  {
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd =
           HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
-      Map<byte[],byte[]> finfo = rd.loadFileInfo();
+      Map<byte[],byte[]> finfo = rd.getHFileInfo();
       byte[] range = finfo.get(Bytes.toBytes("TIMERANGE"));
       assertNotNull(range);
 
@@ -430,7 +445,8 @@ public class TestHFileOutputFormat2  {
     // Set down this value or we OOME in eclipse.
     conf.setInt("mapreduce.task.io.sort.mb", 20);
     // Write a few files.
-    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 64 * 1024);
+    long hregionMaxFilesize = 10 * 1024;
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, hregionMaxFilesize);
 
     Job job = new Job(conf, "testWritingPEData");
     setupRandomGeneratorMapper(job, false);
@@ -457,6 +473,26 @@ public class TestHFileOutputFormat2  {
     assertTrue(job.waitForCompletion(false));
     FileStatus [] files = fs.listStatus(testDir);
     assertTrue(files.length > 0);
+
+    //check output file num and size.
+    for (byte[] family : FAMILIES) {
+      long kvCount= 0;
+      RemoteIterator<LocatedFileStatus> iterator =
+              fs.listFiles(testDir.suffix("/" + new String(family)), true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+                HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
+
+        kvCount += reader.getEntries();
+        scanner.seekTo();
+        long perKVSize = scanner.getCell().getSerializedSize();
+        assertTrue("Data size of each file should not be too large.",
+                perKVSize * reader.getEntries() <= hregionMaxFilesize);
+      }
+      assertEquals("Should write expected data in output file.", ROWSPERSPLIT, kvCount);
+    }
   }
 
   /**
@@ -496,7 +532,7 @@ public class TestHFileOutputFormat2  {
         LocatedFileStatus keyFileStatus = iterator.next();
         HFile.Reader reader =
             HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
-        HFileScanner scanner = reader.getScanner(false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
         Cell cell = scanner.getCell();
         List<Tag> tagsFromCell = PrivateCellUtil.getTags(cell);
@@ -527,7 +563,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte [][] generateRandomStartKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
@@ -539,7 +575,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
       ret[i] =
@@ -598,7 +634,7 @@ public class TestHFileOutputFormat2  {
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
       boolean putSortReducer, List<String> tableStr) throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(MultiTableHFileOutputFormat.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
     int hostCount = 1;
@@ -614,7 +650,7 @@ public class TestHFileOutputFormat2  {
     for (int i = 0; i < hostCount; ++i) {
       hostnames[i] = "datanode_" + i;
     }
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
     util.startMiniCluster(option);
 
@@ -835,15 +871,21 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForCompression(Table table,
       Map<String, Compression.Algorithm> familyToCompression) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setCompressionType(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setCompressionType(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0)
+        .build();
+
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
+    Mockito.doReturn(mockTableDescriptor.build()).when(table).getDescriptor();
   }
 
   /**
@@ -908,13 +950,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForBloomType(Table table,
       Map<String, BloomType> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, BloomType> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setBloomFilterType(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setBloomFilterType(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -980,13 +1025,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForBlockSize(Table table,
       Map<String, Integer> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, Integer> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setBlocksize(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setBlocksize(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -1056,13 +1104,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForDataBlockEncoding(Table table,
       Map<String, DataBlockEncoding> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setDataBlockEncoding(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setDataBlockEncoding(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -1121,10 +1172,12 @@ public class TestHFileOutputFormat2  {
     // Setup table descriptor
     Table table = Mockito.mock(Table.class);
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAMES[0]);
-    Mockito.doReturn(htd).when(table).getDescriptor();
-    for (HColumnDescriptor hcd: HBaseTestingUtility.generateColumnDescriptors()) {
-      htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
+
+    Mockito.doReturn(tableDescriptorBuilder.build()).when(table).getDescriptor();
+    for (ColumnFamilyDescriptor hcd : HBaseTestingUtil.generateColumnDescriptors()) {
+      tableDescriptorBuilder.setColumnFamily(hcd);
     }
 
     // set up the table to return some mock keys
@@ -1149,7 +1202,8 @@ public class TestHFileOutputFormat2  {
       writer = hof.getRecordWriter(context);
 
       // write out random rows
-      writeRandomKeyValues(writer, context, htd.getFamiliesKeys(), ROWSPERSPLIT);
+      writeRandomKeyValues(writer, context,
+        tableDescriptorBuilder.build().getColumnFamilyNames(), ROWSPERSPLIT);
       writer.close(context);
 
       // Make sure that a directory was created for every CF
@@ -1158,24 +1212,26 @@ public class TestHFileOutputFormat2  {
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
       hof.getOutputCommitter(context).commitJob(context);
-      FileStatus[] families = FSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
-      assertEquals(htd.getFamilies().size(), families.length);
+      FileStatus[] families = CommonFSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
+      assertEquals(tableDescriptorBuilder.build().getColumnFamilies().length, families.length);
       for (FileStatus f : families) {
         String familyStr = f.getPath().getName();
-        HColumnDescriptor hcd = htd.getFamily(Bytes.toBytes(familyStr));
+        ColumnFamilyDescriptor hcd = tableDescriptorBuilder.build()
+          .getColumnFamily(Bytes.toBytes(familyStr));
         // verify that the compression on this file matches the configured
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
         Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
-        Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+        Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
 
         byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
         assertEquals("Incorrect bloom filter used for column family " + familyStr +
           "(reader: " + reader + ")",
           hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
-        assertEquals("Incorrect compression used for column family " + familyStr +
-          "(reader: " + reader + ")", hcd.getCompressionType(), reader.getFileContext().getCompression());
+        assertEquals(
+          "Incorrect compression used for column family " + familyStr + "(reader: " + reader + ")",
+          hcd.getCompressionType(), reader.getFileContext().getCompression());
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);
@@ -1196,13 +1252,10 @@ public class TestHFileOutputFormat2  {
     int taskId = context.getTaskAttemptID().getTaskID().getId();
     assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
     final byte [] qualifier = Bytes.toBytes("data");
-    Random random = new Random();
     for (int i = 0; i < numRows; i++) {
-
       Bytes.putInt(keyBytes, 0, i);
-      random.nextBytes(valBytes);
+      Bytes.random(valBytes);
       ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
-
       for (byte[] family : families) {
         Cell kv = new KeyValue(keyBytes, family, qualifier, valBytes);
         writer.write(key, kv);
@@ -1232,7 +1285,7 @@ public class TestHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
@@ -1313,7 +1366,7 @@ public class TestHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
@@ -1397,7 +1450,7 @@ public class TestHFileOutputFormat2  {
 
   public void manualTest(String args[]) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    util = new HBaseTestingUtility(conf);
+    util = new HBaseTestingUtil(conf);
     if ("newtable".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
       byte[][] splitKeys = generateRandomSplitKeys(4);
@@ -1419,7 +1472,7 @@ public class TestHFileOutputFormat2  {
 
   @Test
   public void testBlockStoragePolicy() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     Configuration conf = util.getConfiguration();
     conf.set(HFileOutputFormat2.STORAGE_POLICY_PROPERTY, "ALL_SSD");
 
@@ -1580,7 +1633,8 @@ public class TestHFileOutputFormat2  {
         LocatedFileStatus keyFileStatus = iterator.next();
         HFile.Reader reader =
             HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
-        assertEquals(reader.getCompressionAlgorithm().getName(), hfileoutputformatCompression);
+        assertEquals(reader.getTrailer().getCompressionCodec().getName(),
+            hfileoutputformatCompression);
       }
     } finally {
       if (writer != null && context != null) {
@@ -1589,6 +1643,201 @@ public class TestHFileOutputFormat2  {
       dir.getFileSystem(conf).delete(dir, true);
     }
 
+  }
+
+  @Test
+  public void testMRIncrementalLoadWithLocalityMultiCluster() throws Exception {
+    // Start cluster A
+    util = new HBaseTestingUtil();
+    Configuration confA = util.getConfiguration();
+    int hostCount = 3;
+    int regionNum = 20;
+    String[] hostnames = new String[hostCount];
+    for (int i = 0; i < hostCount; ++i) {
+      hostnames[i] = "datanode_" + i;
+    }
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
+    util.startMiniCluster(option);
+
+    // Start cluster B
+    HBaseTestingUtil utilB = new HBaseTestingUtil();
+    Configuration confB = utilB.getConfiguration();
+    utilB.startMiniCluster(option);
+
+    Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
+
+    byte[][] splitKeys = generateRandomSplitKeys(regionNum - 1);
+    TableName tableName = TableName.valueOf("table");
+    // Create table in cluster B
+    try (Table table = utilB.createTable(tableName, FAMILIES, splitKeys);
+      RegionLocator r = utilB.getConnection().getRegionLocator(tableName)) {
+      // Generate the bulk load files
+      // Job has zookeeper configuration for cluster A
+      // Assume reading from cluster A by TableInputFormat and creating hfiles to cluster B
+      Job job = new Job(confA, "testLocalMRIncrementalLoad");
+      Configuration jobConf = job.getConfiguration();
+      final UUID key = ConfigurationCaptorConnection.configureConnectionImpl(jobConf);
+      job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
+      setupRandomGeneratorMapper(job, false);
+      HFileOutputFormat2.configureIncrementalLoad(job, table, r);
+
+      assertEquals(confB.get(HConstants.ZOOKEEPER_QUORUM),
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY));
+      assertEquals(confB.get(HConstants.ZOOKEEPER_CLIENT_PORT),
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY));
+      assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY));
+
+      String bSpecificConfigKey = "my.override.config.for.b";
+      String bSpecificConfigValue = "b-specific-value";
+      jobConf.set(HFileOutputFormat2.REMOTE_CLUSTER_CONF_PREFIX + bSpecificConfigKey,
+        bSpecificConfigValue);
+
+      FileOutputFormat.setOutputPath(job, testDir);
+
+      assertFalse(util.getTestFileSystem().exists(testDir));
+
+      assertTrue(job.waitForCompletion(true));
+
+      final List<Configuration> configs =
+        ConfigurationCaptorConnection.getCapturedConfigarutions(key);
+
+      assertFalse(configs.isEmpty());
+      for (Configuration config : configs) {
+        assertEquals(confB.get(HConstants.ZOOKEEPER_QUORUM),
+          config.get(HConstants.ZOOKEEPER_QUORUM));
+        assertEquals(confB.get(HConstants.ZOOKEEPER_CLIENT_PORT),
+          config.get(HConstants.ZOOKEEPER_CLIENT_PORT));
+        assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
+          config.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+
+        assertEquals(bSpecificConfigValue,
+          config.get(bSpecificConfigKey));
+      }
+    } finally {
+      utilB.deleteTable(tableName);
+      testDir.getFileSystem(confA).delete(testDir, true);
+      util.shutdownMiniCluster();
+      utilB.shutdownMiniCluster();
+    }
+  }
+
+  private static class ConfigurationCaptorConnection implements Connection {
+    private static final String UUID_KEY = "ConfigurationCaptorConnection.uuid";
+
+    private static final Map<UUID, List<Configuration>> confs = new ConcurrentHashMap<>();
+
+    private final Connection delegate;
+
+    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user)
+      throws IOException {
+      delegate = FutureUtils.get(createAsyncConnection(conf, user)).toConnection();
+
+      final String uuid = conf.get(UUID_KEY);
+      if (uuid != null) {
+        confs.computeIfAbsent(UUID.fromString(uuid), u -> new CopyOnWriteArrayList<>()).add(conf);
+      }
+    }
+
+    static UUID configureConnectionImpl(Configuration conf) {
+      conf.setClass(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
+        ConfigurationCaptorConnection.class, Connection.class);
+
+      final UUID uuid = UUID.randomUUID();
+      conf.set(UUID_KEY, uuid.toString());
+      return uuid;
+    }
+
+    static List<Configuration> getCapturedConfigarutions(UUID key) {
+      return confs.get(key);
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return delegate.getConfiguration();
+    }
+
+    @Override
+    public Table getTable(TableName tableName) throws IOException {
+      return delegate.getTable(tableName);
+    }
+
+    @Override
+    public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
+      return delegate.getTable(tableName, pool);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
+      return delegate.getBufferedMutator(tableName);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException {
+      return delegate.getBufferedMutator(params);
+    }
+
+    @Override
+    public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+      return delegate.getRegionLocator(tableName);
+    }
+
+    @Override
+    public void clearRegionLocationCache() {
+      delegate.clearRegionLocationCache();
+    }
+
+    @Override
+    public Admin getAdmin() throws IOException {
+      return delegate.getAdmin();
+    }
+
+    @Override
+    public void close() throws IOException {
+      delegate.close();
+    }
+
+    @Override
+    public boolean isClosed() {
+      return delegate.isClosed();
+    }
+
+    @Override
+    public TableBuilder getTableBuilder(TableName tableName, ExecutorService pool) {
+      return delegate.getTableBuilder(tableName, pool);
+    }
+
+    @Override
+    public AsyncConnection toAsyncConnection() {
+      return delegate.toAsyncConnection();
+    }
+
+    @Override
+    public String getClusterId() {
+      return delegate.getClusterId();
+    }
+
+    @Override
+    public Hbck getHbck()
+      throws IOException {
+      return delegate.getHbck();
+    }
+
+    @Override
+    public Hbck getHbck(ServerName masterServer) throws IOException {
+      return delegate.getHbck(masterServer);
+    }
+
+    @Override
+    public void abort(String why, Throwable e) {
+      delegate.abort(why, e);
+    }
+
+    @Override
+    public boolean isAborted() {
+      return delegate.isAborted();
+    }
   }
 
 }

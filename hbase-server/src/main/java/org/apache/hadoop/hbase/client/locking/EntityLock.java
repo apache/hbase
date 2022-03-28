@@ -35,8 +35,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.util.Threads;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Lock for HBase Entity either a Table, a Namespace, or Regions.
  *
@@ -145,12 +143,12 @@ public class EntityLock {
     return sb.toString();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   void setTestingSleepTime(long timeInMillis) {
     testingSleepTime = timeInMillis;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   LockHeartbeatWorker getWorker() {
     return worker;
   }

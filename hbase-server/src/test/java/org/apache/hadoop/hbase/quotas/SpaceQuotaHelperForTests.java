@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -25,22 +27,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -49,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
@@ -68,12 +78,13 @@ public class SpaceQuotaHelperForTests {
   public static final long ONE_MEGABYTE = ONE_KILOBYTE * ONE_KILOBYTE;
   public static final long ONE_GIGABYTE = ONE_MEGABYTE * ONE_KILOBYTE;
 
-  private final HBaseTestingUtility testUtil;
+  private final HBaseTestingUtil testUtil;
   private final TestName testName;
   private final AtomicLong counter;
+  private static final int NUM_RETRIES = 10;
 
   public SpaceQuotaHelperForTests(
-      HBaseTestingUtility testUtil, TestName testName, AtomicLong counter) {
+      HBaseTestingUtil testUtil, TestName testName, AtomicLong counter) {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
     this.counter = Objects.requireNonNull(counter);
@@ -119,9 +130,224 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Writes the given mutation into a table until it violates the given policy.
+   * Verifies that the policy has been violated & then returns the name of
+   * the table created & written into.
+   */
+  TableName writeUntilViolationAndVerifyViolation(
+      SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+    final TableName tn = writeUntilViolation(policyToViolate);
+    verifyViolation(policyToViolate, tn, m);
+    return tn;
+  }
+
+  /**
+   * Writes the given mutation into a table until it violates the given policy.
+   * Returns the name of the table created & written into.
+   */
+  TableName writeUntilViolation(SpaceViolationPolicy policyToViolate) throws Exception {
+    TableName tn = createTableWithRegions(10);
+    setQuotaLimit(tn, policyToViolate, 2L);
+    // Write more data than should be allowed and flush it to disk
+    writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+
+    // This should be sufficient time for the chores to run and see the change.
+    Thread.sleep(5000);
+
+    return tn;
+  }
+
+
+  TableName writeUntilViolationAndVerifyViolationInNamespace(
+          String ns, SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+    final TableName tn = writeUntilViolationInNamespace(ns, policyToViolate);
+    verifyViolation(policyToViolate, tn, m);
+    return tn;
+  }
+
+  TableName writeUntilViolationInNamespace(String ns, SpaceViolationPolicy policyToViolate) throws Exception {
+    TableName tn = createTableWithRegions(ns,10);
+
+    setQuotaLimit(ns, policyToViolate, 4L);
+
+    // Write more data than should be allowed and flush it to disk
+    writeData(tn, 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+
+    // This should be sufficient time for the chores to run and see the change.
+    Thread.sleep(5000);
+
+    return tn;
+  }
+
+  /**
+   * Verifies that the given policy on the given table has been violated
+   */
+  void verifyViolation(SpaceViolationPolicy policyToViolate, TableName tn, Mutation m)
+      throws Exception {
+    // But let's try a few times to get the exception before failing
+    boolean sawError = false;
+    String msg = "";
+    for (int i = 0; i < NUM_RETRIES && !sawError; i++) {
+      try (Table table = testUtil.getConnection().getTable(tn)) {
+        if (m instanceof Put) {
+          table.put((Put) m);
+        } else if (m instanceof Delete) {
+          table.delete((Delete) m);
+        } else if (m instanceof Append) {
+          table.append((Append) m);
+        } else if (m instanceof Increment) {
+          table.increment((Increment) m);
+        } else {
+          fail(
+              "Failed to apply " + m.getClass().getSimpleName() +
+                  " to the table. Programming error");
+        }
+        LOG.info("Did not reject the " + m.getClass().getSimpleName() + ", will sleep and retry");
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        msg = StringUtils.stringifyException(e);
+        if ((policyToViolate.equals(SpaceViolationPolicy.DISABLE)
+            && e instanceof TableNotEnabledException) || msg.contains(policyToViolate.name())) {
+          LOG.info("Got the expected exception={}", msg);
+          sawError = true;
+          break;
+        } else {
+          LOG.warn("Did not get the expected exception, will sleep and retry", e);
+          Thread.sleep(2000);
+        }
+      }
+    }
+    if (!sawError) {
+      try (Table quotaTable = testUtil.getConnection().getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+        ResultScanner scanner = quotaTable.getScanner(new Scan());
+        Result result = null;
+        LOG.info("Dumping contents of hbase:quota table");
+        while ((result = scanner.next()) != null) {
+          LOG.info(Bytes.toString(result.getRow()) + " => " + result.toString());
+        }
+        scanner.close();
+      }
+    } else {
+      if (policyToViolate.equals(SpaceViolationPolicy.DISABLE)) {
+        assertTrue(
+            msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
+      } else {
+        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
+                + "', but was " + msg,
+            msg.contains(policyToViolate.name()));
+      }
+    }
+    assertTrue(
+        "Expected to see an exception writing data to a table exceeding its quota", sawError);
+  }
+
+  /**
+   * Verifies that no policy has been violated on the given table
+   */
+  void verifyNoViolation(TableName tn, Mutation m) throws Exception {
+    // But let's try a few times to write data before failing
+    boolean sawSuccess = false;
+    for (int i = 0; i < NUM_RETRIES && !sawSuccess; i++) {
+      try (Table table = testUtil.getConnection().getTable(tn)) {
+        if (m instanceof Put) {
+          table.put((Put) m);
+        } else if (m instanceof Delete) {
+          table.delete((Delete) m);
+        } else if (m instanceof Append) {
+          table.append((Append) m);
+        } else if (m instanceof Increment) {
+          table.increment((Increment) m);
+        } else {
+          fail("Failed to apply " + m.getClass().getSimpleName() + " to the table."
+              + " Programming error");
+        }
+        sawSuccess = true;
+      } catch (Exception e) {
+        LOG.info("Rejected the " + m.getClass().getSimpleName() + ", will sleep and retry");
+        Thread.sleep(2000);
+      }
+    }
+    if (!sawSuccess) {
+      try (Table quotaTable = testUtil.getConnection().getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+        ResultScanner scanner = quotaTable.getScanner(new Scan());
+        Result result = null;
+        LOG.info("Dumping contents of hbase:quota table");
+        while ((result = scanner.next()) != null) {
+          LOG.info(Bytes.toString(result.getRow()) + " => " + result.toString());
+        }
+        scanner.close();
+      }
+    }
+    assertTrue("Expected to succeed in writing data to a table not having quota ", sawSuccess);
+  }
+
+  /**
+   * Verifies that table usage snapshot exists for the table
+   */
+  void verifyTableUsageSnapshotForSpaceQuotaExist(TableName tn) throws Exception {
+    boolean sawUsageSnapshot = false;
+    try (Table quotaTable = testUtil.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Scan s = QuotaTableUtil.makeQuotaSnapshotScanForTable(tn);
+      ResultScanner rs = quotaTable.getScanner(s);
+      sawUsageSnapshot = (rs.next() != null);
+    }
+    assertTrue("Expected to succeed in getting table usage snapshots for space quota", sawUsageSnapshot);
+  }
+
+  /**
+   * Sets the given quota (policy & limit) on the passed table.
+   */
+  void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
+      throws Exception {
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, policy);
+    testUtil.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit set for table = {}, limit = {}", tn, sizeLimit);
+  }
+
+  /**
+   * Sets the given quota (policy & limit) on the passed namespace.
+   */
+  void setQuotaLimit(String ns, SpaceViolationPolicy policy, long sizeInMBs)
+          throws Exception {
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(ns, sizeLimit, policy);
+    testUtil.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit set for namespace = {}, limit = {}", ns, sizeLimit);
+  }
+
+  /**
+   * Removes the space quota from the given table
+   */
+  void removeQuotaFromtable(final TableName tn) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    testUtil.getAdmin().setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  /**
+   * Removes the space quota from the given namespace
+   */
+  void removeQuotaFromNamespace(String ns) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
+    Admin admin = testUtil.getAdmin();
+    admin.setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the namespace ", ns);
+  }
+
+  /**
    * Removes all quotas defined in the HBase quota table.
    */
-  void removeAllQuotas(Connection conn) throws IOException, InterruptedException {
+  void removeAllQuotas() throws Exception {
+    final Connection conn = testUtil.getConnection();
+    removeAllQuotas(conn);
+    assertEquals(0, listNumDefinedQuotas(conn));
+  }
+
+  /**
+   * Removes all quotas defined in the HBase quota table.
+   */
+  void removeAllQuotas(Connection conn) throws IOException {
     // Wait for the quota table to be created
     if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
       waitForQuotaTable(conn);
@@ -167,14 +393,14 @@ public class SpaceQuotaHelperForTests {
   /**
    * Waits 30seconds for the HBase quota table to exist.
    */
-  public void waitForQuotaTable(Connection conn) throws IOException {
+  void waitForQuotaTable(Connection conn) throws IOException {
     waitForQuotaTable(conn, 30_000);
   }
 
   /**
    * Waits {@code timeout} milliseconds for the HBase quota table to exist.
    */
-  public void waitForQuotaTable(Connection conn, long timeout) throws IOException {
+  void waitForQuotaTable(Connection conn, long timeout) throws IOException {
     testUtil.waitFor(timeout, 1000, new Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
@@ -203,14 +429,13 @@ public class SpaceQuotaHelperForTests {
       long bytesToWrite = sizeInBytes;
       long rowKeyId = 0L;
       final StringBuilder sb = new StringBuilder();
-      final Random r = new Random();
       while (bytesToWrite > 0L) {
         sb.setLength(0);
         sb.append(Long.toString(rowKeyId));
         // Use the reverse counter as the rowKey to get even spread across all regions
         Put p = new Put(Bytes.toBytes(sb.reverse().toString()));
         byte[] value = new byte[SIZE_PER_VALUE];
-        r.nextBytes(value);
+        Bytes.random(value);
         p.addColumn(Bytes.toBytes(F1), qual, value);
         updates.add(p);
 
@@ -240,7 +465,13 @@ public class SpaceQuotaHelperForTests {
   }
 
   NamespaceDescriptor createNamespace() throws Exception {
-    NamespaceDescriptor nd = NamespaceDescriptor.create("ns" + counter.getAndIncrement()).build();
+    return createNamespace(null);
+  }
+
+  NamespaceDescriptor createNamespace(String namespace) throws Exception {
+    if (namespace == null || namespace.trim().isEmpty())
+      namespace = "ns" + counter.getAndIncrement();
+    NamespaceDescriptor nd = NamespaceDescriptor.create(namespace).build();
     testUtil.getAdmin().createNamespace(nd);
     return nd;
   }
@@ -306,15 +537,16 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName createTableWithRegions(Admin admin, int numRegions) throws Exception {
-    return createTableWithRegions(
-        testUtil.getAdmin(), NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions);
+    return createTableWithRegions(admin, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions,
+        0);
   }
 
   TableName createTableWithRegions(String namespace, int numRegions) throws Exception {
-    return createTableWithRegions(testUtil.getAdmin(), namespace, numRegions);
+    return createTableWithRegions(testUtil.getAdmin(), namespace, numRegions, 0);
   }
 
-  TableName createTableWithRegions(Admin admin, String namespace, int numRegions) throws Exception {
+  TableName createTableWithRegions(Admin admin, String namespace, int numRegions,
+      int numberOfReplicas) throws Exception {
     final TableName tn = getNextTableName(namespace);
 
     // Delete the old table
@@ -324,8 +556,14 @@ public class SpaceQuotaHelperForTests {
     }
 
     // Create the table
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    TableDescriptor tableDesc;
+    if (numberOfReplicas > 0) {
+      tableDesc = TableDescriptorBuilder.newBuilder(tn).setRegionReplication(numberOfReplicas)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    } else {
+      tableDesc = TableDescriptorBuilder.newBuilder(tn)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    }
     if (numRegions == 1) {
       admin.createTable(tableDesc);
     } else {
@@ -450,10 +688,10 @@ public class SpaceQuotaHelperForTests {
    * Predicate that waits for all store files in a table to have no compacted files.
    */
   static class NoFilesToDischarge implements Predicate<Exception> {
-    private final MiniHBaseCluster cluster;
+    private final SingleProcessHBaseCluster cluster;
     private final TableName tn;
 
-    NoFilesToDischarge(MiniHBaseCluster cluster, TableName tn) {
+    NoFilesToDischarge(SingleProcessHBaseCluster cluster, TableName tn) {
       this.cluster = cluster;
       this.tn = tn;
     }

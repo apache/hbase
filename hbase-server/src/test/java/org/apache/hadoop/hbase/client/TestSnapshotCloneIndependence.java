@@ -23,10 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -34,6 +32,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -63,10 +62,9 @@ public class TestSnapshotCloneIndependence {
   @Rule
   public TestName testName = new TestName();
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static final int NUM_RS = 2;
-  private static final String STRING_TABLE_NAME = "test";
   private static final String TEST_FAM_STR = "fam";
   protected static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
   private static final int CLEANER_INTERVAL = 100;
@@ -267,7 +265,7 @@ public class TestSnapshotCloneIndependence {
         countOriginalTable, clonedTableRowCount);
 
       // Attempt to add data to the test
-      Put p = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      Put p = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
       p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
       originalTable.put(p);
 
@@ -278,7 +276,7 @@ public class TestSnapshotCloneIndependence {
         "The row count of the cloned table changed as a result of addition to the original",
         clonedTableRowCount, countRows(clonedTable));
 
-      Put p2 = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      Put p2 = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
       p2.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
       clonedTable.put(p2);
 
@@ -322,10 +320,10 @@ public class TestSnapshotCloneIndependence {
   private void runTestSnapshotMetadataChangesIndependent() throws Exception {
     // Add a new column family to the original table
     byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(TEST_FAM_2);
 
     admin.disableTable(originalTableName);
-    admin.addColumnFamily(originalTableName, hcd);
+    admin.addColumnFamily(originalTableName, familyDescriptor);
 
     // Verify that it is not in the snapshot
     admin.enableTable(originalTableName);
@@ -334,19 +332,18 @@ public class TestSnapshotCloneIndependence {
     // get a description of the cloned table
     // get a list of its families
     // assert that the family is there
-    HTableDescriptor originalTableDescriptor = new HTableDescriptor(originalTable.getDescriptor());
-    HTableDescriptor clonedTableDescriptor =
-      new HTableDescriptor(admin.getDescriptor(cloneTableName));
+    TableDescriptor originalTableDescriptor = originalTable.getDescriptor();
+    TableDescriptor clonedTableDescriptor = admin.getDescriptor(cloneTableName);
 
     Assert.assertTrue("The original family was not found. There is something wrong. ",
-      originalTableDescriptor.hasFamily(TEST_FAM));
+      originalTableDescriptor.hasColumnFamily(TEST_FAM));
     Assert.assertTrue("The original family was not found in the clone. There is something wrong. ",
-      clonedTableDescriptor.hasFamily(TEST_FAM));
+      clonedTableDescriptor.hasColumnFamily(TEST_FAM));
 
     Assert.assertTrue("The new family was not found. ",
-      originalTableDescriptor.hasFamily(TEST_FAM_2));
+      originalTableDescriptor.hasColumnFamily(TEST_FAM_2));
     Assert.assertTrue("The new family was not found. ",
-      !clonedTableDescriptor.hasFamily(TEST_FAM_2));
+      !clonedTableDescriptor.hasColumnFamily(TEST_FAM_2));
   }
 
   /**

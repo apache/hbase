@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
@@ -57,7 +57,7 @@ public class TestMergeTableRegionsWhileRSCrash {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestMergeTableRegionsWhileRSCrash.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("test");
   private static Admin admin;
   private static byte[] CF = Bytes.toBytes("cf");

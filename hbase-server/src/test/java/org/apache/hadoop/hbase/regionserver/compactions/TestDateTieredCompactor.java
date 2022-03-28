@@ -21,15 +21,14 @@ import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.cre
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyStoreFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
@@ -38,15 +37,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.Scanner;
@@ -97,17 +99,19 @@ public class TestDateTieredCompactor {
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     final Scanner scanner = new Scanner(input);
     // Create store mock that is satisfactory for compactor.
-    HColumnDescriptor col = new HColumnDescriptor(NAME_OF_THINGS);
-    ScanInfo si = new ScanInfo(conf, col, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
+    ScanInfo si = new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0,
+      CellComparatorImpl.COMPARATOR);
     HStore store = mock(HStore.class);
     when(store.getStorefiles()).thenReturn(storefiles);
-    when(store.getColumnFamilyDescriptor()).thenReturn(col);
+    when(store.getColumnFamilyDescriptor()).thenReturn(familyDescriptor);
     when(store.getScanInfo()).thenReturn(si);
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));
-    when(store.getRegionInfo()).thenReturn(new HRegionInfo(TABLE_NAME));
-    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
-      anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
+    when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+    StoreEngine storeEngine = mock(StoreEngine.class);
+    when(storeEngine.createWriter(any(CreateStoreFileWriterParams.class))).thenAnswer(writers);
+    when(store.getStoreEngine()).thenReturn(storeEngine);
     when(store.getComparator()).thenReturn(CellComparatorImpl.COMPARATOR);
     OptionalLong maxSequenceId = StoreUtils.getMaxSequenceIdInList(storefiles);
     when(store.getMaxSequenceId()).thenReturn(maxSequenceId);
@@ -136,7 +140,8 @@ public class TestDateTieredCompactor {
     HStoreFile sf2 = createDummyStoreFile(2L);
     DateTieredCompactor dtc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
     List<Path> paths = dtc.compact(new CompactionRequestImpl(Arrays.asList(sf1)),
-      boundaries.subList(0, boundaries.size() - 1), NoLimitThroughputController.INSTANCE, null);
+      boundaries.subList(0, boundaries.size() - 1), new HashMap<Long, String>(),
+      NoLimitThroughputController.INSTANCE, null);
     writers.verifyKvs(output, allFiles, boundaries);
     if (allFiles) {
       assertEquals(output.length, paths.size());
@@ -165,7 +170,7 @@ public class TestDateTieredCompactor {
     DateTieredCompactor dtc = createCompactor(writers, new KeyValue[0],
       new ArrayList<>(request.getFiles()));
     List<Path> paths = dtc.compact(request, Arrays.asList(Long.MIN_VALUE, Long.MAX_VALUE),
-      NoLimitThroughputController.INSTANCE, null);
+      new HashMap<Long, String>(), NoLimitThroughputController.INSTANCE, null);
     assertEquals(1, paths.size());
     List<StoreFileWritersCapture.Writer> dummyWriters = writers.getWriters();
     assertEquals(1, dummyWriters.size());

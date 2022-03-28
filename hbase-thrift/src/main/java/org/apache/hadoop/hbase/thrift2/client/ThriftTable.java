@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
@@ -426,10 +429,26 @@ public class ThriftTable implements Table {
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public Result mutateRow(RowMutations rm) throws IOException {
     TRowMutations tRowMutations = ThriftUtilities.rowMutationsFromHBase(rm);
     try {
       client.mutateRow(tableNameInBytes, tRowMutations);
+      return Result.EMPTY_RESULT;
     }  catch (TException e) {
       throw new IOException(e);
     }

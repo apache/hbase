@@ -17,13 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.jruby.embed.PathType;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
@@ -33,10 +30,8 @@ public class TestReplicationShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationShell.class);
 
-  @Test
-  public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.include", "replication_admin_test.rb");
-    // Start all ruby tests
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  @Override
+  protected String getIncludeList() {
+    return "replication_admin_test.rb";
   }
 }

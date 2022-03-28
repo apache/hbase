@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -50,11 +50,11 @@ public class TestProcedureExecutor {
   private NoopProcedureStore procStore;
   private ProcedureExecutor<TestProcEnv> procExecutor;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
 
   @Before
   public void setUp() throws Exception {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
 
     // NOTE: The executor will be created by each test
     procEnv = new TestProcEnv();

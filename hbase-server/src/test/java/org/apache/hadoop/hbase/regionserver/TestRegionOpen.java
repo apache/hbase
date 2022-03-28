@@ -27,21 +27,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -59,11 +61,10 @@ public class TestRegionOpen {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionOpen.class);
 
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
   private static final int NB_SERVERS = 1;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -89,12 +90,12 @@ public class TestRegionOpen {
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
     long completed = exec.getCompletedTaskCount();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setPriority(HConstants.HIGH_QOS);
-    htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setPriority(HConstants.HIGH_QOS)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Admin admin = connection.getAdmin()) {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
 
     assertEquals(completed + 1, exec.getCompletedTaskCount());
@@ -109,16 +110,17 @@ public class TestRegionOpen {
     Configuration conf = HTU.getConfiguration();
     Path rootDir = HTU.getDataTestDirOnTestFS();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(FAMILYNAME));
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME)).build();
     admin.createTable(htd);
     HTU.waitUntilNoRegionsInTransition(60000);
 
     // Create new HRI with non-default region replica id
-    HRegionInfo hri = new HRegionInfo(htd.getTableName(),  Bytes.toBytes("A"), Bytes.toBytes("B"), false,
-        System.currentTimeMillis(), 2);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
+      .setStartKey(Bytes.toBytes("A")).setEndKey(Bytes.toBytes("B"))
+      .setRegionId(EnvironmentEdgeManager.currentTime()).setReplicaId(2).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
+      CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     Path regionDir = regionFs.getRegionDir();
     try {
       HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);

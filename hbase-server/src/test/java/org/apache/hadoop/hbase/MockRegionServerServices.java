@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -46,15 +45,15 @@ import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
-import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.LeaseManager;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -64,6 +63,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
@@ -71,7 +72,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
-  private final Map<String, Region> regions = new HashMap<>();
+  private final Map<String, HRegion> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
@@ -83,17 +84,17 @@ public class MockRegionServerServices implements RegionServerServices {
   private volatile boolean stopping = false;
   private final AtomicBoolean running = new AtomicBoolean(true);
 
-  MockRegionServerServices(ZKWatcher zkw) {
+  public MockRegionServerServices(ZKWatcher zkw) {
     this(zkw, null);
   }
 
-  MockRegionServerServices(ZKWatcher zkw, ServerName serverName) {
+  public MockRegionServerServices(ZKWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
     this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
   }
 
-  MockRegionServerServices(){
+  public MockRegionServerServices(){
     this(null, null);
   }
 
@@ -107,17 +108,17 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Region getRegion(String encodedRegionName) {
+  public HRegion getRegion(String encodedRegionName) {
     return this.regions.get(encodedRegionName);
   }
 
   @Override
-  public List<Region> getRegions(TableName tableName) throws IOException {
+  public List<HRegion> getRegions(TableName tableName) throws IOException {
     return null;
   }
 
   @Override
-  public List<Region> getRegions() {
+  public List<HRegion> getRegions() {
     return null;
   }
 
@@ -229,7 +230,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Leases getLeases() {
+  public LeaseManager getLeaseManager() {
     return null;
   }
 
@@ -376,6 +377,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
+    return null;
+  }
+
+  @Override
+  public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return null;
   }
 }

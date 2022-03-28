@@ -152,7 +152,7 @@ public enum EventType {
    * C_M_MERGE_REGION<br>
    * Client asking Master to merge regions.
    */
-  C_M_MERGE_REGION          (30, ExecutorType.MASTER_TABLE_OPERATIONS),
+  C_M_MERGE_REGION          (30, ExecutorType.MASTER_MERGE_OPERATIONS),
   /**
    * Messages originating from Client to Master.<br>
    * C_M_DELETE_TABLE<br>
@@ -206,13 +206,13 @@ public enum EventType {
    * C_M_SNAPSHOT_TABLE<br>
    * Client asking Master to snapshot an offline table.
    */
-  C_M_SNAPSHOT_TABLE        (48, ExecutorType.MASTER_TABLE_OPERATIONS),
+  C_M_SNAPSHOT_TABLE        (48, ExecutorType.MASTER_SNAPSHOT_OPERATIONS),
   /**
    * Messages originating from Client to Master.<br>
    * C_M_RESTORE_SNAPSHOT<br>
    * Client asking Master to restore a snapshot.
    */
-  C_M_RESTORE_SNAPSHOT      (49, ExecutorType.MASTER_TABLE_OPERATIONS),
+  C_M_RESTORE_SNAPSHOT      (49, ExecutorType.MASTER_SNAPSHOT_OPERATIONS),
 
   // Updates from master to ZK. This is done by the master and there is
   // nothing to process by either Master or RS
@@ -294,7 +294,28 @@ public enum EventType {
    *
    * RS_REPLAY_SYNC_REPLICATION_WAL
    */
-  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL);
+  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL),
+
+  /**
+   * RS claim replication queue.<br>
+   *
+   * RS_CLAIM_REPLICATION_QUEUE
+   */
+  RS_CLAIM_REPLICATION_QUEUE(86, ExecutorType.RS_CLAIM_REPLICATION_QUEUE),
+
+  /**
+   *  RS snapshot regions.<br>
+   *
+   *  RS_SNAPSHOT_REGIONS
+   */
+  RS_SNAPSHOT_REGIONS(87, ExecutorType.RS_SNAPSHOT_OPERATIONS),
+
+  /**
+   *  RS verify snapshot.<br>
+   *
+   *  RS_VERIFY_SNAPSHOT
+   */
+  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS);
 
   private final int code;
   private final ExecutorType executor;
@@ -319,11 +340,6 @@ public enum EventType {
       }
     }
     throw new IllegalArgumentException("Unknown code " + code);
-  }
-
-  public boolean isOnlineSchemaChangeSupported() {
-    return this.equals(EventType.C_M_ADD_FAMILY) || this.equals(EventType.C_M_DELETE_FAMILY) ||
-      this.equals(EventType.C_M_MODIFY_FAMILY) || this.equals(EventType.C_M_MODIFY_TABLE);
   }
 
   ExecutorType getExecutorServiceType() {

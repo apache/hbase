@@ -30,7 +30,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -58,7 +58,7 @@ public class TestMapReduceExamples {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMapReduceExamples.class);
 
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
+  private static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
    * Test SampleUploader from examples

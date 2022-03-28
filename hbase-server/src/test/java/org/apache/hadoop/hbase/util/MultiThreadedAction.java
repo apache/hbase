@@ -25,8 +25,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -78,14 +78,14 @@ public abstract class MultiThreadedAction {
    * Default implementation of LoadTestDataGenerator that uses LoadTestKVGenerator, fixed
    * set of column families, and random number of columns in range. The table for it can
    * be created manually or, for example, via
-   * {@link org.apache.hadoop.hbase.HBaseTestingUtility#createPreSplitLoadTestTable(Configuration, TableName, byte[],
-   * org.apache.hadoop.hbase.io.compress.Compression.Algorithm, org.apache.hadoop.hbase.io.encoding.DataBlockEncoding)}
+   * {@link org.apache.hadoop.hbase.HBaseTestingUtil#createPreSplitLoadTestTable(Configuration,
+   * TableName, byte[], org.apache.hadoop.hbase.io.compress.Compression.Algorithm,
+   * org.apache.hadoop.hbase.io.encoding.DataBlockEncoding)}
    */
   public static class DefaultDataGenerator extends LoadTestDataGenerator {
     private byte[][] columnFamilies = null;
     private int minColumnsPerKey;
     private int maxColumnsPerKey;
-    private final Random random = new Random();
 
     public DefaultDataGenerator(int minValueSize, int maxValueSize,
         int minColumnsPerKey, int maxColumnsPerKey, byte[]... columnFamilies) {
@@ -112,7 +112,8 @@ public abstract class MultiThreadedAction {
 
     @Override
     public byte[][] generateColumnsForCf(byte[] rowKey, byte[] cf) {
-      int numColumns = minColumnsPerKey + random.nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
+      int numColumns = minColumnsPerKey +
+        ThreadLocalRandom.current().nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
       byte[][] columns = new byte[numColumns][];
       for (int i = 0; i < numColumns; ++i) {
         columns[i] = Bytes.toBytes(Integer.toString(i));
@@ -158,7 +159,7 @@ public abstract class MultiThreadedAction {
     this.endKey = endKey;
     this.numThreads = numThreads;
     (new Thread(new ProgressReporter(actionLetter),
-        "MultiThreadedAction-ProgressReporter-" + System.currentTimeMillis())).start();
+        "MultiThreadedAction-ProgressReporter-" + EnvironmentEdgeManager.currentTime())).start();
   }
 
   private static String formatTime(long elapsedTime) {
@@ -182,7 +183,7 @@ public abstract class MultiThreadedAction {
 
     @Override
     public void run() {
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       long priorNumKeys = 0;
       long priorCumulativeOpTime = 0;
       int priorAverageKeysPerSecond = 0;
@@ -197,7 +198,7 @@ public abstract class MultiThreadedAction {
           LOG.info(threadsLeft + "Number of keys = 0");
         } else {
           long numKeys = MultiThreadedAction.this.numKeys.get();
-          long time = System.currentTimeMillis() - startTime;
+          long time = EnvironmentEdgeManager.currentTime() - startTime;
           long totalOpTime = totalOpTimeMs.get();
 
           long numKeysDelta = numKeys - priorNumKeys;

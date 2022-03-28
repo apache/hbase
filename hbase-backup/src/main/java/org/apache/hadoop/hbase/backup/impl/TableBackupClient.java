@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,13 +37,11 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Base class for backup operation. Concrete implementation for
@@ -56,7 +54,6 @@ public abstract class TableBackupClient {
 
   public static final String BACKUP_CLIENT_IMPL_CLASS = "backup.client.impl.class";
 
-  @VisibleForTesting
   public static final String BACKUP_TEST_MODE_STAGE = "backup.test.mode.stage";
 
   private static final Logger LOG = LoggerFactory.getLogger(TableBackupClient.class);
@@ -65,7 +62,7 @@ public abstract class TableBackupClient {
   protected Connection conn;
   protected String backupId;
   protected List<TableName> tableList;
-  protected HashMap<String, Long> newTimestamps = null;
+  protected Map<String, Long> newTimestamps = null;
 
   protected BackupManager backupManager;
   protected BackupInfo backupInfo;
@@ -90,7 +87,7 @@ public abstract class TableBackupClient {
     this.tableList = request.getTableList();
     this.conn = conn;
     this.conf = conn.getConfiguration();
-    this.fs = FSUtils.getCurrentFileSystem(conf);
+    this.fs = CommonFSUtils.getCurrentFileSystem(conf);
     backupInfo =
         backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
           request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth());
@@ -161,18 +158,18 @@ public abstract class TableBackupClient {
    * @throws IOException exception
    */
   protected static void cleanupExportSnapshotLog(Configuration conf) throws IOException {
-    FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+    FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
     Path stagingDir =
         new Path(conf.get(BackupRestoreConstants.CONF_STAGING_ROOT, fs.getWorkingDirectory()
             .toString()));
-    FileStatus[] files = FSUtils.listStatus(fs, stagingDir);
+    FileStatus[] files = CommonFSUtils.listStatus(fs, stagingDir);
     if (files == null) {
       return;
     }
     for (FileStatus file : files) {
       if (file.getPath().getName().startsWith("exportSnapshot-")) {
         LOG.debug("Delete log files of exporting snapshot: " + file.getPath().getName());
-        if (FSUtils.delete(fs, file.getPath(), true) == false) {
+        if (CommonFSUtils.delete(fs, file.getPath(), true) == false) {
           LOG.warn("Can not delete " + file.getPath());
         }
       }
@@ -209,7 +206,7 @@ public abstract class TableBackupClient {
           }
 
           Path tableDir = targetDirPath.getParent();
-          FileStatus[] backups = FSUtils.listStatus(outputFs, tableDir);
+          FileStatus[] backups = CommonFSUtils.listStatus(outputFs, tableDir);
           if (backups == null || backups.length == 0) {
             outputFs.delete(tableDir, true);
             LOG.debug(tableDir.toString() + " is empty, remove it.");
@@ -298,7 +295,7 @@ public abstract class TableBackupClient {
 
       if (type == BackupType.INCREMENTAL) {
         // We'll store the log timestamps for this table only in its manifest.
-        HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
+        Map<TableName, Map<String, Long>> tableTimestampMap = new HashMap<>();
         tableTimestampMap.put(table, backupInfo.getIncrTimestampMap().get(table));
         manifest.setIncrTimestampMap(tableTimestampMap);
         ArrayList<BackupImage> ancestorss = backupManager.getAncestors(backupInfo);
@@ -350,14 +347,14 @@ public abstract class TableBackupClient {
    */
   protected void cleanupDistCpLog(BackupInfo backupInfo, Configuration conf) throws IOException {
     Path rootPath = new Path(backupInfo.getHLogTargetDir()).getParent();
-    FileStatus[] files = FSUtils.listStatus(fs, rootPath);
+    FileStatus[] files = CommonFSUtils.listStatus(fs, rootPath);
     if (files == null) {
       return;
     }
     for (FileStatus file : files) {
       if (file.getPath().getName().startsWith("_distcp_logs")) {
         LOG.debug("Delete log files of DistCp: " + file.getPath().getName());
-        FSUtils.delete(fs, file.getPath(), true);
+        CommonFSUtils.delete(fs, file.getPath(), true);
       }
     }
   }
@@ -412,12 +409,10 @@ public abstract class TableBackupClient {
    */
   public abstract void execute() throws IOException;
 
-  @VisibleForTesting
   protected Stage getTestStage() {
     return Stage.valueOf("stage_"+ conf.getInt(BACKUP_TEST_MODE_STAGE, 0));
   }
 
-  @VisibleForTesting
   protected void failStageIf(Stage stage) throws IOException {
     Stage current = getTestStage();
     if (current == stage) {

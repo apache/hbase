@@ -25,14 +25,11 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -47,6 +44,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -57,6 +55,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestSerialReplicationEndpoint {
@@ -65,7 +64,7 @@ public class TestSerialReplicationEndpoint {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration CONF;
   private static Connection CONN;
 
@@ -79,7 +78,7 @@ public class TestSerialReplicationEndpoint {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(CONN);
+    Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 
@@ -111,8 +110,8 @@ public class TestSerialReplicationEndpoint {
 
     try (Table table = CONN.getTable(tableName)) {
       for (int i = 0; i < cellNum; i++) {
-        Put put = new Put(Bytes.toBytes(i)).addColumn(family, qualifier, System.currentTimeMillis(),
-          Bytes.toBytes(i));
+        Put put = new Put(Bytes.toBytes(i)).addColumn(family, qualifier,
+          EnvironmentEdgeManager.currentTime(), Bytes.toBytes(i));
         table.put(put);
       }
     }
@@ -167,7 +166,7 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
       return () -> {
         entryQueue.addAll(entries);
         return ordinal;
@@ -175,14 +174,9 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    public synchronized List<ServerName> getRegionServers() {
+    public synchronized int getNumSinks() {
       // Return multiple server names for endpoint parallel replication.
-      return new ArrayList<>(
-          ImmutableList.of(ServerName.valueOf("www.example.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example2.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example3.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L)));
+      return 10;
     }
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,15 +21,17 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -62,17 +64,16 @@ public class TestInvocationRecordFilter {
   private static final String QUALIFIER_PREFIX = "qualifier";
   private static final String VALUE_PREFIX = "value";
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private HRegion region;
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(
-        TableName.valueOf(TABLE_NAME_BYTES));
-    htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_BYTES))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME_BYTES)).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);
     for (int i = 0; i < 10; i += 2) {

@@ -1,5 +1,4 @@
- /**
-  *
+ /*
   * Licensed to the Apache Software Foundation (ASF) under one
   * or more contributor license agreements.  See the NOTICE file
   * distributed with this work for additional information
@@ -18,17 +17,14 @@
   */
 package org.apache.hadoop.hbase.coordination;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Coordinated operations for {@link SplitLogWorker} and
@@ -44,7 +40,10 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * <p>
  * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
+@Deprecated
 @InterfaceAudience.Private
 public interface SplitLogWorkerCoordination {
 
@@ -94,7 +93,6 @@ public interface SplitLogWorkerCoordination {
    * Used by unit tests to check how many tasks were processed
    * @return number of tasks
    */
-  @VisibleForTesting
   int getTaskReadySeq();
 
   /**

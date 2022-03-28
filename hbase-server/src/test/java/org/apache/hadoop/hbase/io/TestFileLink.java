@@ -32,12 +32,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -89,12 +90,46 @@ public class TestFileLink {
   }
 
   /**
+   * Test that the returned link from {@link FileLink#open(FileSystem)} can be unwrapped
+   * to a {@link HdfsDataInputStream} by
+   * {@link FileLink#getUnderlyingFileLinkInputStream(FSDataInputStream)}
+   */
+  @Test
+  public void testGetUnderlyingFSDataInputStream() throws Exception {
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
+    Configuration conf = testUtil.getConfiguration();
+    conf.setInt("dfs.blocksize", 1024 * 1024);
+    conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);
+
+    testUtil.startMiniDFSCluster(1);
+    try {
+      MiniDFSCluster cluster = testUtil.getDFSCluster();
+      FileSystem fs = cluster.getFileSystem();
+
+      Path originalPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
+
+      writeSomeData(fs, originalPath, 256 << 20, (byte) 2);
+
+      List<Path> files = new ArrayList<Path>();
+      files.add(originalPath);
+
+      FileLink link = new FileLink(files);
+      FSDataInputStream stream = link.open(fs);
+
+      FSDataInputStream underlying = FileLink.getUnderlyingFileLinkInputStream(stream);
+      assertTrue(underlying instanceof HdfsDataInputStream);
+    } finally {
+      testUtil.shutdownMiniCluster();
+    }
+  }
+
+  /**
    * Test, on HDFS, that the FileLink is still readable
    * even when the current file gets renamed.
    */
   @Test
   public void testHDFSLinkReadDuringRename() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
     conf.setInt("dfs.blocksize", 1024 * 1024);
     conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);
@@ -126,7 +161,7 @@ public class TestFileLink {
   }
   @Test(expected = FileNotFoundException.class)
   public void testLinkReadWithMissingFile() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     FileSystem fs = new MyDistributedFileSystem();
 
     Path originalPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
@@ -146,7 +181,7 @@ public class TestFileLink {
    */
   @Test
   public void testLocalLinkReadDuringRename() throws IOException {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     FileSystem fs = testUtil.getTestFileSystem();
     assertEquals("file", fs.getUri().getScheme());
     testLinkReadDuringRename(fs, testUtil.getDataTestDir());
@@ -218,7 +253,7 @@ public class TestFileLink {
    */
   @Test
   public void testHDFSLinkReadDuringDelete() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
     conf.setInt("dfs.blocksize", 1024 * 1024);
     conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);

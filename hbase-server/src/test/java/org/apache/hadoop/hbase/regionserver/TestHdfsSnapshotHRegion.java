@@ -22,14 +22,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,7 +45,7 @@ public class TestHdfsSnapshotHRegion {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHdfsSnapshotHRegion.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String SNAPSHOT_NAME = "foo_snapshot";
   private Table table;
   public static final TableName TABLE_NAME = TableName.valueOf("foo");
@@ -81,7 +81,7 @@ public class TestHdfsSnapshotHRegion {
     String snapshotDir = client.createSnapshot(baseDir, SNAPSHOT_NAME);
     RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(
         table.getName()).getAllRegionLocations().stream().findFirst().get().getRegion();
-    Path tableDir = FSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME);
     HRegion snapshottedRegion = openSnapshotRegion(firstRegion, tableDir);
     Assert.assertNotNull(snapshottedRegion);
     snapshottedRegion.close();
@@ -93,7 +93,7 @@ public class TestHdfsSnapshotHRegion {
     RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(
         table.getName()).getAllRegionLocations().stream().findFirst().get().getRegion();
     String encodedName = firstRegion.getEncodedName();
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLE_NAME);
     Path regionDirectoryPath = new Path(tableDir, encodedName);
     TEST_UTIL.getTestFileSystem().create(
         new Path(regionDirectoryPath, HRegionFileSystem.REGION_TEMP_DIR));
@@ -105,7 +105,7 @@ public class TestHdfsSnapshotHRegion {
     String snapshotDir = client.createSnapshot(baseDir, "foo_snapshot");
     // everything should still open just fine
     HRegion snapshottedRegion = openSnapshotRegion(firstRegion,
-        FSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME));
+      CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME));
     Assert.assertNotNull(snapshottedRegion); // no errors and the region should open
     snapshottedRegion.close();
   }

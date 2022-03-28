@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.HbckRegionInfo.MetaEntry;
@@ -51,8 +51,8 @@ public class TestHBaseFsckComparator {
   byte[] keyEnd = Bytes.toBytes("");
 
   static HbckRegionInfo genHbckInfo(TableName table, byte[] start, byte[] end, int time) {
-    return new HbckRegionInfo(new MetaEntry(new HRegionInfo(table, start, end), null,
-        time));
+    return new HbckRegionInfo(new MetaEntry(
+      RegionInfoBuilder.newBuilder(table).setStartKey(start).setEndKey(end).build(), null, time));
   }
 
   @Test

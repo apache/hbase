@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -249,17 +251,6 @@ public class Put extends Mutation implements HeapSize {
     return (Put) super.setDurability(d);
   }
 
-  /**
-   * Method for setting the put's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Put#Put(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  @Override
-  public Put setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
-    return (Put) super.setFamilyCellMap(map);
-  }
-
   @Override
   public Put setClusterIds(List<UUID> clusterIds) {
     return (Put) super.setClusterIds(clusterIds);
@@ -289,4 +280,10 @@ public class Put extends Mutation implements HeapSize {
   public Put setPriority(int priority) {
     return (Put) super.setPriority(priority);
   }
+
+  @Override
+  public CellBuilder getCellBuilder(CellBuilderType type) {
+    return getCellBuilder(type, Cell.Type.Put);
+  }
+
 }

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -103,7 +103,7 @@ public class TestHFileLink {
         TableName.valueOf("ns", name.getMethodName())};
 
     for(TableName refTable : refTables) {
-      Path refTableDir = FSUtils.getTableDir(archiveDir, refTable);
+      Path refTableDir = CommonFSUtils.getTableDir(archiveDir, refTable);
       Path refRegionDir = HRegion.getRegionDir(refTableDir, encodedRegion);
       Path refDir = new Path(refRegionDir, cf);
       Path refLinkDir = new Path(refDir, linkDir);
@@ -115,15 +115,15 @@ public class TestHFileLink {
               TableName.valueOf(name.getMethodName()+ ":" +name.getMethodName())};
 
       for( TableName tableName : tableNames) {
-        Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+        Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
         Path regionDir = HRegion.getRegionDir(tableDir, encodedRegion);
         Path cfDir = new Path(regionDir, cf);
 
-        //Verify back reference creation
-        assertEquals(encodedRegion+"."+
-            tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
-            HFileLink.createBackReferenceName(FSUtils.getTableName(tableDir).getNameAsString(),
-                encodedRegion));
+        // Verify back reference creation
+        assertEquals(
+          encodedRegion + "." + tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
+          HFileLink.createBackReferenceName(CommonFSUtils.getTableName(tableDir).getNameAsString(),
+            encodedRegion));
 
         //verify parsing back reference
         Pair<TableName, String> parsedRef =

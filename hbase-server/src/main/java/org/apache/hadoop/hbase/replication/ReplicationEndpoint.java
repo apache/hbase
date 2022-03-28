@@ -161,6 +161,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     List<Entry> entries;
     int size;
     String walGroupId;
+    int timeout;
     @InterfaceAudience.Private
     public ReplicateContext() {
     }
@@ -185,6 +186,12 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     }
     public String getWalGroupId(){
       return walGroupId;
+    }
+    public void setTimeout(int timeout) {
+      this.timeout = timeout;
+    }
+    public int getTimeout() {
+      return this.timeout;
     }
   }
 

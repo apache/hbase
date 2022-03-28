@@ -20,12 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -49,6 +43,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
@@ -56,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -64,9 +60,17 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * The {@link Admin} implementation which is based on an {@link AsyncAdmin}.
@@ -129,6 +133,12 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public List<TableDescriptor> listTableDescriptors() throws IOException {
     return get(admin.listTableDescriptors());
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables)
+      throws IOException {
+    return get(admin.listTableDescriptors(includeSysTables));
   }
 
   @Override
@@ -220,8 +230,14 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-      ColumnFamilyDescriptor columnFamily) throws IOException {
+    ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamily(tableName, columnFamily);
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    return admin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
   }
 
   @Override
@@ -235,8 +251,18 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void flush(TableName tableName, byte[] columnFamily) throws IOException {
+    get(admin.flush(tableName, columnFamily));
+  }
+
+  @Override
   public void flushRegion(byte[] regionName) throws IOException {
     get(admin.flushRegion(regionName));
+  }
+
+  @Override
+  public void flushRegion(byte[] regionName, byte[] columnFamily) throws IOException {
+    get(admin.flushRegion(regionName, columnFamily));
   }
 
   @Override
@@ -340,8 +366,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    get(admin.unassign(regionName, force));
+  public void unassign(byte[] regionName) throws IOException {
+    get(admin.unassign(regionName));
   }
 
   @Override
@@ -352,6 +378,11 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public boolean balancerSwitch(boolean onOrOff, boolean synchronous) throws IOException {
     return get(admin.balancerSwitch(onOrOff, synchronous));
+  }
+
+
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
+    return get(admin.balance(request));
   }
 
   @Override
@@ -375,8 +406,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public boolean normalize() throws IOException {
-    return get(admin.normalize());
+  public boolean normalize(NormalizeTableFilterParams ntfp) throws IOException {
+    return get(admin.normalize(ntfp));
   }
 
   @Override
@@ -448,6 +479,12 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return admin.modifyTable(td);
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    return admin.modifyTableStoreFileTracker(tableName, dstSFT);
   }
 
   @Override
@@ -619,14 +656,15 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-      throws IOException, RestoreSnapshotException {
+    throws IOException, RestoreSnapshotException {
     get(admin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
   @Override
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-      boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
-    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl);
+    boolean restoreAcl, String customSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
+    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl, customSFT);
   }
 
   @Override
@@ -759,6 +797,11 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void updateConfiguration() throws IOException {
     get(admin.updateConfiguration());
+  }
+
+  @Override
+  public void updateConfiguration(String groupName) throws IOException {
+    get(admin.updateConfiguration(groupName));
   }
 
   @Override
@@ -941,5 +984,101 @@ class AdminOverAsyncAdmin implements Admin {
   public List<Boolean> hasUserPermissions(String userName, List<Permission> permissions)
       throws IOException {
     return get(admin.hasUserPermissions(userName, permissions));
+  }
+
+  @Override
+  public boolean snapshotCleanupSwitch(final boolean on, final boolean synchronous)
+      throws IOException {
+    return get(admin.snapshotCleanupSwitch(on, synchronous));
+  }
+
+  @Override
+  public boolean isSnapshotCleanupEnabled() throws IOException {
+    return get(admin.isSnapshotCleanupEnabled());
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    return get(admin.clearSlowLogResponses(serverNames));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(String groupName) throws IOException {
+    return get(admin.getRSGroup(groupName));
+  }
+
+  @Override
+  public void moveServersToRSGroup(Set<Address> servers, String groupName) throws IOException {
+    get(admin.moveServersToRSGroup(servers, groupName));
+  }
+
+  @Override
+  public void addRSGroup(String groupName) throws IOException {
+    get(admin.addRSGroup(groupName));
+  }
+
+  @Override
+  public void removeRSGroup(String groupName) throws IOException {
+    get(admin.removeRSGroup(groupName));
+  }
+
+  @Override
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+    return get(admin.balanceRSGroup(groupName, request));
+  }
+
+  @Override
+  public List<RSGroupInfo> listRSGroups() throws IOException {
+    return get(admin.listRSGroups());
+  }
+
+  @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.listTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(Address hostPort) throws IOException {
+    return get(admin.getRSGroup(hostPort));
+  }
+
+  @Override
+  public void removeServersFromRSGroup(Set<Address> servers) throws IOException {
+    get(admin.removeServersFromRSGroup(servers));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(TableName tableName) throws IOException {
+    return get(admin.getRSGroup(tableName));
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    get(admin.setRSGroup(tables, groupName));
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    get(admin.renameRSGroup(oldName, newName));
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    get(admin.updateRSGroupConfig(groupName, configuration));
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

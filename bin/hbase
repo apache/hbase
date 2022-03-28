@@ -54,28 +54,13 @@
 #   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
 #                    Empty by default.
 #
+#   HBASE_JSHELL_ARGS Additional arguments passed to the jshell.
+#                     Defaults to `--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh`
+#
+#   HBASE_HBCK_OPTS  Extra options passed to hbck.
+#                    Defaults to HBASE_SERVER_JAAS_OPTS if specified, or HBASE_REGIONSERVER_OPTS.
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
-
-# This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
-
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-# Detect if we are in hbase sources dir
-in_dev_env=false
-if [ -d "${HBASE_HOME}/target" ]; then
-  in_dev_env=true
-fi
-
-# Detect if we are in the omnibus tarball
-in_omnibus_tarball="false"
-if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
-  in_omnibus_tarball="true"
-fi
 
 read -d '' options_string << EOF
 Options:
@@ -83,9 +68,9 @@ Options:
   --hosts HOSTS        Override the list in 'regionservers' file
   --auth-as-server     Authenticate to ZooKeeper using servers configuration
   --internal-classpath Skip attempting to use client facing jars (WARNING: unstable results between versions)
+  --help or -h         Print this help message
 EOF
-# if no args specified, show usage
-if [ $# = 0 ]; then
+show_usage() {
   echo "Usage: hbase [<options>] <command> [<args>]"
   echo "$options_string"
   echo ""
@@ -107,6 +92,7 @@ if [ $# = 0 ]; then
     echo "  thrift2          Run the HBase Thrift2 server"
     echo "  clean            Run the HBase clean up script"
   fi
+  echo "  jshell           Run a jshell with HBase on the classpath"
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
   echo "  pe               Run PerformanceEvaluation"
@@ -120,7 +106,38 @@ if [ $# = 0 ]; then
   echo "  rowcounter       Run RowCounter tool"
   echo "  cellcounter      Run CellCounter tool"
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
+  echo "  hbtop            Run HBTop tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
+# This will set HBASE_HOME, etc.
+. "$bin"/hbase-config.sh
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# Detect if we are in hbase sources dir
+in_dev_env=false
+if [ -d "${HBASE_HOME}/target" ]; then
+  in_dev_env=true
+fi
+
+# Detect if we are in the omnibus tarball
+in_omnibus_tarball="false"
+if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
+  in_omnibus_tarball="true"
+fi
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  show_usage
   exit 1
 fi
 
@@ -133,6 +150,21 @@ JAVA=$JAVA_HOME/bin/java
 # override default settings for this command, if applicable
 if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
   . "$HBASE_HOME/conf/hbase-env-$COMMAND.sh"
+fi
+
+# establish a default value for HBASE_OPTS if it's not already set. For now,
+# all we set is the garbage collector.
+if [ -z "${HBASE_OPTS}" ] ; then
+  major_version_number="$(parse_java_major_version "$(read_java_version)")"
+  case "$major_version_number" in
+  8|9|10)
+    HBASE_OPTS="-XX:+UseConcMarkSweepGC"
+    ;;
+  11|*)
+    HBASE_OPTS="-XX:+UseG1GC"
+    ;;
+  esac
+  export HBASE_OPTS
 fi
 
 add_size_suffix() {
@@ -183,19 +215,10 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
     add_to_cp_if_exists "${HBASE_HOME}/hbase-rest/target"
   else
     add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
+    # Needed for GetJavaProperty check below
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target/classes"
   fi
 fi
-
-#add the hbase jars for each module
-for f in $HBASE_HOME/hbase-jars/hbase*.jar; do
-	if [[ $f = *sources.jar ]]
-  then
-    : # Skip sources.jar
-  elif [ -f $f ]
-  then
-    CLASSPATH=${CLASSPATH}:$f;
-  fi
-done
 
 #If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 # Allow this functionality to be disabled
@@ -223,7 +246,7 @@ if [ "${INTERNAL_CLASSPATH}" != "true" ]; then
   done
 
   # If command can use our shaded client, use it
-  declare -a commands_in_client_jar=("classpath" "version")
+  declare -a commands_in_client_jar=("classpath" "version" "hbtop")
   for c in "${commands_in_client_jar[@]}"; do
     if [ "${COMMAND}" = "${c}" ]; then
       if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
@@ -241,7 +264,7 @@ if [ "${INTERNAL_CLASSPATH}" != "true" ]; then
 
   # If command needs our shaded mapreduce, use it
   # N.B "mapredcp" is not included here because in the shaded case it skips our built classpath
-  declare -a commands_in_mr_jar=("hbck" "snapshot" "canary" "regionsplitter" "pre-upgrade")
+  declare -a commands_in_mr_jar=("hbck" "snapshot" "regionsplitter" "pre-upgrade")
   for c in "${commands_in_mr_jar[@]}"; do
     if [ "${COMMAND}" = "${c}" ]; then
       # If we didn't find a jar above, this will just be blank and the
@@ -284,13 +307,18 @@ else
   # make it easier to check for shaded/not later on.
   shaded_jar=""
 fi
+# here we will add slf4j-api, commons-logging, jul-to-slf4j, jcl-over-slf4j
+# to classpath, as they are all logging bridges. Only exclude log4j* so we
+# will not actually log anything out. Add it later if necessary
 for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
   if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
-     [ "${f}" != "htrace-core.jar$" ] && \
-     [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+     [[ "${f}" != "htrace-core.jar$" ]] && \
+     [[ ! "${f}" =~ ^.*/log4j.*$ ]]; then
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
+# redirect java.util.logging to slf4j
+HBASE_OPTS="$HBASE_OPTS -Djava.util.logging.config.class=org.apache.hadoop.hbase.logging.JulToSlf4jInitializer"
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -317,7 +345,15 @@ fi
 
 #If configured and available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
-  HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH" "${HADOOP_IN_PATH}" \
+  # If built hbase, temporarily add hbase-server*.jar to classpath for GetJavaProperty
+  # Exclude hbase-server*-tests.jar
+  temporary_cp=
+  for f in "${HBASE_HOME}"/lib/hbase-server*.jar; do
+    if [[ ! "${f}" =~ ^.*\-tests\.jar$ ]]; then
+      temporary_cp=":$f"
+    fi
+  done
+  HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH${temporary_cp}" "${HADOOP_IN_PATH}" \
                              org.apache.hadoop.hbase.util.GetJavaProperty java.library.path)
   if [ -n "$HADOOP_JAVA_LIBRARY_PATH" ]; then
     JAVA_LIBRARY_PATH=$(append_path "${JAVA_LIBRARY_PATH}" "$HADOOP_JAVA_LIBRARY_PATH")
@@ -398,12 +434,18 @@ else
 	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
 fi
 
-if [ "$AUTH_AS_SERVER" == "true" ] || [ "$COMMAND" = "hbck" ]; then
-   if [ -n "$HBASE_SERVER_JAAS_OPTS" ]; then
-     HBASE_OPTS="$HBASE_OPTS $HBASE_SERVER_JAAS_OPTS"
-   else
-     HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
-   fi
+if [ -n "$HBASE_SERVER_JAAS_OPTS" ]; then
+  AUTH_AS_SERVER_OPTS="$HBASE_SERVER_JAAS_OPTS"
+else
+  AUTH_AS_SERVER_OPTS="$HBASE_REGIONSERVER_OPTS"
+fi
+
+if [ "$AUTH_AS_SERVER" == "true" ]; then
+  HBASE_OPTS="$HBASE_OPTS $AUTH_AS_SERVER_OPTS"
+elif [ -z "$HBASE_HBCK_OPTS" ]; then
+  # The default for hbck should be to use auth-as-server args, for compatibility
+  # with HBASE-15145
+  HBASE_HBCK_OPTS="$AUTH_AS_SERVER_OPTS"
 fi
 
 # check if the command needs jline
@@ -450,6 +492,21 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
+add_opentelemetry_agent() {
+  if [ -e "${OPENTELEMETRY_JAVAAGENT_PATH}" ] ; then
+    agent_jar="${OPENTELEMETRY_JAVAAGENT_PATH}"
+  elif ! agent_jar=$(find -L "${HBASE_HOME}/lib/trace" -type f -name "opentelemetry-javaagent-*" 2>/dev/null); then
+    # must be dev environment
+    f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
+    if [ ! -f "${f}" ]; then
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
+      exit 1
+    fi
+    agent_jar=$(tr ':' '\n' < "${f}" | grep opentelemetry-javaagent)
+  fi
+  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar"
+}
+
 #Add the development env class path stuff
 if $in_dev_env; then
   add_maven_deps_to_classpath "cached_classpath.txt"
@@ -484,13 +541,33 @@ fi
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
 	#find the hbase ruby sources
+  # assume we are in a binary install if lib/ruby exists
   if [ -d "$HBASE_HOME/lib/ruby" ]; then
-    HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/lib/ruby"
+    # We want jruby to consume these things rather than our bootstrap script;
+    # jruby will look for the env variable 'JRUBY_OPTS'.
+    JRUBY_OPTS="${JRUBY_OPTS} -X+O"
+    export JRUBY_OPTS
+    # hbase-shell.jar contains a 'jar-bootstrap.rb'
+    # for more info see
+    # https://github.com/jruby/jruby/wiki/StandaloneJarsAndClasses#standalone-executable-jar-files
+    CLASS="org.jruby.JarBootstrapMain"
+  # otherwise assume we are running in a source checkout
   else
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-shell/src/main/ruby"
+    CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/ruby/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
-  CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
+elif [ "$COMMAND" = 'jshell' ] ; then
+  java_version="$(read_java_version)"
+  major_version_number="$(parse_java_major_version "${java_version}")"
+  if [ "${major_version_number}" -lt 9 ] ; then
+    echo "JShell is available only with JDK9 and lated. Detected JDK version is ${java_version}".
+    exit 1
+  fi
+  CLASS='jdk.internal.jshell.tool.JShellToolProvider'
+  # set default values for HBASE_JSHELL_ARGS
+  read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
+  HBASE_OPTS="$HBASE_OPTS $HBASE_JSHELL_OPTS"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
@@ -511,6 +588,7 @@ elif [ "$COMMAND" = "hbck" ] ; then
     CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
     ;;
   esac
+  HBASE_OPTS="$HBASE_OPTS $HBASE_HBCK_OPTS"
 elif [ "$COMMAND" = "wal" ] ; then
   CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
@@ -624,7 +702,7 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
     for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
       if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
          [ "${f}" != "htrace-core.jar$" ] && \
-         [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+         [[ ! "${f}" =~ ^.*/log4j.*$ ]]; then
         echo -n ":${f}"
       fi
     done
@@ -642,7 +720,7 @@ elif [ "$COMMAND" = "ltt" ] ; then
   CLASS='org.apache.hadoop.hbase.util.LoadTestTool'
   HBASE_OPTS="$HBASE_OPTS $HBASE_LTT_OPTS"
 elif [ "$COMMAND" = "canary" ] ; then
-  CLASS='org.apache.hadoop.hbase.tool.Canary'
+  CLASS='org.apache.hadoop.hbase.tool.CanaryTool'
   HBASE_OPTS="$HBASE_OPTS $HBASE_CANARY_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
@@ -656,6 +734,27 @@ elif [ "$COMMAND" = "pre-upgrade" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 elif [ "$COMMAND" = "completebulkload" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.BulkLoadHFilesTool'
+elif [ "$COMMAND" = "hbtop" ] ; then
+  CLASS='org.apache.hadoop.hbase.hbtop.HBTop'
+  if [ -n "${shaded_jar}" ] ; then
+    for f in "${HBASE_HOME}"/lib/hbase-hbtop*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+    for f in "${HBASE_HOME}"/lib/commons-lang3*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+  fi
+
+  if [ -f "${HBASE_HOME}/conf/log4j2-hbtop.properties" ] ; then
+    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
+  fi
+  HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
   CLASS=$COMMAND
 fi
@@ -685,18 +784,15 @@ if [ "${HBASE_JDK11}" != "" ]; then
   fi
 else
   # Use JDK detection
-  JAVA=$JAVA_HOME/bin/java
-
-  version=$($JAVA -version 2>&1 | awk -F '"' '/version/ {print $2}')
-  # '-' check is for cases such as "13-ea"
-  version_number=$(echo "$version" | cut -d'.' -f1 | cut -d'-' -f1)
+  version="$(read_java_version)"
+  major_version_number="$(parse_java_major_version "$version")"
 
   if [ "${DEBUG}" = "true" ]; then
     echo "HBASE_JDK11 not set hence using JDK detection."
-    echo "Extracted JDK version - ${version}, version_number - ${version_number}"
+    echo "Extracted JDK version - ${version}, major_version_number - ${major_version_number}"
   fi
 
-  if [[ "$version_number" -ge "11" ]]; then
+  if [[ "$major_version_number" -ge "11" ]]; then
     if [ "${DEBUG}" = "true" ]; then
       echo "Version ${version} is greater-than/equal to 11 hence adding JDK11 jars to classpath."
     fi
@@ -713,6 +809,13 @@ if [ "${addJDK11Jars}" = "true" ]; then
     fi
 elif [ "${DEBUG}" = "true" ]; then
   echo "JDK11 jars skipped from classpath."
+fi
+
+if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
+  if [ "${DEBUG}" = "true" ]; then
+    echo "Attaching opentelemetry agent"
+  fi
+  add_opentelemetry_agent
 fi
 
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
@@ -738,10 +841,9 @@ fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
-for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j-log4j*.jar; do
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/log4j*.jar; do
   if [ -f "${f}" ]; then
     CLASSPATH="${CLASSPATH}:${f}"
-    break
   fi
 done
 
@@ -752,9 +854,15 @@ if [ "${DEBUG}" = "true" ]; then
   HBASE_OPTS="${HBASE_OPTS} -Xdiag"
 fi
 
+# resolve the command arguments
+read -r -a CMD_ARGS <<< "$@"
+if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
+  CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
+fi
+
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
 else
   export JVM_PID="$$"
-  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
 fi

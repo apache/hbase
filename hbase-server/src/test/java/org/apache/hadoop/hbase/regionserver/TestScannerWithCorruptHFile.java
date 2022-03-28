@@ -22,16 +22,17 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -59,7 +60,7 @@ public class TestScannerWithCorruptHFile {
 
   @Rule public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
 
   @BeforeClass
@@ -88,10 +89,10 @@ public class TestScannerWithCorruptHFile {
   @Test(expected = DoNotRetryIOException.class)
   public void testScanOnCorruptHFile() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addCoprocessor(CorruptHFileCoprocessor.class.getName());
-    htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
-    Table table = TEST_UTIL.createTable(htd, null);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(CorruptHFileCoprocessor.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
+    Table table = TEST_UTIL.createTable(tableDescriptor, null);
     try {
       loadTable(table, 1);
       scan(table);

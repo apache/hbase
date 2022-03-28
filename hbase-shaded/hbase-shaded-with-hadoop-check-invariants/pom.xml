@@ -16,7 +16,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha-3-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
   <artifactId>hbase-shaded-with-hadoop-check-invariants</artifactId>
@@ -40,7 +40,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-client</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <!-- parent pom defines these for children. :( :( :( -->
     <dependency>
@@ -49,8 +48,18 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
       <scope>provided</scope>
     </dependency>
     <!-- Test dependencies -->
@@ -77,13 +86,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>extra-enforcer-rules</artifactId>
-            <version>1.0-beta-6</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>enforce-banned-dependencies</id>
@@ -109,6 +111,7 @@
                     <!-- annotations that never change -->
                     <exclude>com.google.code.findbugs:*</exclude>
                     <exclude>com.github.stephenc.findbugs:*</exclude>
+                    <exclude>com.github.spotbugs:*</exclude>
                     <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
                     <exclude>org.apache.htrace:*</exclude>
                     <!-- NB we don't exclude Hadoop from this check here, because the assumption is any needed classes

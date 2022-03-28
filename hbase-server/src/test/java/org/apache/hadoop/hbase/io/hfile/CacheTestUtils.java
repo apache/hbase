@@ -30,8 +30,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
@@ -41,9 +41,8 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class CacheTestUtils {
 
@@ -284,11 +283,11 @@ public class CacheTestUtils {
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     HashSet<String> usedStrings = new HashSet<>();
     for (int i = 0; i < numBlocks; i++) {
       ByteBuffer cachedBuffer = ByteBuffer.allocate(blockSize);
-      rand.nextBytes(cachedBuffer.array());
+      Bytes.random(cachedBuffer.array());
       cachedBuffer.rewind();
       int onDiskSizeWithoutHeader = blockSize;
       int uncompressedSizeWithoutHeader = blockSize;
@@ -326,7 +325,6 @@ public class CacheTestUtils {
     return returnedBlocks;
   }
 
-  @VisibleForTesting
   public static class HFileBlockPair {
     BlockCacheKey blockName;
     HFileBlock block;

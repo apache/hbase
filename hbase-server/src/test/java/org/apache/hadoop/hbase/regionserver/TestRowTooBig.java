@@ -20,15 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RowTooBigException;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,10 +51,10 @@ public class TestRowTooBig {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRowTooBig.class);
 
-  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static Path rootRegionDir;
-  private static final HTableDescriptor TEST_HTD =
-    new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
+  private static final TableDescriptor TEST_TD = TableDescriptorBuilder
+    .newBuilder(TableName.valueOf(TestRowTooBig.class.getSimpleName())).build();
 
   @BeforeClass
   public static void before() throws Exception {
@@ -76,26 +78,18 @@ public class TestRowTooBig {
    * OOME happened before we actually get to reading results, but
    * during seeking, as each StoreFile gets it's own scanner,
    * and each scanner seeks after the first KV.
-   * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
   public void testScannersSeekOnFewLargeCells() throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    HTableDescriptor htd = TEST_HTD;
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
-    } else {
-      htd.addFamily(hcd);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TD)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
-    final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
-    HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir,
+      HTU.getConfiguration(), tableDescriptor);
     try {
       // Add 5 cells to memstore
       for (int i = 0; i < 5 ; i++) {
@@ -110,7 +104,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -130,19 +124,12 @@ public class TestRowTooBig {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    HTableDescriptor htd = TEST_HTD;
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
-    } else {
-      htd.addFamily(hcd);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TD)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
-    final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
-    HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir,
+      HTU.getConfiguration(), tableDescriptor);
     try {
       // Add to memstore
       for (int i = 0; i < 10; i++) {
@@ -159,7 +146,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 }

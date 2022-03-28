@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.InvocationTargetException;
@@ -30,8 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class Methods {
+public final class Methods {
   private static final Logger LOG = LoggerFactory.getLogger(Methods.class);
+
+  private Methods() {
+  }
 
   public static <T> Object call(Class<T> clazz, T instance, String methodName,
       Class[] types, Object[] args) throws Exception {

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
+import org.apache.hadoop.hbase.mob.mapreduce.MobRefReporter;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.util.ProgramDriver;
@@ -33,6 +34,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Stable
 public class Driver {
+  private Driver() {}
 
   public static void main(String[] args) throws Throwable {
     ProgramDriver pgd = new ProgramDriver();
@@ -55,6 +57,8 @@ public class Driver {
     pgd.addClass(WALPlayer.NAME, WALPlayer.class, "Replay WAL files.");
     pgd.addClass(ExportSnapshot.NAME, ExportSnapshot.class, "Export" +
         " the specific snapshot to a given FileSystem.");
+    pgd.addClass(MobRefReporter.NAME, MobRefReporter.class, "Check the mob cells in a particular " +
+        "table and cf and confirm that the files they point to are correct.");
 
     ProgramDriver.class.getMethod("driver", new Class [] {String[].class}).
       invoke(pgd, new Object[]{args});

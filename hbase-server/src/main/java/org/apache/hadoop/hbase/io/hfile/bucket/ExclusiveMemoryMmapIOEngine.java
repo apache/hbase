@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -35,9 +34,9 @@ public class ExclusiveMemoryMmapIOEngine extends FileMmapIOEngine {
 
   @Override
   public Cacheable read(BucketEntry be) throws IOException {
-    ByteBuff dst = ByteBuff.wrap(ByteBuffer.allocate(be.getLength()));
+    ByteBuff dst = be.allocator.allocate(be.getLength());
     bufferArray.read(be.offset(), dst);
     dst.position(0).limit(be.getLength());
-    return be.wrapAsCacheable(dst.nioByteBuffers());
+    return be.wrapAsCacheable(dst);
   }
 }

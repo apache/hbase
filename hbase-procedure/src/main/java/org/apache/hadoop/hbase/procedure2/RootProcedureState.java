@@ -148,7 +148,7 @@ class RootProcedureState<TEnvironment> {
       subprocStack = new ArrayList<>();
     }
     proc.addStackIndex(subprocStack.size());
-    LOG.debug("Add procedure {} as the {}th rollback step", proc, subprocStack.size());
+    LOG.trace("Add procedure {} as the {}th rollback step", proc, subprocStack.size());
     subprocStack.add(proc);
   }
 

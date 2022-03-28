@@ -21,7 +21,7 @@ import static org.junit.Assert.assertFalse;
 
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
@@ -50,7 +50,7 @@ public class TestLoadProcedureError {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestLoadProcedureError.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Load");
 
@@ -126,7 +126,7 @@ public class TestLoadProcedureError {
     ARRIVE.await();
     FAIL_LOAD = true;
     // do not persist the store tracker
-    UTIL.getMiniHBaseCluster().getMaster().getWalProcedureStore().stop(true);
+    UTIL.getMiniHBaseCluster().getMaster().getProcedureStore().stop(true);
     UTIL.getMiniHBaseCluster().getMaster().abort("for testing");
     waitNoMaster();
     // restart twice, and should fail twice, as we will throw an exception in the afterReplay above

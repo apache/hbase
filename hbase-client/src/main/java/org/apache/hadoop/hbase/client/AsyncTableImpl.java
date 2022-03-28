@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-
-import com.google.protobuf.RpcChannel;
+import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -29,9 +28,11 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * Just a wrapper of {@link RawAsyncTableImpl}. The difference is that users need to provide a
@@ -42,12 +43,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
-  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
+  private final RawAsyncTableImpl rawTable;
 
   private final ExecutorService pool;
 
-  AsyncTableImpl(AsyncConnectionImpl conn, AsyncTable<AdvancedScanResultConsumer> rawTable,
-      ExecutorService pool) {
+  AsyncTableImpl(RawAsyncTableImpl rawTable, ExecutorService pool) {
     this.rawTable = rawTable;
     this.pool = pool;
   }
@@ -174,7 +174,49 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public CompletableFuture<Void> mutateRow(RowMutations mutation) {
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilder() {
+
+      private final CheckAndMutateWithFilterBuilder builder =
+        rawTable.checkAndMutate(row, filter);
+
+      @Override
+      public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenPut(Put put) {
+        return wrap(builder.thenPut(put));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenDelete(Delete delete) {
+        return wrap(builder.thenDelete(delete));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
+        return wrap(builder.thenMutate(mutation));
+      }
+    };
+  }
+
+  @Override
+  public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return wrap(rawTable.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
+    List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream()
+      .map(this::wrap).collect(toList());
+  }
+
+  @Override
+  public CompletableFuture<Result> mutateRow(RowMutations mutation) {
     return wrap(rawTable.mutateRow(mutation));
   }
 
@@ -237,26 +279,27 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
       Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
       CoprocessorCallback<R> callback) {
+    final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
       @Override
       public void onRegionComplete(RegionInfo region, R resp) {
-        pool.execute(() -> callback.onRegionComplete(region, resp));
+        pool.execute(context.wrap(() -> callback.onRegionComplete(region, resp)));
       }
 
       @Override
       public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(() -> callback.onRegionError(region, error));
+        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
       }
 
       @Override
       public void onComplete() {
-        pool.execute(() -> callback.onComplete());
+        pool.execute(context.wrap(callback::onComplete));
       }
 
       @Override
       public void onError(Throwable error) {
-        pool.execute(() -> callback.onError(error));
+        pool.execute(context.wrap(() -> callback.onError(error)));
       }
     };
     CoprocessorServiceBuilder<S, R> builder =

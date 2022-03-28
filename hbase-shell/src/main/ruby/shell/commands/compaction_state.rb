@@ -21,7 +21,7 @@ module Shell
   module Commands
     class CompactionState < Command
       def help
-        <<-EOF
+        <<~EOF
           Gets compaction status (MAJOR, MAJOR_AND_MINOR, MINOR, NONE) for a table:
           hbase> compaction_state 'ns1:t1'
           hbase> compaction_state 't1'

@@ -19,8 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.math3.random.RandomData;
 import org.apache.commons.math3.random.RandomDataImpl;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class runs performance benchmarks for {@link HFile}.
@@ -91,11 +91,25 @@ public class HFilePerformanceEvaluation {
   }
 
   static Cell createCell(final byte [] keyRow) {
-    return CellUtil.createCell(keyRow);
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(keyRow)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build();
   }
 
   static Cell createCell(final byte [] keyRow, final byte [] value) {
-    return CellUtil.createCell(keyRow, value);
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(keyRow)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(value)
+      .build();
   }
 
   /**
@@ -317,7 +331,7 @@ public class HFilePerformanceEvaluation {
     long run() throws Exception {
       long elapsedTime;
       setUp();
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       try {
         for (int i = 0; i < totalRows; i++) {
           if (i > 0 && i % getReportingPeriod() == 0) {
@@ -325,7 +339,7 @@ public class HFilePerformanceEvaluation {
           }
           doRow(i);
         }
-        elapsedTime = System.currentTimeMillis() - startTime;
+        elapsedTime = EnvironmentEdgeManager.currentTime() - startTime;
       } finally {
         tearDown();
       }
@@ -336,7 +350,6 @@ public class HFilePerformanceEvaluation {
 
   static class SequentialWriteBenchmark extends RowOrientedBenchmark {
     protected HFile.Writer writer;
-    private Random random = new Random();
     private byte[] bytes = new byte[ROW_LENGTH];
 
     public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf,
@@ -353,7 +366,7 @@ public class HFilePerformanceEvaluation {
       
       if (cipher == "aes") {
         byte[] cipherKey = new byte[AES.KEY_LENGTH];
-        new SecureRandom().nextBytes(cipherKey);
+        Bytes.secureRandom(cipherKey);
         builder.withEncryptionContext(Encryption.newContext(conf)
             .setCipher(Encryption.getCipher(conf, cipher))
             .setKey(cipherKey));
@@ -366,7 +379,6 @@ public class HFilePerformanceEvaluation {
       writer = HFile.getWriterFactoryNoCache(conf)
           .withPath(fs, mf)
           .withFileContext(hFileContext)
-          .withComparator(CellComparator.getInstance())
           .create();
     }
     
@@ -376,7 +388,7 @@ public class HFilePerformanceEvaluation {
     }
 
     private byte[] generateValue() {
-      random.nextBytes(bytes);
+      Bytes.random(bytes);
       return bytes;
     }
 
@@ -404,7 +416,6 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       reader = HFile.createReader(this.fs, this.mf, new CacheConfig(this.conf), true, this.conf);
-      this.reader.loadFileInfo();
     }
 
     @Override
@@ -425,7 +436,7 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       super.setUp();
-      this.scanner = this.reader.getScanner(false, false);
+      this.scanner = this.reader.getScanner(conf, false, false);
       this.scanner.seekTo();
     }
 
@@ -435,7 +446,7 @@ public class HFilePerformanceEvaluation {
         // TODO: Fix. Make Scanner do Cells.
         Cell c = this.scanner.getCell();
         PerformanceEvaluationCommons.assertKey(format(i + 1), c);
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 
@@ -448,8 +459,6 @@ public class HFilePerformanceEvaluation {
 
   static class UniformRandomReadBenchmark extends ReadBenchmark {
 
-    private Random random = new Random();
-
     public UniformRandomReadBenchmark(Configuration conf, FileSystem fs,
         Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
@@ -457,7 +466,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(false, true);
+      HFileScanner scanner = this.reader.getScanner(conf, false, true);
       byte [] b = getRandomRow();
       if (scanner.seekTo(createCell(b)) < 0) {
         LOG.info("Not able to seekTo " + new String(b));
@@ -466,16 +475,15 @@ public class HFilePerformanceEvaluation {
       // TODO: Fix scanner so it does Cells
       Cell c = scanner.getCell();
       PerformanceEvaluationCommons.assertKey(b, c);
-      PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
     }
 
     private byte [] getRandomRow() {
-      return format(random.nextInt(totalRows));
+      return format(ThreadLocalRandom.current().nextInt(totalRows));
     }
   }
 
   static class UniformRandomSmallScan extends ReadBenchmark {
-    private Random random = new Random();
 
     public UniformRandomSmallScan(Configuration conf, FileSystem fs,
         Path mf, int totalRows) {
@@ -484,7 +492,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(false, false);
+      HFileScanner scanner = this.reader.getScanner(conf, false, false);
       byte [] b = getRandomRow();
       // System.out.println("Random row: " + new String(b));
       Cell c = createCell(b);
@@ -503,12 +511,12 @@ public class HFilePerformanceEvaluation {
           return;
         }
         c = scanner.getCell();
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 
     private byte [] getRandomRow() {
-      return format(random.nextInt(totalRows));
+      return format(ThreadLocalRandom.current().nextInt(totalRows));
     }
   }
 
@@ -523,7 +531,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(false, true);
+      HFileScanner scanner = this.reader.getScanner(conf, false, true);
       byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
       scanner.seekTo(createCell(gaussianRandomRowBytes));
       for (int ii = 0; ii < 30; ii++) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,12 +22,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -44,17 +44,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestConstraint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConstraint.class);
+    HBaseClassTestRule.forClass(TestConstraint.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestConstraint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
@@ -62,28 +61,27 @@ public class TestConstraint {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     util.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     util.startMiniCluster();
   }
 
   /**
    * Test that we run a passing constraint
-   * @throws Exception
    */
-  @SuppressWarnings("unchecked")
   @Test
   public void testConstraintPasses() throws Exception {
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+
     for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
@@ -100,23 +98,20 @@ public class TestConstraint {
 
   /**
    * Test that constraints will fail properly
-   * @throws Exception
    */
-  @SuppressWarnings("unchecked")
   @Test
   public void testConstraintFails() throws Exception {
-
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
 
     // add a constraint that is sure to fail
-    Constraints.add(desc, AllFailConstraint.class);
+    Constraints.add(builder, AllFailConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -135,27 +130,25 @@ public class TestConstraint {
 
   /**
    * Check that if we just disable one constraint, then
-   * @throws Throwable
    */
-  @SuppressWarnings("unchecked")
   @Test
-  public void testDisableConstraint() throws Throwable {
+  public void testDisableConstraint() throws Exception {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint to make sure it others get run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
     // Add Constraint to check
-    Constraints.add(desc, AllFailConstraint.class);
+    Constraints.add(builder, AllFailConstraint.class);
 
     // and then disable the failing constraint
-    Constraints.disableConstraint(desc, AllFailConstraint.class);
+    Constraints.disableConstraint(builder, AllFailConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
@@ -171,24 +164,23 @@ public class TestConstraint {
 
   /**
    * Test that if we disable all constraints, then nothing gets run
-   * @throws Throwable
    */
-  @SuppressWarnings("unchecked")
   @Test
-  public void testDisableConstraints() throws Throwable {
+  public void testDisableConstraints() throws Exception {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint to check to see if is run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
     // then disable all the constraints
-    Constraints.disable(desc);
+    Constraints.disable(builder);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
@@ -205,23 +197,23 @@ public class TestConstraint {
 
   /**
    * Check to make sure a constraint is unloaded when it fails
-   * @throws Exception
    */
   @Test
   public void testIsUnloaded() throws Exception {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // make sure that constraints are unloaded
-    Constraints.add(desc, RuntimeFailConstraint.class);
+    Constraints.add(builder, RuntimeFailConstraint.class);
     // add a constraint to check to see if is run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
     CheckWasRunConstraint.wasRun = false;
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -229,9 +221,9 @@ public class TestConstraint {
     byte[] qualifier = new byte[0];
     put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
-    try{
-    table.put(put);
-    fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
+    try {
+      table.put(put);
+      fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
     } catch (Exception e) {// NOOP
     }
 

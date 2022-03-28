@@ -41,6 +41,12 @@ public interface ExceptionTrackingSource extends BaseSource {
       "rest of the requests will have to be retried.";
   String EXCEPTIONS_CALL_QUEUE_TOO_BIG = "exceptions.callQueueTooBig";
   String EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC = "Call queue is full";
+  String EXCEPTIONS_QUOTA_EXCEEDED = "exceptions.quotaExceeded";
+  String EXCEPTIONS_RPC_THROTTLING = "exceptions.rpcThrottling";
+  String EXCEPTIONS_CALL_DROPPED = "exceptions.callDropped";
+  String EXCEPTIONS_CALL_TIMED_OUT = "exceptions.callTimedOut";
+  String EXCEPTIONS_REQUEST_TOO_BIG = "exceptions.requestTooBig";
+  String OTHER_EXCEPTIONS = "exceptions.otherExceptions";
 
   void exception();
 
@@ -56,4 +62,10 @@ public interface ExceptionTrackingSource extends BaseSource {
   void tooBusyException();
   void multiActionTooLargeException();
   void callQueueTooBigException();
+  void quotaExceededException();
+  void rpcThrottlingException();
+  void callDroppedException();
+  void callTimedOut();
+  void requestTooBigException();
+  void otherExceptions();
 }

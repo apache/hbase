@@ -24,10 +24,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -93,8 +92,7 @@ public class HMobStore extends HStore {
   private AtomicLong mobFlushedCellsSize = new AtomicLong();
   private AtomicLong mobScanCellsCount = new AtomicLong();
   private AtomicLong mobScanCellsSize = new AtomicLong();
-  private ColumnFamilyDescriptor family;
-  private Map<String, List<Path>> map = new ConcurrentHashMap<>();
+  private Map<TableName, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
   // 1. A ref tag with type TagType.MOB_REFERENCE_TAG_TYPE. This just denote this this cell is not
@@ -107,17 +105,16 @@ public class HMobStore extends HStore {
   public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
     super(region, family, confParam, warmup);
-    this.family = family;
     this.mobFileCache = region.getMobFileCache();
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
-        family.getNameAsString());
+        getColumnFamilyName());
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDescriptor().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
-        .getEncodedName(), family.getNameAsString()));
-    map.put(Bytes.toString(tn.getName()), locations);
+        .getEncodedName(), getColumnFamilyName()));
+    map.put(tn, locations);
     List<Tag> tags = new ArrayList<>(2);
     tags.add(MobConstants.MOB_REF_TAG);
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
@@ -160,7 +157,7 @@ public class HMobStore extends HStore {
   protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
       CellComparator cellComparator) throws IOException {
     MobStoreEngine engine = new MobStoreEngine();
-    engine.createComponents(conf, store, cellComparator);
+    engine.createComponentsOnce(conf, store, cellComparator);
     return engine;
   }
 
@@ -193,28 +190,6 @@ public class HMobStore extends HStore {
       isCompaction);
   }
 
-  /**
-   * Creates the writer for the del file in temp directory.
-   * The del file keeps tracking the delete markers. Its name has a suffix _del,
-   * the format is [0-9a-f]+(_del)?.
-   * @param date The latest date of written cells.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
-   * @return The writer for the del file.
-   * @throws IOException
-   */
-  public StoreFileWriter createDelFileWriterInTmp(Date date, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey) throws IOException {
-    if (startKey == null) {
-      startKey = HConstants.EMPTY_START_ROW;
-    }
-    Path path = getTempDir();
-    String suffix = UUID
-        .randomUUID().toString().replaceAll("-", "") + "_del";
-    MobFileName mobFileName = MobFileName.create(startKey, MobUtils.formatDate(date), suffix);
-    return createWriterInTmp(mobFileName, path, maxKeyCount, compression, true);
-  }
 
   /**
    * Creates the writer for the mob file in temp directory.
@@ -231,7 +206,7 @@ public class HMobStore extends HStore {
       Compression.Algorithm compression, byte[] startKey,
       boolean isCompaction) throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID()
-        .toString().replaceAll("-", ""));
+        .toString().replaceAll("-", ""),  getHRegion().getRegionInfo().getEncodedName());
     return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
   }
 
@@ -248,9 +223,11 @@ public class HMobStore extends HStore {
   public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
       long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction) throws IOException {
-    return MobUtils.createWriter(conf, region.getFilesystem(), family,
-      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConf,
-      cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
+    return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
+      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
+      getStoreContext().getEncryptionContext(), StoreUtils.getChecksumType(conf),
+      StoreUtils.getBytesPerChecksum(conf), getStoreContext().getBlockSize(), BloomType.NONE,
+      isCompaction);
   }
 
   /**
@@ -265,13 +242,12 @@ public class HMobStore extends HStore {
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(sourceFile);
-    String msg = "Renaming flushed file from " + sourceFile + " to " + dstPath;
-    LOG.info(msg);
+    LOG.info(" FLUSH Renaming flushed file from {} to {}", sourceFile, dstPath);
     Path parent = dstPath.getParent();
-    if (!region.getFilesystem().exists(parent)) {
-      region.getFilesystem().mkdirs(parent);
+    if (!getFileSystem().exists(parent)) {
+      getFileSystem().mkdirs(parent);
     }
-    if (!region.getFilesystem().rename(sourceFile, dstPath)) {
+    if (!getFileSystem().rename(sourceFile, dstPath)) {
       throw new IOException("Failed rename of " + sourceFile + " to " + dstPath);
     }
   }
@@ -284,7 +260,7 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
-      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.cacheConf,
+      storeFile = new HStoreFile(getFileSystem(), path, conf, getCacheConfig(),
           BloomType.NONE, isPrimaryReplicaStore());
       storeFile.initReader();
     } catch (IOException e) {
@@ -310,6 +286,20 @@ public class HMobStore extends HStore {
   }
 
   /**
+   * Reads the cell from the mob file with readEmptyValueOnMobCellMiss
+   * @param reference The cell found in the HBase, its value is a path to a mob file.
+   * @param cacheBlocks Whether the scanner should cache blocks.
+   * @param readEmptyValueOnMobCellMiss should return empty mob cell if reference
+   *        can not be resolved.
+   * @return The cell found in the mob file.
+   * @throws IOException
+   */
+  public MobCell resolve(Cell reference, boolean cacheBlocks, boolean readEmptyValueOnMobCellMiss)
+      throws IOException {
+    return resolve(reference, cacheBlocks, -1, readEmptyValueOnMobCellMiss);
+  }
+
+  /**
    * Reads the cell from the mob file.
    * @param reference The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
@@ -324,26 +314,9 @@ public class HMobStore extends HStore {
     MobCell mobCell = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
-      Tag tableNameTag = MobUtils.getTableNameTag(reference);
-      if (tableNameTag != null) {
-        String tableNameString = Tag.getValueAsString(tableNameTag);
-        List<Path> locations = map.get(tableNameString);
-        if (locations == null) {
-          IdLock.Entry lockEntry = keyLock.getLockEntry(tableNameString.hashCode());
-          try {
-            locations = map.get(tableNameString);
-            if (locations == null) {
-              locations = new ArrayList<>(2);
-              TableName tn = TableName.valueOf(tableNameString);
-              locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
-              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn,
-                MobUtils.getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
-              map.put(tableNameString, locations);
-            }
-          } finally {
-            keyLock.releaseLockEntry(lockEntry);
-          }
-        }
+      Optional<TableName> tableName = MobUtils.getTableName(reference);
+      if (tableName.isPresent()) {
+        List<Path> locations = getLocations(tableName.get());
         mobCell = readCell(locations, fileName, reference, cacheBlocks, readPt,
           readEmptyValueOnMobCellMiss);
       }
@@ -364,6 +337,32 @@ public class HMobStore extends HStore {
       mobCell = new MobCell(cell);
     }
     return mobCell;
+  }
+
+  /**
+   * @param tableName to look up locations for, can not be null
+   * @return a list of location in order of working dir, archive dir. will not be null.
+   */
+  public List<Path> getLocations(TableName tableName) throws IOException {
+    List<Path> locations = map.get(tableName);
+    if (locations == null) {
+      IdLock.Entry lockEntry = keyLock.getLockEntry(tableName.hashCode());
+      try {
+        locations = map.get(tableName);
+        if (locations == null) {
+          locations = new ArrayList<>(2);
+          locations.add(MobUtils.getMobFamilyPath(conf, tableName, getColumnFamilyDescriptor()
+            .getNameAsString()));
+          locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tableName,
+            MobUtils.getMobRegionInfo(tableName).getEncodedName(), getColumnFamilyDescriptor()
+              .getNameAsString()));
+          map.put(tableName, locations);
+        }
+      } finally {
+        keyLock.releaseLockEntry(lockEntry);
+      }
+    }
+    return locations;
   }
 
   /**
@@ -390,7 +389,7 @@ public class HMobStore extends HStore {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
-        file = mobFileCache.openFile(fs, path, cacheConf);
+        file = mobFileCache.openFile(fs, path, getCacheConfig());
         return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt)
             : file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {
@@ -520,4 +519,6 @@ public class HMobStore extends HStore {
   public byte[] getRefCellTags() {
     return this.refCellTags;
   }
+
+
 }

@@ -19,14 +19,16 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.Descriptors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos;
 
 @Category(SmallTests.class)
 public class TestCoprocessorRpcUtils {
@@ -38,12 +40,12 @@ public class TestCoprocessorRpcUtils {
   @Test
   public void testServiceName() throws Exception {
     // verify that we de-namespace build in HBase rpc services
-    Descriptors.ServiceDescriptor authService =
+    ServiceDescriptor authService =
         AuthenticationProtos.AuthenticationService.getDescriptor();
     assertEquals(authService.getName(), CoprocessorRpcUtils.getServiceName(authService));
 
     // non-hbase rpc services should remain fully qualified
-    Descriptors.ServiceDescriptor dummyService =
+    ServiceDescriptor dummyService =
         DummyRegionServerEndpointProtos.DummyService.getDescriptor();
     assertEquals(dummyService.getFullName(), CoprocessorRpcUtils.getServiceName(dummyService));
   }

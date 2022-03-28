@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,33 +25,37 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseCluster;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A (possibly mischievous) action that the ChaosMonkey can perform.
  */
-public class Action {
+public abstract class Action {
 
   public static final String KILL_MASTER_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.killmastertimeout";
@@ -72,8 +76,6 @@ public class Action {
   public static final String START_NAMENODE_TIMEOUT_KEY =
       "hbase.chaosmonkey.action.startnamenodetimeout";
 
-  protected static final Logger LOG = LoggerFactory.getLogger(Action.class);
-
   protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long KILL_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
@@ -86,9 +88,10 @@ public class Action {
   protected static final long START_NAMENODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
-  protected HBaseCluster cluster;
+  protected HBaseClusterInterface cluster;
   protected ClusterMetrics initialStatus;
   protected ServerName[] initialServers;
+  protected Properties monkeyProps;
 
   protected long killMasterTimeout;
   protected long startMasterTimeout;
@@ -100,33 +103,48 @@ public class Action {
   protected long startDataNodeTimeout;
   protected long killNameNodeTimeout;
   protected long startNameNodeTimeout;
+  protected boolean skipMetaRS;
+
+  /**
+   * Retrieve the instance's {@link Logger}, for use throughout the class hierarchy.
+   */
+  protected abstract Logger getLogger();
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
     cluster = context.getHBaseCluster();
     initialStatus = cluster.getInitialClusterMetrics();
     Collection<ServerName> regionServers = initialStatus.getLiveServerMetrics().keySet();
-    initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
+    initialServers = regionServers.toArray(new ServerName[0]);
 
-    killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
-      KILL_MASTER_TIMEOUT_DEFAULT);
-    startMasterTimeout = cluster.getConf().getLong(START_MASTER_TIMEOUT_KEY,
-      START_MASTER_TIMEOUT_DEFAULT);
-    killRsTimeout = cluster.getConf().getLong(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT);
-    startRsTimeout = cluster.getConf().getLong(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT);
-    killZkNodeTimeout = cluster.getConf().getLong(KILL_ZK_NODE_TIMEOUT_KEY,
-      KILL_ZK_NODE_TIMEOUT_DEFAULT);
-    startZkNodeTimeout = cluster.getConf().getLong(START_ZK_NODE_TIMEOUT_KEY,
-      START_ZK_NODE_TIMEOUT_DEFAULT);
-    killDataNodeTimeout = cluster.getConf().getLong(KILL_DATANODE_TIMEOUT_KEY,
-      KILL_DATANODE_TIMEOUT_DEFAULT);
-    startDataNodeTimeout = cluster.getConf().getLong(START_DATANODE_TIMEOUT_KEY,
-      START_DATANODE_TIMEOUT_DEFAULT);
-    killNameNodeTimeout =
-        cluster.getConf().getLong(KILL_NAMENODE_TIMEOUT_KEY, KILL_NAMENODE_TIMEOUT_DEFAULT);
-    startNameNodeTimeout =
-        cluster.getConf().getLong(START_NAMENODE_TIMEOUT_KEY, START_NAMENODE_TIMEOUT_DEFAULT);
+    monkeyProps = context.getMonkeyProps();
+    if (monkeyProps == null){
+      monkeyProps = new Properties();
+      IntegrationTestBase.loadMonkeyProperties(monkeyProps, cluster.getConf());
+    }
 
+    killMasterTimeout = Long.parseLong(monkeyProps.getProperty(
+      KILL_MASTER_TIMEOUT_KEY, KILL_MASTER_TIMEOUT_DEFAULT + ""));
+    startMasterTimeout = Long.parseLong(monkeyProps.getProperty(START_MASTER_TIMEOUT_KEY,
+      START_MASTER_TIMEOUT_DEFAULT + ""));
+    killRsTimeout = Long.parseLong(monkeyProps.getProperty(KILL_RS_TIMEOUT_KEY,
+      KILL_RS_TIMEOUT_DEFAULT + ""));
+    startRsTimeout = Long.parseLong(monkeyProps.getProperty(START_RS_TIMEOUT_KEY,
+      START_RS_TIMEOUT_DEFAULT+ ""));
+    killZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_ZK_NODE_TIMEOUT_KEY,
+      KILL_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    startZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_ZK_NODE_TIMEOUT_KEY,
+      START_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    killDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_DATANODE_TIMEOUT_KEY,
+      KILL_DATANODE_TIMEOUT_DEFAULT + ""));
+    startDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_DATANODE_TIMEOUT_KEY,
+      START_DATANODE_TIMEOUT_DEFAULT + ""));
+    killNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_NAMENODE_TIMEOUT_KEY,
+      KILL_NAMENODE_TIMEOUT_DEFAULT + ""));
+    startNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_NAMENODE_TIMEOUT_KEY,
+      START_NAMENODE_TIMEOUT_DEFAULT + ""));
+    skipMetaRS = Boolean.parseBoolean(monkeyProps.getProperty(MonkeyConstants.SKIP_META_RS,
+      MonkeyConstants.DEFAULT_SKIP_META_RS + ""));
   }
 
   public void perform() throws Exception { }
@@ -135,93 +153,127 @@ public class Action {
   protected ServerName[] getCurrentServers() throws IOException {
     ClusterMetrics clusterStatus = cluster.getClusterMetrics();
     Collection<ServerName> regionServers = clusterStatus.getLiveServerMetrics().keySet();
-    int count = regionServers == null ? 0 : regionServers.size();
+    int count = regionServers.size();
     if (count <= 0) {
       return new ServerName [] {};
     }
     ServerName master = clusterStatus.getMasterName();
-    Set<ServerName> masters = new HashSet<ServerName>();
+    Set<ServerName> masters = new HashSet<>();
     masters.add(master);
     masters.addAll(clusterStatus.getBackupMasterNames());
     ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
     tmp.removeAll(masters);
-    return tmp.toArray(new ServerName[tmp.size()]);
+
+    if(skipMetaRS){
+      ServerName metaServer = cluster.getServerHoldingMeta();
+      tmp.remove(metaServer);
+    }
+
+    return tmp.toArray(new ServerName[0]);
   }
 
   protected void killMaster(ServerName server) throws IOException {
-    LOG.info("Killing master " + server);
+    getLogger().info("Killing master {}", server);
     cluster.killMaster(server);
     cluster.waitForMasterToStop(server, killMasterTimeout);
-    LOG.info("Killed master " + server);
+    getLogger().info("Killed master " + server);
   }
 
   protected void startMaster(ServerName server) throws IOException {
-    LOG.info("Starting master " + server.getHostname());
+    getLogger().info("Starting master {}", server.getHostname());
     cluster.startMaster(server.getHostname(), server.getPort());
     cluster.waitForActiveAndReadyMaster(startMasterTimeout);
-    LOG.info("Started master " + server.getHostname());
+    getLogger().info("Started master " + server.getHostname());
+  }
+
+  protected void stopRs(ServerName server) throws IOException {
+    getLogger().info("Stopping regionserver {}", server);
+    cluster.stopRegionServer(server);
+    cluster.waitForRegionServerToStop(server, killRsTimeout);
+    getLogger().info("Stopping regionserver {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
+  }
+
+  protected void suspendRs(ServerName server) throws IOException {
+    getLogger().info("Suspending regionserver {}", server);
+    cluster.suspendRegionServer(server);
+    if(!(cluster instanceof SingleProcessHBaseCluster)){
+      cluster.waitForRegionServerToStop(server, killRsTimeout);
+    }
+    getLogger().info("Suspending regionserver {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
+  }
+
+  protected void resumeRs(ServerName server) throws IOException {
+    getLogger().info("Resuming regionserver {}", server);
+    cluster.resumeRegionServer(server);
+    if(!(cluster instanceof SingleProcessHBaseCluster)){
+      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
+    }
+    getLogger().info("Resuming regionserver {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void killRs(ServerName server) throws IOException {
-    LOG.info("Killing regionserver " + server);
+    getLogger().info("Killing regionserver {}", server);
     cluster.killRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info("Killed regionserver " + server + ". Reported num of rs:"
-        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Killed regionserver {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startRs(ServerName server) throws IOException {
-    LOG.info("Starting regionserver " + server.getAddress());
+    getLogger().info("Starting regionserver {}", server.getAddress());
     cluster.startRegionServer(server.getHostname(), server.getPort());
     cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
-    LOG.info("Started regionserver " + server.getAddress() + ". Reported num of rs:"
-      + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Started regionserver {}. Reported num of rs:{}", server.getAddress(),
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void killZKNode(ServerName server) throws IOException {
-    LOG.info("Killing zookeeper node " + server);
+    getLogger().info("Killing zookeeper node {}", server);
     cluster.killZkNode(server);
     cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
-    LOG.info("Killed zookeeper node " + server + ". Reported num of rs:"
-      + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Killed zookeeper node {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startZKNode(ServerName server) throws IOException {
-    LOG.info("Starting zookeeper node " + server.getHostname());
+    getLogger().info("Starting zookeeper node {}", server.getHostname());
     cluster.startZkNode(server.getHostname(), server.getPort());
     cluster.waitForZkNodeToStart(server, startZkNodeTimeout);
-    LOG.info("Started zookeeper node " + server);
+    getLogger().info("Started zookeeper node {}", server);
   }
 
   protected void killDataNode(ServerName server) throws IOException {
-    LOG.info("Killing datanode " + server);
+    getLogger().info("Killing datanode {}", server);
     cluster.killDataNode(server);
     cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
-    LOG.info("Killed datanode " + server + ". Reported num of rs:"
-      + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Killed datanode {}. Reported num of rs:{}", server,
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startDataNode(ServerName server) throws IOException {
-    LOG.info("Starting datanode " + server.getHostname());
+    getLogger().info("Starting datanode {}", server.getHostname());
     cluster.startDataNode(server);
     cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
-    LOG.info("Started datanode " + server);
+    getLogger().info("Started datanode {}", server);
   }
 
   protected void killNameNode(ServerName server) throws IOException {
-    LOG.info("Killing namenode :-" + server.getHostname());
+    getLogger().info("Killing namenode :-{}", server.getHostname());
     cluster.killNameNode(server);
     cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
-    LOG.info("Killed namenode:" + server + ". Reported num of rs:"
-        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Killed namenode:{}. Reported num of rs:{}", server,
+        cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startNameNode(ServerName server) throws IOException {
-    LOG.info("Starting Namenode :-" + server.getHostname());
+    getLogger().info("Starting Namenode :-{}", server.getHostname());
     cluster.startNameNode(server);
     cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
-    LOG.info("Started namenode:" + server);
+    getLogger().info("Started namenode:{}", server);
   }
   protected void unbalanceRegions(ClusterMetrics clusterStatus,
       List<ServerName> fromServers, List<ServerName> toServers,
@@ -234,24 +286,26 @@ public class Action {
       // Ugh.
       List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
-      LOG.debug("Removing " + victimRegionCount + " regions from " + sn);
+      getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
+      Random rand = ThreadLocalRandom.current();
       for (int i = 0; i < victimRegionCount; ++i) {
-        int victimIx = RandomUtils.nextInt(0, regions.size());
-        String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
+        int victimIx = rand.nextInt(regions.size());
+        String regionId = RegionInfo.encodeRegionName(regions.remove(victimIx));
         victimRegions.add(Bytes.toBytes(regionId));
       }
     }
 
-    LOG.info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
-        + " servers to " + toServers.size() + " different servers");
+    getLogger().info("Moving {} regions from {} servers to {} different servers",
+      victimRegions.size(), fromServers.size(), toServers.size());
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
+    Random rand = ThreadLocalRandom.current();
     for (byte[] victimRegion : victimRegions) {
       // Don't keep moving regions if we're
       // trying to stop the monkey.
       if (context.isStopping()) {
         break;
       }
-      int targetIx = RandomUtils.nextInt(0, toServers.size());
+      int targetIx = rand.nextInt(toServers.size());
       admin.move(victimRegion, toServers.get(targetIx));
     }
   }
@@ -262,10 +316,19 @@ public class Action {
     try {
       result = admin.balance();
     } catch (Exception e) {
-      LOG.warn("Got exception while doing balance ", e);
+      getLogger().warn("Got exception while doing balance ", e);
     }
     if (!result) {
-      LOG.error("Balancer didn't succeed");
+      getLogger().error("Balancer didn't succeed");
+    }
+  }
+
+  protected void setBalancer(boolean onOrOff, boolean synchronous) throws Exception {
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
+    try {
+      admin.balancerSwitch(onOrOff, synchronous);
+    } catch (Exception e) {
+      getLogger().warn("Got exception while switching balance ", e);
     }
   }
 
@@ -274,12 +337,15 @@ public class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table. If there are no columns in a table
+   * or if the context is stopping does nothing.
    * @param tableName the table to modify
-   * @param transform the modification to perform. Callers will have the column name as a string and a column family builder available to them
+   * @param transform the modification to perform. Callers will have the
+   *                  column name as a string and a column family builder available to them
    */
-  protected void modifyAllTableColumns(TableName tableName, BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
-    HBaseTestingUtility util = this.context.getHBaseIntegrationTestingUtility();
+  protected void modifyAllTableColumns(TableName tableName,
+    BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
+    HBaseTestingUtil util = this.context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
@@ -304,11 +370,13 @@ public class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table.
+   * If there are no columns in a table or if the context is stopping does nothing.
    * @param tableName the table to modify
    * @param transform the modification to perform on each column family descriptor builder
    */
-  protected void modifyAllTableColumns(TableName tableName, Consumer<ColumnFamilyDescriptorBuilder> transform) throws IOException {
+  protected void modifyAllTableColumns(TableName tableName,
+    Consumer<ColumnFamilyDescriptorBuilder> transform) throws IOException {
     modifyAllTableColumns(tableName, (name, cfd) -> transform.accept(cfd));
   }
 
@@ -317,16 +385,26 @@ public class Action {
    */
   public static class ActionContext {
     private IntegrationTestingUtility util;
+    private Properties monkeyProps = null;
 
     public ActionContext(IntegrationTestingUtility util) {
       this.util = util;
+    }
+
+    public ActionContext(Properties monkeyProps, IntegrationTestingUtility util) {
+      this.util = util;
+      this.monkeyProps = monkeyProps;
+    }
+
+    public Properties getMonkeyProps(){
+      return monkeyProps;
     }
 
     public IntegrationTestingUtility getHBaseIntegrationTestingUtility() {
       return util;
     }
 
-    public HBaseCluster getHBaseCluster() {
+    public HBaseClusterInterface getHBaseCluster() {
       return util.getHBaseClusterInterface();
     }
 

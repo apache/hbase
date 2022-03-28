@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -29,6 +32,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -53,6 +57,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  */
 @InterfaceAudience.Private
 public class MasterAddressTracker extends ZKNodeTracker {
+
+  private volatile List<ServerName> backupMasters = Collections.emptyList();
+
   /**
    * Construct a master address listener with the specified
    * <code>zookeeper</code> reference.
@@ -66,6 +73,26 @@ public class MasterAddressTracker extends ZKNodeTracker {
    */
   public MasterAddressTracker(ZKWatcher watcher, Abortable abortable) {
     super(watcher, watcher.getZNodePaths().masterAddressZNode, abortable);
+  }
+
+  private void loadBackupMasters() {
+    try {
+      backupMasters = Collections.unmodifiableList(getBackupMastersAndRenewWatch(watcher));
+    } catch (InterruptedIOException e) {
+      abortable.abort("Unexpected exception handling nodeChildrenChanged event", e);
+    }
+  }
+
+  @Override
+  protected void postStart() {
+    loadBackupMasters();
+  }
+
+  @Override
+  public void nodeChildrenChanged(String path) {
+    if (path.equals(watcher.getZNodePaths().backupMasterAddressesZNode)) {
+      loadBackupMasters();
+    }
   }
 
   /**
@@ -196,6 +223,43 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
+   * Get backup master info port.
+   * Use this instead of {@link #getBackupMasterInfoPort(ServerName)} if you do not have an
+   * instance of this tracker in your context.
+   *
+   * @param zkw ZKWatcher to use
+   * @param sn  ServerName of the backup master
+   * @return backup master info port in the the master address znode or 0 if no
+   *         znode present.
+   * @throws KeeperException if a ZooKeeper operation fails
+   * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
+   */
+  public static int getBackupMasterInfoPort(ZKWatcher zkw, final ServerName sn)
+    throws KeeperException, IOException {
+    byte[] data;
+    try {
+      data = ZKUtil.getData(zkw,
+        ZNodePaths.joinZNode(zkw.getZNodePaths().backupMasterAddressesZNode, sn.toString()));
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
+    if (data == null) {
+      throw new IOException("Can't get backup master address from ZooKeeper; znode data == null");
+    }
+    try {
+      final ZooKeeperProtos.Master backup = parse(data);
+      if (backup == null) {
+        return 0;
+      }
+      return backup.getInfoPort();
+    } catch (DeserializationException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    }
+  }
+
+  /**
    * Set master address into the <code>master</code> znode or into the backup
    * subdirectory of backup masters; switch off the passed in <code>znode</code>
    * path.
@@ -248,11 +312,12 @@ public class MasterAddressTracker extends ZKNodeTracker {
     }
     int prefixLen = ProtobufUtil.lengthOfPBMagic();
     try {
-      return ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+      return ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
   }
+
   /**
    * delete the master znode if its content is same as the parameter
    * @param zkw must not be null
@@ -277,5 +342,59 @@ public class MasterAddressTracker extends ZKNodeTracker {
     }
 
     return false;
+  }
+
+  public List<ServerName> getBackupMasters() {
+    return backupMasters;
+  }
+
+  /**
+   * Retrieves the list of registered backup masters and renews a watch on the znode for children
+   * updates.
+   * @param zkw Zookeeper watcher to use
+   * @return List of backup masters.
+   * @throws InterruptedIOException if there is any issue fetching the required data from Zookeeper.
+   */
+  public static List<ServerName> getBackupMastersAndRenewWatch(
+      ZKWatcher zkw) throws InterruptedIOException {
+    // Build Set of backup masters from ZK nodes
+    List<String> backupMasterStrings = null;
+    try {
+      backupMasterStrings = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
+          zkw.getZNodePaths().backupMasterAddressesZNode);
+    } catch (KeeperException e) {
+      LOG.warn(zkw.prefix("Unable to list backup servers"), e);
+    }
+
+    List<ServerName> backupMasters = Collections.emptyList();
+    if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
+      backupMasters = new ArrayList<>(backupMasterStrings.size());
+      for (String s: backupMasterStrings) {
+        try {
+          byte [] bytes;
+          try {
+            bytes = ZKUtil.getData(zkw, ZNodePaths.joinZNode(
+                zkw.getZNodePaths().backupMasterAddressesZNode, s));
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException();
+          }
+          if (bytes != null) {
+            ServerName sn;
+            try {
+              sn = ProtobufUtil.parseServerNameFrom(bytes);
+            } catch (DeserializationException e) {
+              LOG.warn("Failed parse, skipping registering backup server", e);
+              continue;
+            }
+            backupMasters.add(sn);
+          }
+        } catch (KeeperException e) {
+          LOG.warn(zkw.prefix("Unable to get information about " +
+              "backup servers"), e);
+        }
+      }
+      backupMasters.sort(Comparator.comparing(ServerName::getServerName));
+    }
+    return backupMasters;
   }
 }

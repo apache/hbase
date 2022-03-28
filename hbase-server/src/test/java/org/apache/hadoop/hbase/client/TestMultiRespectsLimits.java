@@ -21,26 +21,24 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -60,11 +58,12 @@ public class TestMultiRespectsLimits {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiRespectsLimits.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
   private final static byte[] FAMILY = Bytes.toBytes("D");
-  public static final int MAX_SIZE = 500;
+  public static final int MAX_SIZE = 100;
+  private static String LOG_LEVEL;
 
   @Rule
   public TestName name = new TestName();
@@ -72,7 +71,8 @@ public class TestMultiRespectsLimits {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // disable the debug log to avoid flooding the output
-    LogManager.getLogger(AsyncRegionLocatorHelper.class).setLevel(Level.INFO);
+    LOG_LEVEL = Log4jUtils.getEffectiveLevel(AsyncRegionLocatorHelper.class.getName());
+    Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), "INFO");
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       MAX_SIZE);
 
@@ -82,6 +82,9 @@ public class TestMultiRespectsLimits {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    if (LOG_LEVEL != null) {
+      Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), LOG_LEVEL);
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -104,7 +107,7 @@ public class TestMultiRespectsLimits {
     List<Get> gets = new ArrayList<>(MAX_SIZE);
 
     for (int i = 0; i < MAX_SIZE; i++) {
-      gets.add(new Get(HBaseTestingUtility.ROWS[i]));
+      gets.add(new Get(HBaseTestingUtil.ROWS[i]));
     }
 
     RpcServerInterface rpcServer = TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer();
@@ -152,7 +155,7 @@ public class TestMultiRespectsLimits {
     // however the block being reference will be larger than MAX_SIZE.
     // This should cause the regionserver to try and send a result immediately.
     byte[] value = new byte[MAX_SIZE - 100];
-    ThreadLocalRandom.current().nextBytes(value);
+    Bytes.random(value);
 
     for (byte[] col:cols) {
       Put p = new Put(row);

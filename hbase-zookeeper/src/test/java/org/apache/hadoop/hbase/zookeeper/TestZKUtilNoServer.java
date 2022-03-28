@@ -52,7 +52,7 @@ public class TestZKUtilNoServer {
     conf.set(Superusers.SUPERUSER_CONF_KEY, "user1");
     String node = "/hbase/testUnsecure";
     ZKWatcher watcher = new ZKWatcher(conf, node, null, false);
-    List<ACL> aclList = ZKUtil.createACL(watcher, node, false);
+    List<ACL> aclList = watcher.createACL(node, false);
     assertEquals(1, aclList.size());
     assertTrue(aclList.contains(Ids.OPEN_ACL_UNSAFE.iterator().next()));
   }
@@ -63,7 +63,7 @@ public class TestZKUtilNoServer {
     conf.set(Superusers.SUPERUSER_CONF_KEY, "user1");
     String node = "/hbase/testSecuritySingleSuperuser";
     ZKWatcher watcher = new ZKWatcher(conf, node, null, false);
-    List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
+    List<ACL> aclList = watcher.createACL(node, true);
     assertEquals(2, aclList.size()); // 1+1, since ACL will be set for the creator by default
     assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
     assertTrue(aclList.contains(Ids.CREATOR_ALL_ACL.iterator().next()));
@@ -75,7 +75,7 @@ public class TestZKUtilNoServer {
     conf.set(Superusers.SUPERUSER_CONF_KEY, "user1,@group1,user2,@group2,user3");
     String node = "/hbase/testCreateACL";
     ZKWatcher watcher = new ZKWatcher(conf, node, null, false);
-    List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
+    List<ACL> aclList = watcher.createACL(node, true);
     assertEquals(4, aclList.size()); // 3+1, since ACL will be set for the creator by default
     assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group1"))));
     assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group2"))));
@@ -91,7 +91,7 @@ public class TestZKUtilNoServer {
     UserGroupInformation.setLoginUser(UserGroupInformation.createRemoteUser("user4"));
     String node = "/hbase/testCreateACL";
     ZKWatcher watcher = new ZKWatcher(conf, node, null, false);
-    List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
+    List<ACL> aclList = watcher.createACL(node, true);
     assertEquals(3, aclList.size()); // 3, since service user the same as one of superuser
     assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group1"))));
     assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("auth", ""))));

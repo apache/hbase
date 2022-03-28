@@ -21,16 +21,14 @@ import static org.apache.hadoop.hbase.io.ByteBuffAllocator.NONE;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
-
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
-import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import sun.nio.ch.DirectBuffer;
 
 /**
  * An implementation of ByteBuff where a single BB backs the BBI. This just acts as a wrapper over a
@@ -39,8 +37,8 @@ import sun.nio.ch.DirectBuffer;
 @InterfaceAudience.Private
 public class SingleByteBuff extends ByteBuff {
 
-  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  private static final boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   // Underlying BB
   private final ByteBuffer buf;
@@ -64,7 +62,7 @@ public class SingleByteBuff extends ByteBuff {
       this.unsafeOffset = UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset();
       this.unsafeRef = buf.array();
     } else {
-      this.unsafeOffset = ((DirectBuffer) buf).address();
+      this.unsafeOffset = UnsafeAccess.directBufferAddress(buf);
     }
   }
 
@@ -371,7 +369,25 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public int read(ReadableByteChannel channel) throws IOException {
     checkRefCount();
-    return channelRead(channel, buf);
+    return read(channel, buf, 0, CHANNEL_READER);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    return read(channel, buf, offset, FILE_READER);
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while(buf.hasRemaining()) {
+      int len = channel.write(buf, offset);
+      total += len;
+      offset += len;
+    }
+    return total;
   }
 
   @Override

@@ -204,7 +204,7 @@ public class TestProcedureMember {
         new Answer<Void>() {
           @Override
           public Void answer(InvocationOnMock invocation) throws Throwable {
-            throw new IOException("Forced IOException in memeber prepare");
+            throw new IOException("Forced IOException in member prepare");
           }
         }).when(mockMemberComms).sendMemberAcquired(any());
 
@@ -288,7 +288,7 @@ public class TestProcedureMember {
         new Answer<Void>() {
           @Override
           public Void answer(InvocationOnMock invocation) throws Throwable {
-            throw new IOException("Forced IOException in memeber prepare");
+            throw new IOException("Forced IOException in member prepare");
           }
         }).when(spySub).insideBarrier();
 

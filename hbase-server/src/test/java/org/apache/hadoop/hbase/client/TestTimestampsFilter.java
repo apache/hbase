@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
@@ -43,8 +43,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -58,8 +56,7 @@ public class TestTimestampsFilter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTimestampsFilter.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestTimestampsFilter.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -354,9 +351,9 @@ public class TestTimestampsFilter {
     byte startRow[] = Bytes.toBytes("row:" + startRowIdx);
     byte endRow[] = Bytes.toBytes("row:" + endRowIdx + 1); // exclusive
     Filter filter = new TimestampsFilter(versions);
-    Scan scan = new Scan(startRow, endRow);
+    Scan scan = new Scan().withStartRow(startRow).withStopRow(endRow);
     scan.setFilter(filter);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     ResultScanner scanner = ht.getScanner(scan);
     return scanner.next(endRowIdx - startRowIdx + 1);
   }

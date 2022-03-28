@@ -69,8 +69,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
    * phases to complete.
    */
   @Override
-  protected void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions)
-      throws HBaseSnapshotException, IOException {
+  protected void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions) throws IOException {
     Set<String> regionServers = new HashSet<>(regions.size());
     for (Pair<RegionInfo, ServerName> region : regions) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {

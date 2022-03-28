@@ -27,9 +27,10 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -134,11 +135,12 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     @Override
     public void run() {
       try {
+        Random rand = ThreadLocalRandom.current();
         long rowKeyBase;
         StringBuilder buf = new StringBuilder();
         byte[][] columnFamilies = dataGenerator.getColumnFamilies();
         while ((rowKeyBase = getNextKeyToUpdate()) < endKey) {
-          if (RandomUtils.nextInt(0, 100) < updatePercent) {
+          if (rand.nextInt(100) < updatePercent) {
             byte[] rowKey = dataGenerator.getDeterministicUniqueKey(rowKeyBase);
             Increment inc = new Increment(rowKey);
             Append app = new Append(rowKey);
@@ -187,8 +189,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                   if (Bytes.equals(column, INCREMENT) || Bytes.equals(column, MUTATE_INFO)) {
                     continue;
                   }
-                  MutationType mt = MutationType
-                      .valueOf(RandomUtils.nextInt(0, MutationType.values().length));
+                  MutationType mt =
+                    MutationType.values()[rand.nextInt(MutationType.values().length)];
                   long columnHash = Arrays.hashCode(column);
                   long hashCode = cfHash + columnHash;
                   byte[] hashCodeBytes = Bytes.toBytes(hashCode);
@@ -278,7 +280,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
 
     public void mutate(Table table, Mutation m,
         long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       try {
         m = dataGenerator.beforeMutate(keyBase, m);
         if (m instanceof Increment) {
@@ -293,11 +295,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
           throw new IllegalArgumentException(
             "unsupported mutation " + m.getClass().getSimpleName());
         }
-        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+        totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
       } catch (IOException e) {
         if (ignoreNonceConflicts) {
           LOG.info("Detected nonce conflict, ignoring: " + e.getMessage());
-          totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+          totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
           return;
         }
         failedKeySet.add(keyBase);
@@ -309,7 +311,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
           exceptionInfo = StringUtils.stringifyException(e);
         }
         LOG.error("Failed to mutate: " + keyBase + " after " +
-            (System.currentTimeMillis() - start) +
+            (EnvironmentEdgeManager.currentTime() - start) +
           "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
             + exceptionInfo);
       }
@@ -331,7 +333,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
 
   public void mutate(Table table, Mutation m,
       long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       m = dataGenerator.beforeMutate(keyBase, m);
       if (m instanceof Increment) {
@@ -346,7 +348,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         throw new IllegalArgumentException(
           "unsupported mutation " + m.getClass().getSimpleName());
       }
-      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
     } catch (IOException e) {
       failedKeySet.add(keyBase);
       String exceptionInfo;
@@ -360,9 +362,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         pw.flush();
         exceptionInfo = StringUtils.stringifyException(e);
       }
-      LOG.error("Failed to mutate: " + keyBase + " after " + (System.currentTimeMillis() - start) +
-        "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
-          + exceptionInfo);
+      LOG.error("Failed to mutate: " + keyBase + " after " +
+        (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
+          getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
     }
   }
 

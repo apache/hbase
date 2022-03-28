@@ -31,16 +31,15 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -48,13 +47,15 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -69,7 +70,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationWithTags {
 
   @ClassRule
@@ -89,8 +90,8 @@ public class TestReplicationWithTags {
   private static Table htable1;
   private static Table htable2;
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
+  private static HBaseTestingUtil utility1;
+  private static HBaseTestingUtil utility2;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
@@ -115,7 +116,7 @@ public class TestReplicationWithTags {
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         TestCoprocessorForTagsAtSource.class.getName());
 
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     // Have to reget conf1 in case zk cluster location different
@@ -133,7 +134,7 @@ public class TestReplicationWithTags {
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
             TestCoprocessorForTagsAtSink.class.getName());
 
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
 
     LOG.info("Setup second Zk");
@@ -142,22 +143,21 @@ public class TestReplicationWithTags {
 
     connection1 = ConnectionFactory.createConnection(conf1);
     replicationAdmin = connection1.getAdmin();
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(utility2.getClusterKey()).build();
     replicationAdmin.addReplicationPeer("2", rpc);
 
-    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    fam.setMaxVersions(3);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
     try (Connection conn = ConnectionFactory.createConnection(conf1);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     try (Connection conn = ConnectionFactory.createConnection(conf2);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     htable1 = utility1.getConnection().getTable(TABLE_NAME);
     htable2 = utility2.getConnection().getTable(TABLE_NAME);
@@ -193,14 +193,14 @@ public class TestReplicationWithTags {
           Thread.sleep(SLEEP_TIME);
         } else {
           assertArrayEquals(ROW, res.value());
-          assertEquals(1, TestCoprocessorForTagsAtSink.tags.size());
-          Tag tag = TestCoprocessorForTagsAtSink.tags.get(0);
+          assertEquals(1, TestCoprocessorForTagsAtSink.TAGS.size());
+          Tag tag = TestCoprocessorForTagsAtSink.TAGS.get(0);
           assertEquals(TAG_TYPE, tag.getType());
           break;
         }
       }
     } finally {
-      TestCoprocessorForTagsAtSink.tags = null;
+      TestCoprocessorForTagsAtSink.TAGS = null;
     }
   }
 
@@ -243,7 +243,7 @@ public class TestReplicationWithTags {
   }
 
   public static class TestCoprocessorForTagsAtSink implements RegionCoprocessor, RegionObserver {
-    public static List<Tag> tags = null;
+    private static List<Tag> TAGS = null;
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -257,7 +257,7 @@ public class TestReplicationWithTags {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = PrivateCellUtil.getTags(cell);
+          TAGS = PrivateCellUtil.getTags(cell);
         }
       }
     }

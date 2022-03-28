@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.executor;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * @see ExecutorService
  */
 @InterfaceAudience.Private
-public abstract class EventHandler implements Runnable, Comparable<Runnable> {
+public abstract class EventHandler implements Runnable, Comparable<EventHandler> {
   private static final Logger LOG = LoggerFactory.getLogger(EventHandler.class);
 
   // type of event this object represents
@@ -75,7 +75,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Tracer.getCurrentSpan();
+    this.parent = Span.current();
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -100,10 +100,14 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
   @Override
   public void run() {
-    try (TraceScope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder(getClass().getSimpleName())
+      .setParent(Context.current().with(parent)).startSpan();
+    try (Scope scope = span.makeCurrent()) {
       process();
-    } catch(Throwable t) {
+    } catch (Throwable t) {
       handleException(t);
+    } finally {
+      span.end();
     }
   }
 
@@ -152,12 +156,14 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * priority beyond FIFO, they should override {@link #getPriority()}.
    */
   @Override
-  public int compareTo(Runnable o) {
-    EventHandler eh = (EventHandler)o;
-    if(getPriority() != eh.getPriority()) {
-      return (getPriority() < eh.getPriority()) ? -1 : 1;
+  public int compareTo(EventHandler o) {
+    if (o == null) {
+      return 1;
     }
-    return (this.seqid < eh.seqid) ? -1 : 1;
+    if(getPriority() != o.getPriority()) {
+      return (getPriority() < o.getPriority()) ? -1 : 1;
+    }
+    return (this.seqid < o.seqid) ? -1 : 1;
   }
 
   @Override

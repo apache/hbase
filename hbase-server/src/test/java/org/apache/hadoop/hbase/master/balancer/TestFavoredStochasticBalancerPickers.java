@@ -31,10 +31,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -79,13 +78,13 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFavoredStochasticBalancerPickers.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int SLAVES = 6;
   private static final int REGIONS = SLAVES * 3;
   private static Configuration conf;
 
   private Admin admin;
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @Rule
   public TestName name = new TestName();
@@ -99,7 +98,6 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 30000);
     conf.setInt("hbase.master.balancer.stochastic.moveCost", 0);
     conf.setBoolean("hbase.master.balancer.stochastic.execute.maxSteps", true);
-    conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
   }
 
   @Before
@@ -180,13 +178,15 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         serverAssignments.put(sn, getTableRegionsFromServer(tableName, sn));
       }
     }
-    RegionLocationFinder regionFinder = new RegionLocationFinder();
+    RegionHDFSBlockLocationFinder regionFinder = new RegionHDFSBlockLocationFinder();
     regionFinder.setClusterMetrics(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
     regionFinder.setConf(conf);
-    regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
-    Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
+    regionFinder.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
+    BalancerClusterState cluster =
+      new BalancerClusterState(serverAssignments, null, regionFinder, new RackManager(conf));
     LoadOnlyFavoredStochasticBalancer balancer = (LoadOnlyFavoredStochasticBalancer) TEST_UTIL
-        .getMiniHBaseCluster().getMaster().getLoadBalancer();
+      .getMiniHBaseCluster().getMaster().getLoadBalancer().getInternalBalancer();
 
     cluster.sortServersByRegionCount();
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
@@ -196,23 +196,25 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
       LOG.error("Most loaded server: " + mostLoadedServer + " does not match: "
           + cluster.servers[servers[servers.length -1]]);
     }
-    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length -1]]);
-    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker = balancer.new FavoredNodeLoadPicker();
+    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length - 1]]);
+    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker =
+      balancer.new FavoredNodeLoadPicker();
     boolean userRegionPicked = false;
     for (int i = 0; i < 100; i++) {
       if (userRegionPicked) {
         break;
       } else {
-        Cluster.Action action = loadPicker.generate(cluster);
-        if (action.type == Cluster.Action.Type.MOVE_REGION) {
-          Cluster.MoveRegionAction moveRegionAction = (Cluster.MoveRegionAction) action;
-          RegionInfo region = cluster.regions[moveRegionAction.region];
-          assertNotEquals(-1, moveRegionAction.toServer);
-          ServerName destinationServer = cluster.servers[moveRegionAction.toServer];
-          assertEquals(cluster.servers[moveRegionAction.fromServer], mostLoadedServer);
+        BalanceAction action = loadPicker.generate(cluster);
+        if (action.getType() == BalanceAction.Type.MOVE_REGION) {
+          MoveRegionAction moveRegionAction = (MoveRegionAction) action;
+          RegionInfo region = cluster.regions[moveRegionAction.getRegion()];
+          assertNotEquals(-1, moveRegionAction.getToServer());
+          ServerName destinationServer = cluster.servers[moveRegionAction.getToServer()];
+          assertEquals(cluster.servers[moveRegionAction.getFromServer()], mostLoadedServer);
           if (!region.getTable().isSystemTable()) {
             List<ServerName> favNodes = fnm.getFavoredNodes(region);
-            assertTrue(favNodes.contains(ServerName.valueOf(destinationServer.getHostAndPort(), -1)));
+            assertTrue(favNodes.contains(
+              ServerName.valueOf(destinationServer.getAddress(), -1)));
             userRegionPicked = true;
           }
         }

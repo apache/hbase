@@ -116,7 +116,7 @@ public class BackupManifest {
     private long startTs;
     private long completeTs;
     private ArrayList<BackupImage> ancestors;
-    private HashMap<TableName, HashMap<String, Long>> incrTimeRanges;
+    private Map<TableName, Map<String, Long>> incrTimeRanges;
 
     static Builder newBuilder() {
       return new Builder();
@@ -187,11 +187,11 @@ public class BackupManifest {
       return builder.build();
     }
 
-    private static HashMap<TableName, HashMap<String, Long>> loadIncrementalTimestampMap(
+    private static Map<TableName, Map<String, Long>> loadIncrementalTimestampMap(
         BackupProtos.BackupImage proto) {
       List<BackupProtos.TableServerTimestamp> list = proto.getTstMapList();
 
-      HashMap<TableName, HashMap<String, Long>> incrTimeRanges = new HashMap<>();
+      Map<TableName, Map<String, Long>> incrTimeRanges = new HashMap<>();
 
       if (list == null || list.size() == 0) {
         return incrTimeRanges;
@@ -199,7 +199,7 @@ public class BackupManifest {
 
       for (BackupProtos.TableServerTimestamp tst : list) {
         TableName tn = ProtobufUtil.toTableName(tst.getTableName());
-        HashMap<String, Long> map = incrTimeRanges.get(tn);
+        Map<String, Long> map = incrTimeRanges.get(tn);
         if (map == null) {
           map = new HashMap<>();
           incrTimeRanges.put(tn, map);
@@ -217,9 +217,9 @@ public class BackupManifest {
       if (this.incrTimeRanges == null) {
         return;
       }
-      for (Entry<TableName, HashMap<String, Long>> entry : this.incrTimeRanges.entrySet()) {
+      for (Entry<TableName, Map<String, Long>> entry : this.incrTimeRanges.entrySet()) {
         TableName key = entry.getKey();
-        HashMap<String, Long> value = entry.getValue();
+        Map<String, Long> value = entry.getValue();
         BackupProtos.TableServerTimestamp.Builder tstBuilder =
             BackupProtos.TableServerTimestamp.newBuilder();
         tstBuilder.setTableName(ProtobufUtil.toProtoTableName(key));
@@ -359,11 +359,11 @@ public class BackupManifest {
       return hash;
     }
 
-    public HashMap<TableName, HashMap<String, Long>> getIncrTimeRanges() {
+    public Map<TableName, Map<String, Long>> getIncrTimeRanges() {
       return incrTimeRanges;
     }
 
-    private void setIncrTimeRanges(HashMap<TableName, HashMap<String, Long>> incrTimeRanges) {
+    private void setIncrTimeRanges(Map<TableName, Map<String, Long>> incrTimeRanges) {
       this.incrTimeRanges = incrTimeRanges;
     }
   }
@@ -512,11 +512,11 @@ public class BackupManifest {
    * Set the incremental timestamp map directly.
    * @param incrTimestampMap timestamp map
    */
-  public void setIncrTimestampMap(HashMap<TableName, HashMap<String, Long>> incrTimestampMap) {
+  public void setIncrTimestampMap(Map<TableName, Map<String, Long>> incrTimestampMap) {
     this.backupImage.setIncrTimeRanges(incrTimestampMap);
   }
 
-  public Map<TableName, HashMap<String, Long>> getIncrTimestampMap() {
+  public Map<TableName, Map<String, Long>> getIncrTimestampMap() {
     return backupImage.getIncrTimeRanges();
   }
 

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HConstants;
@@ -177,11 +178,11 @@ public interface TableDescriptor {
   TableName getTableName();
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+   * Get the region server group this table belongs to. The regions of this table will be placed
+   * only on the region servers within this group. If not present, will be placed on
+   * {@link org.apache.hadoop.hbase.rsgroup.RSGroupInfo#DEFAULT_GROUP}.
    */
-  @Deprecated
-  String getOwnerString();
+  Optional<String> getRegionServerGroup();
 
   /**
    * Getter for accessing the metadata associated with the key.
@@ -274,7 +275,7 @@ public interface TableDescriptor {
 
   /**
    * Check if normalization enable flag of the table is true. If flag is false
-   * then no region normalizer won't attempt to normalize this table.
+   * then region normalizer won't attempt to normalize this table.
    *
    * @return true if region normalization is enabled for this table
    */

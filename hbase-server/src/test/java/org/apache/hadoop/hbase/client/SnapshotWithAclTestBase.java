@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -47,7 +50,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
   private static byte[] TEST_QUALIFIER = Bytes.toBytes("cq");
   private static byte[] TEST_ROW = Bytes.toBytes(0);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   // user is table owner. will have all permissions on table
   private static User USER_OWNER;
@@ -117,14 +120,17 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "usernone", new String[0]);
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);
   }
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.createTable(TableDescriptorBuilder.newBuilder(TEST_TABLE)
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build(), new byte[][] { Bytes.toBytes("s") });
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitTableEnabled(TEST_TABLE);
 
     grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null,
@@ -197,9 +203,9 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     TableName tableName2 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
     cloneSnapshot(snapshotName1, tableName2, false);
     verifyRows(tableName2);
-    verifyAllowed(new AccessReadAction(tableName2), USER_OWNER);
+    verifyDenied(new AccessReadAction(tableName2), USER_OWNER);
     verifyDenied(new AccessReadAction(tableName2), USER_NONE, USER_RO, USER_RW);
-    verifyAllowed(new AccessWriteAction(tableName2), USER_OWNER);
+    verifyDenied(new AccessWriteAction(tableName2), USER_OWNER);
     verifyDenied(new AccessWriteAction(tableName2), USER_RO, USER_RW, USER_NONE);
 
     // remove read permission for USER_RO.
@@ -227,5 +233,46 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_NONE);
     verifyAllowed(new AccessWriteAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
+  }
+
+
+  final class AccessSnapshotAction implements AccessTestAction {
+    private String snapshotName;
+    private AccessSnapshotAction(String snapshotName) {
+      this.snapshotName = snapshotName;
+    }
+    @Override
+    public Object run() throws Exception {
+      try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = conn.getAdmin()) {
+        admin.snapshot(this.snapshotName, TEST_TABLE);
+      }
+      return null;
+    }
+  }
+
+  @Test
+  public void testDeleteSnapshot() throws Exception {
+    String testSnapshotName = HBaseCommonTestingUtil.getRandomUUID().toString();
+    verifyAllowed(new AccessSnapshotAction(testSnapshotName), USER_OWNER);
+    verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtil.getRandomUUID().toString()),
+      USER_RO, USER_RW, USER_NONE);
+    List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots(
+      Pattern.compile(testSnapshotName));
+    Assert.assertEquals(1, snapshotDescriptions.size());
+    Assert.assertEquals(USER_OWNER.getShortName(), snapshotDescriptions.get(0).getOwner());
+    AccessTestAction deleteSnapshotAction = () -> {
+      try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = conn.getAdmin()) {
+        admin.deleteSnapshot(testSnapshotName);
+      }
+      return null;
+    };
+    verifyDenied(deleteSnapshotAction, USER_RO, USER_RW, USER_NONE);
+    verifyAllowed(deleteSnapshotAction, USER_OWNER);
+
+    List<SnapshotDescription> snapshotsAfterDelete = TEST_UTIL.getAdmin().listSnapshots(
+      Pattern.compile(testSnapshotName));
+    Assert.assertEquals(0, snapshotsAfterDelete.size());
   }
 }

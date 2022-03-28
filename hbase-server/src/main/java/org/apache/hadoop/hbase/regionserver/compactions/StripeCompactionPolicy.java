@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -122,6 +121,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
           allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
       request.setMajorRangeFull();
+      request.getRequest().setAfterSplit(true);
       return request;
     }
 
@@ -129,10 +129,13 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     List<HStoreFile> l0Files = si.getLevel0Files();
 
     // See if we need to make new stripes.
-    boolean shouldCompactL0 = (this.config.getLevel0MinFiles() <= l0Files.size());
+    boolean shouldCompactL0 =
+        this.config.getLevel0MinFiles() <= l0Files.size() || allL0FilesExpired(si);
     if (stripeCount == 0) {
-      if (!shouldCompactL0) return null; // nothing to do.
-      return selectNewStripesCompaction(si);
+      if (!shouldCompactL0) {
+        return null; // nothing to do.
+      }
+      return selectL0OnlyCompaction(si);
     }
 
     boolean canDropDeletesNoL0 = l0Files.isEmpty();
@@ -140,16 +143,20 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       if (!canDropDeletesNoL0) {
         // If we need to compact L0, see if we can add something to it, and drop deletes.
         StripeCompactionRequest result = selectSingleStripeCompaction(
-            si, true, canDropDeletesNoL0, isOffpeak);
-        if (result != null) return result;
+            si, !shouldSelectL0Files(si), canDropDeletesNoL0, isOffpeak);
+        if (result != null) {
+          return result;
+        }
       }
       LOG.debug("Selecting L0 compaction with " + l0Files.size() + " files");
-      return new BoundaryStripeCompactionRequest(l0Files, si.getStripeBoundaries());
+      return selectL0OnlyCompaction(si);
     }
 
     // Try to delete fully expired stripes
     StripeCompactionRequest result = selectExpiredMergeCompaction(si, canDropDeletesNoL0);
-    if (result != null) return result;
+    if (result != null) {
+      return result;
+    }
 
     // Ok, nothing special here, let's see if we need to do a common compaction.
     // This will also split the stripes that are too big if needed.
@@ -161,7 +168,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return filesCompacting.isEmpty()
         && (StoreUtils.hasReferences(si.getStorefiles())
           || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
-          || needsSingleStripeCompaction(si));
+          || needsSingleStripeCompaction(si) || hasExpiredStripes(si) || allL0FilesExpired(si));
   }
 
   @Override
@@ -199,7 +206,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       // If we want to compact L0 to drop deletes, we only want whole-stripe compactions.
       // So, pass includeL0 as 2nd parameter to indicate that.
       List<HStoreFile> selection = selectSimpleCompaction(stripes.get(i),
-          !canDropDeletesWithoutL0 && includeL0, isOffpeak);
+          !canDropDeletesWithoutL0 && includeL0, isOffpeak, false);
       if (selection.isEmpty()) continue;
       long size = 0;
       for (HStoreFile sf : selection) {
@@ -267,21 +274,46 @@ public class StripeCompactionPolicy extends CompactionPolicy {
    * @return The resulting selection.
    */
   private List<HStoreFile> selectSimpleCompaction(
-      List<HStoreFile> sfs, boolean allFilesOnly, boolean isOffpeak) {
+      List<HStoreFile> sfs, boolean allFilesOnly, boolean isOffpeak, boolean forceCompact) {
     int minFilesLocal = Math.max(
         allFilesOnly ? sfs.size() : 0, this.config.getStripeCompactMinFiles());
     int maxFilesLocal = Math.max(this.config.getStripeCompactMaxFiles(), minFilesLocal);
-    return stripePolicy.applyCompactionPolicy(sfs, false, isOffpeak, minFilesLocal, maxFilesLocal);
+    List<HStoreFile> selected = stripePolicy.applyCompactionPolicy(sfs, false,
+        isOffpeak, minFilesLocal, maxFilesLocal);
+    if (forceCompact && (selected == null || selected.isEmpty()) && !sfs.isEmpty()) {
+      return stripePolicy.selectCompactFiles(sfs, maxFilesLocal, isOffpeak);
+    }
+    return selected;
   }
 
-  private StripeCompactionRequest selectNewStripesCompaction(StripeInformationProvider si) {
+  private boolean shouldSelectL0Files(StripeInformationProvider si) {
+    return si.getLevel0Files().size() > this.config.getStripeCompactMaxFiles() ||
+      getTotalFileSize(si.getLevel0Files()) > comConf.getMaxCompactSize();
+  }
+
+  private StripeCompactionRequest selectL0OnlyCompaction(StripeInformationProvider si) {
     List<HStoreFile> l0Files = si.getLevel0Files();
-    Pair<Long, Integer> kvsAndCount = estimateTargetKvs(l0Files, config.getInitialCount());
-    LOG.debug("Creating " + kvsAndCount.getSecond() + " initial stripes with "
-        + kvsAndCount.getFirst() + " kvs each via L0 compaction of " + l0Files.size() + " files");
-    SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
-        si.getLevel0Files(), OPEN_KEY, OPEN_KEY, kvsAndCount.getSecond(), kvsAndCount.getFirst());
-    request.setMajorRangeFull(); // L0 only, can drop deletes.
+    List<HStoreFile> selectedFiles = l0Files;
+    if (shouldSelectL0Files(si)) {
+      selectedFiles = selectSimpleCompaction(l0Files, false, false, true);
+      assert !selectedFiles.isEmpty() : "Selected L0 files should not be empty";
+    }
+    StripeCompactionRequest request;
+    if (si.getStripeCount() == 0) {
+      Pair<Long, Integer> estimate = estimateTargetKvs(selectedFiles, config.getInitialCount());
+      long targetKvs = estimate.getFirst();
+      int targetCount = estimate.getSecond();
+      request =
+        new SplitStripeCompactionRequest(selectedFiles, OPEN_KEY, OPEN_KEY, targetCount, targetKvs);
+      if (selectedFiles.size() == l0Files.size()) {
+        ((SplitStripeCompactionRequest) request).setMajorRangeFull(); // L0 only, can drop deletes.
+      }
+      LOG.debug("Creating {} initial stripes with {} kvs each via L0 compaction of {}/{} files",
+        targetCount, targetKvs, selectedFiles.size(), l0Files.size());
+    } else {
+      request = new BoundaryStripeCompactionRequest(selectedFiles, si.getStripeBoundaries());
+      LOG.debug("Boundary L0 compaction of {}/{} files", selectedFiles.size(), l0Files.size());
+    }
     return request;
   }
 
@@ -335,6 +367,40 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       result.setMajorRangeFull();
     }
     return result;
+  }
+
+  protected boolean hasExpiredStripes(StripeInformationProvider si) {
+    // Find if exists a stripe where all files have expired, if any.
+    ArrayList<ImmutableList<HStoreFile>> stripes = si.getStripes();
+    for (ImmutableList<HStoreFile> stripe : stripes) {
+      if (allFilesExpired(stripe)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected boolean allL0FilesExpired(StripeInformationProvider si) {
+    return allFilesExpired(si.getLevel0Files());
+  }
+
+  private boolean allFilesExpired(final List<HStoreFile> storeFiles) {
+    if (storeFiles == null || storeFiles.isEmpty()) {
+      return false;
+    }
+    long cfTtl = this.storeConfigInfo.getStoreFileTtl();
+    if (cfTtl == Long.MAX_VALUE) {
+      return false; // minversion might be set, cannot delete old files
+    }
+    long timestampCutoff = EnvironmentEdgeManager.currentTime() - cfTtl;
+    for (HStoreFile storeFile : storeFiles) {
+      // Check store file is not empty and has not expired
+      if (storeFile.getReader().getMaxTimestamp() >= timestampCutoff
+        && storeFile.getReader().getEntries() != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static long getTotalKvCount(final Collection<HStoreFile> candidates) {

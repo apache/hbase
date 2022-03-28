@@ -20,18 +20,17 @@ package org.apache.hadoop.hbase.procedure2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -48,7 +47,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
  * we should use lock to obtain the correct order. Ignored.
  */
 @Ignore
-@Category({ MasterTests.class, LargeTests.class })
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureReplayOrder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -62,14 +61,14 @@ public class TestProcedureReplayOrder {
   private TestProcedureEnv procEnv;
   private ProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     htu.getConfiguration().setInt(WALProcedureStore.SYNC_WAIT_MSEC_CONF_KEY, 25);
 
     testDir = htu.getDataTestDir();

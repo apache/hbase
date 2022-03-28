@@ -22,21 +22,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
@@ -44,27 +43,26 @@ class MajorCompactionRequest {
 
   private static final Logger LOG = LoggerFactory.getLogger(MajorCompactionRequest.class);
 
-  protected final Configuration configuration;
+  protected final Connection connection;
   protected final RegionInfo region;
   private Set<String> stores;
 
-  MajorCompactionRequest(Configuration configuration, RegionInfo region) {
-    this.configuration = configuration;
+  MajorCompactionRequest(Connection connection, RegionInfo region) {
+    this.connection = connection;
     this.region = region;
   }
 
-  @VisibleForTesting
-  MajorCompactionRequest(Configuration configuration, RegionInfo region,
+  MajorCompactionRequest(Connection connection, RegionInfo region,
       Set<String> stores) {
-    this(configuration, region);
+    this(connection, region);
     this.stores = stores;
   }
 
-  static Optional<MajorCompactionRequest> newRequest(Configuration configuration, RegionInfo info,
+  static Optional<MajorCompactionRequest> newRequest(Connection connection, RegionInfo info,
       Set<String> stores, long timestamp) throws IOException {
     MajorCompactionRequest request =
-        new MajorCompactionRequest(configuration, info, stores);
-    return request.createRequest(configuration, stores, timestamp);
+        new MajorCompactionRequest(connection, info, stores);
+    return request.createRequest(connection, stores, timestamp);
   }
 
   RegionInfo getRegion() {
@@ -79,34 +77,30 @@ class MajorCompactionRequest {
     this.stores = stores;
   }
 
-  @VisibleForTesting
-  Optional<MajorCompactionRequest> createRequest(Configuration configuration,
+  Optional<MajorCompactionRequest> createRequest(Connection connection,
       Set<String> stores, long timestamp) throws IOException {
     Set<String> familiesToCompact = getStoresRequiringCompaction(stores, timestamp);
     MajorCompactionRequest request = null;
     if (!familiesToCompact.isEmpty()) {
-      request = new MajorCompactionRequest(configuration, region, familiesToCompact);
+      request = new MajorCompactionRequest(connection, region, familiesToCompact);
     }
     return Optional.ofNullable(request);
   }
 
   Set<String> getStoresRequiringCompaction(Set<String> requestedStores, long timestamp)
       throws IOException {
-    try(Connection connection = getConnection(configuration)) {
-      HRegionFileSystem fileSystem = getFileSystem(connection);
-      Set<String> familiesToCompact = Sets.newHashSet();
-      for (String family : requestedStores) {
-        if (shouldCFBeCompacted(fileSystem, family, timestamp)) {
-          familiesToCompact.add(family);
-        }
+    HRegionFileSystem fileSystem = getFileSystem();
+    Set<String> familiesToCompact = Sets.newHashSet();
+    for (String family : requestedStores) {
+      if (shouldCFBeCompacted(fileSystem, family, timestamp)) {
+        familiesToCompact.add(family);
       }
-      return familiesToCompact;
     }
+    return familiesToCompact;
   }
 
   boolean shouldCFBeCompacted(HRegionFileSystem fileSystem, String family, long ts)
       throws IOException {
-
     // do we have any store files?
     Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
     if (storeFiles == null) {
@@ -143,11 +137,6 @@ class MajorCompactionRequest {
     return false;
   }
 
-  @VisibleForTesting
-  Connection getConnection(Configuration configuration) throws IOException {
-    return ConnectionFactory.createConnection(configuration);
-  }
-
   protected boolean familyHasReferenceFile(HRegionFileSystem fileSystem, String family, long ts)
       throws IOException {
     List<Path> referenceFiles =
@@ -164,19 +153,18 @@ class MajorCompactionRequest {
 
   }
 
-  @VisibleForTesting
   List<Path> getReferenceFilePaths(FileSystem fileSystem, Path familyDir)
       throws IOException {
     return FSUtils.getReferenceFilePaths(fileSystem, familyDir);
   }
 
-  @VisibleForTesting
-  HRegionFileSystem getFileSystem(Connection connection) throws IOException {
-    Admin admin = connection.getAdmin();
-    return HRegionFileSystem.openRegionFromFileSystem(admin.getConfiguration(),
-        FSUtils.getCurrentFileSystem(admin.getConfiguration()),
-        FSUtils.getTableDir(FSUtils.getRootDir(admin.getConfiguration()), region.getTable()),
-        region, true);
+  HRegionFileSystem getFileSystem() throws IOException {
+    try (Admin admin = connection.getAdmin()) {
+      return HRegionFileSystem.openRegionFromFileSystem(admin.getConfiguration(),
+        CommonFSUtils.getCurrentFileSystem(admin.getConfiguration()),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(admin.getConfiguration()),
+          region.getTable()), region, true);
+    }
   }
 
   @Override

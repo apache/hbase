@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -28,7 +29,8 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 @InterfaceAudience.Private
 public class MetricsSink {
 
-  private long lastTimestampForAge = System.currentTimeMillis();
+  private long lastTimestampForAge = EnvironmentEdgeManager.currentTime();
+  private long startTimestamp = EnvironmentEdgeManager.currentTime();
   private final MetricsReplicationSinkSource mss;
 
   public MetricsSink() {
@@ -46,7 +48,7 @@ public class MetricsSink {
     long age = 0;
     if (lastTimestampForAge != timestamp) {
       lastTimestampForAge = timestamp;
-      age = System.currentTimeMillis() - lastTimestampForAge;
+      age = EnvironmentEdgeManager.currentTime() - lastTimestampForAge;
     }
     mss.setLastAppliedOpAge(age);
     return age;
@@ -91,18 +93,6 @@ public class MetricsSink {
   }
 
   /**
-   * Get the TimeStampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
-   * at which hbase instance starts
-   * @return timeStampsOfLastAppliedOp;
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
-   * @see #getTimestampOfLastAppliedOp()
-   */
-  @Deprecated
-  public long getTimeStampOfLastAppliedOp() {
-    return getTimestampOfLastAppliedOp();
-  }
-
-  /**
    * Get the TimestampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
    * at which hbase instance starts
    * @return timeStampsOfLastAppliedOp;
@@ -110,4 +100,21 @@ public class MetricsSink {
   public long getTimestampOfLastAppliedOp() {
     return this.lastTimestampForAge;
   }
+
+  /**
+   * Gets the time stamp from when the Sink was initialized.
+   * @return startTimestamp
+   */
+  public long getStartTimestamp() {
+    return this.startTimestamp;
+  }
+
+  /**
+   * Gets the total number of OPs delivered to this sink.
+   * @return totalAplliedOps
+   */
+  public long getAppliedOps() {
+    return this.mss.getSinkAppliedOps();
+  }
+
 }

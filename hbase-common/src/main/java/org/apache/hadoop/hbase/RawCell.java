@@ -18,13 +18,18 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An extended version of cell that gives more power to CPs
+ * An extended version of Cell that allows CPs manipulate Tags.
  */
+// Added by HBASE-19092 to expose Tags to CPs (history server) w/o exposing ExtendedCell.
+// Why is this in hbase-common and not in hbase-server where it is used?
+// RawCell is an odd name for a class that is only for CPs that want to manipulate Tags on
+// server-side only w/o exposing ExtendedCell -- super rare, super exotic.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface RawCell extends Cell {
   static final int MAX_TAGS_LENGTH = (2 * Short.MAX_VALUE) + 1;
@@ -63,5 +68,12 @@ public interface RawCell extends Cell {
     if (tagsLength > MAX_TAGS_LENGTH) {
       throw new IllegalArgumentException("tagslength " + tagsLength + " > " + MAX_TAGS_LENGTH);
     }
+  }
+
+  /**
+   * @return A new cell which is having the extra tags also added to it.
+   */
+  public static Cell createCell(Cell cell, List<Tag> tags) {
+    return PrivateCellUtil.createCell(cell, tags);
   }
 }

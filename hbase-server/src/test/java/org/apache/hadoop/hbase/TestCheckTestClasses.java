@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
-
 import java.util.List;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -29,7 +28,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Checks tests are categorized.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestCheckTestClasses {
 
   @ClassRule

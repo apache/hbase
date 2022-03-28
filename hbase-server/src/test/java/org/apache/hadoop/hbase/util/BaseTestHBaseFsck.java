@@ -38,14 +38,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -82,7 +84,7 @@ import org.slf4j.LoggerFactory;
 public class BaseTestHBaseFsck {
   static final int POOL_SIZE = 7;
   protected static final Logger LOG = LoggerFactory.getLogger(BaseTestHBaseFsck.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final static Configuration conf = TEST_UTIL.getConfiguration();
   protected final static String FAM_STR = "fam";
   protected final static byte[] FAM = Bytes.toBytes(FAM_STR);
@@ -107,9 +109,10 @@ public class BaseTestHBaseFsck {
    * Debugging method to dump the contents of meta.
    */
   protected void dumpMeta(TableName tableName) throws IOException {
-    List<byte[]> metaRows = TEST_UTIL.getMetaTableRows(tableName);
-    for (byte[] row : metaRows) {
-      LOG.info(Bytes.toString(row));
+    List<RegionInfo> regions =
+      MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+    for (RegionInfo region : regions) {
+      LOG.info(region.getRegionNameAsString());
     }
   }
 
@@ -135,7 +138,7 @@ public class BaseTestHBaseFsck {
    * @param metaRow  if true remove region's row from META
    * @param hdfs if true remove region's dir in HDFS
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs) throws IOException, InterruptedException {
     deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false,
@@ -150,7 +153,7 @@ public class BaseTestHBaseFsck {
    * @param regionInfoOnly if true remove a region dir's .regioninfo file
    * @param replicaId replica id
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs, boolean regionInfoOnly, int replicaId)
           throws IOException, InterruptedException {
@@ -179,9 +182,9 @@ public class BaseTestHBaseFsck {
 
         if (regionInfoOnly) {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
@@ -189,9 +192,9 @@ public class BaseTestHBaseFsck {
 
         if (hdfs) {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
@@ -209,7 +212,6 @@ public class BaseTestHBaseFsck {
       LOG.info(hri.toString() + hsa.toString());
     }
 
-    TEST_UTIL.getMetaTableRows(htd.getTableName());
     LOG.info("*** After delete:");
     dumpMeta(htd.getTableName());
   }
@@ -235,11 +237,14 @@ public class BaseTestHBaseFsck {
    * @throws Exception
    */
   void setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tablename);
-    desc.setRegionReplication(replicaCount);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    createTable(TEST_UTIL, desc, SPLITS);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tablename);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAM).build();
+    tableDescriptorBuilder.setRegionReplication(replicaCount);
+    // If a table has no CF's it doesn't get checked
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    createTable(TEST_UTIL, tableDescriptorBuilder.build(), SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<>(ROWKEYS.length);
@@ -258,12 +263,16 @@ public class BaseTestHBaseFsck {
    * @throws Exception
    */
   void setupMobTable(TableName tablename) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tablename);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(0);
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    createTable(TEST_UTIL, desc, SPLITS);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tablename);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(FAM)
+        .setMobEnabled(true)
+        .setMobThreshold(0).build();
+    // If a table has no CF's it doesn't get checked
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    createTable(TEST_UTIL, tableDescriptorBuilder.build(), SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<>(ROWKEYS.length);
@@ -286,7 +295,7 @@ public class BaseTestHBaseFsck {
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows(byte[] start, byte[] end) throws IOException {
-    return TEST_UTIL.countRows(tbl, new Scan(start, end));
+    return TEST_UTIL.countRows(tbl, new Scan().withStartRow(start).withStopRow(end));
   }
 
   /**
@@ -333,9 +342,9 @@ public class BaseTestHBaseFsck {
   }
 
   public void deleteTableDir(TableName table) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
-    Path p = FSUtils.getTableDir(rootDir, table);
+    Path p = CommonFSUtils.getTableDir(rootDir, table);
     HBaseFsck.debugLsr(conf, p);
     boolean success = fs.delete(p, true);
     LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -350,7 +359,7 @@ public class BaseTestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+    Path tableDir= CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
     Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
     Path famDir = new Path(regionDir, FAM_STR);
 
@@ -402,7 +411,7 @@ public class BaseTestHBaseFsck {
     String startKey = mobFileName.getStartKey();
     String date = mobFileName.getDate();
     return MobFileName.create(startKey, date,
-                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""))
+                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""), "abcdef")
       .getFileName();
   }
 
@@ -543,7 +552,7 @@ public class BaseTestHBaseFsck {
 
     if (regionInfoOnly) {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
@@ -553,7 +562,7 @@ public class BaseTestHBaseFsck {
 
     if (hdfs) {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
@@ -600,24 +609,24 @@ public class BaseTestHBaseFsck {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
-    byte [][] splitKeys) throws Exception {
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor tableDescriptor,
+      byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
     MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
         .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
     coproc.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
-      admin.createTable(htd, splitKeys);
+      admin.createTable(tableDescriptor, splitKeys);
     } else {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
     coproc.tableCreationLatch.await();
     coproc.tableCreationLatch = null;
-    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+    testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
-  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
     throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.

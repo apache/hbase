@@ -20,11 +20,8 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -32,7 +29,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -41,19 +37,24 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
@@ -97,7 +98,8 @@ public class DeleteTableProcedure
 
           // TODO: Move out... in the acquireLock()
           LOG.debug("Waiting for RIT for {}", this);
-          regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
+          regions = env.getAssignmentManager().getRegionStates()
+            .getRegionsOfTableForDeleting(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
@@ -274,102 +276,87 @@ public class DeleteTableProcedure
       final boolean archive) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
-    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
 
     if (fs.exists(tableDir)) {
-      // Ensure temp exists
-      if (!fs.exists(tempdir) && !fs.mkdirs(tempdir)) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      // Ensure parent exists
-      if (!fs.exists(tempTableDir.getParent()) && !fs.mkdirs(tempTableDir.getParent())) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      if (fs.exists(tempTableDir)) {
-        // TODO
-        // what's in this dir? something old? probably something manual from the user...
-        // let's get rid of this stuff...
-        FileStatus[] files = fs.listStatus(tempTableDir);
-        if (files != null && files.length > 0) {
-          List<Path> regionDirList = Arrays.stream(files)
-            .filter(FileStatus::isDirectory)
-            .map(FileStatus::getPath)
-            .collect(Collectors.toList());
-          HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(),
-            tempTableDir, regionDirList);
+      // Archive regions from FS (temp directory)
+      if (archive) {
+        List<Path> regionDirList = new ArrayList<>();
+        for (RegionInfo region : regions) {
+          if (RegionReplicaUtil.isDefaultReplica(region)) {
+            regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, region));
+            List<RegionInfo> mergeRegions =
+                env.getAssignmentManager().getRegionStateStore().getMergeRegions(region);
+            if (!CollectionUtils.isEmpty(mergeRegions)) {
+              mergeRegions.stream().forEach(
+                r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
+            }
+          }
         }
-        fs.delete(tempTableDir, true);
+        HFileArchiver
+          .archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
+            regionDirList);
+        if (!regionDirList.isEmpty()) {
+          LOG.debug("Archived {} regions", tableName);
+        }
       }
 
-      // Move the table in /hbase/.tmp
-      if (!fs.rename(tableDir, tempTableDir)) {
-        throw new IOException("Unable to move '" + tableDir + "' to temp '" + tempTableDir + "'");
+      // Archive mob data
+      Path mobTableDir =
+        CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
+      Path regionDir = new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
+      if (fs.exists(regionDir)) {
+        HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
       }
-    }
 
-    // Archive regions from FS (temp directory)
-    if (archive) {
-      List<Path> regionDirList = regions.stream().filter(RegionReplicaUtil::isDefaultReplica)
-        .map(region -> FSUtils.getRegionDirFromTableDir(tempTableDir, region))
-        .collect(Collectors.toList());
-      HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tempTableDir,
-        regionDirList);
-      LOG.debug("Table '{}' archived!", tableName);
-    }
-
-    // Archive mob data
-    Path mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
-            tableName);
-    Path regionDir =
-            new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
-    if (fs.exists(regionDir)) {
-      HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
-    }
-
-    // Delete table directory from FS (temp directory)
-    if (!fs.delete(tempTableDir, true) && fs.exists(tempTableDir)) {
-      throw new IOException("Couldn't delete " + tempTableDir);
-    }
-
-    // Delete the table directory where the mob files are saved
-    if (mobTableDir != null && fs.exists(mobTableDir)) {
-      if (!fs.delete(mobTableDir, true)) {
-        throw new IOException("Couldn't delete mob dir " + mobTableDir);
+      // Delete table directory from FS
+      if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
+        throw new IOException("Couldn't delete " + tableDir);
       }
-    }
 
-    // Delete the directory on wal filesystem
-    FileSystem walFs = mfs.getWALFileSystem();
-    Path tableWALDir = FSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
-    if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
-      throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
+      // Delete the table directory where the mob files are saved
+      if (mobTableDir != null && fs.exists(mobTableDir)) {
+        if (!fs.delete(mobTableDir, true)) {
+          throw new IOException("Couldn't delete mob dir " + mobTableDir);
+        }
+      }
+
+      // Delete the directory on wal filesystem
+      FileSystem walFs = mfs.getWALFileSystem();
+      Path tableWALDir = CommonFSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
+      if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
+        throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
+      }
     }
   }
 
   /**
    * There may be items for this table still up in hbase:meta in the case where the info:regioninfo
    * column was empty because of some write error. Remove ALL rows from hbase:meta that have to do
-   * with this table. See HBASE-12980.
+   * with this table.
+   * <p/>
+   * See HBASE-12980.
    */
   private static void cleanRegionsInMeta(final MasterProcedureEnv env, final TableName tableName)
-      throws IOException {
-    Connection connection = env.getMasterServices().getConnection();
-    Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
-    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-      List<Delete> deletes = new ArrayList<>();
-      try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
-        for (Result result : resScanner) {
-          deletes.add(new Delete(result.getRow()));
+    throws IOException {
+    Scan tableScan = MetaTableAccessor.getScanForTableName(env.getMasterConfiguration(), tableName)
+      .setFilter(new KeyOnlyFilter());
+    long now = EnvironmentEdgeManager.currentTime();
+    List<Delete> deletes = new ArrayList<>();
+    try (
+      Table metaTable = env.getMasterServices().getConnection().getTable(TableName.META_TABLE_NAME);
+      ResultScanner scanner = metaTable.getScanner(tableScan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
         }
+        deletes.add(new Delete(result.getRow(), now));
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
-            + TableName.META_TABLE_NAME);
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from " +
+          TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }

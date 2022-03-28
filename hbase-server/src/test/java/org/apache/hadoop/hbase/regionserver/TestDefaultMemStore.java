@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
@@ -36,12 +38,13 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -99,7 +102,8 @@ public class TestDefaultMemStore {
     internalSetUp();
     // no pool
     this.chunkCreator =
-        ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+        0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     this.memstore = new DefaultMemStore();
   }
 
@@ -207,7 +211,7 @@ public class TestDefaultMemStore {
     }
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Assert that new values are seen in kvset as we scan.
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     count = 0;
     int snapshotIndex = 5;
     try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
@@ -252,11 +256,16 @@ public class TestDefaultMemStore {
     // use case 1: both kvs in kvset
     this.memstore.add(kv1.clone(), null);
     this.memstore.add(kv2.clone(), null);
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // snapshot is empty,active segment is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
+    // active segment is empty,snapshot is not empty,
+    // empty segment is skipped.
     this.memstore.snapshot();
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    //
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new DefaultMemStore();
@@ -283,6 +292,18 @@ public class TestDefaultMemStore {
         || kv2.equals(scanner1.next()));
     assertNull(scanner0.next());
     assertNull(scanner1.next());
+  }
+
+  protected void verifyOneScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2) throws IOException {
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
+    assertEquals(1, memstorescanners.size());
+    final KeyValueScanner scanner0 = memstorescanners.get(0);
+    scanner0.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    Cell n0 = scanner0.next();
+    Cell n1 = scanner0.next();
+    assertTrue(kv1.equals(n0));
+    assertTrue(kv2.equals(n1));
+    assertNull(scanner0.next());
   }
 
   protected void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
@@ -573,15 +594,15 @@ public class TestDefaultMemStore {
     addRows(this.memstore);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+        EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
         assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -916,7 +937,7 @@ public class TestDefaultMemStore {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
-      HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+      HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
       String cf = "foo";
       HRegion region =
           hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
@@ -942,14 +963,16 @@ public class TestDefaultMemStore {
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
     Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, "1234");
+    TableDescriptors tds = new FSTableDescriptors(conf);
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
-        conf, FSTableDescriptors.createMetaTableDescriptor(conf),
+        conf, tds.get(TableName.META_TABLE_NAME),
         wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // parameterized tests add [#] suffix get rid of [ and ].
     TableDescriptor desc = TableDescriptorBuilder
@@ -967,28 +990,23 @@ public class TestDefaultMemStore {
   }
 
   /**
-   * Inserts a new region's meta information into the passed
-   * <code>meta</code> region. Used by the HMaster bootstrap code adding
-   * new table to hbase:meta table.
-   *
+   * Inserts a new region's meta information into the passed <code>meta</code> region.
    * @param meta hbase:meta HRegion to be updated
    * @param r HRegion to add to <code>meta</code>
-   *
-   * @throws IOException
    */
-  public static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
-    meta.checkResources();
+  private static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
     // The row key is the region name
     byte[] row = r.getRegionInfo().getRegionName();
     final long now = EnvironmentEdgeManager.currentTime();
     final List<Cell> cells = new ArrayList<>(2);
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.REGIONINFO_QUALIFIER, now, RegionInfo.toByteArray(r.getRegionInfo())));
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, now,
+      RegionInfo.toByteArray(r.getRegionInfo())));
     // Set into the root table the version of the meta table.
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.META_VERSION_QUALIFIER, now,
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER, now,
       Bytes.toBytes(HConstants.META_VERSION)));
-    meta.put(row, HConstants.CATALOG_FAMILY, cells);
+    NavigableMap<byte[], List<Cell>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    familyMap.put(HConstants.CATALOG_FAMILY, cells);
+    meta.put(new Put(row, HConstants.LATEST_TIMESTAMP, familyMap));
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
@@ -1021,7 +1039,7 @@ public class TestDefaultMemStore {
   protected int addRows(final MemStore hmc, final long ts) {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = ts == HConstants.LATEST_TIMESTAMP ?
-        System.currentTimeMillis() : ts;
+        EnvironmentEdgeManager.currentTime() : ts;
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);

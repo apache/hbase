@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -37,6 +36,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +57,7 @@ public class TestMutateRowsRecovery {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMutateRowsRecovery.class);
 
-  private MiniHBaseCluster cluster = null;
+  private SingleProcessHBaseCluster cluster = null;
   private Connection connection = null;
   private static final int NB_SERVERS = 3;
 
@@ -67,7 +68,7 @@ public class TestMutateRowsRecovery {
   static final byte[] row1 = Bytes.toBytes("rowA");
   static final byte[] row2 = Bytes.toBytes("rowB");
 
-  static final HBaseTestingUtility TESTING_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TESTING_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void before() throws Exception {
@@ -101,9 +102,9 @@ public class TestMutateRowsRecovery {
     try {
       admin = connection.getAdmin();
       hTable = connection.getTable(tableName);
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      desc.addFamily(new HColumnDescriptor(fam1));
-      admin.createTable(desc);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
+      admin.createTable(tableDescriptor);
 
       // Add a multi
       RowMutations rm = new RowMutations(row1);
@@ -124,7 +125,7 @@ public class TestMutateRowsRecovery {
       // Send the RS Load to ensure correct lastflushedseqid for stores
       rs1.tryRegionServerReport(now - 30000, now);
       // Kill the RS to trigger wal replay
-      cluster.killRegionServer(rs1.serverName);
+      cluster.killRegionServer(rs1.getServerName());
 
       // Ensure correct data exists
       Get g1 = new Get(row1);

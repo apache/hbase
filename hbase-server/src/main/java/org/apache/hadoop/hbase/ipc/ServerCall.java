@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -26,12 +29,17 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -42,9 +50,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -91,11 +96,15 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
 
-  // This is a dirty hack to address HBASE-22539. The lowest bit is for normal rpc cleanup, and the
-  // second bit is for WAL reference. We can only call release if both of them are zero. The reason
-  // why we can not use a general reference counting is that, we may call cleanup multiple times in
-  // the current implementation. We should fix this in the future.
-  private final AtomicInteger reference = new AtomicInteger(0b01);
+  // This is a dirty hack to address HBASE-22539. The highest bit is for rpc ref and cleanup, and
+  // the rest of the bits are for WAL reference count. We can only call release if all of them are
+  // zero. The reason why we can not use a general reference counting is that, we may call cleanup
+  // multiple times in the current implementation. We should fix this in the future.
+  // The refCount here will start as 0x80000000 and increment with every WAL reference and decrement
+  // from WAL side on release
+  private final AtomicInteger reference = new AtomicInteger(0x80000000);
+
+  private final Span span;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
@@ -127,6 +136,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     this.bbAllocator = byteBuffAllocator;
     this.cellBlockBuilder = cellBlockBuilder;
     this.reqCleanup = reqCleanup;
+    this.span = Span.current();
   }
 
   /**
@@ -145,15 +155,17 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     // If the call was run successfuly, we might have already returned the BB
     // back to pool. No worries..Then inputCellBlock will be null
     cleanup();
+    span.end();
   }
 
-  private void release(int mask) {
+  @Override
+  public void cleanup() {
     for (;;) {
       int ref = reference.get();
-      if ((ref & mask) == 0) {
+      if ((ref & 0x80000000) == 0) {
         return;
       }
-      int nextRef = ref & (~mask);
+      int nextRef = ref & 0x7fffffff;
       if (reference.compareAndSet(ref, nextRef)) {
         if (nextRef == 0) {
           if (this.reqCleanup != null) {
@@ -165,23 +177,20 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     }
   }
 
-  @Override
-  public void cleanup() {
-    release(0b01);
-  }
-
   public void retainByWAL() {
-    for (;;) {
-      int ref = reference.get();
-      int nextRef = ref | 0b10;
-      if (reference.compareAndSet(ref, nextRef)) {
-        return;
-      }
-    }
+    reference.incrementAndGet();
   }
 
   public void releaseByWAL() {
-    release(0b10);
+    // Here this method of decrementAndGet for releasing WAL reference count will work in both
+    // cases - i.e. highest bit (cleanup) 1 or 0. We will be decrementing a negative or positive
+    // value respectively in these 2 cases, but the logic will work the same way
+    if (reference.decrementAndGet() == 0) {
+      if (this.reqCleanup != null) {
+        this.reqCleanup.run();
+      }
+    }
+
   }
 
   @Override
@@ -212,15 +221,21 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     return "callId: " + this.id + " service: " + serviceName +
         " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
         " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-        " connection: " + connection.toString() +
-        " deadline: " + deadline;
+        " connection: " + connection + " deadline: " + deadline;
   }
 
   @Override
-  public synchronized void setResponse(Message m, final CellScanner cells,
-      Throwable t, String errorMsg) {
-    if (this.isError) return;
-    if (t != null) this.isError = true;
+  public synchronized void setResponse(Message m, final CellScanner cells, Throwable t,
+    String errorMsg) {
+    if (this.isError) {
+      return;
+    }
+    if (t != null) {
+      this.isError = true;
+      TraceUtil.setError(span, t);
+    } else {
+      span.setStatus(StatusCode.OK);
+    }
     BufferChain bc = null;
     try {
       ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
@@ -275,9 +290,6 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
         }
       }
       bc = new BufferChain(responseBufs);
-      if (connection.useWrap) {
-        bc = wrapWithSasl(bc);
-      }
     } catch (IOException e) {
       RpcServer.LOG.warn("Exception while creating response " + e);
     }
@@ -285,11 +297,12 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     // Once a response message is created and set to this.response, this Call can be treated as
     // done. The Responder thread will do the n/w write of this message back to client.
     if (this.rpcCallback != null) {
-      try {
+      try (Scope ignored = span.makeCurrent()) {
         this.rpcCallback.run();
       } catch (Exception e) {
         // Don't allow any exception here to kill this handler thread.
         RpcServer.LOG.warn("Exception while running the Rpc Callback.", e);
+        TraceUtil.setError(span, e);
       }
     }
   }
@@ -385,9 +398,10 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     return pbBuf;
   }
 
-  protected BufferChain wrapWithSasl(BufferChain bc)
-      throws IOException {
-    if (!this.connection.useSasl) return bc;
+  protected BufferChain wrapWithSasl(BufferChain bc) throws IOException {
+    if (!this.connection.useSasl) {
+      return bc;
+    }
     // Looks like no way around this; saslserver wants a byte array.  I have to make it one.
     // THIS IS A BIG UGLY COPY.
     byte [] responseBytes = bc.getBytes();
@@ -418,7 +432,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public long disconnectSince() {
     if (!this.connection.isConnectionOpen()) {
-      return System.currentTimeMillis() - receiveTime;
+      return EnvironmentEdgeManager.currentTime() - receiveTime;
     } else {
       return -1L;
     }
@@ -540,6 +554,20 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public synchronized BufferChain getResponse() {
-    return response;
+    if (connection.useWrap) {
+      /*
+       * wrapping result with SASL as the last step just before sending it out, so
+       * every message must have the right increasing sequence number
+       */
+      try {
+        return wrapWithSasl(response);
+      } catch (IOException e) {
+        /* it is exactly the same what setResponse() does */
+        RpcServer.LOG.warn("Exception while creating response " + e);
+        return null;
+      }
+    } else {
+      return response;
+    }
   }
 }

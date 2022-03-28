@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 
 import java.io.IOException;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,8 +30,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
-import javax.crypto.spec.SecretKeySpec;
 
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -70,7 +69,8 @@ import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,9 +115,9 @@ public class TestHMobStore {
   private Cell seekKey3;
   private NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
   private List<Cell> expected = new ArrayList<>();
-  private long id = System.currentTimeMillis();
+  private long id = EnvironmentEdgeManager.currentTime();
   private Get get = new Get(row);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final String DIR = TEST_UTIL.getDataTestDir("TestHMobStore").toString();
 
   /**
@@ -153,16 +153,17 @@ public class TestHMobStore {
 
     //Setting up tje Region and Store
     Path basedir = new Path(DIR + methodName);
-    Path tableDir = FSUtils.getTableDir(basedir, td.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(basedir, td.getTableName());
     String logName = "logs";
     Path logdir = new Path(basedir, logName);
     FileSystem fs = FileSystem.get(conf);
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(td.getTableName()).build();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, basedir);
+    CommonFSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, methodName);
     region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, td, null);
     region.setMobFileCache(new MobFileCache(conf));
@@ -174,7 +175,7 @@ public class TestHMobStore {
 
   private void init(Configuration conf, ColumnFamilyDescriptor cfd)
       throws IOException {
-    Path basedir = FSUtils.getRootDir(conf);
+    Path basedir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
     Path homePath = new Path(basedir, Bytes.toString(family) + Path.SEPARATOR
         + Bytes.toString(family));
@@ -460,11 +461,8 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param storeFilesSize
-   * @throws IOException
    */
   private void flush(int storeFilesSize) throws IOException{
-    this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
     Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
@@ -472,9 +470,6 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param store
-   * @param id
-   * @throws IOException
    */
   private static void flushStore(HMobStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);
@@ -489,9 +484,8 @@ public class TestHMobStore {
 
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key cfKey = new SecretKeySpec(keyBytes, algorithm);
 

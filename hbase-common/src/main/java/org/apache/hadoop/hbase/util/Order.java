@@ -27,22 +27,31 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum Order {
-
   ASCENDING {
     @Override
-    public int cmp(int cmp) { /* noop */ return cmp; }
+    public int cmp(int cmp) {
+      /* noop */ return cmp;
+    }
 
     @Override
-    public byte apply(byte val) { /* noop */ return val; }
+    public byte apply(byte val) {
+      /* noop */ return val;
+    }
 
     @Override
-    public void apply(byte[] val) { /* noop */ }
+    public void apply(byte[] val) {
+      /* noop */
+    }
 
     @Override
-    public void apply(byte[] val, int offset, int length) { /* noop */ }
+    public void apply(byte[] val, int offset, int length) {
+      /* noop */
+    }
 
     @Override
-    public String toString() { return "ASCENDING"; }
+    public String toString() {
+      return "ASCENDING";
+    }
   },
 
   DESCENDING {
@@ -53,23 +62,33 @@ public enum Order {
     private static final byte MASK = (byte) 0xff;
 
     @Override
-    public int cmp(int cmp) { return -1 * cmp; }
+    public int cmp(int cmp) {
+      return -1 * cmp;
+    }
 
     @Override
-    public byte apply(byte val) { return (byte) (val ^ MASK); }
+    public byte apply(byte val) {
+      return (byte) (val ^ MASK);
+    }
 
     @Override
     public void apply(byte[] val) {
-      for (int i = 0; i < val.length; i++) { val[i] ^= MASK; }
+      for (int i = 0; i < val.length; i++) {
+        val[i] ^= MASK;
+      }
     }
 
     @Override
     public void apply(byte[] val, int offset, int length) {
-      for (int i = 0; i < length; i++) { val[offset + i] ^= MASK; }
+      for (int i = 0; i < length; i++) {
+        val[offset + i] ^= MASK;
+      }
     }
 
     @Override
-    public String toString() { return "DESCENDING"; }
+    public String toString() {
+      return "DESCENDING";
+    }
   };
 
   /**

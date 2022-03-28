@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,30 +42,29 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -76,13 +75,13 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -126,7 +125,7 @@ public abstract class TestReplicationSourceManager {
 
   protected static Configuration conf;
 
-  protected static HBaseTestingUtility utility;
+  protected static HBaseTestingUtil utility;
 
   protected static Replication replication;
 
@@ -188,13 +187,14 @@ public abstract class TestReplicationSourceManager {
     ZKUtil.setData(zkw, "/hbase/replication/state", ZKReplicationPeerStorage.ENABLED_ZNODE_BYTES);
 
     ZKClusterId.setClusterId(zkw, new ClusterId());
-    FSUtils.setRootDir(utility.getConfiguration(), utility.getDataTestDir());
+    CommonFSUtils.setRootDir(utility.getConfiguration(), utility.getDataTestDir());
     fs = FileSystem.get(conf);
     oldLogDir = utility.getDataTestDir(HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = utility.getDataTestDir(HConstants.HREGION_LOGDIR_NAME);
     remoteLogDir = utility.getDataTestDir(ReplicationUtils.REMOTE_WAL_DIR_NAME);
     replication = new Replication();
-    replication.initialize(new DummyServer(), fs, logDir, oldLogDir, null);
+    replication.initialize(new DummyServer(), fs, logDir, oldLogDir,
+      new WALFactory(conf, "test", null, false));
     managerOfCluster = getManagerFromCluster();
     if (managerOfCluster != null) {
       // After replication procedure, we need to add peer by hand (other than by receiving
@@ -229,7 +229,7 @@ public abstract class TestReplicationSourceManager {
     return utility.getMiniHBaseCluster().getRegionServerThreads()
         .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
         .findAny()
-        .map(HRegionServer::getReplicationSourceService)
+        .map(RegionServerServices::getReplicationSourceService)
         .map(r -> (Replication)r)
         .map(Replication::getReplicationManager)
         .get();
@@ -300,11 +300,10 @@ public abstract class TestReplicationSourceManager {
         wal.rollWriter();
       }
       LOG.info(Long.toString(i));
-      final long txid = wal.append(
-          hri,
-          new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-          edit,
-          true);
+      final long txid = wal.appendData(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
+        edit);
       wal.sync(txid);
     }
 
@@ -316,9 +315,10 @@ public abstract class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      wal.append(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-        edit, true);
+      wal.appendData(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
+        edit);
     }
     wal.sync();
 
@@ -338,9 +338,10 @@ public abstract class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(source,
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
-    wal.append(hri,
-      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-      edit, true);
+    wal.appendData(hri,
+      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+        mvcc, scopes),
+      edit);
     wal.sync();
 
     assertEquals(1, manager.getWALs().size());
@@ -404,9 +405,7 @@ public abstract class TestReplicationSourceManager {
     ReplicationPeers rp1 =
         ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration());
     rp1.init();
-    NodeFailoverWorker w1 =
-        manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "1");
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
@@ -430,8 +429,7 @@ public abstract class TestReplicationSourceManager {
     rq.addWAL(server.getServerName(), "2", group + ".log1");
     rq.addWAL(server.getServerName(), "2", group + ".log2");
 
-    NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "2");
 
     // The log of the unknown peer should be removed from zk
     for (String peer : manager.getAllQueues()) {
@@ -504,7 +502,7 @@ public abstract class TestReplicationSourceManager {
     String replicationSourceImplName = conf.get("replication.replicationsource.implementation");
     final String peerId = "FakePeer";
     final ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey("localhost:" + utility.getZkCluster().getClientPort() + ":/hbase").build();
+      .setClusterKey(utility.getZkCluster().getAddress().toString() + ":/hbase").build();
     try {
       DummyServer server = new DummyServer();
       ReplicationQueueStorage rq = ReplicationStorageFactory
@@ -548,7 +546,7 @@ public abstract class TestReplicationSourceManager {
     }
     return utility.getMiniHBaseCluster().getRegionServerThreads()
         .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .map(HRegionServer::getReplicationSourceService)
+        .map(RegionServerServices::getReplicationSourceService)
         .map(r -> (Replication)r)
         .map(Replication::getReplicationManager)
         .mapToLong(ReplicationSourceManager::getSizeOfLatestPath)
@@ -559,7 +557,7 @@ public abstract class TestReplicationSourceManager {
   public void testRemovePeerMetricsCleanup() throws Exception {
     final String peerId = "DummyPeer";
     final ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey("localhost:" + utility.getZkCluster().getClientPort() + ":/hbase").build();
+      .setClusterKey(utility.getZkCluster().getAddress().toString() + ":/hbase").build();
     try {
       MetricsReplicationSourceSource globalSource = getGlobalSource();
       final int globalLogQueueSizeInitial = globalSource.getSizeOfLogQueue();
@@ -702,8 +700,6 @@ public abstract class TestReplicationSourceManager {
 
   /**
    * Remove a peer and wait for it to get cleaned up
-   * @param peerId
-   * @throws Exception
    */
   private void removePeerAndWait(final String peerId) throws Exception {
     final ReplicationPeers rp = manager.getReplicationPeers();
@@ -826,7 +822,7 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
-  static class DummyServer implements Server {
+  static class DummyServer extends MockServer {
     String hostname;
 
     DummyServer() {
@@ -848,38 +844,8 @@ public abstract class TestReplicationSourceManager {
     }
 
     @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-
-    @Override
     public Connection getConnection() {
       return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf(hostname, 1234, 1L);
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false; // To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
@@ -888,23 +854,8 @@ public abstract class TestReplicationSourceManager {
     }
 
     @Override
-    public FileSystem getFileSystem() {
-      return null;
-    }
-
-    @Override
-    public boolean isStopping() {
-      return false;
-    }
-
-    @Override
-    public Connection createConnection(Configuration conf) throws IOException {
-      return null;
-    }
-
-    @Override
-    public AsyncClusterConnection getAsyncClusterConnection() {
-      return null;
+    public ServerName getServerName() {
+      return ServerName.valueOf(hostname, 1234, 1L);
     }
   }
 }

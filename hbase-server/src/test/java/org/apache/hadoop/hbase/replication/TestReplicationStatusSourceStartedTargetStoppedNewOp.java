@@ -46,7 +46,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedNewOp extends TestRe
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedNewOp() throws Exception {
     UTIL2.shutdownMiniHBaseCluster();
-    restartHBaseCluster(UTIL1, 1);
+    restartSourceCluster(1);
     Admin hbaseAdmin = UTIL1.getAdmin();
     // add some values to source cluster
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {

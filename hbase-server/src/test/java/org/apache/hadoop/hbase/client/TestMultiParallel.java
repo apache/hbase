@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -65,7 +65,7 @@ public class TestMultiParallel {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
@@ -130,7 +130,7 @@ public class TestMultiParallel {
   }
 
   private static byte[][] makeKeys() {
-    byte [][] starterKeys = HBaseTestingUtility.KEYS;
+    byte [][] starterKeys = HBaseTestingUtil.KEYS;
     // Create a "non-uniform" test set with the following characteristics:
     // a) Unequal number of keys per region
 
@@ -679,7 +679,7 @@ public class TestMultiParallel {
 
     @Override
     public void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<RegionPlan> plans) throws IOException {
+        BalanceRequest request, List<RegionPlan> plans) throws IOException {
       if (!plans.isEmpty()) {
         postBalanceCount.incrementAndGet();
       }

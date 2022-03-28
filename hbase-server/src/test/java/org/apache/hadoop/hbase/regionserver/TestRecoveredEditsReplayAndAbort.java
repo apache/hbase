@@ -19,28 +19,26 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -84,17 +82,13 @@ public class TestRecoveredEditsReplayAndAbort {
   protected TableName tableName;
   protected String method;
 
-  protected static HBaseTestingUtility TEST_UTIL;
+  protected static HBaseTestingUtil TEST_UTIL;
   public static Configuration CONF ;
-  private static FileSystem FILESYSTEM;
   private HRegion region = null;
-
-  private final Random random = new Random();
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
-    FILESYSTEM = TEST_UTIL.getTestFileSystem();
+    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     method = name.getMethodName();
     tableName = TableName.valueOf(method);
@@ -116,7 +110,8 @@ public class TestRecoveredEditsReplayAndAbort {
     //mock a RegionServerServices
     final RegionServerAccounting rsAccounting = new RegionServerAccounting(CONF);
     RegionServerServices rs = Mockito.mock(RegionServerServices.class);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     Mockito.when(rs.getRegionServerAccounting()).thenReturn(rsAccounting);
     Mockito.when(rs.isAborted()).thenReturn(false);
     Mockito.when(rs.getNonceManager()).thenReturn(null);
@@ -128,13 +123,12 @@ public class TestRecoveredEditsReplayAndAbort {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).build())
         .build();
-    HRegionInfo info = new HRegionInfo(htd.getTableName(),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     Path logDir = TEST_UTIL
         .getDataTestDirOnTestFS("TestRecoveredEidtsReplayAndAbort.log");
-    final WAL wal = HBaseTestingUtility.createWal(CONF, logDir, info);
+    final WAL wal = HBaseTestingUtil.createWal(CONF, logDir, info);
     Path rootDir = TEST_UTIL.getDataTestDir();
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem
         .createRegionOnFileSystem(CONF, TEST_UTIL.getTestFileSystem(), tableDir, info);
     region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info,
@@ -163,7 +157,7 @@ public class TestRecoveredEditsReplayAndAbort {
           WALEdit edit = new WALEdit();
           // 200KB kv
           byte[] value = new byte[200 * 1024];
-          random.nextBytes(value);
+          Bytes.random(value);
           edit.add(
               new KeyValue(row, fam1, Bytes.toBytes(j), time, KeyValue.Type.Put,
                   value));
@@ -173,7 +167,7 @@ public class TestRecoveredEditsReplayAndAbort {
         }
         writer.close();
       }
-      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      TaskMonitor.get().createStatus(method);
       //try to replay the edits
       try {
         region.initialize(new CancelableProgressable() {
@@ -207,7 +201,7 @@ public class TestRecoveredEditsReplayAndAbort {
       //a memory leak.
       Assert.assertEquals(0, ChunkCreator.getInstance().numberOfMappedChunks());
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }

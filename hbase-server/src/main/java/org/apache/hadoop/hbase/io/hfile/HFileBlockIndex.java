@@ -121,12 +121,6 @@ public class HFileBlockIndex {
 
     private byte[][] blockKeys;
 
-    public ByteArrayKeyBlockIndexReader(final int treeLevel,
-        final CachingBlockReader cachingBlockReader) {
-      this(treeLevel);
-      this.cachingBlockReader = cachingBlockReader;
-    }
-
     public ByteArrayKeyBlockIndexReader(final int treeLevel) {
       // Can be null for METAINDEX block
       searchTreeLevel = treeLevel;
@@ -164,13 +158,14 @@ public class HFileBlockIndex {
     @Override
     public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
         boolean cacheBlocks, boolean pread, boolean isCompaction,
-        DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+        DataBlockEncoding expectedDataBlockEncoding,
+        CachingBlockReader cachingBlockReader) throws IOException {
       // this would not be needed
       return null;
     }
 
     @Override
-    public Cell midkey() throws IOException {
+    public Cell midkey(CachingBlockReader cachingBlockReader) throws IOException {
       // Not needed here
       return null;
     }
@@ -229,7 +224,6 @@ public class HFileBlockIndex {
       }
       return sb.toString();
     }
-
   }
 
   /**
@@ -237,19 +231,13 @@ public class HFileBlockIndex {
    * part of a cell like the Data block index or the ROW_COL bloom blocks
    * This needs a comparator to work with the Cells
    */
-   static class CellBasedKeyBlockIndexReader extends BlockIndexReader {
+  static class CellBasedKeyBlockIndexReader extends BlockIndexReader {
 
     private Cell[] blockKeys;
     /** Pre-computed mid-key */
     private AtomicReference<Cell> midKey = new AtomicReference<>();
     /** Needed doing lookup on blocks. */
     private CellComparator comparator;
-
-    public CellBasedKeyBlockIndexReader(final CellComparator c, final int treeLevel,
-        final CachingBlockReader cachingBlockReader) {
-      this(c, treeLevel);
-      this.cachingBlockReader = cachingBlockReader;
-    }
 
     public CellBasedKeyBlockIndexReader(final CellComparator c, final int treeLevel) {
       // Can be null for METAINDEX block
@@ -290,7 +278,8 @@ public class HFileBlockIndex {
     @Override
     public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
         boolean cacheBlocks, boolean pread, boolean isCompaction,
-        DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+        DataBlockEncoding expectedDataBlockEncoding,
+        CachingBlockReader cachingBlockReader) throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
         return null;
@@ -406,7 +395,7 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public Cell midkey() throws IOException {
+    public Cell midkey(CachingBlockReader cachingBlockReader) throws IOException {
       if (rootCount == 0)
         throw new IOException("HFile empty");
 
@@ -512,7 +501,8 @@ public class HFileBlockIndex {
       return sb.toString();
     }
   }
-   /**
+
+  /**
    * The reader will always hold the root level index in the memory. Index
    * blocks at all other levels will be cached in the LRU cache in practice,
    * although this API does not enforce that.
@@ -522,7 +512,7 @@ public class HFileBlockIndex {
    * This allows us to do binary search for the entry corresponding to the
    * given key without having to deserialize the block.
    */
-   static abstract class BlockIndexReader implements HeapSize {
+  static abstract class BlockIndexReader implements HeapSize {
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
@@ -538,9 +528,6 @@ public class HFileBlockIndex {
      * level, two for root and leaf levels, etc.
      */
     protected int searchTreeLevel;
-
-    /** A way to read {@link HFile} blocks at a given offset */
-    protected CachingBlockReader cachingBlockReader;
 
     /**
      * @return true if the block index is empty.
@@ -573,10 +560,10 @@ public class HFileBlockIndex {
      * @throws IOException
      */
     public HFileBlock seekToDataBlock(final Cell key, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
-        throws IOException {
+        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding,
+        CachingBlockReader cachingBlockReader) throws IOException {
       BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, currentBlock,
-        cacheBlocks, pread, isCompaction, expectedDataBlockEncoding);
+        cacheBlocks, pread, isCompaction, expectedDataBlockEncoding, cachingBlockReader);
       if (blockWithScanInfo == null) {
         return null;
       } else {
@@ -600,7 +587,8 @@ public class HFileBlockIndex {
      */
     public abstract BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
         boolean cacheBlocks, boolean pread, boolean isCompaction,
-        DataBlockEncoding expectedDataBlockEncoding) throws IOException;
+        DataBlockEncoding expectedDataBlockEncoding,
+        CachingBlockReader cachingBlockReader) throws IOException;
 
     /**
      * An approximation to the {@link HFile}'s mid-key. Operates on block
@@ -609,7 +597,7 @@ public class HFileBlockIndex {
      *
      * @return the first key of the middle block
      */
-    public abstract Cell midkey() throws IOException;
+    public abstract Cell midkey(CachingBlockReader cachingBlockReader) throws IOException;
 
     /**
      * @param i from 0 to {@link #getRootBlockCount() - 1}

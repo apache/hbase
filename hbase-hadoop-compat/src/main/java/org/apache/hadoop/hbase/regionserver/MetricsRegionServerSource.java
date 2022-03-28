@@ -87,6 +87,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updateCheckAndPut(long t);
 
   /**
+   * Update checkAndMutate histogram
+   * @param t time it took
+   */
+  void updateCheckAndMutate(long t);
+
+  /**
    * Update the Get time histogram .
    *
    * @param t time it took
@@ -220,6 +226,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
    */
   void updateCompactionOutputSize(boolean isMajor, long bytes);
 
+  void incrScannerLeaseExpired();
+
   // Strings used for exporting to metrics system.
   String REGION_COUNT = "regionCount";
   String REGION_COUNT_DESC = "Number of regions";
@@ -233,6 +241,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STOREFILE_COUNT_DESC = "Number of Store Files";
   String STORE_REF_COUNT = "storeRefCount";
   String STORE_REF_COUNT_DESC = "Store reference count";
+  String MAX_COMPACTED_STORE_FILE_REF_COUNT = "maxCompactedStoreFileRefCount";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
@@ -398,6 +407,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String DELETE_KEY = "delete";
   String CHECK_AND_DELETE_KEY = "checkAndDelete";
   String CHECK_AND_PUT_KEY = "checkAndPut";
+  String CHECK_AND_MUTATE_KEY = "checkAndMutate";
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
@@ -478,6 +488,20 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
+  String HEDGED_READ_IN_CUR_THREAD = "hedgedReadOpsInCurThread";
+  String HEDGED_READ_IN_CUR_THREAD_DESC =
+    "The number of times we execute a hedged read in current thread as a fallback for task rejection";
+
+  String TOTAL_BYTES_READ = "totalBytesRead";
+  String TOTAL_BYTES_READ_DESC = "The total number of bytes read from HDFS";
+  String LOCAL_BYTES_READ = "localBytesRead";
+  String LOCAL_BYTES_READ_DESC =
+      "The number of bytes read from the local HDFS DataNode";
+  String SHORTCIRCUIT_BYTES_READ = "shortCircuitBytesRead";
+  String SHORTCIRCUIT_BYTES_READ_DESC = "The number of bytes read through HDFS short circuit read";
+  String ZEROCOPY_BYTES_READ = "zeroCopyBytesRead";
+  String ZEROCOPY_BYTES_READ_DESC =
+      "The number of bytes read through HDFS zero copy";
 
   String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
@@ -549,6 +573,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
   String RPC_SCAN_REQUEST_COUNT_DESC =
       "Number of rpc scan requests this RegionServer has answered.";
+  String RPC_FULL_SCAN_REQUEST_COUNT = "rpcFullScanRequestCount";
+  String RPC_FULL_SCAN_REQUEST_COUNT_DESC =
+      "Number of rpc scan requests that were possible full region scans.";
   String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
   String RPC_MULTI_REQUEST_COUNT_DESC =
       "Number of rpc multi requests this RegionServer has answered.";
@@ -573,4 +600,10 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT_DESC = "Total buffer count in ByteBuffAllocator";
   String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT = "ByteBuffAllocatorUsedBufferCount";
   String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT_DESC = "Used buffer count in ByteBuffAllocator";
+
+  String ACTIVE_SCANNERS = "activeScanners";
+  String ACTIVE_SCANNERS_DESC = "Gauge of currently active scanners";
+
+  String SCANNER_LEASE_EXPIRED_COUNT = "scannerLeaseExpiredCount";
+  String SCANNER_LEASE_EXPIRED_COUNT_DESC = "Count of scanners which were expired due to scanner lease timeout";
 }

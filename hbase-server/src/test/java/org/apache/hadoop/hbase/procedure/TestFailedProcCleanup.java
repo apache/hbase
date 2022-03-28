@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.BeforeClass;
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 /**
  * Check if CompletedProcedureCleaner cleans up failed nonce procedures.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestFailedProcCleanup {
 
   @ClassRule
@@ -61,7 +61,7 @@ public class TestFailedProcCleanup {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedProcCleanup.class);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
   private static final TableName TABLE = TableName.valueOf("test");
   private static final byte[] FAMILY = Bytes.toBytesBinary("f");

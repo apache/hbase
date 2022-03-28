@@ -26,13 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -128,7 +128,7 @@ public class TestRegionSizeCalculator {
     when(mockedTable.getAllRegionLocations()).thenReturn(regionLocations);
 
     for (String regionName : regionNames) {
-      HRegionInfo info = Mockito.mock(HRegionInfo.class);
+      RegionInfo info = Mockito.mock(RegionInfo.class);
       when(info.getRegionName()).thenReturn(Bytes.toBytes(regionName));
       regionLocations.add(new HRegionLocation(info, sn));
     }

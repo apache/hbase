@@ -21,7 +21,7 @@ module Shell
     # create a new table by cloning the existent table schema.
     class CloneTableSchema < Command
       def help
-        <<-HELP
+        <<~HELP
           Create a new table by cloning the existent table schema.
           There're no copies of data involved.
           Just copy the table descriptor and split keys.

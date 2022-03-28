@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,11 +23,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -44,6 +47,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
@@ -52,6 +56,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -62,8 +67,14 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
+import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceResponse;
+import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -74,13 +85,19 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -88,9 +105,12 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufMessageConverter;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
@@ -99,8 +119,10 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -110,7 +132,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
@@ -124,14 +145,16 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
@@ -142,12 +165,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegio
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Column;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
@@ -176,9 +203,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableD
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -196,11 +226,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  * users; e.g. Coprocessor Endpoints. If you make change in here, be sure to make change in
  * the companion class too (not the end of the world, especially if you are adding new functionality
  * but something to be aware of.
- * @see ProtobufUtil
  */
-// TODO: Generate the non-shaded protobufutil from this one.
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
+
   private ProtobufUtil() {
   }
 
@@ -268,7 +297,6 @@ public final class ProtobufUtil {
     }
   }
 
-  @VisibleForTesting
   public static boolean isClassLoaderLoaded() {
     return classLoaderLoaded;
   }
@@ -373,7 +401,9 @@ public final class ProtobufUtil {
    * @see #toServerName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName)
    */
   public static HBaseProtos.ServerName toServerName(final ServerName serverName) {
-    if (serverName == null) return null;
+    if (serverName == null) {
+      return null;
+    }
     HBaseProtos.ServerName.Builder builder =
       HBaseProtos.ServerName.newBuilder();
     builder.setHostName(serverName.getHostname());
@@ -404,6 +434,50 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return ServerName.valueOf(hostName, port, startCode);
+  }
+
+  /**
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style servername where
+   *          servername was host and port. Works too with data that begins w/ the pb 'PBUF' magic
+   *          and that is then followed by a protobuf that has a serialized {@link ServerName} in
+   *          it.
+   * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
+   *         instance.
+   */
+  public static ServerName toServerName(final byte[] data) throws DeserializationException {
+    if (data == null || data.length <= 0) {
+      return null;
+    }
+    if (ProtobufMagic.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufMagic.lengthOfPBMagic();
+      try {
+        ZooKeeperProtos.Master rss =
+          ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
+        HBaseProtos.ServerName sn = rss.getMaster();
+        return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (/* InvalidProtocolBufferException */IOException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException. This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return ServerName.valueOf(hostname, port, -1L);
   }
 
   /**
@@ -764,10 +838,7 @@ public final class ProtobufUtil {
           if (qv.hasQualifier()) {
             qualifier = qv.getQualifier().toByteArray();
           }
-          long ts = HConstants.LATEST_TIMESTAMP;
-          if (qv.hasTimestamp()) {
-            ts = qv.getTimestamp();
-          }
+          long ts = cellTimestampOrLatest(qv);
           if (deleteType == DeleteType.DELETE_ONE_VERSION) {
             delete.addColumn(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
@@ -834,7 +905,7 @@ public final class ProtobufUtil {
                   .setRow(mutation.getRow())
                   .setFamily(family)
                   .setQualifier(qualifier)
-                  .setTimestamp(qv.getTimestamp())
+                  .setTimestamp(cellTimestampOrLatest(qv))
                   .setType(KeyValue.Type.Put.getCode())
                   .setValue(value)
                   .setTags(tags)
@@ -847,6 +918,14 @@ public final class ProtobufUtil {
       mutation.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return mutation;
+  }
+
+  private static long cellTimestampOrLatest(QualifierValue cell) {
+    if (cell.hasTimestamp()) {
+      return cell.getTimestamp();
+    } else {
+      return HConstants.LATEST_TIMESTAMP;
+    }
   }
 
   /**
@@ -898,6 +977,9 @@ public final class ProtobufUtil {
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
+    if (type == MutationType.INCREMENT) {
+      return toIncrement(proto, null);
+    }
     if (type == MutationType.APPEND) {
       return toAppend(proto, null);
     }
@@ -908,60 +990,6 @@ public final class ProtobufUtil {
       return toPut(proto, null);
     }
     throw new IOException("Unknown mutation type " + type);
-  }
-
-  /**
-   * Convert a protocol buffer Mutate to a Get.
-   * @param proto the protocol buffer Mutate to convert.
-   * @param cellScanner
-   * @return the converted client get.
-   * @throws IOException
-   */
-  public static Get toGet(final MutationProto proto, final CellScanner cellScanner)
-      throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.INCREMENT || type == MutationType.APPEND : type.name();
-    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
-    Get get = null;
-    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: "
-            + TextFormat.shortDebugString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
-              + " no cell returned: " + TextFormat.shortDebugString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (get == null) {
-          get = new Get(CellUtil.cloneRow(cell));
-        }
-        get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
-      }
-    } else {
-      get = new Get(row);
-      for (ColumnValue column : proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv : column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException("Missing required field: qualifier value");
-          }
-          get.addColumn(family, qualifier);
-        }
-      }
-    }
-    if (proto.hasTimeRange()) {
-      TimeRange timeRange = toTimeRange(proto.getTimeRange());
-      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
-    }
-    for (NameBytesPair attribute : proto.getAttributeList()) {
-      get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return get;
   }
 
   public static ClientProtos.Scan.ReadType toReadType(Scan.ReadType readType) {
@@ -1007,9 +1035,6 @@ public final class ProtobufUtil {
     }
     if (scan.getMaxResultSize() > 0) {
       scanBuilder.setMaxResultSize(scan.getMaxResultSize());
-    }
-    if (scan.isSmall()) {
-      scanBuilder.setSmall(scan.isSmall());
     }
     if (scan.getAllowPartialResults()) {
       scanBuilder.setAllowPartialResults(scan.getAllowPartialResults());
@@ -1129,7 +1154,7 @@ public final class ProtobufUtil {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }
     if (proto.hasMaxVersions()) {
-      scan.setMaxVersions(proto.getMaxVersions());
+      scan.readVersions(proto.getMaxVersions());
     }
     if (proto.hasStoreLimit()) {
       scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
@@ -1161,9 +1186,6 @@ public final class ProtobufUtil {
     if (proto.hasMaxResultSize()) {
       scan.setMaxResultSize(proto.getMaxResultSize());
     }
-    if (proto.hasSmall()) {
-      scan.setSmall(proto.getSmall());
-    }
     if (proto.hasAllowPartialResults()) {
       scan.setAllowPartialResults(proto.getAllowPartialResults());
     }
@@ -1194,9 +1216,7 @@ public final class ProtobufUtil {
     if (proto.hasMvccReadPoint()) {
       PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
     }
-    if (scan.isSmall()) {
-      scan.setReadType(Scan.ReadType.PREAD);
-    } else if (proto.hasReadType()) {
+    if (proto.hasReadType()) {
       scan.setReadType(toReadType(proto.getReadType()));
     }
     if (proto.getNeedCursorResult()) {
@@ -1424,6 +1444,21 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
+    return toResult(result, false);
+  }
+
+  /**
+   *  Convert a client Result to a protocol buffer Result
+   * @param result the client Result to convert
+   * @param encodeTags whether to includeTags in converted protobuf result or not
+   *                   When @encodeTags is set to true, it will return all the tags in the response.
+   *                   These tags may contain some sensitive data like acl permissions, etc.
+   *                   Only the tools like Export, Import which needs to take backup needs to set
+   *                   it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResult(final Result result, boolean encodeTags) {
     if (result.getExists() != null) {
       return toResult(result.getExists(), result.isStale());
     }
@@ -1435,7 +1470,7 @@ public final class ProtobufUtil {
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     for (Cell c : cells) {
-      builder.addCell(toCell(c));
+      builder.addCell(toCell(c, encodeTags));
     }
 
     builder.setStale(result.isStale());
@@ -1482,6 +1517,22 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
+    return toResult(proto, false);
+  }
+
+  /**
+   * Convert a protocol buffer Result to a client Result
+   *
+   * @param proto the protocol buffer Result to convert
+   * @param decodeTags whether to decode tags into converted client Result
+   *                   When @decodeTags is set to true, it will decode all the tags from the
+   *                   response. These tags may contain some sensitive data like acl permissions,
+   *                   etc. Only the tools like Export, Import which needs to take backup needs to
+   *                   set it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
+   * @return the converted client Result
+   */
+  public static Result toResult(final ClientProtos.Result proto, boolean decodeTags) {
     if (proto.hasExists()) {
       if (proto.getStale()) {
         return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
@@ -1497,7 +1548,7 @@ public final class ProtobufUtil {
     List<Cell> cells = new ArrayList<>(values.size());
     ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (CellProtos.Cell c : values) {
-      cells.add(toCell(builder, c));
+      cells.add(toCell(builder, c, decodeTags));
     }
     return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
@@ -1540,7 +1591,7 @@ public final class ProtobufUtil {
       if (cells == null) cells = new ArrayList<>(values.size());
       ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (CellProtos.Cell c: values) {
-        cells.add(toCell(builder, c));
+        cells.add(toCell(builder, c, false));
       }
     }
 
@@ -1713,35 +1764,33 @@ public final class ProtobufUtil {
 // Start helpers for Admin
 
   /**
-   * A helper to retrieve region info given a region name
-   * using admin protocol.
+   * A helper to retrieve region info given a region name or an
+   * encoded region name using admin protocol.
    *
-   * @param admin
-   * @param regionName
    * @return the retrieved region info
-   * @throws IOException
    */
-  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
+  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(
+      final RpcController controller, final AdminService.BlockingInterface admin,
+      final byte[] regionName) throws IOException {
     try {
-      GetRegionInfoRequest request =
-        RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response =
-        admin.getRegionInfo(controller, request);
+      GetRegionInfoRequest request = getGetRegionInfoRequest(regionName);
+      GetRegionInfoResponse response = admin.getRegionInfo(controller,
+        getGetRegionInfoRequest(regionName));
       return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
   }
 
-  public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoadInfo(
-      GetRegionLoadResponse regionLoadResponse) {
-    List<org.apache.hadoop.hbase.RegionLoad> regionLoadList =
-        new ArrayList<>(regionLoadResponse.getRegionLoadsCount());
-    for (RegionLoad regionLoad : regionLoadResponse.getRegionLoadsList()) {
-      regionLoadList.add(new org.apache.hadoop.hbase.RegionLoad(regionLoad));
-    }
-    return regionLoadList;
+  /**
+   * @return A GetRegionInfoRequest for the passed in regionName.
+   */
+  public static GetRegionInfoRequest getGetRegionInfoRequest(final byte [] regionName)
+    throws IOException {
+    return org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
+        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
+          buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
+        RequestConverter.buildGetRegionInfoRequest(regionName);
   }
 
   /**
@@ -1975,14 +2024,13 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Unwraps an exception from a protobuf service into the underlying (expected) IOException.
-   * This method will <strong>always</strong> throw an exception.
+   * Unwraps an exception from a protobuf service into the underlying (expected) IOException. This
+   * method will <strong>always</strong> throw an exception.
    * @param se the {@code ServiceException} instance to convert into an {@code IOException}
+   * @throws NullPointerException if {@code se} is {@code null}
    */
   public static void toIOException(ServiceException se) throws IOException {
-    if (se == null) {
-      throw new NullPointerException("Null service exception passed!");
-    }
+    Objects.requireNonNull(se, "Service exception cannot be null");
 
     Throwable cause = se.getCause();
     if (cause != null && cause instanceof IOException) {
@@ -1991,7 +2039,7 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static CellProtos.Cell toCell(final Cell kv) {
+  public static CellProtos.Cell toCell(final Cell kv, boolean encodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
@@ -2006,7 +2054,10 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(wrap(((ByteBufferExtendedCell) kv).getValueByteBuffer(),
         ((ByteBufferExtendedCell) kv).getValuePosition(), kv.getValueLength()));
-      // TODO : Once tags become first class then we may have to set tags to kvbuilder.
+      if (encodeTags) {
+        kvbuilder.setTags(wrap(((ByteBufferExtendedCell) kv).getTagsByteBuffer(),
+          ((ByteBufferExtendedCell) kv).getTagsPosition(), kv.getTagsLength()));
+      }
     } else {
       kvbuilder.setRow(
         UnsafeByteOperations.unsafeWrap(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
@@ -2018,6 +2069,10 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
+      if (encodeTags) {
+        kvbuilder.setTags(UnsafeByteOperations.unsafeWrap(kv.getTagsArray(), kv.getTagsOffset(),
+          kv.getTagsLength()));
+      }
     }
     return kvbuilder.build();
   }
@@ -2029,15 +2084,19 @@ public final class ProtobufUtil {
     return UnsafeByteOperations.unsafeWrap(dup);
   }
 
-  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
-    return cellBuilder.clear()
-            .setRow(cell.getRow().toByteArray())
-            .setFamily(cell.getFamily().toByteArray())
-            .setQualifier(cell.getQualifier().toByteArray())
-            .setTimestamp(cell.getTimestamp())
-            .setType((byte) cell.getCellType().getNumber())
-            .setValue(cell.getValue().toByteArray())
-            .build();
+  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
+                            boolean decodeTags) {
+    ExtendedCellBuilder builder = cellBuilder.clear()
+        .setRow(cell.getRow().toByteArray())
+        .setFamily(cell.getFamily().toByteArray())
+        .setQualifier(cell.getQualifier().toByteArray())
+        .setTimestamp(cell.getTimestamp())
+        .setType((byte) cell.getCellType().getNumber())
+        .setValue(cell.getValue().toByteArray());
+    if (decodeTags && cell.hasTags()) {
+      builder.setTags(cell.getTags().toByteArray());
+    }
+    return builder.build();
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
@@ -2216,6 +2275,57 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Return SlowLogParams to maintain recent online slowlog responses
+   *
+   * @param message Message object {@link Message}
+   * @return SlowLogParams with regionName(for filter queries) and params
+   */
+  public static SlowLogParams getSlowLogParams(Message message) {
+    if (message == null) {
+      return null;
+    }
+    if (message instanceof ScanRequest) {
+      ScanRequest scanRequest = (ScanRequest) message;
+      String regionName = getStringForByteString(scanRequest.getRegion().getValue());
+      String params = TextFormat.shortDebugString(message);
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MutationProto) {
+      MutationProto mutationProto = (MutationProto) message;
+      String params = "type= " + mutationProto.getMutateType().toString();
+      return new SlowLogParams(params);
+    } else if (message instanceof GetRequest) {
+      GetRequest getRequest = (GetRequest) message;
+      String regionName = getStringForByteString(getRequest.getRegion().getValue());
+      String params = "region= " + regionName + ", row= "
+        + getStringForByteString(getRequest.getGet().getRow());
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MultiRequest) {
+      MultiRequest multiRequest = (MultiRequest) message;
+      int actionsCount = multiRequest.getRegionActionList()
+        .stream()
+        .mapToInt(ClientProtos.RegionAction::getActionCount)
+        .sum();
+      RegionAction actions = multiRequest.getRegionActionList().get(0);
+      String regionName = getStringForByteString(actions.getRegion().getValue());
+      String params = "region= " + regionName + ", for " + actionsCount + " action(s)";
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MutateRequest) {
+      MutateRequest mutateRequest = (MutateRequest) message;
+      String regionName = getStringForByteString(mutateRequest.getRegion().getValue());
+      String params = "region= " + regionName;
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof CoprocessorServiceRequest) {
+      CoprocessorServiceRequest coprocessorServiceRequest = (CoprocessorServiceRequest) message;
+      String params = "coprocessorService= "
+        + coprocessorServiceRequest.getCall().getServiceName()
+        + ":" + coprocessorServiceRequest.getCall().getMethodName();
+      return new SlowLogParams(params);
+    }
+    String params = message.getClass().toString();
+    return new SlowLogParams(params);
+  }
+
+  /**
    * Print out some subset of a MutationProto rather than all of it and its data
    * @param proto Protobuf to print out
    * @return Short String of mutation proto
@@ -2234,6 +2344,13 @@ public final class ProtobufUtil {
     return HBaseProtos.TableName.newBuilder()
         .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace()))
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
+  }
+
+  public static List<HBaseProtos.TableName> toProtoTableNameList(List<TableName> tableNameList) {
+    if (tableNameList == null) {
+      return new ArrayList<>();
+    }
+    return tableNameList.stream().map(ProtobufUtil::toProtoTableName).collect(Collectors.toList());
   }
 
   public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
@@ -2577,12 +2694,25 @@ public final class ProtobufUtil {
    * @return The WAL log marker for bulk loads.
    */
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
+    ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
+    Map<String, Long> storeFilesSize, long bulkloadSeqId) {
+    return toBulkLoadDescriptor(tableName, encodedRegionName, storeFiles,
+      storeFilesSize, bulkloadSeqId, null, true);
+  }
+
+  public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId) {
+      Map<String, Long> storeFilesSize, long bulkloadSeqId,
+      List<String> clusterIds, boolean replicate) {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+          .setTableName(ProtobufUtil.toProtoTableName(tableName))
+          .setEncodedRegionName(encodedRegionName)
+          .setBulkloadSeqNum(bulkloadSeqId)
+          .setReplicate(replicate);
+    if(clusterIds != null) {
+      desc.addAllClusterIds(clusterIds);
+    }
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
       WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
@@ -2713,7 +2843,12 @@ public final class ProtobufUtil {
 
   public static ReplicationLoadSink toReplicationLoadSink(
       ClusterStatusProtos.ReplicationLoadSink rls) {
-    return new ReplicationLoadSink(rls.getAgeOfLastAppliedOp(), rls.getTimeStampsOfLastAppliedOp());
+    ReplicationLoadSink.ReplicationLoadSinkBuilder builder = ReplicationLoadSink.newBuilder();
+    builder.setAgeOfLastAppliedOp(rls.getAgeOfLastAppliedOp()).
+      setTimestampsOfLastAppliedOp(rls.getTimeStampsOfLastAppliedOp()).
+      setTimestampStarted(rls.hasTimestampStarted()? rls.getTimestampStarted(): -1L).
+      setTotalOpsProcessed(rls.hasTotalOpsProcessed()? rls.getTotalOpsProcessed(): -1L);
+    return builder.build();
   }
 
   public static ReplicationLoadSource toReplicationLoadSource(
@@ -2776,10 +2911,18 @@ public final class ProtobufUtil {
   }
 
   public static TimeRange toTimeRange(HBaseProtos.TimeRange timeRange) {
-    return timeRange == null ?
-      TimeRange.allTime() :
-      new TimeRange(timeRange.hasFrom() ? timeRange.getFrom() : 0,
-        timeRange.hasTo() ? timeRange.getTo() : Long.MAX_VALUE);
+    if (timeRange == null) {
+      return TimeRange.allTime();
+    }
+    if (timeRange.hasFrom()) {
+      if (timeRange.hasTo()) {
+        return TimeRange.between(timeRange.getFrom(), timeRange.getTo());
+      } else {
+        return TimeRange.from(timeRange.getFrom());
+      }
+    } else {
+      return TimeRange.until(timeRange.getTo());
+    }
   }
 
   /**
@@ -2862,7 +3005,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
    * state
    * @param state the protobuf CompactionState
    * @return CompactionState
@@ -2875,13 +3018,31 @@ public final class ProtobufUtil {
     return GetRegionInfoResponse.CompactionState.valueOf(state.toString());
   }
 
+  /**
+   * Creates {@link CompactionState} from
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos
+   * .RegionLoad.CompactionState} state
+   * @param state the protobuf CompactionState
+   * @return CompactionState
+   */
+  public static CompactionState createCompactionStateForRegionLoad(
+      RegionLoad.CompactionState state) {
+    return CompactionState.valueOf(state.toString());
+  }
+
+  public static RegionLoad.CompactionState createCompactionStateForRegionLoad(
+      CompactionState state) {
+    return RegionLoad.CompactionState.valueOf(state.toString());
+  }
+
   public static Optional<Long> toOptionalTimestamp(MajorCompactionTimestampResponse resp) {
     long timestamp = resp.getCompactionTimestamp();
     return timestamp == 0 ? Optional.empty() : Optional.of(timestamp);
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from {@link SnapshotType}
    * @param type the SnapshotDescription type
    * @return the protobuf SnapshotDescription type
@@ -2892,7 +3053,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from the type of SnapshotDescription string
    * @param snapshotDesc string representing the snapshot description type
    * @return the protobuf SnapshotDescription type
@@ -2903,8 +3065,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link SnapshotType} from the type of
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * Creates {@link SnapshotType} from the
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * @param type the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
@@ -2914,7 +3076,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from {@link SnapshotDescription} to
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription}
    * @param snapshotDesc the POJO SnapshotDescription
    * @return the protobuf SnapshotDescription
    */
@@ -2940,13 +3102,16 @@ public final class ProtobufUtil {
     if (snapshotDesc.getVersion() != -1) {
       builder.setVersion(snapshotDesc.getVersion());
     }
+    if (snapshotDesc.getMaxFileSize() != -1) {
+      builder.setMaxFileSize(snapshotDesc.getMaxFileSize());
+    }
     builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
     return builder.build();
   }
 
   /**
    * Convert from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription} to
    * {@link SnapshotDescription}
    * @param snapshotDesc the protobuf SnapshotDescription
    * @return the POJO SnapshotDescription
@@ -2955,6 +3120,7 @@ public final class ProtobufUtil {
       createSnapshotDesc(SnapshotProtos.SnapshotDescription snapshotDesc) {
     final Map<String, Object> snapshotProps = new HashMap<>();
     snapshotProps.put("TTL", snapshotDesc.getTtl());
+    snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, snapshotDesc.getMaxFileSize());
     return new SnapshotDescription(snapshotDesc.getName(),
             snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
             createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
@@ -3049,6 +3215,44 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Get the Meta region state from the passed data bytes. Can handle both old and new style
+   * server names.
+   * @param data protobuf serialized data with meta server name.
+   * @param replicaId replica ID for this region
+   * @return RegionState instance corresponding to the serialized data.
+   * @throws DeserializationException if the data is invalid.
+   */
+  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
+      throws DeserializationException {
+    RegionState.State state = RegionState.State.OPEN;
+    ServerName serverName;
+    if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+      try {
+        int prefixLen = ProtobufUtil.lengthOfPBMagic();
+        ZooKeeperProtos.MetaRegionServer rl =
+            ZooKeeperProtos.MetaRegionServer.parser().parseFrom(data, prefixLen,
+                data.length - prefixLen);
+        if (rl.hasState()) {
+          state = RegionState.State.convert(rl.getState());
+        }
+        HBaseProtos.ServerName sn = rl.getServer();
+        serverName = ServerName.valueOf(
+            sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException("Unable to parse meta region location");
+      }
+    } else {
+      // old style of meta region location?
+      serverName = parseServerNameFrom(data);
+    }
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
+  }
+
+  /**
    * Get a ServerName from the passed in data bytes.
    * @param data Data with a serialize server name in it; can handle the old style
    * servername where servername was host and port.  Works too with data that
@@ -3129,7 +3333,9 @@ public final class ProtobufUtil {
    * @return the converted Proto RegionInfo
    */
   public static HBaseProtos.RegionInfo toRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
-    if (info == null) return null;
+    if (info == null) {
+      return null;
+    }
     HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
@@ -3152,7 +3358,9 @@ public final class ProtobufUtil {
    * @return the converted RegionInfo
    */
   public static org.apache.hadoop.hbase.client.RegionInfo toRegionInfo(final HBaseProtos.RegionInfo proto) {
-    if (proto == null) return null;
+    if (proto == null) {
+      return null;
+    }
     TableName tableName = ProtobufUtil.toTableName(proto.getTableName());
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
@@ -3264,6 +3472,8 @@ public final class ProtobufUtil {
     return ClusterStatusProtos.ReplicationLoadSink.newBuilder()
         .setAgeOfLastAppliedOp(rls.getAgeOfLastAppliedOp())
         .setTimeStampsOfLastAppliedOp(rls.getTimestampsOfLastAppliedOp())
+        .setTimestampStarted(rls.getTimestampStarted())
+        .setTotalOpsProcessed(rls.getTotalOpsProcessed())
         .build();
   }
 
@@ -3298,4 +3508,423 @@ public final class ProtobufUtil {
     }
     return Collections.emptySet();
   }
+
+  public static ClusterStatusProtos.RegionStatesCount toTableRegionStatesCount(
+      RegionStatesCount regionStatesCount) {
+    int openRegions = 0;
+    int splitRegions = 0;
+    int closedRegions = 0;
+    int regionsInTransition = 0;
+    int totalRegions = 0;
+    if (regionStatesCount != null) {
+      openRegions = regionStatesCount.getOpenRegions();
+      splitRegions = regionStatesCount.getSplitRegions();
+      closedRegions = regionStatesCount.getClosedRegions();
+      regionsInTransition = regionStatesCount.getRegionsInTransition();
+      totalRegions = regionStatesCount.getTotalRegions();
+    }
+    return ClusterStatusProtos.RegionStatesCount.newBuilder()
+      .setOpenRegions(openRegions)
+      .setSplitRegions(splitRegions)
+      .setClosedRegions(closedRegions)
+      .setRegionsInTransition(regionsInTransition)
+      .setTotalRegions(totalRegions)
+      .build();
+  }
+
+  public static RegionStatesCount toTableRegionStatesCount(
+    ClusterStatusProtos.RegionStatesCount regionStatesCount) {
+    int openRegions = 0;
+    int splitRegions = 0;
+    int closedRegions = 0;
+    int regionsInTransition = 0;
+    int totalRegions = 0;
+    if (regionStatesCount != null) {
+      closedRegions = regionStatesCount.getClosedRegions();
+      regionsInTransition = regionStatesCount.getRegionsInTransition();
+      openRegions = regionStatesCount.getOpenRegions();
+      splitRegions = regionStatesCount.getSplitRegions();
+      totalRegions = regionStatesCount.getTotalRegions();
+    }
+    return new RegionStatesCount.RegionStatesCountBuilder()
+      .setOpenRegions(openRegions)
+      .setSplitRegions(splitRegions)
+      .setClosedRegions(closedRegions)
+      .setRegionsInTransition(regionsInTransition)
+      .setTotalRegions(totalRegions)
+      .build();
+  }
+
+  /**
+   * Convert Protobuf class
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload}
+   * To client SlowLog Payload class {@link OnlineLogRecord}
+   *
+   * @param slowLogPayload SlowLog Payload protobuf instance
+   * @return SlowLog Payload for client usecase
+   */
+  private static LogEntry getSlowLogRecord(
+      final TooSlowLog.SlowLogPayload slowLogPayload) {
+    OnlineLogRecord onlineLogRecord = new OnlineLogRecord.OnlineLogRecordBuilder()
+      .setCallDetails(slowLogPayload.getCallDetails())
+      .setClientAddress(slowLogPayload.getClientAddress())
+      .setMethodName(slowLogPayload.getMethodName())
+      .setMultiGetsCount(slowLogPayload.getMultiGets())
+      .setMultiMutationsCount(slowLogPayload.getMultiMutations())
+      .setMultiServiceCalls(slowLogPayload.getMultiServiceCalls())
+      .setParam(slowLogPayload.getParam())
+      .setProcessingTime(slowLogPayload.getProcessingTime())
+      .setQueueTime(slowLogPayload.getQueueTime())
+      .setRegionName(slowLogPayload.getRegionName())
+      .setResponseSize(slowLogPayload.getResponseSize())
+      .setServerClass(slowLogPayload.getServerClass())
+      .setStartTime(slowLogPayload.getStartTime())
+      .setUserName(slowLogPayload.getUserName())
+      .build();
+    return onlineLogRecord;
+  }
+
+  /**
+   * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
+   *
+   * @param logEntry slowlog response protobuf instance
+   * @return list of SlowLog payloads for client usecase
+   */
+  public static List<LogEntry> toSlowLogPayloads(
+      final HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponses")) {
+        AdminProtos.SlowLogResponses slowLogResponses = (AdminProtos.SlowLogResponses) method
+          .invoke(null, logEntry.getLogMessage());
+        return slowLogResponses.getSlowLogPayloadsList().stream()
+          .map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  /**
+   * Convert {@link ClearSlowLogResponses} to boolean
+   *
+   * @param clearSlowLogResponses Clear slowlog response protobuf instance
+   * @return boolean representing clear slowlog response
+   */
+  public static boolean toClearSlowLogPayload(final ClearSlowLogResponses clearSlowLogResponses) {
+    return clearSlowLogResponses.getIsCleaned();
+  }
+
+  public static void populateBalanceRSGroupResponse(RSGroupAdminProtos.BalanceRSGroupResponse.Builder responseBuilder, BalanceResponse response) {
+    responseBuilder
+      .setBalanceRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted());
+  }
+
+  public static BalanceResponse toBalanceResponse(RSGroupAdminProtos.BalanceRSGroupResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.getBalanceRan())
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesCalculated() : 0)
+      .build();
+  }
+
+  public static RSGroupAdminProtos.BalanceRSGroupRequest createBalanceRSGroupRequest(String groupName, BalanceRequest request) {
+    return RSGroupAdminProtos.BalanceRSGroupRequest.newBuilder()
+      .setRSGroupName(groupName)
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  public static BalanceRequest toBalanceRequest(RSGroupAdminProtos.BalanceRSGroupRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
+  }
+
+  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
+    RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
+
+    Collection<Address> addresses = proto.getServersList().parallelStream()
+      .map(serverName -> Address.fromParts(serverName.getHostName(), serverName.getPort()))
+      .collect(Collectors.toList());
+    rsGroupInfo.addAllServers(addresses);
+
+    Collection<TableName> tables = proto.getTablesList().parallelStream()
+      .map(ProtobufUtil::toTableName).collect(Collectors.toList());
+    rsGroupInfo.addAllTables(tables);
+
+    proto.getConfigurationList().forEach(pair ->
+        rsGroupInfo.setConfiguration(pair.getName(), pair.getValue()));
+    return rsGroupInfo;
+  }
+
+  public static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
+    List<HBaseProtos.TableName> tables = new ArrayList<>(pojo.getTables().size());
+    for (TableName arg : pojo.getTables()) {
+      tables.add(ProtobufUtil.toProtoTableName(arg));
+    }
+    List<HBaseProtos.ServerName> hostports = new ArrayList<>(pojo.getServers().size());
+    for (Address el : pojo.getServers()) {
+      hostports.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+          .setPort(el.getPort()).build());
+    }
+    List<NameStringPair> configuration = pojo.getConfiguration().entrySet()
+        .stream().map(entry -> NameStringPair.newBuilder()
+            .setName(entry.getKey()).setValue(entry.getValue()).build())
+        .collect(Collectors.toList());
+    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName()).addAllServers(hostports)
+        .addAllTables(tables).addAllConfiguration(configuration).build();
+  }
+
+  public static CheckAndMutate toCheckAndMutate(ClientProtos.Condition condition,
+    MutationProto mutation, CellScanner cellScanner) throws IOException {
+    byte[] row = condition.getRow().toByteArray();
+    CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row);
+    Filter filter = condition.hasFilter() ? ProtobufUtil.toFilter(condition.getFilter()) : null;
+    if (filter != null) {
+      builder.ifMatches(filter);
+    } else {
+      builder.ifMatches(condition.getFamily().toByteArray(),
+        condition.getQualifier().toByteArray(),
+        CompareOperator.valueOf(condition.getCompareType().name()),
+        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+    }
+    TimeRange timeRange = condition.hasTimeRange() ?
+      ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
+    builder.timeRange(timeRange);
+
+    try {
+      MutationType type = mutation.getMutateType();
+      switch (type) {
+        case PUT:
+          return builder.build(ProtobufUtil.toPut(mutation, cellScanner));
+        case DELETE:
+          return builder.build(ProtobufUtil.toDelete(mutation, cellScanner));
+        case INCREMENT:
+          return builder.build(ProtobufUtil.toIncrement(mutation, cellScanner));
+        case APPEND:
+          return builder.build(ProtobufUtil.toAppend(mutation, cellScanner));
+        default:
+          throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+  }
+
+  public static CheckAndMutate toCheckAndMutate(ClientProtos.Condition condition,
+    List<Mutation> mutations) throws IOException {
+    assert mutations.size() > 0;
+    byte[] row = condition.getRow().toByteArray();
+    CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row);
+    Filter filter = condition.hasFilter() ? ProtobufUtil.toFilter(condition.getFilter()) : null;
+    if (filter != null) {
+      builder.ifMatches(filter);
+    } else {
+      builder.ifMatches(condition.getFamily().toByteArray(),
+        condition.getQualifier().toByteArray(),
+        CompareOperator.valueOf(condition.getCompareType().name()),
+        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+    }
+    TimeRange timeRange = condition.hasTimeRange() ?
+      ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
+    builder.timeRange(timeRange);
+
+    try {
+      if (mutations.size() == 1) {
+        Mutation m = mutations.get(0);
+        if (m instanceof Put) {
+          return builder.build((Put) m);
+        } else if (m instanceof Delete) {
+          return builder.build((Delete) m);
+        } else if (m instanceof Increment) {
+          return builder.build((Increment) m);
+        } else if (m instanceof Append) {
+          return builder.build((Append) m);
+        } else {
+          throw new DoNotRetryIOException("Unsupported mutate type: " + m.getClass()
+            .getSimpleName().toUpperCase());
+        }
+      } else {
+        return builder.build(new RowMutations(mutations.get(0).getRow()).add(mutations));
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+
+    ClientProtos.Condition.Builder builder = ClientProtos.Condition.newBuilder()
+      .setRow(UnsafeByteOperations.unsafeWrap(row));
+
+    if (filter != null) {
+      builder.setFilter(ProtobufUtil.toFilter(filter));
+    } else {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(family))
+        .setQualifier(UnsafeByteOperations.unsafeWrap(
+          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
+        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
+        .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
+    }
+
+    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, null, null, null, null, filter, timeRange);
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, family, qualifier, op, value, null, timeRange);
+  }
+
+  public static List<LogEntry> toBalancerDecisionResponse(
+      HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsResponse")) {
+        MasterProtos.BalancerDecisionsResponse response =
+          (MasterProtos.BalancerDecisionsResponse) method
+            .invoke(null, logEntry.getLogMessage());
+        return getBalancerDecisionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  public static List<LogEntry> toBalancerRejectionResponse(
+    HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerRejectionsResponse")) {
+        MasterProtos.BalancerRejectionsResponse response =
+          (MasterProtos.BalancerRejectionsResponse) method
+            .invoke(null, logEntry.getLogMessage());
+        return getBalancerRejectionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  public static List<LogEntry> getBalancerDecisionEntries(
+      MasterProtos.BalancerDecisionsResponse response) {
+    List<RecentLogs.BalancerDecision> balancerDecisions = response.getBalancerDecisionList();
+    if (CollectionUtils.isEmpty(balancerDecisions)) {
+      return Collections.emptyList();
+    }
+    return balancerDecisions.stream().map(balancerDecision -> new BalancerDecision.Builder()
+      .setInitTotalCost(balancerDecision.getInitTotalCost())
+      .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
+      .setComputedTotalCost(balancerDecision.getComputedTotalCost())
+      .setFinalFunctionCosts(balancerDecision.getFinalFunctionCosts())
+      .setComputedSteps(balancerDecision.getComputedSteps())
+      .setRegionPlans(balancerDecision.getRegionPlansList()).build())
+      .collect(Collectors.toList());
+  }
+
+  public static List<LogEntry> getBalancerRejectionEntries(
+    MasterProtos.BalancerRejectionsResponse response) {
+    List<RecentLogs.BalancerRejection> balancerRejections = response.getBalancerRejectionList();
+    if (CollectionUtils.isEmpty(balancerRejections)) {
+      return Collections.emptyList();
+    }
+    return balancerRejections.stream().map(balancerRejection -> new BalancerRejection.Builder()
+      .setReason(balancerRejection.getReason())
+      .setCostFuncInfoList(balancerRejection.getCostFuncInfoList())
+      .build())
+      .collect(Collectors.toList());
+  }
+
+  public static HBaseProtos.LogRequest toBalancerDecisionRequest(int limit) {
+    MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+      MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(balancerDecisionsRequest.getClass().getName())
+      .setLogMessage(balancerDecisionsRequest.toByteString())
+      .build();
+  }
+
+  public static HBaseProtos.LogRequest toBalancerRejectionRequest(int limit) {
+    MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest =
+      MasterProtos.BalancerRejectionsRequest.newBuilder().setLimit(limit).build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(balancerRejectionsRequest.getClass().getName())
+      .setLogMessage(balancerRejectionsRequest.toByteString())
+      .build();
+  }
+
+  public static MasterProtos.BalanceRequest toBalanceRequest(BalanceRequest request) {
+    return MasterProtos.BalanceRequest.newBuilder()
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  public static BalanceRequest toBalanceRequest(MasterProtos.BalanceRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
+  }
+
+  public static MasterProtos.BalanceResponse toBalanceResponse(BalanceResponse response) {
+    return MasterProtos.BalanceResponse.newBuilder()
+      .setBalancerRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted())
+      .build();
+  }
+
+  public static BalanceResponse toBalanceResponse(MasterProtos.BalanceResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.hasBalancerRan() && response.getBalancerRan())
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesExecuted() : 0)
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .build();
+  }
+
+  public static ServerTask getServerTask(ClusterStatusProtos.ServerTask task) {
+    return ServerTaskBuilder.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
+      .build();
+  }
+
+  public static ClusterStatusProtos.ServerTask toServerTask(ServerTask task) {
+    return ClusterStatusProtos.ServerTask.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
+      .build();
+  }
+
 }

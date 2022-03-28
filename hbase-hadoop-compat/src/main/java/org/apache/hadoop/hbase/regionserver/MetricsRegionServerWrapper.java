@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -79,6 +80,11 @@ public interface MetricsRegionServerWrapper {
    * Get the size of WAL files of this region server.
    */
   long getWALFileSize();
+
+  /**
+   * Get the excluded datanodes in the cache of this region server.
+   */
+  List<String> getWALExcludeDNs();
 
   /**
    * Get the number of WAL files with slow appends for this region server.
@@ -453,6 +459,31 @@ public interface MetricsRegionServerWrapper {
   long getHedgedReadWins();
 
   /**
+   * @return Count of times a hedged read executes in current thread
+   */
+  long getHedgedReadOpsInCurThread();
+
+  /**
+   * @return Number of total bytes read from HDFS.
+   */
+  long getTotalBytesRead();
+
+  /**
+   * @return Number of bytes read from the local HDFS DataNode.
+   */
+  long getLocalBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS short circuit.
+   */
+  long getShortCircuitBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS zero copy.
+   */
+  long getZeroCopyBytesRead();
+
+  /**
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
@@ -466,6 +497,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of rpc scan requests to this region server.
    */
   long getRpcScanRequestsCount();
+
+  /**
+   * Get the number of full region rpc scan requests to this region server.
+   */
+  long getRpcFullScanRequestsCount();
 
   /**
    * Get the number of rpc multi requests to this region server.
@@ -533,4 +569,6 @@ public interface MetricsRegionServerWrapper {
   long getByteBuffAllocatorTotalBufferCount();
 
   long getByteBuffAllocatorUsedBufferCount();
+
+  int getActiveScanners();
 }

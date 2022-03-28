@@ -25,17 +25,22 @@ module Shell
 Flush all regions in passed table or pass a region row to
 flush an individual region or a region server name whose format
 is 'host,port,startcode', to flush all its regions.
+You can also flush a single column family for all regions within a table,
+or for an specific region only.
 For example:
 
   hbase> flush 'TABLENAME'
+  hbase> flush 'TABLENAME','FAMILYNAME'
   hbase> flush 'REGIONNAME'
+  hbase> flush 'REGIONNAME','FAMILYNAME'
   hbase> flush 'ENCODED_REGIONNAME'
+  hbase> flush 'ENCODED_REGIONNAME','FAMILYNAME'
   hbase> flush 'REGION_SERVER_NAME'
 EOF
       end
 
-      def command(table_or_region_name)
-        admin.flush(table_or_region_name)
+      def command(table_or_region_name, family = nil)
+        admin.flush(table_or_region_name, family)
       end
     end
   end

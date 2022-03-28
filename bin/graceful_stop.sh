@@ -22,7 +22,8 @@
 # Turn off the balancer before running this script.
 function usage {
   echo "Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] \
-[--rest]  [-nob |--nobalancer ] <hostname>"
+[--rest] [-n |--noack] [--maxthreads <number of threads>] [--movetimeout <timeout in seconds>] \
+[-nob |--nobalancer] [-d |--designatedfile <file path>] [-x |--excludefile <file path>] <hostname>"
   echo " thrift         If we should stop/start thrift before/after the hbase stop/start"
   echo " rest           If we should stop/start rest before/after the hbase stop/start"
   echo " restart        If we should restart after graceful stop"
@@ -32,10 +33,13 @@ moving regions"
   echo " maxthreads xx  Limit the number of threads used by the region mover. Default value is 1."
   echo " movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,\
 exit with error. Default value is INT_MAX."
-  echo " hostname       Hostname of server we are to stop"
+  echo " hostname       Hostname to stop; match what HBase uses; pass 'localhost' if local to avoid ssh"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
-  echo " nob| nobalancer Do not manage balancer states. This is only used as optimization in \
+  echo " nob|nobalancer Do not manage balancer states. This is only used as optimization in \
 rolling_restart.sh to avoid multiple calls to hbase shell"
+  echo " d|designatedfile xx Designated file with <hostname:port> per line as unload targets"
+  echo " x|excludefile xx Exclude file should have <hostname:port> per line. We do not unload \
+regions to hostnames given in exclude file"
   exit 1
 }
 
@@ -57,6 +61,8 @@ movetimeout=2147483647
 maxthreads=1
 failfast=
 nob=false
+designatedfile=
+excludefile=
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -69,6 +75,8 @@ do
     --maxthreads) shift; maxthreads=$1; shift;;
     --movetimeout) shift; movetimeout=$1; shift;;
     --nobalancer | -nob) nob=true; shift;;
+    --designatedfile | -d) shift; designatedfile=$1; shift;;
+    --excludefile | -x) shift; excludefile=$1; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;	# terminate while loop
@@ -95,10 +103,11 @@ hostname=$1
 filename="/tmp/$hostname"
 
 local=
-localhostname=`/bin/hostname`
+localhostname=`/bin/hostname -f`
 
-if [ "$localhostname" == "$hostname" ]; then
+if [ "$localhostname" == "$hostname" ] || [ "$hostname" == "localhost" ]; then
   local=true
+  hostname=$localhostname
 fi
 
 if [ "$nob" == "true"  ]; then
@@ -110,10 +119,20 @@ else
   log "Previous balancer state was $HBASE_BALANCER_STATE"
 fi
 
+unload_args="--filename $filename --maxthreads $maxthreads $noack --operation unload \
+--timeout $movetimeout --regionserverhost $hostname"
+
+if [ "$designatedfile" != "" ]; then
+  unload_args="$unload_args --designatedfile $designatedfile"
+fi
+
+if [ "$excludefile" != "" ]; then
+  unload_args="$unload_args --excludefile $excludefile"
+fi
+
 log "Unloading $hostname region(s)"
 HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.apache.hadoop.hbase.util.RegionMover \
---filename $filename --maxthreads $maxthreads $noack --operation "unload" --timeout $movetimeout \
---regionserverhost $hostname
+$unload_args
 log "Unloaded $hostname region(s)"
 
 # Stop the server(s). Have to put hostname into its own little file for hbase-daemons.sh
@@ -183,4 +202,4 @@ else
 fi
 
 # Cleanup tmp files.
-trap "rm -f  "/tmp/$(basename $0).*.tmp" &> /dev/null" EXIT
+trap "rm -f  /tmp/$(basename $0).*.tmp &> /dev/null" EXIT

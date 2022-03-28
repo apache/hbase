@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -36,7 +37,7 @@ import org.junit.rules.TestName;
  */
 public class CloneSnapshotFromClientTestBase {
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -84,8 +85,7 @@ public class CloneSnapshotFromClientTestBase {
   @Before
   public void setup() throws Exception {
     this.admin = TEST_UTIL.getAdmin();
-
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     tableName = TableName.valueOf(getValidMethodName() + tid);
     emptySnapshot = "emptySnaptb-" + tid;
     snapshotName0 = "snaptb0-" + tid;
@@ -145,7 +145,7 @@ public class CloneSnapshotFromClientTestBase {
     return 1;
   }
 
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

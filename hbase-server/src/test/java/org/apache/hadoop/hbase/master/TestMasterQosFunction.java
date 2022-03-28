@@ -24,12 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.QosTestHelper;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.ipc.QosTestBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,15 +42,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 @Category({MasterTests.class, SmallTests.class})
-public class TestMasterQosFunction extends QosTestHelper {
+public class TestMasterQosFunction extends QosTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterQosFunction.class);
 
   private Configuration conf;
-  private RSRpcServices rpcServices;
-  private AnnotationReadingPriorityFunction qosFunction;
+  private MasterRpcServices rpcServices;
+  private MasterAnnotationReadingPriorityFunction qosFunction;
 
 
   @Before
@@ -60,16 +58,17 @@ public class TestMasterQosFunction extends QosTestHelper {
     conf = HBaseConfiguration.create();
     rpcServices = Mockito.mock(MasterRpcServices.class);
     when(rpcServices.getConfiguration()).thenReturn(conf);
-    qosFunction = new MasterAnnotationReadingPriorityFunction(rpcServices, MasterRpcServices.class);
+    qosFunction = new MasterAnnotationReadingPriorityFunction(rpcServices);
   }
 
   @Test
   public void testRegionInTransition() throws IOException {
     // Check ReportRegionInTransition
-    HBaseProtos.RegionInfo meta_ri = HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO);
-    HBaseProtos.RegionInfo normal_ri = HRegionInfo.convert(
-        new HRegionInfo(TableName.valueOf("test:table"),
-            Bytes.toBytes("a"), Bytes.toBytes("b"), false));
+    HBaseProtos.RegionInfo meta_ri =
+      ProtobufUtil.toRegionInfo(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    HBaseProtos.RegionInfo normal_ri =
+      ProtobufUtil.toRegionInfo(RegionInfoBuilder.newBuilder(TableName.valueOf("test:table"))
+        .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build());
 
 
     RegionServerStatusProtos.RegionStateTransition metaTransition = RegionServerStatusProtos
@@ -96,7 +95,7 @@ public class TestMasterQosFunction extends QosTestHelper {
             .addTransition(normalTransition).build();
 
     final String reportFuncName = "ReportRegionStateTransition";
-    checkMethod(conf, reportFuncName, HConstants.META_QOS, qosFunction,
+    checkMethod(conf, reportFuncName, 300, qosFunction,
         metaTransitionRequest);
     checkMethod(conf, reportFuncName, HConstants.HIGH_QOS, qosFunction, normalTransitionRequest);
   }
@@ -104,8 +103,5 @@ public class TestMasterQosFunction extends QosTestHelper {
   @Test
   public void testAnnotations() {
     checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
-    checkMethod(conf, "CompactRegion", HConstants.ADMIN_QOS, qosFunction);
-    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
-    checkMethod(conf, "GetRegionInfo", HConstants.ADMIN_QOS, qosFunction);
   }
 }

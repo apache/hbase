@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +20,30 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to restart the HRegionServer holding Meta.
 */
 public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
+
   public RestartRsHoldingMetaAction(long sleepTime) {
     super(sleepTime);
   }
+
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart region server holding META");
+    getLogger().info("Performing action: Restart regionserver holding META");
     ServerName server = cluster.getServerHoldingMeta();
     if (server == null) {
-      LOG.warn("No server is holding hbase:meta right now.");
+      getLogger().warn("No server is holding hbase:meta right now.");
       return;
     }
     ClusterMetrics clusterStatus = cluster.getClusterMetrics();

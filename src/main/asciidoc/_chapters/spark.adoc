@@ -145,7 +145,7 @@ number of other Spark base functions  are supported out of the box:
 `bulkGet`:: For massively parallel sending of gets to HBase to create a new RDD
 `mapPartition`:: To do a Spark Map function with a Connection object to allow full
 access to HBase
-`hBaseRDD`:: To simplify a distributed scan to create a RDD
+`hbaseRDD`:: To simplify a distributed scan to create a RDD
 // end::spark_base_functions[]
 
 For examples of all these functionalities, see the

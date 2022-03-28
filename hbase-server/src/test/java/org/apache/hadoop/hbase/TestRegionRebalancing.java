@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -27,10 +28,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceResponse;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -73,9 +78,9 @@ public class TestRegionRebalancing {
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionRebalancing.class);
-  private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private RegionLocator regionLocator;
-  private HTableDescriptor desc;
+  private TableDescriptor tableDescriptor;
   private String balancerName;
 
   public TestRegionRebalancing(String balancerName) {
@@ -93,8 +98,9 @@ public class TestRegionRebalancing {
     UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
     // set minCostNeedBalance to 0, make sure balancer run
     UTIL.startMiniCluster(1);
-    this.desc = new HTableDescriptor(TableName.valueOf("test"));
-    this.desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
+
+    this.tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
   }
 
   /**
@@ -108,14 +114,14 @@ public class TestRegionRebalancing {
   throws IOException, InterruptedException {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
-      admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
-          1, HBaseTestingUtility.KEYS.length));
-      this.regionLocator = connection.getRegionLocator(this.desc.getTableName());
+      admin.createTable(this.tableDescriptor, Arrays.copyOfRange(HBaseTestingUtil.KEYS,
+          1, HBaseTestingUtil.KEYS.length));
+      this.regionLocator = connection.getRegionLocator(this.tableDescriptor.getTableName());
 
       MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
 
       assertEquals("Test table should have right number of regions",
-        HBaseTestingUtility.KEYS.length,
+        HBaseTestingUtil.KEYS.length,
         this.regionLocator.getStartKeys().length);
 
       // verify that the region assignments are balanced to start out
@@ -128,14 +134,21 @@ public class TestRegionRebalancing {
       assertRegionsAreBalanced();
 
       // On a balanced cluster, calling balance() should return true
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+      BalanceResponse response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertEquals(0, response.getMovesCalculated());
+      assertEquals(0, response.getMovesExecuted());
 
       // if we add a server, then the balance() call should return true
       // add a region server - total of 3
       LOG.info("Started third server=" +
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
       assertRegionsAreBalanced();
 
       // kill a region server - total of 2
@@ -152,14 +165,24 @@ public class TestRegionRebalancing {
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       waitOnCrashProcessing();
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
+
       assertRegionsAreBalanced();
       for (int i = 0; i < 6; i++){
         LOG.info("Adding " + (i + 5) + "th region server");
         UTIL.getHBaseCluster().startRegionServer();
       }
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
+
       assertRegionsAreBalanced();
       regionLocator.close();
     }
@@ -168,7 +191,7 @@ public class TestRegionRebalancing {
   /**
    * Wait on crash processing. Balancer won't run if processing a crashed server.
    */
-  private void waitOnCrashProcessing() {
+  private void waitOnCrashProcessing() throws IOException {
     while (UTIL.getHBaseCluster().getMaster().getServerManager().areDeadServersInProgress()) {
       LOG.info("Waiting on processing of crashed server before proceeding...");
       Threads.sleep(1000);
@@ -260,7 +283,7 @@ public class TestRegionRebalancing {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    int totalRegions = HBaseTestingUtility.KEYS.length;
+    int totalRegions = HBaseTestingUtil.KEYS.length;
     try {
         Thread.sleep(200);
     } catch (InterruptedException e) {

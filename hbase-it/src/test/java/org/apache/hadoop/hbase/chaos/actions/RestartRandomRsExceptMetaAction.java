@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,18 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RestartRandomRsExceptMetaAction extends RestartRandomRsAction {
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRandomRsExceptMetaAction.class);
+
   public RestartRandomRsExceptMetaAction(long sleepTime) {
     super(sleepTime);
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -27,6 +29,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ClickjackingPreventionFilter implements Filter {
   private FilterConfig filterConfig;
+  private static final String DEFAULT_XFRAMEOPTIONS = "DENY";
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
@@ -50,5 +54,12 @@ public class ClickjackingPreventionFilter implements Filter {
 
   @Override
   public void destroy() {
+  }
+
+  public static Map<String, String> getDefaultParameters(Configuration conf) {
+    Map<String, String> params = new HashMap<>();
+    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
+        DEFAULT_XFRAMEOPTIONS));
+    return params;
   }
 }

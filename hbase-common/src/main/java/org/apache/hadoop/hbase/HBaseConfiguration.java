@@ -36,34 +36,8 @@ import org.slf4j.LoggerFactory;
 public class HBaseConfiguration extends Configuration {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseConfiguration.class);
 
-  /**
-   * Instantiating HBaseConfiguration() is deprecated. Please use
-   * HBaseConfiguration#create() to construct a plain Configuration
-   * @deprecated since 0.90.0. Please use {@link #create()} instead.
-   * @see #create()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
-   */
-  @Deprecated
-  public HBaseConfiguration() {
-    //TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
-    super();
-    addHbaseResources(this);
-    LOG.warn("instantiating HBaseConfiguration() is deprecated. Please use"
-        + " HBaseConfiguration#create() to construct a plain Configuration");
-  }
-
-  /**
-   * Instantiating HBaseConfiguration() is deprecated. Please use
-   * HBaseConfiguration#create(conf) to construct a plain Configuration
-   * @deprecated since 0.90.0. Please use {@link #create(Configuration)} instead.
-   * @see #create(Configuration)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
-   */
-  @Deprecated
-  public HBaseConfiguration(final Configuration c) {
-    //TODO:replace with private constructor
-    this();
-    merge(this, c);
+  static {
+    addDeprecatedKeys();
   }
 
   private static void checkDefaultsVersion(Configuration conf) {
@@ -75,6 +49,46 @@ public class HBaseConfiguration extends Configuration {
         "hbase-default.xml file seems to be for an older version of HBase (" +
         defaultsVersion + "), this version is " + thisVersion);
     }
+  }
+
+  /**
+   * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
+   * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
+   * hbase.server.allocator.max.buffer.count and hbase.server.allocator.buffer.size.
+   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
+   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
+   * compatibility.
+   * <br>
+   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be
+   * replaced by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config
+   * keys here for backward compatibility.
+   * <br>
+   * Note: Before Hadoop-3.3, we must call the addDeprecations method before creating the
+   * Configuration object to work correctly. After this bug is fixed in hadoop-3.3, there will be
+   * no order problem.
+   * @see <a href="https://issues.apache.org/jira/browse/HADOOP-15708">HADOOP-15708</a>
+   */
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[]{
+      new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
+      new DeprecationDelta("hbase.regionserver.hostname.disable.master.reversedns",
+        "hbase.unsafe.regionserver.hostname.disable.master.reversedns"),
+      new DeprecationDelta("hbase.offheapcache.minblocksize",
+        "hbase.blockcache.minblocksize"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.enabled",
+        "hbase.server.allocator.pool.enabled"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.max",
+        "hbase.server.allocator.max.buffer.count"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.buffer.size",
+        "hbase.server.allocator.buffer.size"),
+      new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
+      new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
+      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
+      new DeprecationDelta("hbase.master.mob.ttl.cleaner.period",
+        "hbase.master.mob.cleaner.period"),
+      new DeprecationDelta("hbase.normalizer.min.region.count",
+        "hbase.normalizer.merge.min.region.count")
+    });
   }
 
   public static Configuration addHbaseResources(Configuration conf) {
@@ -186,35 +200,14 @@ public class HBaseConfiguration extends Configuration {
    */
   public static String getPassword(Configuration conf, String alias,
       String defPass) throws IOException {
-    String passwd = null;
-    try {
-      Method m = Configuration.class.getMethod("getPassword", String.class);
-      char[] p = (char[]) m.invoke(conf, alias);
-      if (p != null) {
-        LOG.debug(String.format("Config option \"%s\" was found through" +
-            " the Configuration getPassword method.", alias));
-        passwd = new String(p);
-      } else {
-        LOG.debug(String.format(
-            "Config option \"%s\" was not found. Using provided default value",
-            alias));
-        passwd = defPass;
-      }
-    } catch (NoSuchMethodException e) {
-      // this is a version of Hadoop where the credential
-      //provider API doesn't exist yet
-      LOG.debug(String.format(
-          "Credential.getPassword method is not available." +
-              " Falling back to configuration."));
-      passwd = conf.get(alias, defPass);
-    } catch (SecurityException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (IllegalAccessException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (InvocationTargetException e) {
-      throw new IOException(e.getMessage(), e);
+    String passwd;
+    char[] p = conf.getPassword(alias);
+    if (p != null) {
+      LOG.debug("Config option {} was found through the Configuration getPassword method.", alias);
+      passwd = new String(p);
+    } else {
+      LOG.debug("Config option {} was not found. Using provided default value", alias);
+      passwd = defPass;
     }
     return passwd;
   }
@@ -250,7 +243,7 @@ public class HBaseConfiguration extends Configuration {
    * @return the merged configuration with override properties and cluster key applied
    */
   public static Configuration createClusterConf(Configuration baseConf, String clusterKey,
-                                                String overridePrefix) throws IOException {
+      String overridePrefix) throws IOException {
     Configuration clusterConf = HBaseConfiguration.create(baseConf);
     if (clusterKey != null && !clusterKey.isEmpty()) {
       applyClusterKeyToConf(clusterConf, clusterKey);
@@ -268,14 +261,21 @@ public class HBaseConfiguration extends Configuration {
    * used to communicate with distant clusters
    * @param conf configuration object to configure
    * @param key string that contains the 3 required configuratins
-   * @throws IOException
    */
   private static void applyClusterKeyToConf(Configuration conf, String key)
-      throws IOException{
+      throws IOException {
     ZKConfig.ZKClusterKey zkClusterKey = ZKConfig.transformClusterKey(key);
     conf.set(HConstants.ZOOKEEPER_QUORUM, zkClusterKey.getQuorumString());
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClusterKey.getClientPort());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkClusterKey.getZnodeParent());
+    // Without the right registry, the above configs are useless. Also, we don't use setClass()
+    // here because the ConnectionRegistry* classes are not resolvable from this module.
+    // This will be broken if ZkConnectionRegistry class gets renamed or moved. Is there a better
+    // way?
+    LOG.info("Overriding client registry implementation to {}",
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
   }
 
   /**

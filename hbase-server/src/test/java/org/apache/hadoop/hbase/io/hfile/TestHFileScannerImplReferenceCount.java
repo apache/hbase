@@ -29,15 +29,15 @@ import static org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.MIN_INDEX_NUM_ENT
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -47,8 +47,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl.HFileScannerImpl;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,10 +59,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@RunWith(Parameterized.class)
+@Category({ IOTests.class, LargeTests.class })
 public class TestHFileScannerImplReferenceCount {
 
   @ClassRule
@@ -71,18 +77,27 @@ public class TestHFileScannerImplReferenceCount {
   @Rule
   public TestName CASE = new TestName();
 
+  @Parameters(name = "{index}: ioengine={0}")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[] { "file" }, new Object[] { "offheap" },
+      new Object[] { "mmap" }, new Object[] { "pmem" });
+  }
+
+  @Parameter
+  public String ioengine;
+
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final byte[] SUFFIX = randLongBytes();
   private static final int CELL_COUNT = 1000;
 
   private static byte[] randLongBytes() {
-    Random rand = new Random();
     byte[] keys = new byte[30];
-    rand.nextBytes(keys);
+    Bytes.random(keys);
     return keys;
   }
 
@@ -113,14 +128,18 @@ public class TestHFileScannerImplReferenceCount {
 
   @Before
   public void setUp() throws IOException {
+    String caseName = CASE.getMethodName().replaceAll("[^a-zA-Z0-9]", "_");
+    this.workDir = UTIL.getDataTestDir(caseName);
+    if (!"offheap".equals(ioengine)) {
+      ioengine = ioengine + ":" + workDir.toString() + "/cachedata";
+    }
+    UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY, ioengine);
     this.firstCell = null;
     this.secondCell = null;
     this.allocator = ByteBuffAllocator.create(UTIL.getConfiguration(), true);
     this.conf = new Configuration(UTIL.getConfiguration());
-    String caseName = CASE.getMethodName();
-    this.workDir = UTIL.getDataTestDir(caseName);
     this.fs = this.workDir.getFileSystem(conf);
-    this.hfilePath = new Path(this.workDir, caseName + System.currentTimeMillis());
+    this.hfilePath = new Path(this.workDir, caseName + EnvironmentEdgeManager.currentTime());
     LOG.info("Start to write {} cells into hfile: {}, case:{}", CELL_COUNT, hfilePath, caseName);
   }
 
@@ -145,13 +164,11 @@ public class TestHFileScannerImplReferenceCount {
             .withCompression(compression).withDataBlockEncoding(encoding).build();
     try (HFile.Writer writer =
         new HFile.WriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
-            .withFileContext(context).withComparator(CellComparatorImpl.COMPARATOR).create()) {
-      Random rand = new Random(9713312); // Just a fixed seed.
+            .withFileContext(context).create()) {
       for (int i = 0; i < cellCount; ++i) {
         byte[] keyBytes = Bytes.add(Bytes.toBytes(i), SUFFIX);
-
         // A random-length random value.
-        byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+        byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
         KeyValue keyValue =
             new KeyValue(keyBytes, FAMILY, QUALIFIER, HConstants.LATEST_TIMESTAMP, valueBytes);
         if (firstCell == null) {
@@ -181,17 +198,17 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertFalse(block1 instanceof ExclusiveMemHFileBlock);
 
     HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertFalse(block2 instanceof ExclusiveMemHFileBlock);
@@ -202,34 +219,34 @@ public class TestHFileScannerImplReferenceCount {
 
     scanner.seekTo(firstCell);
     curBlock = scanner.curBlock;
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(curBlock, 2);
 
     // Seek to the block again, the curBlock won't change and won't read from BlockCache. so
     // refCnt should be unchanged.
     scanner.seekTo(firstCell);
     Assert.assertTrue(curBlock == scanner.curBlock);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(curBlock, 2);
     prevBlock = curBlock;
 
     scanner.seekTo(secondCell);
     curBlock = scanner.curBlock;
-    Assert.assertEquals(prevBlock.refCnt(), 2);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 2);
+    this.assertRefCnt(curBlock, 2);
 
     // After shipped, the prevBlock will be release, but curBlock is still referenced by the
     // curBlock.
     scanner.shipped();
-    Assert.assertEquals(prevBlock.refCnt(), 1);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 1);
+    this.assertRefCnt(curBlock, 2);
 
     // Try to ship again, though with nothing to client.
     scanner.shipped();
-    Assert.assertEquals(prevBlock.refCnt(), 1);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 1);
+    this.assertRefCnt(curBlock, 2);
 
     // The curBlock will also be released.
     scanner.close();
-    Assert.assertEquals(curBlock.refCnt(), 1);
+    this.assertRefCnt(curBlock, 1);
 
     // Finish the block & block2 RPC path
     Assert.assertTrue(block1.release());
@@ -265,15 +282,15 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertFalse(block1 instanceof ExclusiveMemHFileBlock);
     HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertFalse(block2 instanceof ExclusiveMemHFileBlock);
     // Wait until flushed to IOEngine;
@@ -287,7 +304,7 @@ public class TestHFileScannerImplReferenceCount {
     curBlock = scanner.curBlock;
     Assert.assertFalse(curBlock == block2);
     Assert.assertEquals(1, block2.refCnt());
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     prevBlock = scanner.curBlock;
 
     // Release the block1, no other reference.
@@ -305,22 +322,22 @@ public class TestHFileScannerImplReferenceCount {
     // the curBlock is read from IOEngine, so a different block.
     Assert.assertFalse(curBlock == block1);
     // Two reference for curBlock: 1. scanner; 2. blockCache.
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     // Reference count of prevBlock must be unchanged because we haven't shipped.
-    Assert.assertEquals(2, prevBlock.refCnt());
+    this.assertRefCnt(prevBlock, 2);
 
     // Do the shipped
     scanner.shipped();
     Assert.assertEquals(scanner.prevBlocks.size(), 0);
     Assert.assertNotNull(scanner.curBlock);
-    Assert.assertEquals(2, curBlock.refCnt());
-    Assert.assertEquals(1, prevBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
+    this.assertRefCnt(prevBlock, 1);
 
     // Do the close
     scanner.close();
     Assert.assertNull(scanner.curBlock);
-    Assert.assertEquals(1, curBlock.refCnt());
-    Assert.assertEquals(1, prevBlock.refCnt());
+    this.assertRefCnt(curBlock, 1);
+    this.assertRefCnt(prevBlock, 1);
 
     Assert.assertTrue(defaultBC.evictBlocksByHfileName(hfilePath.getName()) >= 2);
     Assert.assertEquals(0, curBlock.refCnt());
@@ -328,8 +345,8 @@ public class TestHFileScannerImplReferenceCount {
 
     // Reload the block1 again.
     block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     // Wait until flushed to IOEngine;
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block1.getBlockType().isData());
@@ -340,16 +357,24 @@ public class TestHFileScannerImplReferenceCount {
     Assert.assertTrue(scanner.seekTo());
     curBlock = scanner.curBlock;
     Assert.assertFalse(curBlock == block1);
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     // Return false because firstCell <= c[0]
     Assert.assertFalse(scanner.seekBefore(firstCell));
     // The block1 shouldn't be released because we still don't do the shipped or close.
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
 
     scanner.close();
-    Assert.assertEquals(1, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 1);
     Assert.assertTrue(defaultBC.evictBlocksByHfileName(hfilePath.getName()) >= 1);
     Assert.assertEquals(0, curBlock.refCnt());
+  }
+
+  private void assertRefCnt(HFileBlock block, int value) {
+    if (ioengine.startsWith("offheap") || ioengine.startsWith("pmem")) {
+      Assert.assertEquals(value, block.refCnt());
+    } else {
+      Assert.assertEquals(value - 1, block.refCnt());
+    }
   }
 
   @Test
@@ -387,15 +412,15 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertTrue(block1 instanceof ExclusiveMemHFileBlock);
     HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertTrue(block2 instanceof ExclusiveMemHFileBlock);
     // One RPC reference path.
@@ -439,8 +464,8 @@ public class TestHFileScannerImplReferenceCount {
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
-        .getHFileBlock();
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
+            DataBlockEncoding.NONE, reader).getHFileBlock();
 
     Assert.assertTrue(block1.isSharedMem());
     Assert.assertTrue(block1 instanceof SharedMemHFileBlock);

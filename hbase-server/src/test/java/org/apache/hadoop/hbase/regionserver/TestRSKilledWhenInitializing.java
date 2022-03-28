@@ -28,13 +28,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -91,13 +90,12 @@ public class TestRSKilledWhenInitializing {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     // Start the cluster
-    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.createRootDir();
-    final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
-            RegisterAndDieRegionServer.class);
+    final LocalHBaseCluster cluster = new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS,
+        HMaster.class, RegisterAndDieRegionServer.class);
     final MasterThread master = startMaster(cluster.getMasters().get(0));
     try {
       // Master is up waiting on RegionServers to check in. Now start RegionServers.
@@ -105,7 +103,7 @@ public class TestRSKilledWhenInitializing {
         cluster.getRegionServers().get(i).start();
       }
       // Expected total regionservers depends on whether Master can host regions or not.
-      int expectedTotalRegionServers = NUM_RS + (LoadBalancer.isTablesOnMaster(conf)? 1: 0);
+      int expectedTotalRegionServers = NUM_RS;
       List<ServerName> onlineServersList = null;
       do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
@@ -198,9 +196,9 @@ public class TestRSKilledWhenInitializing {
    * the response to a reportForDuty. When it dies, it clears its ephemeral znode which the master
    * notices and so removes the region from its set of online regionservers.
    */
-  static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf)
-    throws IOException, InterruptedException {
+  static class RegisterAndDieRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    public RegisterAndDieRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 

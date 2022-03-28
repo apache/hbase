@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -52,9 +52,10 @@ import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
-import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -71,7 +72,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, LargeTests.class})
 public class TestSplitLogManager {
 
   @ClassRule
@@ -88,7 +89,7 @@ public class TestSplitLogManager {
   private Configuration conf;
   private int to;
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   class DummyMasterServices extends MockNoopMasterServices {
     private ZKWatcher zkw;
@@ -118,7 +119,7 @@ public class TestSplitLogManager {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniZKCluster();
     conf = TEST_UTIL.getConfiguration();
     // Use a different ZK wrapper instance for each tests.
@@ -151,8 +152,19 @@ public class TestSplitLogManager {
   @After
   public void teardown() throws IOException, KeeperException {
     master.stop("");
-    if (slm != null) slm.stop();
+    if (slm != null) {
+      slm.stop();
+    }
     TEST_UTIL.shutdownMiniZKCluster();
+  }
+
+  @Test
+  public void testBatchWaitMillis() {
+    assertEquals(100, SplitLogManager.getBatchWaitTimeMillis(0));
+    assertEquals(100, SplitLogManager.getBatchWaitTimeMillis(1));
+    assertEquals(1000, SplitLogManager.getBatchWaitTimeMillis(10));
+    assertEquals(60_000, SplitLogManager.getBatchWaitTimeMillis(101));
+    assertEquals(60_000, SplitLogManager.getBatchWaitTimeMillis(1011));
   }
 
   private interface Expr {
@@ -212,7 +224,6 @@ public class TestSplitLogManager {
 
   /**
    * Test whether the splitlog correctly creates a task in zookeeper
-   * @throws Exception
    */
   @Test
   public void testTaskCreation() throws Exception {
@@ -244,7 +255,7 @@ public class TestSplitLogManager {
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
     assertFalse(task.isUnassigned());
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");
@@ -333,7 +344,8 @@ public class TestSplitLogManager {
         return (tot_mgr_resubmit.sum() + tot_mgr_resubmit_failed.sum());
       }
     }, 0, 1, 5*60000); // wait long enough
-    Assert.assertEquals("Could not run test. Lost ZK connection?", 0, tot_mgr_resubmit_failed.sum());
+    Assert.assertEquals("Could not run test. Lost ZK connection?",
+      0, tot_mgr_resubmit_failed.sum());
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
@@ -460,9 +472,13 @@ public class TestSplitLogManager {
     final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    if (tot_mgr_heartbeat.sum() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    if (tot_mgr_heartbeat.sum() == 0) {
+      waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    }
     slm.handleDeadWorker(worker1);
-    if (tot_mgr_resubmit.sum() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, to+to/2);
+    if (tot_mgr_resubmit.sum() == 0) {
+      waitForCounter(tot_mgr_resubmit, 0, 1, to+to/2);
+    }
     if (tot_mgr_resubmit_dead_server_task.sum() == 0) {
       waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, to + to/2);
     }
@@ -485,7 +501,9 @@ public class TestSplitLogManager {
 
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    if (tot_mgr_heartbeat.sum() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    if (tot_mgr_heartbeat.sum() == 0) {
+      waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    }
 
     // Not yet resubmitted.
     Assert.assertEquals(0, tot_mgr_resubmit.sum());
@@ -504,7 +522,8 @@ public class TestSplitLogManager {
     LOG.info("testEmptyLogDir");
     slm = new SplitLogManager(master, conf);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path emptyLogDirPath = new Path(new Path(fs.getWorkingDirectory(), HConstants.HREGION_LOGDIR_NAME),
+    Path emptyLogDirPath = new Path(new Path(fs.getWorkingDirectory(),
+      HConstants.HREGION_LOGDIR_NAME),
         ServerName.valueOf("emptyLogDir", 1, 1).toString());
     fs.mkdirs(emptyLogDirPath);
     slm.splitLogDistributed(emptyLogDirPath);

@@ -26,7 +26,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import java.nio.ByteBuffer;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Handle connection preamble.
@@ -58,7 +57,6 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
     p.remove("preambleDecoder");
   }
 
-  @VisibleForTesting
   protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
     return new NettyServerRpcConnection(rpcServer, channel);
   }

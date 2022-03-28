@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -73,7 +73,7 @@ public class TestCompactionArchiveIOException {
 
   private static final String ERROR_FILE = "fffffffffffffffffdeadbeef";
 
-  public HBaseTestingUtility testUtil;
+  public HBaseTestingUtil testUtil;
 
   private Path testDir;
 
@@ -82,10 +82,10 @@ public class TestCompactionArchiveIOException {
 
   @Before
   public void setup() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
     testDir = testUtil.getDataTestDirOnTestFS();
-    FSUtils.setRootDir(testUtil.getConfiguration(), testDir);
+    CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);
   }
 
   @After
@@ -181,8 +181,9 @@ public class TestCompactionArchiveIOException {
 
   private HRegion initHRegion(TableDescriptor htd, RegionInfo info) throws IOException {
     Configuration conf = testUtil.getConfiguration();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
     Path regionDir = new Path(tableDir, info.getEncodedName());
     Path storeDir = new Path(regionDir, htd.getColumnFamilies()[0].getNameAsString());
 
@@ -195,7 +196,7 @@ public class TestCompactionArchiveIOException {
 
     HRegionFileSystem fs = new HRegionFileSystem(conf, errFS, tableDir, info);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, tableDir);
+    CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
 

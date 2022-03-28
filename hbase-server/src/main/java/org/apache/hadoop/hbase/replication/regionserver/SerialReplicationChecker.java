@@ -25,11 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.ReplicationBarrierResult;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat.ReplicationBarrierResult;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
@@ -50,12 +49,13 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
  * </p>
  * <p>
  * We record all the open sequence number for a region in a special family in meta, which is called
- * 'barrier', so there will be a sequence of open sequence number (b1, b2, b3, ...). We call [bn,
- * bn+1) a range, and it is obvious that a region will always be on the same RS within a range.
+ * 'rep_barrier', so there will be a sequence of open sequence number (b1, b2, b3, ...). We call
+ * [bn, bn+1) a range, and it is obvious that a region will always be on the same RS within a
+ * range.
  * <p>
  * When split and merge, we will also record the parent for the generated region(s) in the special
- * family in meta. And also, we will write an extra 'open sequence number' for the parent region(s),
- * which is the max sequence id of the region plus one.
+ * family in meta. And also, we will write an extra 'open sequence number' for the parent
+ * region(s), which is the max sequence id of the region plus one.
  * </p>
  * </p>
  * <p>
@@ -139,7 +139,7 @@ class SerialReplicationChecker {
 
   public SerialReplicationChecker(Configuration conf, ReplicationSource source) {
     this.peerId = source.getPeerId();
-    this.storage = source.getQueueStorage();
+    this.storage = source.getReplicationQueueStorage();
     this.conn = source.getServer().getConnection();
     this.waitTimeMs =
       conf.getLong(REPLICATION_SERIALLY_WAITING_KEY, REPLICATION_SERIALLY_WAITING_DEFAULT);
@@ -159,7 +159,7 @@ class SerialReplicationChecker {
   }
 
   private boolean isParentFinished(byte[] regionName) throws IOException {
-    long[] barriers = MetaTableAccessor.getReplicationBarrier(conn, regionName);
+    long[] barriers = ReplicationBarrierFamilyFormat.getReplicationBarriers(conn, regionName);
     if (barriers.length == 0) {
       return true;
     }
@@ -184,8 +184,9 @@ class SerialReplicationChecker {
   private boolean canPush(Entry entry, byte[] row) throws IOException {
     String encodedNameAsString = Bytes.toString(entry.getKey().getEncodedRegionName());
     long seqId = entry.getKey().getSequenceId();
-    ReplicationBarrierResult barrierResult = MetaTableAccessor.getReplicationBarrierResult(conn,
-      entry.getKey().getTableName(), row, entry.getKey().getEncodedRegionName());
+    ReplicationBarrierResult barrierResult =
+      ReplicationBarrierFamilyFormat.getReplicationBarrierResult(conn,
+        entry.getKey().getTableName(), row, entry.getKey().getEncodedRegionName());
     LOG.debug("Replication barrier for {}: {}", entry, barrierResult);
     long[] barriers = barrierResult.getBarriers();
     int index = Arrays.binarySearch(barriers, seqId);

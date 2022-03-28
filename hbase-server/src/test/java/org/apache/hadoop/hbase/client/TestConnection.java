@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +32,7 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,12 +41,11 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -58,6 +56,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 
 /**
  * This class is for testing {@link Connection}.
@@ -70,7 +75,7 @@ public class TestConnection {
     HBaseClassTestRule.forClass(TestConnection.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConnection.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
@@ -81,6 +86,7 @@ public class TestConnection {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    ResourceLeakDetector.setLevel(Level.PARANOID);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
@@ -93,6 +99,11 @@ public class TestConnection {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    TEST_UTIL.getAdmin().balancerSwitch(true, true);
   }
 
   /**
@@ -125,7 +136,7 @@ public class TestConnection {
     TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
-    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -190,9 +201,9 @@ public class TestConnection {
     RpcClient rpcClient = ((AsyncConnectionImpl) connection.toAsyncConnection()).rpcClient;
 
     LOG.info("Going to cancel connections. connection=" + connection.toString() + ", sn=" + sn);
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < 500; i++) {
       rpcClient.cancelConnections(sn);
-      Thread.sleep(5);
+      Thread.sleep(50);
     }
 
     step.compareAndSet(1, 2);
@@ -207,7 +218,6 @@ public class TestConnection {
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
-    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
   /**
@@ -234,7 +244,7 @@ public class TestConnection {
     table.put(put);
 
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
-    mee.setValue(System.currentTimeMillis());
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
     LOG.info("first get");
     table.get(new Get(ROW));
@@ -306,6 +316,8 @@ public class TestConnection {
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
   }
 
+  /*
+  ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
   @Test
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
@@ -328,6 +340,7 @@ public class TestConnection {
     table.close();
     connection.close();
   }
+   */
 
   @Test
   public void testLocateRegionsWithRegionReplicas() throws IOException {
@@ -381,5 +394,23 @@ public class TestConnection {
     };
     conn.getTable(tableName).coprocessorService(MultiRowMutationService.class,
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, callable);
+  }
+
+  // There is no assertion, but you need to confirm that there is no resource leak output from netty
+  @Test
+  public void testCancelConnectionMemoryLeak() throws IOException, InterruptedException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+      Table table = connection.getTable(tableName)) {
+      table.get(new Get(Bytes.toBytes("1")));
+      ServerName sn = TEST_UTIL.getRSForFirstRegionInTable(tableName).getServerName();
+      RpcClient rpcClient = ((AsyncConnectionImpl) connection.toAsyncConnection()).rpcClient;
+      rpcClient.cancelConnections(sn);
+      Thread.sleep(1000);
+      System.gc();
+      Thread.sleep(1000);
+    }
   }
 }

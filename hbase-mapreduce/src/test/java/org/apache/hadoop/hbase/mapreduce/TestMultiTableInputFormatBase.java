@@ -246,5 +246,11 @@ public class TestMultiTableInputFormatBase {
     public AsyncConnection toAsyncConnection() {
       return null;
     }
+
+    @Override
+    public String getClusterId() {
+      return null;
+    }
+
   }
 }

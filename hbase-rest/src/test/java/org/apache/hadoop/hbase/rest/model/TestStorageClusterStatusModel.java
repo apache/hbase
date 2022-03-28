@@ -32,7 +32,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStorageClusterStatusModel.class);
@@ -41,19 +40,23 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     super(StorageClusterStatusModel.class);
 
     AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-      "<ClusterStatus averageLoad=\"1.0\" regions=\"2\" requests=\"0\">" +
-      "<DeadNodes/><LiveNodes>" +
-      "<Node heapSizeMB=\"128\" maxHeapSizeMB=\"1024\" name=\"test1\" requests=\"0\" startCode=\"1245219839331\">" +
-      "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6cm9vdCwsMA==\" readRequestsCount=\"1\" " +
-      "rootIndexSizeKB=\"1\" storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" storefiles=\"1\" stores=\"1\" " +
-      "totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/>" +
-      "</Node>" +
-      "<Node heapSizeMB=\"512\" maxHeapSizeMB=\"1024\" name=\"test2\" requests=\"0\" startCode=\"1245239331198\">" +
-      "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\" " +
-      "readRequestsCount=\"1\" rootIndexSizeKB=\"1\" storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" " +
-      "storefiles=\"1\" stores=\"1\" totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" " +
-      "totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/></Node></LiveNodes></ClusterStatus>";
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<ClusterStatus averageLoad=\"1.0\" regions=\"2\" requests=\"0\">" +
+            "<DeadNodes/><LiveNodes>" +
+            "<Node heapSizeMB=\"128\" maxHeapSizeMB=\"1024\" name=\"test1\" requests=\"0\" " +
+            "startCode=\"1245219839331\"><Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" " +
+            "name=\"aGJhc2U6cm9vdCwsMA==\" readRequestsCount=\"1\" rootIndexSizeKB=\"1\" " +
+            "storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" storefiles=\"1\" stores=\"1\" " +
+            "totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" totalStaticIndexSizeKB=\"1\" " +
+            "writeRequestsCount=\"2\"/></Node>" +
+            "<Node heapSizeMB=\"512\" maxHeapSizeMB=\"1024\" name=\"test2\" requests=\"0\" " +
+            "startCode=\"1245239331198\">" +
+            "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" " +
+            "name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\" readRequestsCount=\"1\" " +
+            "rootIndexSizeKB=\"1\" storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" " +
+            "storefiles=\"1\" stores=\"1\" totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" " +
+            "totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/></Node></LiveNodes>" +
+            "</ClusterStatus>";
 
     AS_PB =
       "Cj8KBXRlc3QxEOO6i+eeJBgAIIABKIAIMicKDWhiYXNlOnJvb3QsLDAQARgBIAAoADAAOAFAAkgB" +

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -38,7 +39,6 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
 
   private int minNumTags, maxNumTags;
   private int minTagLength, maxTagLength;
-  private Random random = new Random();
 
   public LoadTestDataGeneratorWithTags(int minValueSize, int maxValueSize, int minColumnsPerKey,
       int maxColumnsPerKey, byte[]... columnFamilies) {
@@ -66,17 +66,18 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
   public Mutation beforeMutate(long rowkeyBase, Mutation m) throws IOException {
     if (m instanceof Put) {
       List<Cell> updatedCells = new ArrayList<>();
+      Random rand = ThreadLocalRandom.current();
       int numTags;
       if (minNumTags == maxNumTags) {
         numTags = minNumTags;
       } else {
-        numTags = minNumTags + random.nextInt(maxNumTags - minNumTags);
+        numTags = minNumTags + rand.nextInt(maxNumTags - minNumTags);
       }
       List<Tag> tags;
       for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
         Cell cell = cellScanner.current();
-        byte[] tag = LoadTestDataGenerator.generateData(random,
-            minTagLength + random.nextInt(maxTagLength - minTagLength));
+        byte[] tag = LoadTestDataGenerator.generateData(rand,
+            minTagLength + rand.nextInt(maxTagLength - minTagLength));
         tags = new ArrayList<>();
         for (int n = 0; n < numTags; n++) {
           tags.add(new ArrayBackedTag((byte) 127, tag));

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,16 +29,19 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +61,7 @@ public class TestColumnSeeking {
       HBaseClassTestRule.forClass(TestColumnSeeking.class);
 
   @Rule public TestName name = new TestName();
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
 
@@ -69,14 +72,13 @@ public class TestColumnSeeking {
     byte[] familyBytes = Bytes.toBytes("Family");
     TableName table = TableName.valueOf(name.getMethodName());
 
-    HColumnDescriptor hcd =
-        new HColumnDescriptor(familyBytes).setMaxVersions(1000);
-    hcd.setMaxVersions(3);
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(familyBytes)
+      .setMaxVersions(1000).setMaxVersions(3).build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(table).setColumnFamily(familyDescriptor).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
     // Set this so that the archiver writes to the temp dir as well.
-    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");
@@ -145,7 +147,7 @@ public class TestColumnSeeking {
       for (int i = 0; i < numberOfTests + 1; i++) {
         Collection<KeyValue> kvSet;
         Scan scan = new Scan();
-        scan.setMaxVersions();
+        scan.readAllVersions();
         if (i < numberOfTests) {
           if (columnLists[i].isEmpty()) continue; // HBASE-7700
           kvSet = kvMaps[i].values();
@@ -169,10 +171,10 @@ public class TestColumnSeeking {
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @SuppressWarnings("unchecked")
@@ -182,13 +184,16 @@ public class TestColumnSeeking {
     byte[] familyBytes = Bytes.toBytes("Family");
     TableName table = TableName.valueOf(name.getMethodName());
 
-    HTableDescriptor htd = new HTableDescriptor(table);
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(3);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(table);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family))
+        .setMaxVersions(3).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
-    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
+    HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptorBuilder.build());
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");
@@ -257,7 +262,7 @@ public class TestColumnSeeking {
     for (int i = 0; i < numberOfTests + 1; i++) {
       Collection<KeyValue> kvSet;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       if (i < numberOfTests) {
         if (columnLists[i].isEmpty()) continue; // HBASE-7700
         kvSet = kvMaps[i].values();
@@ -281,7 +286,7 @@ public class TestColumnSeeking {
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mttr;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
@@ -52,7 +54,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -63,9 +64,6 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.htrace.core.AlwaysSampler;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -233,8 +231,7 @@ public class IntegrationTestMTTR {
     }
 
     // Create the table.  If this fails then fail everything.
-    TableDescriptor tableDescriptor = util.getAdmin().getDescriptor(tableName);
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     // Make the max file size huge so that splits don't happen during the test.
     builder.setMaxFileSize(Long.MAX_VALUE);
@@ -378,12 +375,9 @@ public class IntegrationTestMTTR {
      * @param span Span.  To be kept if the time taken was over 1 second
      */
     public void addResult(long time, Span span) {
-      if (span == null) {
-        return;
-      }
       stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
       if (TimeUnit.SECONDS.convert(time, TimeUnit.NANOSECONDS) >= 1) {
-        traces.add(span.getTracerId());
+        traces.add(span.getSpanContext().getTraceId());
       }
     }
 
@@ -423,15 +417,11 @@ public class IntegrationTestMTTR {
       final int maxIterations = 10;
       int numAfterDone = 0;
       int resetCount = 0;
-      TraceUtil.addSampler(AlwaysSampler.INSTANCE);
       // Keep trying until the rs is back up and we've gotten a put through
       while (numAfterDone < maxIterations) {
         long start = System.nanoTime();
-        Span span = null;
-        try (TraceScope scope = TraceUtil.createTrace(getSpanName())) {
-          if (scope != null) {
-            span = scope.getSpan();
-          }
+        Span span = TraceUtil.getGlobalTracer().spanBuilder(getSpanName()).startSpan();
+        try (Scope scope = span.makeCurrent()) {
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {
             numAfterDone++;
@@ -462,7 +452,6 @@ public class IntegrationTestMTTR {
           throw e;
         } catch (RetriesExhaustedException e){
           throw e;
-
         // Everything else is potentially recoverable on the application side. For instance, a CM
         // action kills the RS that hosted a scanner the client was using. Continued use of that
         // scanner should be terminated, but a new scanner can be created and the read attempted
@@ -477,6 +466,8 @@ public class IntegrationTestMTTR {
             LOG.info("Too many unexpected Exceptions. Aborting.", e);
             throw e;
           }
+        } finally {
+          span.end();
         }
         result.addResult(System.nanoTime() - start, span);
       }
@@ -542,7 +533,7 @@ public class IntegrationTestMTTR {
         s.setBatch(2);
         s.addFamily(FAMILY);
         s.setFilter(new KeyOnlyFilter());
-        s.setMaxVersions(1);
+        s.readVersions(1);
 
         rs = table.getScanner(s);
         Result result = rs.next();

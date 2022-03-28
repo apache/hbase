@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -77,8 +80,6 @@ public class RestoreSnapshotProcedure
   // Monitor
   private MonitoredTask monitorStatus = null;
 
-  private Boolean traceEnabled = null;
-
   /**
    * Constructor (for failover)
    */
@@ -90,6 +91,7 @@ public class RestoreSnapshotProcedure
   throws HBaseIOException {
     this(env, tableDescriptor, snapshot, false);
   }
+
   /**
    * Constructor
    * @param env MasterProcedureEnv
@@ -129,9 +131,7 @@ public class RestoreSnapshotProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final RestoreSnapshotState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
 
     // Make sure that the monitor status is set up
     getMonitorStatus();
@@ -275,6 +275,7 @@ public class RestoreSnapshotProcedure
         restoreSnapshotMsg.addParentToChildRegionsPairList (parentToChildrenPair);
       }
     }
+    restoreSnapshotMsg.setRestoreAcl(restoreAcl);
     serializer.serialize(restoreSnapshotMsg.build());
   }
 
@@ -324,6 +325,9 @@ public class RestoreSnapshotProcedure
             parentToChildrenPair.getChild2RegionName()));
       }
     }
+    if (restoreSnapshotMsg.hasRestoreAcl()) {
+      restoreAcl = restoreSnapshotMsg.getRestoreAcl();
+    }
   }
 
   /**
@@ -334,7 +338,7 @@ public class RestoreSnapshotProcedure
   private void prepareRestore(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
 
@@ -372,7 +376,7 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
+    env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
   }
 
   /**
@@ -385,14 +389,15 @@ public class RestoreSnapshotProcedure
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
+    final Configuration conf = new Configuration(env.getMasterConfiguration());
 
     LOG.info("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
     try {
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterServices().getConfiguration(), fs, snapshotDir, snapshot);
+        conf, fs, snapshotDir, snapshot);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-        env.getMasterServices().getConfiguration(),
+        conf,
         fs,
         manifest,
         modifiedTableDescriptor,
@@ -417,12 +422,11 @@ public class RestoreSnapshotProcedure
 
   /**
    * Apply changes to hbase:meta
-   * @param env MasterProcedureEnv
-   * @throws IOException
    **/
   private void updateMETA(final MasterProcedureEnv env) throws IOException {
     try {
       Connection conn = env.getMasterServices().getConnection();
+      RegionStateStore regionStateStore = env.getAssignmentManager().getRegionStateStore();
       int regionReplication = modifiedTableDescriptor.getRegionReplication();
 
       // 1. Prepare to restore
@@ -437,7 +441,7 @@ public class RestoreSnapshotProcedure
       // not overwritten/removed, so you end up with old informations
       // that are not correct after the restore.
       if (regionsToRemove != null) {
-        MetaTableAccessor.deleteRegionInfos(conn, regionsToRemove);
+        regionStateStore.deleteRegions(regionsToRemove);
         deleteRegionsFromInMemoryStates(regionsToRemove, env, regionReplication);
       }
 
@@ -453,7 +457,7 @@ public class RestoreSnapshotProcedure
       }
 
       if (regionsToRestore != null) {
-        MetaTableAccessor.overwriteRegions(conn, regionsToRestore, regionReplication);
+        regionStateStore.overwriteRegions(regionsToRestore, regionReplication);
 
         deleteRegionsFromInMemoryStates(regionsToRestore, env, regionReplication);
         addRegionsToInMemoryStates(regionsToRestore, env, regionReplication);
@@ -551,14 +555,11 @@ public class RestoreSnapshotProcedure
   }
 
   /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
+   * Exposed for Testing: HBASE-26462
    */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public boolean getRestoreAcl() {
+    return restoreAcl;
   }
 }

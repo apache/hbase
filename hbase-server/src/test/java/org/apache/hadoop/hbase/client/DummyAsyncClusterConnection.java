@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
@@ -125,12 +126,6 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs) {
-    return null;
-  }
-
-  @Override
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload) {
     return null;
@@ -143,8 +138,8 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<Boolean> bulkLoad(TableName tableName,
-      List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-      String bulkToken, boolean copyFiles) {
+    List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
+    String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
     return null;
   }
 
@@ -155,6 +150,24 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public Connection toConnection() {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>>
+    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<Void> replicate(RegionInfo replica,
+    List<Entry> entries, int numRetries, long rpcTimeoutNs,
+    long operationTimeoutNs) {
     return null;
   }
 }

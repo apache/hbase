@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
-
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.commons.lang3.ObjectUtils;
@@ -46,14 +44,20 @@ final class AsyncRegionLocatorHelper {
   static boolean canUpdateOnError(HRegionLocation loc, HRegionLocation oldLoc) {
     // Do not need to update if no such location, or the location is newer, or the location is not
     // the same with us
-    return oldLoc != null && oldLoc.getSeqNum() <= loc.getSeqNum() &&
+    if (loc == null || loc.getServerName() == null) {
+      return false;
+    }
+    if (oldLoc == null || oldLoc.getServerName() == null) {
+      return false;
+    }
+    return oldLoc.getSeqNum() <= loc.getSeqNum() &&
       oldLoc.getServerName().equals(loc.getServerName());
   }
 
   static void updateCachedLocationOnError(HRegionLocation loc, Throwable exception,
       Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
       Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
-      Optional<MetricsConnection> metrics) {
+      MetricsConnection metrics) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,
@@ -81,7 +85,9 @@ final class AsyncRegionLocatorHelper {
       addToCache.accept(newLoc);
     } else {
       LOG.debug("Try removing {} from cache", loc);
-      metrics.ifPresent(m -> m.incrCacheDroppingExceptions(exception));
+      if (metrics != null) {
+        metrics.incrCacheDroppingExceptions(exception);
+      }
       removeFromCache.accept(loc);
     }
   }

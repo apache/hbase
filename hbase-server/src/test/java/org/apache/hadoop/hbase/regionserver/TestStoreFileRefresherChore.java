@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -47,10 +46,10 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Before;
@@ -60,14 +59,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestStoreFileRefresherChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStoreFileRefresherChore.class);
 
-  private HBaseTestingUtility TEST_UTIL;
+  private HBaseTestingUtil TEST_UTIL;
   private Path testDir;
 
   @Rule
@@ -75,9 +74,9 @@ public class TestStoreFileRefresherChore {
 
   @Before
   public void setUp() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }
 
   private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
@@ -98,7 +97,7 @@ public class TestStoreFileRefresherChore {
     }
 
     @Override
-    public Collection<StoreFileInfo> getStoreFiles(String familyName) throws IOException {
+    public List<StoreFileInfo> getStoreFiles(String familyName) throws IOException {
       if (fail) {
         throw new IOException("simulating FS failure");
       }
@@ -109,16 +108,17 @@ public class TestStoreFileRefresherChore {
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
       throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
         .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
     HRegionFileSystem fs =
         new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, tableDir);
+    CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region =
         new HRegion(fs, wals.getWAL(info),
             conf, htd, null);
@@ -201,7 +201,8 @@ public class TestStoreFileRefresherChore {
     regions.add(primary);
     regions.add(replica1);
 
-    StaleStorefileRefresherChore chore = new StaleStorefileRefresherChore(period, regionServer, new StoppableImplementation());
+    StaleStorefileRefresherChore chore = new StaleStorefileRefresherChore(period, regionServer,
+      new StoppableImplementation());
 
     // write some data to primary and flush
     putData(primary, 0, 100, qf, families);

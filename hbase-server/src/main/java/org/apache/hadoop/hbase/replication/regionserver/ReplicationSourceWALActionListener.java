@@ -20,15 +20,13 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Used to receive new wals.
@@ -56,7 +54,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
-  public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
+  public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
     scopeWALEdits(logKey, logEdit, conf);
   }
 
@@ -66,7 +64,6 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
    * @param logKey Key that may get scoped according to its edits
    * @param logEdit Edits used to lookup the scopes
    */
-  @VisibleForTesting
   static void scopeWALEdits(WALKey logKey, WALEdit logEdit, Configuration conf) {
     // For bulk load replication we need meta family to know the file we want to replicate.
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
@@ -74,7 +71,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
     }
     // For replay, or if all the cells are markers, do not need to store replication scope.
     if (logEdit.isReplay() ||
-      logEdit.getCells().stream().allMatch(c -> CellUtil.matchingFamily(c, WALEdit.METAFAMILY))) {
+      logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))) {
       ((WALKeyImpl) logKey).clearReplicationScope();
     }
   }

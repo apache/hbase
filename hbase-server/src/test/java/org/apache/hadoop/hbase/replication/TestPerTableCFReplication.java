@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,12 +33,11 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -40,6 +45,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
@@ -72,9 +79,9 @@ public class TestPerTableCFReplication {
   private static Configuration conf2;
   private static Configuration conf3;
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
-  private static HBaseTestingUtility utility3;
+  private static HBaseTestingUtil utility1;
+  private static HBaseTestingUtil utility2;
+  private static HBaseTestingUtil utility3;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 100;
 
@@ -91,10 +98,10 @@ public class TestPerTableCFReplication {
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
   private static final byte[] val = Bytes.toBytes("myval");
 
-  private static HTableDescriptor table;
-  private static HTableDescriptor tabA;
-  private static HTableDescriptor tabB;
-  private static HTableDescriptor tabC;
+  private static TableDescriptor table;
+  private static TableDescriptor tabA;
+  private static TableDescriptor tabB;
+  private static TableDescriptor tabC;
 
   @Rule
   public TestName name = new TestName();
@@ -114,7 +121,7 @@ public class TestPerTableCFReplication {
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
 
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     new ZKWatcher(conf1, "cluster1", null, true);
@@ -125,53 +132,45 @@ public class TestPerTableCFReplication {
     conf3 = new Configuration(conf1);
     conf3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
 
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster3", null, true);
 
-    utility3 = new HBaseTestingUtility(conf3);
+    utility3 = new HBaseTestingUtil(conf3);
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 
-    table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    fam = new HColumnDescriptor(noRepfamName);
-    table.addFamily(fam);
+    table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
-    tabA = new HTableDescriptor(tabAName);
-    fam = new HColumnDescriptor(f1Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.addFamily(fam);
-    fam = new HColumnDescriptor(f2Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.addFamily(fam);
-    fam = new HColumnDescriptor(f3Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.addFamily(fam);
+    tabA = TableDescriptorBuilder.newBuilder(tabAName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
-    tabB = new HTableDescriptor(tabBName);
-    fam = new HColumnDescriptor(f1Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.addFamily(fam);
-    fam = new HColumnDescriptor(f2Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.addFamily(fam);
-    fam = new HColumnDescriptor(f3Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.addFamily(fam);
+    tabB = TableDescriptorBuilder.newBuilder(tabBName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
-    tabC = new HTableDescriptor(tabCName);
-    fam = new HColumnDescriptor(f1Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.addFamily(fam);
-    fam = new HColumnDescriptor(f2Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.addFamily(fam);
-    fam = new HColumnDescriptor(f3Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.addFamily(fam);
+    tabC = TableDescriptorBuilder.newBuilder(tabCName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();
@@ -373,14 +372,13 @@ public class TestPerTableCFReplication {
   @Test
   public void testPerTableCFReplication() throws Exception {
     LOG.info("testPerTableCFReplication");
-    Admin replicationAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
-    Connection connection3 = ConnectionFactory.createConnection(conf3);
-    try {
+    try (Connection connection1 = ConnectionFactory.createConnection(conf1);
+      Connection connection2 = ConnectionFactory.createConnection(conf2);
+      Connection connection3 = ConnectionFactory.createConnection(conf3);
       Admin admin1 = connection1.getAdmin();
       Admin admin2 = connection2.getAdmin();
       Admin admin3 = connection3.getAdmin();
+      Admin replicationAdmin = connection1.getAdmin()) {
 
       admin1.createTable(tabA);
       admin1.createTable(tabB);
@@ -522,10 +520,6 @@ public class TestPerTableCFReplication {
       //     cf 'f3' of tableC can replicated to cluster2 and cluster3
       putAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
       deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
-    } finally {
-      connection1.close();
-      connection2.close();
-      connection3.close();
     }
   }
 

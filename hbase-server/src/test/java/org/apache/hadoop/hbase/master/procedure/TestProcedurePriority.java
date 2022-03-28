@@ -26,10 +26,11 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -66,7 +67,7 @@ public class TestProcedurePriority {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestProcedurePriority.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static String TABLE_NAME_PREFIX = "TestProcedurePriority-";
 
@@ -126,7 +127,7 @@ public class TestProcedurePriority {
     for (Future<?> future : futures) {
       future.get(3, TimeUnit.MINUTES);
     }
-    UTIL.getAdmin().balance(true);
+    UTIL.getAdmin().balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(true).build());
     UTIL.waitUntilNoRegionsInTransition();
   }
 

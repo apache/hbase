@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -53,7 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Specifying timestamps, deleteFamily and deleteColumns will delete all
  * versions with a timestamp less than or equal to that passed.  If no
  * timestamp is specified, an entry is added with a timestamp of 'now'
- * where 'now' is the servers's System.currentTimeMillis().
+ * where 'now' is the servers's EnvironmentEdgeManager.currentTime().
  * Specifying a timestamp to the deleteColumn method will
  * delete versions only with a timestamp equal to that specified.
  * If no timestamp is passed to deleteColumn, internally, it figures the
@@ -323,5 +325,10 @@ public class Delete extends Mutation {
   @Override
   public Delete setPriority(int priority) {
     return (Delete) super.setPriority(priority);
+  }
+
+  @Override
+  public CellBuilder getCellBuilder(CellBuilderType type) {
+    return getCellBuilder(type, Cell.Type.Delete);
   }
 }

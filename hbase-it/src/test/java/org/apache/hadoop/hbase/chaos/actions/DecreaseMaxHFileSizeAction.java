@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,27 +19,31 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DecreaseMaxHFileSizeAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(DecreaseMaxHFileSizeAction.class);
 
-  private static final long minFileSize = 1 *  1024 * 1024 * 1024L;
+  private static final long minFileSize = 1024 * 1024 * 1024L;
 
   private final long sleepTime;
   private final TableName tableName;
-  private final Random random;
   private Admin admin;
 
   public DecreaseMaxHFileSizeAction(long sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
     this.tableName = tableName;
-    this.random = new Random();
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -69,7 +73,8 @@ public class DecreaseMaxHFileSizeAction extends Action {
 
     // We don't want to go too far below 1gb.
     // So go to about 1gb +/- 512 on each side.
-    newValue = Math.max(minFileSize, newValue) - (512 - random.nextInt(1024));
+    newValue = Math.max(minFileSize, newValue) -
+        (512 - ThreadLocalRandom.current().nextInt(1024));
 
     // Change the table descriptor.
     TableDescriptor modifiedTable =

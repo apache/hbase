@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -32,7 +31,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class ThrottleSettings extends QuotaSettings {
+public class ThrottleSettings extends QuotaSettings {
   final QuotaProtos.ThrottleRequest proto;
 
   ThrottleSettings(final String userName, final TableName tableName, final String namespace,
@@ -52,7 +51,6 @@ class ThrottleSettings extends QuotaSettings {
   /**
    * Returns a copy of the internal state of <code>this</code>
    */
-  @VisibleForTesting
   QuotaProtos.ThrottleRequest getProto() {
     return proto.toBuilder().build();
   }
@@ -60,6 +58,11 @@ class ThrottleSettings extends QuotaSettings {
   public TimeUnit getTimeUnit() {
     return proto.hasTimedQuota() ?
       ProtobufUtil.toTimeUnit(proto.getTimedQuota().getTimeUnit()) : null;
+  }
+
+  public QuotaScope getQuotaScope() {
+    return proto.hasTimedQuota() ? ProtobufUtil.toQuotaScope(proto.getTimedQuota().getScope())
+        : null;
   }
 
   @Override

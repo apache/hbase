@@ -26,7 +26,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -37,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
@@ -46,15 +44,15 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
-import javax.xml.stream.XMLStreamException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -72,19 +70,17 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+
 @Category({RestTests.class, MediumTests.class})
 public class TestTableScan {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableScan.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestTableScan.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";
@@ -98,7 +94,7 @@ public class TestTableScan {
   private static int expectedRows3;
   private static Configuration conf;
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
 
@@ -112,10 +108,15 @@ public class TestTableScan {
       REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
-      HTableDescriptor htd = new HTableDescriptor(TABLE);
-      htd.addFamily(new HColumnDescriptor(CFA));
-      htd.addFamily(new HColumnDescriptor(CFB));
-      admin.createTable(htd);
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TABLE);
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
       expectedRows1 = TestScannerResource.insertData(conf, TABLE, COLUMN_1, 1.0);
       expectedRows2 = TestScannerResource.insertData(conf, TABLE, COLUMN_2, 0.5);
       expectedRows3 = TestScannerResource.insertData(conf, TABLE, COLUMN_EMPTY, 1.0);
@@ -131,7 +132,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerXML() throws IOException, JAXBException, XMLStreamException {
+  public void testSimpleScannerXML() throws IOException, JAXBException {
     // Test scanning particular columns
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -207,7 +208,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerJson() throws IOException, JAXBException {
+  public void testSimpleScannerJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -294,16 +295,16 @@ public class TestTableScan {
     unmarshaller.setListener(new Unmarshaller.Listener() {
         @Override
         public void beforeUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
+          }
         }
 
         @Override
         public void afterUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(null);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(null);
+          }
         }
     });
 
@@ -434,7 +435,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testScanningUnknownColumnJson() throws IOException, JAXBException {
+  public void testScanningUnknownColumnJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -603,7 +604,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testColumnWithEmptyQualifier() throws IOException, JAXBException {
+  public void testColumnWithEmptyQualifier() throws IOException {
     // Test scanning with empty qualifier
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -669,7 +670,6 @@ public class TestTableScan {
   @XmlRootElement(name = "CellSet")
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ClientSideCellSetModel implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
     /**
@@ -686,26 +686,23 @@ public class TestTableScan {
      * is removed again.
      */
     public void setCellSetModelListener(final Listener l) {
-        row = (l == null) ? null : new ArrayList<RowModel>() {
+      row = (l == null) ? null : new ArrayList<RowModel>() {
         private static final long serialVersionUID = 1L;
 
-            @Override
-            public boolean add(RowModel o) {
-                l.handleRowModel(ClientSideCellSetModel.this, o);
-                listenerInvoked = true;
-                return false;
-            }
-        };
+        @Override
+        public boolean add(RowModel o) {
+          l.handleRowModel(ClientSideCellSetModel.this, o);
+          listenerInvoked = true;
+          return false;
+        }
+      };
     }
 
     /**
      * This listener is invoked every time a new row model is unmarshalled.
      */
-    public static interface Listener {
-        void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
+    public interface Listener {
+      void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
     }
   }
 }
-
-
-

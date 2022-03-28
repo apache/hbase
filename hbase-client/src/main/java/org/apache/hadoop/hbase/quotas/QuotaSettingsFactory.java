@@ -123,10 +123,15 @@ public class QuotaSettingsFactory {
     return settings;
   }
 
-  protected static List<QuotaSettings> fromThrottle(final String userName,
+  public static List<ThrottleSettings> fromTableThrottles(final TableName tableName,
+      final QuotaProtos.Throttle throttle) {
+    return fromThrottle(null, tableName, null, null, throttle);
+  }
+
+  protected static List<ThrottleSettings> fromThrottle(final String userName,
       final TableName tableName, final String namespace, final String regionServer,
       final QuotaProtos.Throttle throttle) {
-    List<QuotaSettings> settings = new ArrayList<>();
+    List<ThrottleSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.REQUEST_NUMBER, throttle.getReqNum()));

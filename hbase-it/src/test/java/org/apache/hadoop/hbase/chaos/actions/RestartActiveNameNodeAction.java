@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -30,11 +29,15 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that tries to restart the active namenode.
  */
 public class RestartActiveNameNodeAction extends RestartActionBaseAction {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
 
   // Value taken from org.apache.hadoop.ha.ActiveStandbyElector.java, variable :- LOCK_FILENAME
   private static final String ACTIVE_NN_LOCK_NAME = "ActiveStandbyElectorLock";
@@ -48,10 +51,14 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart active namenode");
-    Configuration conf = FSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
+    getLogger().info("Performing action: Restart active namenode");
+    Configuration conf = CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
     String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
     if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
       throw new Exception("HA for namenode is not enabled");
@@ -82,9 +89,9 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
     if (activeNamenode == null) {
       throw new Exception("No active Name node found in zookeeper under " + hadoopHAZkNode);
     }
-    LOG.info("Found active namenode host:" + activeNamenode);
+    getLogger().info("Found active namenode host:" + activeNamenode);
     ServerName activeNNHost = ServerName.valueOf(activeNamenode, -1, -1);
-    LOG.info("Restarting Active NameNode :" + activeNamenode);
+    getLogger().info("Restarting Active NameNode :" + activeNamenode);
     restartNameNode(activeNNHost, sleepTime);
   }
 }

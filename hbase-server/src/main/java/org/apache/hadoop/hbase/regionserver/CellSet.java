@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -30,6 +28,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -52,7 +51,7 @@ public class CellSet implements NavigableSet<Cell>  {
 
   private final int numUniqueKeys;
 
-  CellSet(final CellComparator c) {
+  public CellSet(final CellComparator c) {
     this.delegatee = new ConcurrentSkipListMap<>(c.getSimpleComparator());
     this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
@@ -62,13 +61,11 @@ public class CellSet implements NavigableSet<Cell>  {
     this.numUniqueKeys = numUniqueKeys;
   }
 
-  @VisibleForTesting
   CellSet(final NavigableMap<Cell, Cell> m) {
     this.delegatee = m;
     this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
-  @VisibleForTesting
   NavigableMap<Cell, Cell> getDelegatee() {
     return delegatee;
   }

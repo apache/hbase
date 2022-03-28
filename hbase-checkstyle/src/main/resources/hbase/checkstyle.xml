@@ -122,12 +122,6 @@
       <property name="lineWrappingIndentation" value="2"/>
     </module>
 
-    <!-- Size Violation Checks
-    http://checkstyle.sourceforge.net/config_sizes.html -->
-    <module name="LineLength">
-      <property name="max" value="100"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
-    </module>
     <module name="MethodLength"/>
 
     <!-- Whitespace Checks
@@ -137,5 +131,12 @@
 
     <!-- Make the @SuppressWarnings annotations available to Checkstyle -->
     <module name="SuppressWarningsHolder"/>
+  </module>
+
+  <!-- Size Violation Checks
+  http://checkstyle.sourceforge.net/config_sizes.html -->
+  <module name="LineLength">
+    <property name="max" value="100"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
   </module>
 </module>

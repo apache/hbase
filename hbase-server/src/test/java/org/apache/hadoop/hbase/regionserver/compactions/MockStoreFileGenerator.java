@@ -23,8 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -39,12 +38,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 class MockStoreFileGenerator {
   /** How many chars long the store file name will be. */
   private static final int FILENAME_LENGTH = 10;
-  /** The random number generator. */
-  protected Random random;
-
-  MockStoreFileGenerator(Class<?> klass) {
-    random = new Random(klass.getSimpleName().hashCode());
-  }
 
   protected List<HStoreFile> createStoreFileList(final int[] fs) {
     List<HStoreFile> storeFiles = new LinkedList<>();
@@ -66,9 +59,9 @@ class MockStoreFileGenerator {
     HStoreFile mockSf = mock(HStoreFile.class);
     StoreFileReader reader = mock(StoreFileReader.class);
     String stringPath = "/hbase/testTable/regionA/" +
-        RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null, random);
+        RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null,
+          ThreadLocalRandom.current());
     Path path = new Path(stringPath);
-
 
     when(reader.getSequenceID()).thenReturn(seqId);
     when(reader.getTotalUncompressedBytes()).thenReturn(sizeInBytes);

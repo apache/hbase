@@ -21,17 +21,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -47,21 +48,21 @@ import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestHeapMemoryManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHeapMemoryManager.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
@@ -140,11 +141,11 @@ public class TestHeapMemoryManager {
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     Thread.sleep(1500);
     // No changes should be made by tuner as we already have lot of empty space
@@ -183,10 +184,10 @@ public class TestHeapMemoryManager {
     // do some offheap flushes also. So there should be decrease in memstore but
     // not as that when we don't have offheap flushes
     memStoreFlusher.flushType = FlushType.ABOVE_OFFHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(-maxStepValue, oldMemstoreHeapSize, memStoreFlusher.memstoreSize);
@@ -231,10 +232,10 @@ public class TestHeapMemoryManager {
     // do some offheap flushes also. So there should be decrease in memstore but
     // not as that when we don't have offheap flushes
     memStoreFlusher.flushType = FlushType.ABOVE_OFFHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(-maxStepValue, oldMemstoreHeapSize, memStoreFlusher.memstoreSize);
@@ -247,10 +248,10 @@ public class TestHeapMemoryManager {
     // flushes are due to onheap overhead. This should once again call for increase in
     // memstore size but that increase should be to the safe size
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(maxStepValue, oldMemstoreHeapSize, memStoreFlusher.memstoreSize);
@@ -313,10 +314,10 @@ public class TestHeapMemoryManager {
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(DefaultHeapMemoryTuner.DEFAULT_MAX_STEP_VALUE, oldMemstoreHeapSize,
@@ -327,8 +328,8 @@ public class TestHeapMemoryManager {
     oldBlockCacheSize = blockCache.maxSize;
     // Do some more flushes before the next run of HeapMemoryTuner
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(DefaultHeapMemoryTuner.DEFAULT_MAX_STEP_VALUE, oldMemstoreHeapSize,
@@ -362,10 +363,10 @@ public class TestHeapMemoryManager {
     heapMemoryManager.start(choreService);
     // this should not change anything with onheap memstore
     memStoreFlusher.flushType = FlushType.ABOVE_OFFHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     Thread.sleep(1500);
     // No changes should be made by tuner as we already have lot of empty space
@@ -449,9 +450,9 @@ public class TestHeapMemoryManager {
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     blockCache.evictBlock(null);
     // Allow the tuner to run once and do necessary memory up
     Thread.sleep(1500);
@@ -460,9 +461,9 @@ public class TestHeapMemoryManager {
     assertEquals(oldBlockCacheSize, blockCache.maxSize);
     // Do some more flushes before the next run of HeapMemoryTuner
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     // Allow the tuner to run once and do necessary memory up
     waitForTune(memStoreFlusher, memStoreFlusher.memstoreSize);
     assertHeapSpaceDelta(DefaultHeapMemoryTuner.DEFAULT_MAX_STEP_VALUE, oldMemstoreHeapSize,
@@ -495,9 +496,9 @@ public class TestHeapMemoryManager {
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_LOWER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
     // Allow the tuner to run once and do necessary memory up
@@ -507,7 +508,7 @@ public class TestHeapMemoryManager {
     assertEquals(oldBlockCacheSize, blockCache.maxSize);
     // Flushes that block updates
     memStoreFlusher.flushType = FlushType.ABOVE_ONHEAP_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null, false, FlushLifeCycleTracker.DUMMY);
+    memStoreFlusher.requestFlush(null, FlushLifeCycleTracker.DUMMY);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
@@ -753,14 +754,19 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
-        FlushLifeCycleTracker tracker) {
+    public boolean requestFlush(HRegion region, FlushLifeCycleTracker tracker) {
       this.listener.flushRequested(flushType, region);
       return true;
     }
 
     @Override
-    public boolean requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
+    public boolean requestFlush(HRegion region, List<byte[]> families,
+        FlushLifeCycleTracker tracker) {
+      return true;
+    }
+
+    @Override
+    public boolean requestDelayedFlush(HRegion region, long delay) {
       return true;
     }
 

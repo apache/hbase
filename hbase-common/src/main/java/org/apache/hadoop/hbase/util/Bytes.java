@@ -37,9 +37,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -47,9 +49,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.misc.Unsafe;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
@@ -57,7 +56,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * comparisons, hash code generation, manufacturing keys for HashMaps or
  * HashSets, and can be used as key in maps or trees.
  */
-@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
@@ -127,8 +125,7 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  @VisibleForTesting
-  static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   /**
    * Returns length of the byte array, returning 0 if the array is null.
@@ -1270,7 +1267,6 @@ public class Bytes implements Comparable<Bytes> {
 
   }
 
-  @VisibleForTesting
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
   }
@@ -1362,21 +1358,17 @@ public class Bytes implements Comparable<Bytes> {
 
     protected static final class UnsafeConverter extends Converter {
 
-      static final Unsafe theUnsafe;
-
       public UnsafeConverter() {}
 
       static {
-        if (UNSAFE_UNALIGNED) {
-          theUnsafe = UnsafeAccess.theUnsafe;
-        } else {
+        if (!UNSAFE_UNALIGNED) {
           // It doesn't matter what we throw;
           // it's swallowed in getBestComparer().
           throw new Error();
         }
 
         // sanity check - this should never fail
-        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
           throw new AssertionError();
         }
       }
@@ -1415,12 +1407,11 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Provides a lexicographical comparer implementation; either a Java
-   * implementation or a faster implementation based on {@link Unsafe}.
+   * implementation or a faster implementation based on {@code Unsafe}.
    *
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
    */
-  @VisibleForTesting
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
@@ -1470,22 +1461,18 @@ public class Bytes implements Comparable<Bytes> {
       }
     }
 
-    @VisibleForTesting
     enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
 
-      static final Unsafe theUnsafe;
       static {
-        if (UNSAFE_UNALIGNED) {
-          theUnsafe = UnsafeAccess.theUnsafe;
-        } else {
+        if (!UNSAFE_UNALIGNED) {
           // It doesn't matter what we throw;
           // it's swallowed in getBestComparer().
           throw new Error();
         }
 
         // sanity check - this should never fail
-        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
           throw new AssertionError();
         }
       }
@@ -1523,8 +1510,8 @@ public class Bytes implements Comparable<Bytes> {
          * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
         for (i = 0; i < strideLimit; i += stride) {
-          long lw = theUnsafe.getLong(buffer1, offset1Adj + i);
-          long rw = theUnsafe.getLong(buffer2, offset2Adj + i);
+          long lw = HBasePlatformDependent.getLong(buffer1, offset1Adj + i);
+          long rw = HBasePlatformDependent.getLong(buffer2, offset2Adj + i);
           if (lw != rw) {
             if(!UnsafeAccess.LITTLE_ENDIAN) {
               return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
@@ -2365,10 +2352,15 @@ public class Bytes implements Comparable<Bytes> {
     Arrays.fill(b, offset, offset + length, (byte) 0);
   }
 
-  private static final SecureRandom RNG = new SecureRandom();
+  // Pseudorandom random number generator, do not use SecureRandom here
+  private static final Random RNG = new Random();
 
   /**
    * Fill given array with random bytes.
+   * @param b array which needs to be filled with random bytes
+   * <p>
+   * If you want random bytes generated by a strong source of randomness use {@link
+   *   Bytes#secureRandom(byte[])}.
    * @param b array which needs to be filled with random bytes
    */
   public static void random(byte[] b) {
@@ -2377,9 +2369,12 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Fill given array with random bytes at the specified position.
-   * @param b
-   * @param offset
-   * @param length
+   * <p>
+   * If you want random bytes generated by a strong source of randomness use {@link
+   *   Bytes#secureRandom(byte[], int, int)}.
+   * @param b array which needs to be filled with random bytes
+   * @param offset staring offset in array
+   * @param length number of bytes to fill
    */
   public static void random(byte[] b, int offset, int length) {
     checkPositionIndex(offset, b.length, "offset");
@@ -2387,6 +2382,33 @@ public class Bytes implements Comparable<Bytes> {
     checkPositionIndex(offset + length, b.length, "offset + length");
     byte[] buf = new byte[length];
     RNG.nextBytes(buf);
+    System.arraycopy(buf, 0, b, offset, length);
+  }
+
+  // Bytes.secureRandom may be used to create key material.
+  private static final SecureRandom SECURE_RNG = new SecureRandom();
+
+  /**
+   * Fill given array with random bytes using a strong random number generator.
+   * @param b array which needs to be filled with random bytes
+   */
+  public static void secureRandom(byte[] b) {
+    SECURE_RNG.nextBytes(b);
+  }
+
+  /**
+   * Fill given array with random bytes at the specified position using a strong random number
+   * generator.
+   * @param b array which needs to be filled with random bytes
+   * @param offset staring offset in array
+   * @param length number of bytes to fill
+   */
+  public static void secureRandom(byte[] b, int offset, int length) {
+    checkPositionIndex(offset, b.length, "offset");
+    checkArgument(length > 0, "length must be greater than 0");
+    checkPositionIndex(offset + length, b.length, "offset + length");
+    byte[] buf = new byte[length];
+    SECURE_RNG.nextBytes(buf);
     System.arraycopy(buf, 0, b, offset, length);
   }
 

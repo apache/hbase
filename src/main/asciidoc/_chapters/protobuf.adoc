@@ -148,3 +148,75 @@ consider extending it also in
 Going forward, we will provide a new module of common types for use
 by CPEPs that will have the same guarantees against change as does our
 public API. TODO.
+
+=== protobuf changes for hbase-3.0.0 (HBASE-23797)
+Since hadoop(start from 3.3.x) also shades protobuf and bumps the version to
+3.x, there is no reason for us to stay on protobuf 2.5.0 any more.
+
+In HBase 3.0.0, the hbase-protocol module has been purged, the CPEP
+implementation should use the protos in hbase-protocol-shaded module, and also
+make use of the shaded protobuf in hbase-thirdparty. In general, we will keep
+the protobuf version compatible for a whole major release, unless there are
+critical problems, for example, a critical CVE on protobuf.
+
+Add this dependency to your pom:
+[source,xml]
+----
+<dependency>
+  <groupId>org.apache.hbase.thirdparty</groupId>
+  <artifactId>hbase-shaded-protobuf</artifactId>
+  <!-- use the version that your target hbase cluster uses -->
+  <version>${hbase-thirdparty.version}</version>
+  <scope>provided</scope>
+</dependency>
+----
+
+And typically you also need to add this plugin to your pom to make your
+generated protobuf code also use the shaded and relocated protobuf version
+in hbase-thirdparty.
+[source,xml]
+----
+<plugin>
+  <groupId>com.google.code.maven-replacer-plugin</groupId>
+  <artifactId>replacer</artifactId>
+  <version>1.5.3</version>
+  <executions>
+    <execution>
+      <phase>process-sources</phase>
+      <goals>
+        <goal>replace</goal>
+      </goals>
+    </execution>
+  </executions>
+  <configuration>
+    <basedir>${basedir}/target/generated-sources/</basedir>
+      <includes>
+        <include>**/*.java</include>
+      </includes>
+      <!-- Ignore errors when missing files, because it means this build
+           was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+      <ignoreErrors>true</ignoreErrors>
+      <replacements>
+        <replacement>
+          <token>([^\.])com.google.protobuf</token>
+          <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+        </replacement>
+        <replacement>
+          <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+          <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+        </replacement>
+        <!-- replacer doesn't support anchoring or negative lookbehind -->
+        <replacement>
+          <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+          <value>$1</value>
+        </replacement>
+      </replacements>
+  </configuration>
+</plugin>
+----
+
+In hbase-examples module, we have some examples under the
+`org.apache.hadoop.hbase.coprocessor.example` package. You can see
+`BulkDeleteEndpoint` and `BulkDelete.proto` for more details, and you can also
+check the `pom.xml` of hbase-examples module to see how to make use of the above
+plugin.

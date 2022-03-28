@@ -73,6 +73,7 @@ public class HashTable extends Configured implements Tool {
   final static String MANIFEST_FILE_NAME = "manifest";
   final static String HASH_DATA_DIR = "hashes";
   final static String OUTPUT_DATA_FILE_PREFIX = "part-r-";
+  final static String IGNORE_TIMESTAMPS = "ignoreTimestamps";
   private final static String TMP_MANIFEST_FILE_NAME = "manifest.tmp";
 
   TableHash tableHash = new TableHash();
@@ -96,6 +97,8 @@ public class HashTable extends Configured implements Tool {
     int versions = -1;
     long startTime = 0;
     long endTime = 0;
+    boolean ignoreTimestamps;
+    boolean rawScan;
 
     List<ImmutableBytesWritable> partitions;
 
@@ -134,6 +137,7 @@ public class HashTable extends Configured implements Tool {
       if (endTime != 0) {
         p.setProperty("endTimestamp", Long.toString(endTime));
       }
+      p.setProperty("rawScan", Boolean.toString(rawScan));
 
       try (OutputStreamWriter osw = new OutputStreamWriter(fs.create(path), Charsets.UTF_8)) {
         p.store(osw, null);
@@ -171,6 +175,11 @@ public class HashTable extends Configured implements Tool {
         versions = Integer.parseInt(versionString);
       }
 
+      String rawScanString = p.getProperty("rawScan");
+      if (rawScanString != null) {
+        rawScan = Boolean.parseBoolean(rawScanString);
+      }
+
       String startTimeString = p.getProperty("startTimestamp");
       if (startTimeString != null) {
         startTime = Long.parseLong(startTimeString);
@@ -192,19 +201,21 @@ public class HashTable extends Configured implements Tool {
         scan.setBatch(scanBatch);
       }
       if (versions >= 0) {
-        scan.setMaxVersions(versions);
+        scan.readVersions(versions);
       }
       if (!isTableStartRow(startRow)) {
-        scan.setStartRow(startRow);
+        scan.withStartRow(startRow);
       }
       if (!isTableEndRow(stopRow)) {
-        scan.setStopRow(stopRow);
+        scan.withStopRow(stopRow);
       }
-      if(families != null) {
-        for(String fam : families.split(",")) {
+      if (families != null) {
+        for (String fam : families.split(",")) {
           scan.addFamily(Bytes.toBytes(fam));
         }
       }
+      scan.setRaw(rawScan);
+
       return scan;
     }
 
@@ -302,6 +313,7 @@ public class HashTable extends Configured implements Tool {
       if (versions >= 0) {
         sb.append(", versions=").append(versions);
       }
+      sb.append(", rawScan=").append(rawScan);
       if (startTime != 0) {
         sb.append("startTime=").append(startTime);
       }
@@ -434,6 +446,7 @@ public class HashTable extends Configured implements Tool {
           getConf().get("mapreduce.job.name", "hashTable_" + tableHash.tableName));
     Configuration jobConf = job.getConfiguration();
     jobConf.setLong(HASH_BATCH_SIZE_CONF_KEY, tableHash.batchSize);
+    jobConf.setBoolean(IGNORE_TIMESTAMPS, tableHash.ignoreTimestamps);
     job.setJarByClass(HashTable.class);
 
     TableMapReduceUtil.initTableMapperJob(tableHash.tableName, tableHash.initScan(),
@@ -471,7 +484,7 @@ public class HashTable extends Configured implements Tool {
     private ImmutableBytesWritable batchStartKey;
     private ImmutableBytesWritable batchHash;
     private long batchSize = 0;
-
+    boolean ignoreTimestamps;
 
     public ResultHasher() {
       try {
@@ -503,10 +516,13 @@ public class HashTable extends Configured implements Tool {
         digest.update(cell.getRowArray(), cell.getRowOffset(), rowLength);
         digest.update(cell.getFamilyArray(), cell.getFamilyOffset(), familyLength);
         digest.update(cell.getQualifierArray(), cell.getQualifierOffset(), qualifierLength);
-        long ts = cell.getTimestamp();
-        for (int i = 8; i > 0; i--) {
-          digest.update((byte) ts);
-          ts >>>= 8;
+
+        if (!ignoreTimestamps) {
+          long ts = cell.getTimestamp();
+          for (int i = 8; i > 0; i--) {
+            digest.update((byte) ts);
+            ts >>>= 8;
+          }
         }
         digest.update(cell.getValueArray(), cell.getValueOffset(), valueLength);
 
@@ -552,7 +568,8 @@ public class HashTable extends Configured implements Tool {
       targetBatchSize = context.getConfiguration()
           .getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
       hasher = new ResultHasher();
-
+      hasher.ignoreTimestamps = context.getConfiguration().
+        getBoolean(IGNORE_TIMESTAMPS, false);
       TableSplit split = (TableSplit) context.getInputSplit();
       hasher.startBatch(new ImmutableBytesWritable(split.getStartRow()));
     }
@@ -603,21 +620,25 @@ public class HashTable extends Configured implements Tool {
     System.err.println("Usage: HashTable [options] <tablename> <outputpath>");
     System.err.println();
     System.err.println("Options:");
-    System.err.println(" batchsize     the target amount of bytes to hash in each batch");
-    System.err.println("               rows are added to the batch until this size is reached");
-    System.err.println("               (defaults to " + DEFAULT_BATCH_SIZE + " bytes)");
-    System.err.println(" numhashfiles  the number of hash files to create");
-    System.err.println("               if set to fewer than number of regions then");
-    System.err.println("               the job will create this number of reducers");
-    System.err.println("               (defaults to 1/100 of regions -- at least 1)");
-    System.err.println(" startrow      the start row");
-    System.err.println(" stoprow       the stop row");
-    System.err.println(" starttime     beginning of the time range (unixtime in millis)");
-    System.err.println("               without endtime means from starttime to forever");
-    System.err.println(" endtime       end of the time range.  Ignored if no starttime specified.");
-    System.err.println(" scanbatch     scanner batch size to support intra row scans");
-    System.err.println(" versions      number of cell versions to include");
-    System.err.println(" families      comma-separated list of families to include");
+    System.err.println(" batchsize         the target amount of bytes to hash in each batch");
+    System.err.println("                   rows are added to the batch until this size is reached");
+    System.err.println("                   (defaults to " + DEFAULT_BATCH_SIZE + " bytes)");
+    System.err.println(" numhashfiles      the number of hash files to create");
+    System.err.println("                   if set to fewer than number of regions then");
+    System.err.println("                   the job will create this number of reducers");
+    System.err.println("                   (defaults to 1/100 of regions -- at least 1)");
+    System.err.println(" startrow          the start row");
+    System.err.println(" stoprow           the stop row");
+    System.err.println(" starttime         beginning of the time range (unixtime in millis)");
+    System.err.println("                   without endtime means from starttime to forever");
+    System.err.println(" endtime           end of the time range.");
+    System.err.println("                   Ignored if no starttime specified.");
+    System.err.println(" scanbatch         scanner batch size to support intra row scans");
+    System.err.println(" versions          number of cell versions to include");
+    System.err.println(" rawScan           performs a raw scan (false if omitted)");
+    System.err.println(" families          comma-separated list of families to include");
+    System.err.println(" ignoreTimestamps  if true, ignores cell timestamps");
+    System.err.println("                   when calculating hashes");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename     Name of the table to hash");
@@ -696,9 +717,22 @@ public class HashTable extends Configured implements Tool {
           continue;
         }
 
+        final String rawScanArgKey = "--rawScan=";
+        if (cmd.startsWith(rawScanArgKey)) {
+          tableHash.rawScan = Boolean.parseBoolean(cmd.substring(rawScanArgKey.length()));
+          continue;
+        }
+
         final String familiesArgKey = "--families=";
         if (cmd.startsWith(familiesArgKey)) {
           tableHash.families = cmd.substring(familiesArgKey.length());
+          continue;
+        }
+
+        final String ignoreTimestampsKey = "--ignoreTimestamps=";
+        if (cmd.startsWith(ignoreTimestampsKey)) {
+          tableHash.ignoreTimestamps = Boolean.
+            parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
           continue;
         }
 

@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class represents a split policy which makes the split decision based
@@ -59,6 +59,12 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
   private long writeRequestCount;
   private long blockedRequestCount;
   private float blockedRate;
+
+  @Override
+  public String toString() {
+    return "BusyRegionSplitPolicy{" + "maxBlockedRequests=" + maxBlockedRequests + ", minAge="
+      + minAge + ", aggregationWindow=" + aggregationWindow + ", " + super.toString() + '}';
+  }
 
   @Override
   protected void configureForRegion(final HRegion region) {

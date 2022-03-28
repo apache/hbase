@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The CompositeImmutableSegments is created as a collection of ImmutableSegments and supports
@@ -52,7 +51,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     }
   }
 
-  @VisibleForTesting
   @Override
   public List<Segment> getAllSegments() {
     return new ArrayList<>(segments);

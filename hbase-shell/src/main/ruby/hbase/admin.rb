@@ -25,6 +25,12 @@ java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
+java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
+java_import org.apache.hadoop.hbase.HConstants
+
+require 'hbase/balancer_utils'
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -53,12 +59,22 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or region server flush
-    def flush(name)
-      @admin.flushRegion(name.to_java_bytes)
+    def flush(name, family = nil)
+      family_bytes = nil
+      family_bytes = family.to_java_bytes unless family.nil?
+      if family_bytes.nil?
+        @admin.flushRegion(name.to_java_bytes)
+      else
+        @admin.flushRegion(name.to_java_bytes, family_bytes)
+      end
     rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
       # Unknown region. Try table.
       begin
-        @admin.flush(TableName.valueOf(name))
+        if family_bytes.nil?
+          @admin.flush(TableName.valueOf(name))
+        else
+          @admin.flush(TableName.valueOf(name), family_bytes)
+        end
       rescue java.lang.IllegalArgumentException
         # Unknown table. Try region server.
         @admin.flushRegionServer(ServerName.valueOf(name))
@@ -115,7 +131,11 @@ module Hbase
 
     # Requests to compact all regions on the regionserver
     def compact_regionserver(servername, major = false)
-      @admin.compactRegionServer(ServerName.valueOf(servername), major)
+      if major
+        @admin.majorCompactRegionServer(ServerName.valueOf(servername))
+      else
+        @admin.compactRegionServer(ServerName.valueOf(servername))
+      end
     end
 
     #----------------------------------------------------------------------------------------------
@@ -212,9 +232,10 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a cluster balance
-    # Returns true if balancer ran
-    def balancer(force)
-      @admin.balance(java.lang.Boolean.valueOf(force))
+    # Returns BalanceResponse with details of the balancer run
+    def balancer(*args)
+      request = ::Hbase::BalancerUtils.create_balance_request(args)
+      @admin.balance(request)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -241,9 +262,54 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests region normalization for all configured tables in the cluster
-    # Returns true if normalizer ran successfully
-    def normalize
-      @admin.normalize
+    # Returns true if normalize request was successfully submitted
+    def normalize(*args)
+      builder = org.apache.hadoop.hbase.client.NormalizeTableFilterParams::Builder.new
+      args.each do |arg|
+        unless arg.is_a?(String) || arg.is_a?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
+        end
+
+        if arg.key?(TABLE_NAME)
+          table_name = arg.delete(TABLE_NAME)
+          unless table_name.is_a?(String)
+            raise(ArgumentError, "#{TABLE_NAME} must be of type String")
+          end
+
+          builder.tableNames(java.util.Collections.singletonList(TableName.valueOf(table_name)))
+        elsif arg.key?(TABLE_NAMES)
+          table_names = arg.delete(TABLE_NAMES)
+          unless table_names.is_a?(Array)
+            raise(ArgumentError, "#{TABLE_NAMES} must be of type Array")
+          end
+
+          table_name_list = java.util.LinkedList.new
+          table_names.each do |tn|
+            unless tn.is_a?(String)
+              raise(ArgumentError, "#{TABLE_NAMES} value #{tn} must be of type String")
+            end
+
+            table_name_list.add(TableName.valueOf(tn))
+          end
+          builder.tableNames(table_name_list)
+        elsif arg.key?(REGEX)
+          regex = arg.delete(REGEX)
+          raise(ArgumentError, "#{REGEX} must be of type String") unless regex.is_a?(String)
+
+          builder.regex(regex)
+        elsif arg.key?(NAMESPACE)
+          namespace = arg.delete(NAMESPACE)
+          unless namespace.is_a?(String)
+            raise(ArgumentError, "#{NAMESPACE} must be of type String")
+          end
+
+          builder.namespace(namespace)
+        else
+          raise(ArgumentError, "Unrecognized argument #{arg}")
+        end
+      end
+      ntfp = builder.build
+      @admin.normalize(ntfp)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -327,15 +393,15 @@ module Hbase
     def enable_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.enableTable(table_name)
+          @admin.enableTable(table_name)
         rescue java.io.IOException => e
           puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -351,15 +417,15 @@ module Hbase
     def disable_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.disableTable(table_name)
+          @admin.disableTable(table_name)
         rescue java.io.IOException => e
           puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #---------------------------------------------------------------------------------------------
@@ -390,15 +456,15 @@ module Hbase
     def drop_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.deleteTable(table_name)
+          @admin.deleteTable(table_name)
         rescue java.io.IOException => e
           puts puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -411,7 +477,7 @@ module Hbase
       )
       zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
-      org.apache.hadoop.hbase.zookeeper.ZKUtil.dump(@zk_wrapper)
+      org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -425,7 +491,7 @@ module Hbase
       has_columns = false
 
       # Start defining the table
-      htd = org.apache.hadoop.hbase.HTableDescriptor.new(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+      tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf(table_name))
       splits = nil
       # Args are either columns or splits, add them to the table definition
       # TODO: add table options support
@@ -438,20 +504,20 @@ module Hbase
         if arg.is_a?(String) || arg.key?(NAME)
           # If the arg is a string, default action is to add a column to the table.
           # If arg has a name, it must also be a column descriptor.
-          descriptor = hcd(arg, htd)
+          descriptor = cfd(arg, tdb)
           # Warn if duplicate columns are added
-          if htd.hasFamily(descriptor.getName)
+          if tdb.build.hasColumnFamily(descriptor.getName)
             puts "Family '" + descriptor.getNameAsString + "' already exists, the old one will be replaced"
-            htd.modifyFamily(descriptor)
+            tdb.modifyColumnFamily(descriptor)
           else
-            htd.addFamily(descriptor)
+            tdb.setColumnFamily(descriptor)
           end
           has_columns = true
           next
         end
         if arg.key?(REGION_REPLICATION)
           region_replication = JInteger.valueOf(arg.delete(REGION_REPLICATION))
-          htd.setRegionReplication(region_replication)
+          tdb.setRegionReplication(region_replication)
         end
 
         # Get rid of the "METHOD", which is deprecated for create.
@@ -471,7 +537,7 @@ module Hbase
           File.foreach(splits_file) do |line|
             arg[SPLITS].push(line.chomp)
           end
-          htd.setValue(SPLITS_FILE, arg[SPLITS_FILE])
+          tdb.setValue(SPLITS_FILE, splits_file)
         end
 
         if arg.key?(SPLITS)
@@ -492,7 +558,7 @@ module Hbase
         end
 
         # Done with splits; apply formerly-table_att parameters.
-        update_htd_from_arg(htd, arg)
+        update_tdb_from_arg(tdb, arg)
 
         arg.each_key do |ignored_key|
           puts(format('An argument ignored (unknown or overridden): %s', ignored_key))
@@ -504,10 +570,10 @@ module Hbase
 
       if splits.nil?
         # Perform the create table call
-        @admin.createTable(htd)
+        @admin.createTable(tdb.build)
       else
         # Perform the create table call
-        @admin.createTable(htd, splits)
+        @admin.createTable(tdb.build, splits)
       end
     end
 
@@ -520,8 +586,9 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
-    def unassign(region_name, force)
-      @admin.unassign(region_name.to_java_bytes, java.lang.Boolean.valueOf(force))
+    # the force parameter is deprecated, if it is specified, will be ignored.
+    def unassign(region_name, force = nil)
+      @admin.unassign(region_name.to_java_bytes)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -531,11 +598,29 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Merge two regions
-    def merge_region(region_a_name, region_b_name, force)
-      @admin.mergeRegions(region_a_name.to_java_bytes,
-                          region_b_name.to_java_bytes,
-                          java.lang.Boolean.valueOf(force))
+    # Merge multiple regions
+    def merge_region(regions, force)
+      unless regions.is_a?(Array)
+        raise(ArgumentError, "Type of #{regions.inspect} is #{regions.class}, but expected Array")
+      end
+      region_array = Java::byte[][regions.length].new
+      i = 0
+      while i < regions.length
+        unless regions[i].is_a?(String)
+          raise(
+              ArgumentError,
+              "Type of #{regions[i].inspect} is #{regions[i].class}, but expected String"
+          )
+        end
+        region_array[i] = regions[i].to_java_bytes
+        i += 1
+      end
+      org.apache.hadoop.hbase.util.FutureUtils.get(
+          @admin.mergeRegionsAsync(
+              region_array,
+              java.lang.Boolean.valueOf(force)
+          )
+      )
     end
 
     #----------------------------------------------------------------------------------------------
@@ -552,7 +637,29 @@ module Hbase
 
     def get_table_attributes(table_name)
       tableExists(table_name)
-      @admin.getDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+      td = @admin.getDescriptor TableName.valueOf(table_name)
+      # toStringTableAttributes is a public method, but it is defined on the private class
+      # ModifiableTableDescriptor, so we need reflection to access it in JDK 11+.
+      # TODO Maybe move this to a utility class in the future?
+      method = td.java_class.declared_method :toStringTableAttributes
+      method.accessible = true
+      method.invoke td
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable snapshot auto-cleanup based on TTL expiration
+    # Returns previous snapshot auto-cleanup switch setting.
+    def snapshot_cleanup_switch(enable_disable)
+      @admin.snapshotCleanupSwitch(
+        java.lang.Boolean.valueOf(enable_disable), java.lang.Boolean.valueOf(false)
+      )
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query the current state of the snapshot auto-cleanup based on TTL
+    # Returns the snapshot auto-cleanup state (true if enabled)
+    def snapshot_cleanup_enabled?
+      @admin.isSnapshotCleanupEnabled
     end
 
     #----------------------------------------------------------------------------------------------
@@ -560,83 +667,30 @@ module Hbase
     def truncate(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      table_description = @admin.getDescriptor(table_name)
-      raise ArgumentError, "Table #{table_name_str} is not enabled. Enable it first." unless
-          enabled?(table_name_str)
-      puts 'Disabling table...'
-      @admin.disableTable(table_name)
 
-      begin
-        puts 'Truncating table...'
-        @admin.truncateTable(table_name, false)
-      rescue => e
-        # Handle the compatibility case, where the truncate method doesn't exists on the Master
-        raise e unless e.respond_to?(:cause) && !e.cause.nil?
-        rootCause = e.cause
-        if rootCause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
-          # Handle the compatibility case, where the truncate method doesn't exists on the Master
-          puts 'Dropping table...'
-          @admin.deleteTable(table_name)
-
-          puts 'Creating table...'
-          @admin.createTable(table_description)
-        else
-          raise e
-        end
+      if enabled?(table_name_str)
+        puts 'Disabling table...'
+        disable(table_name_str)
       end
+
+      puts 'Truncating table...'
+      @admin.truncateTable(table_name, false)
     end
 
     #----------------------------------------------------------------------------------------------
-    # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
-    def truncate_preserve(table_name_str, conf = @conf)
+    # Truncates table while maintaining region boundaries
+    # (deletes all records by recreating the table)
+    def truncate_preserve(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      locator = @connection.getRegionLocator(table_name)
-      begin
-        splits = locator.getAllRegionLocations
-                        .map { |i| Bytes.toStringBinary(i.getRegion.getStartKey) }
-                        .delete_if { |k| k == '' }.to_java :String
-        splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
-      ensure
-        locator.close
+
+      if enabled?(table_name_str)
+        puts 'Disabling table...'
+        disable(table_name_str)
       end
 
-      table_description = @admin.getDescriptor(table_name)
-      puts 'Disabling table...'
-      disable(table_name_str)
-
-      begin
-        puts 'Truncating table...'
-        # just for test
-        unless conf.getBoolean('hbase.client.truncatetable.support', true)
-          raise UnsupportedMethodException, 'truncateTable'
-        end
-        @admin.truncateTable(table_name, true)
-      rescue => e
-        # Handle the compatibility case, where the truncate method doesn't exists on the Master
-        raise e unless e.respond_to?(:cause) && !e.cause.nil?
-        rootCause = e.cause
-        if rootCause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
-          # Handle the compatibility case, where the truncate method doesn't exists on the Master
-          puts 'Dropping table...'
-          @admin.deleteTable(table_name)
-
-          puts 'Creating table with region boundaries...'
-          @admin.createTable(table_description, splits)
-        else
-          raise e
-        end
-      end
-    end
-
-    class UnsupportedMethodException < StandardError
-      def initialize(name)
-        @method_name = name
-      end
-
-      def cause
-        org.apache.hadoop.hbase.DoNotRetryIOException.new("#{@method_name} is not support")
-      end
+      puts 'Truncating table...'
+      @admin.truncateTable(table_name, true)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -648,17 +702,57 @@ module Hbase
       # Table should exist
       raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      status = Pair.new
       begin
-        status = @admin.getAlterStatus(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-        if status.getSecond != 0
-          puts "#{status.getSecond - status.getFirst}/#{status.getSecond} regions updated."
+        cluster_metrics = @admin.getClusterMetrics
+        table_region_status = cluster_metrics
+                              .getTableRegionStatesCount
+                              .get(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+        if table_region_status.getTotalRegions != 0
+          updated_regions = table_region_status.getTotalRegions -
+                            table_region_status.getRegionsInTransition -
+                            table_region_status.getClosedRegions
+          puts "#{updated_regions}/#{table_region_status.getTotalRegions} regions updated."
         else
           puts 'All regions updated.'
         end
         sleep 1
-      end while !status.nil? && status.getFirst != 0
+      end while !table_region_status.nil? && table_region_status.getRegionsInTransition != 0
       puts 'Done.'
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Use our internal logic to convert from "spec string" format to a coprocessor descriptor
+    #
+    # Provided for backwards shell compatibility
+    #
+    # @param [String] spec_str
+    # @return [ColumnDescriptor]
+    def coprocessor_descriptor_from_spec_str(spec_str)
+      method = TableDescriptorBuilder.java_class.declared_method_smart :toCoprocessorDescriptor
+      method.accessible = true
+      result = method.invoke(nil, spec_str).to_java
+      # unpack java's Optional to be more rubonic
+      return result.isPresent ? result.get : nil
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Use CoprocessorDescriptorBuilder to convert a Hash to CoprocessorDescriptor
+    #
+    # @param [Hash] spec column descriptor specification
+    # @return [ColumnDescriptor]
+    def coprocessor_descriptor_from_hash(spec)
+      classname = spec[CLASSNAME]
+      raise ArgumentError.new "CLASSNAME must be provided in spec" if classname.nil?
+      jar_path = spec[JAR_PATH]
+      priority = spec[PRIORITY]
+      properties = spec[PROPERTIES]
+
+      builder = CoprocessorDescriptorBuilder.newBuilder classname
+      builder.setJarPath jar_path unless jar_path.nil?
+      builder.setPriority priority unless priority.nil?
+      properties&.each { |k, v| builder.setProperty(k, v.to_s) }
+
+      builder.build
     end
 
     #----------------------------------------------------------------------------------------------
@@ -677,7 +771,7 @@ module Hbase
       table_name = TableName.valueOf(table_name_str)
 
       # Get table descriptor
-      htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(table_name))
+      tdb = TableDescriptorBuilder.newBuilder(@admin.getDescriptor(table_name))
       hasTableUpdate = false
 
       # Process all args
@@ -692,14 +786,14 @@ module Hbase
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
         if method.nil? && arg.key?(NAME)
-          descriptor = hcd(arg, htd)
+          descriptor = cfd(arg, tdb)
           column_name = descriptor.getNameAsString
 
           # If column already exist, then try to alter it. Create otherwise.
-          if htd.hasFamily(column_name.to_java_bytes)
-            htd.modifyFamily(descriptor)
+          if tdb.build.hasColumnFamily(column_name.to_java_bytes)
+            tdb.modifyColumnFamily(descriptor)
           else
-            htd.addFamily(descriptor)
+            tdb.setColumnFamily(descriptor)
           end
           hasTableUpdate = true
           next
@@ -711,23 +805,34 @@ module Hbase
           # Delete column family
           if method == 'delete'
             raise(ArgumentError, 'NAME parameter missing for delete method') unless name
-            htd.removeFamily(name.to_java_bytes)
+            tdb.removeColumnFamily(name.to_java_bytes)
             hasTableUpdate = true
           # Unset table attributes
           elsif method == 'table_att_unset'
             raise(ArgumentError, 'NAME parameter missing for table_att_unset method') unless name
             if name.is_a?(Array)
               name.each do |key|
-                if htd.getValue(key).nil?
+                if tdb.build.getValue(key).nil?
                   raise ArgumentError, "Could not find attribute: #{key}"
                 end
-                htd.remove(key)
+                tdb.removeValue(key)
               end
             else
-              if htd.getValue(name).nil?
+              if tdb.build.getValue(name).nil?
                 raise ArgumentError, "Could not find attribute: #{name}"
               end
-              htd.remove(name)
+              tdb.removeValue(name)
+            end
+            hasTableUpdate = true
+          elsif method == 'table_remove_coprocessor'
+            classname = arg.delete(CLASSNAME)
+            raise(ArgumentError, 'CLASSNAME parameter missing for table_remove_coprocessor method') unless classname
+            if classname.is_a?(Array)
+              classname.each do |key|
+                tdb.removeCoprocessor(key)
+              end
+            else
+              tdb.removeCoprocessor(classname)
             end
             hasTableUpdate = true
           # Unset table configuration
@@ -735,16 +840,16 @@ module Hbase
             raise(ArgumentError, 'NAME parameter missing for table_conf_unset method') unless name
             if name.is_a?(Array)
               name.each do |key|
-                if htd.getConfigurationValue(key).nil?
+                if tdb.build.getValue(key).nil?
                   raise ArgumentError, "Could not find configuration: #{key}"
                 end
-                htd.removeConfiguration(key)
+                tdb.removeValue(key)
               end
             else
-              if htd.getConfigurationValue(name).nil?
+              if tdb.build.getValue(name).nil?
                 raise ArgumentError, "Could not find configuration: #{name}"
               end
-              htd.removeConfiguration(name)
+              tdb.removeValue(name)
             end
             hasTableUpdate = true
           # Unknown method
@@ -760,7 +865,7 @@ module Hbase
         end
 
         # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
-        update_htd_from_arg(htd, arg)
+        update_tdb_from_arg(tdb, arg)
 
         # set a coprocessor attribute
         valid_coproc_keys = []
@@ -769,11 +874,19 @@ module Hbase
           k = String.new(key) # prepare to strip
           k.strip!
 
-          next unless k =~ /coprocessor/i
-          v = String.new(value)
-          v.strip!
-          # TODO: We should not require user to config the coprocessor with our inner format.
-          htd.addCoprocessorWithSpec(v)
+          # Uses insensitive matching so we can accept lowercase 'coprocessor' for compatibility
+          next unless k =~ /#{COPROCESSOR}/i
+          if value.is_a? String
+            # Specifying a coprocessor by this "spec string" is here for backwards compatibility
+            v = String.new value
+            v.strip!
+            cp = coprocessor_descriptor_from_spec_str v
+          elsif value.is_a? Hash
+            cp = coprocessor_descriptor_from_hash value
+          else
+            raise ArgumentError.new 'coprocessor must be provided as a String or Hash'
+          end
+          tdb.setCoprocessor cp
           valid_coproc_keys << key
         end
 
@@ -792,7 +905,7 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        future = @admin.modifyTableAsync(htd)
+        future = @admin.modifyTableAsync(tdb.build)
 
         if wait == true
           puts 'Updating all regions with the new schema...'
@@ -811,13 +924,16 @@ module Hbase
           puts(format('    %s', v))
         end
         master = cluster_metrics.getMasterName
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort,
-                    master.getStartcode))
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          for task in cluster_metrics.getMasterTasks
+            puts(format('    %s', task.toString))
+          end
+        end
         puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
         for server in cluster_metrics.getBackupMasterNames
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-
         master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
@@ -829,6 +945,9 @@ module Hbase
           for name, region in cluster_metrics.getLiveServerMetrics.get(server).getRegionMetrics
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
+          end
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+            puts(format('        %s', task.toString))
           end
         end
         puts(format('%d dead servers', cluster_metrics.getDeadServerNames.size))
@@ -845,12 +964,18 @@ module Hbase
           r_source_string = '       SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
+          if r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimestampStarted()
+          # If we have applied no operations since we've started replication,
+          # assume that we're not acting as a sink and don't print the normal information
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ", Waiting for OPs... "
+          else
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
+            r_sink_string << ", TimeStampsOfLastAppliedOp=" +
+               (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()
+          end
 
-          r_sink_string << ' AgeOfLastAppliedOp=' +
-                           r_load_sink.getAgeOfLastAppliedOp.to_s
-          r_sink_string << ', TimeStampsOfLastAppliedOp=' +
-                           java.util.Date.new(r_load_sink
-                             .getTimestampsOfLastAppliedOp).toString
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
           puts(format('    %<host>s:', host: server_name.getHostname))
@@ -861,6 +986,33 @@ module Hbase
           else
             puts(format('%<source>s', source: r_source_string))
             puts(format('%<sink>s', sink: r_sink_string))
+          end
+        end
+      elsif format == 'tasks'
+        master = cluster_metrics.getMasterName
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          printed = false
+          for task in cluster_metrics.getMasterTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('    %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('    no active tasks')
+          end
+        end
+        puts(format('%d live servers', cluster_metrics.getServersSize))
+        for server in cluster_metrics.getServers
+          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+          printed = false
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('        %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('        no active tasks')
           end
         end
       elsif format == 'simple'
@@ -925,7 +1077,7 @@ module Hbase
     end
 
     def build_shipped_stats(source_load, r_source_string)
-      r_source_string << if source_load.getTimeStampOfLastShippedOp.zero?
+      r_source_string << if source_load.getTimestampOfLastShippedOp.zero?
                            "\n           " \
                            'No Ops shipped since last restart'
                          else
@@ -933,7 +1085,7 @@ module Hbase
                            source_load.getAgeOfLastShippedOp.to_s +
                            ', TimeStampOfLastShippedOp=' +
                            java.util.Date.new(source_load
-                             .getTimeStampOfLastShippedOp).toString
+                             .getTimestampOfLastShippedOp).toString
                          end
     end
 
@@ -975,126 +1127,118 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Return a new HColumnDescriptor made of passed args
-    def hcd(arg, htd)
+    # Return a new ColumnFamilyDescriptor made of passed args
+    def cfd(arg, tdb)
       # String arg, single parameter constructor
-      return org.apache.hadoop.hbase.HColumnDescriptor.new(arg) if arg.is_a?(String)
+      return ColumnFamilyDescriptorBuilder.of(arg) if arg.is_a?(String)
 
       raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg.delete(NAME)
 
-      family = htd.getFamily(name.to_java_bytes)
+      descriptor = tdb.build.getColumnFamily(name.to_java_bytes)
+      unless descriptor.nil?
+        cfdb = ColumnFamilyDescriptorBuilder.newBuilder(descriptor)
+      end
       # create it if it's a new family
-      family ||= org.apache.hadoop.hbase.HColumnDescriptor.new(name.to_java_bytes)
+      cfdb ||= ColumnFamilyDescriptorBuilder.newBuilder(name.to_java_bytes)
 
-      family.setBlockCacheEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE)
-      family.setScope(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE)
-      family.setCacheDataOnWrite(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_DATA_ON_WRITE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_DATA_ON_WRITE)
-      family.setCacheIndexesOnWrite(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_INDEX_ON_WRITE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_INDEX_ON_WRITE)
-      family.setCacheBloomsOnWrite(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_BLOOMS_ON_WRITE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::CACHE_BLOOMS_ON_WRITE)
-      family.setEvictBlocksOnClose(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::EVICT_BLOCKS_ON_CLOSE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::EVICT_BLOCKS_ON_CLOSE)
-      family.setInMemory(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY)
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY_COMPACTION)
-        family.setInMemoryCompaction(
-          org.apache.hadoop.hbase.MemoryCompactionPolicy.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY_COMPACTION))
+      cfdb.setBlockCacheEnabled(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKCACHE))) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKCACHE)
+      cfdb.setScope(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::REPLICATION_SCOPE))) if arg.include?(ColumnFamilyDescriptorBuilder::REPLICATION_SCOPE)
+      cfdb.setCacheDataOnWrite(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::CACHE_DATA_ON_WRITE))) if arg.include?(ColumnFamilyDescriptorBuilder::CACHE_DATA_ON_WRITE)
+      cfdb.setCacheIndexesOnWrite(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::CACHE_INDEX_ON_WRITE))) if arg.include?(ColumnFamilyDescriptorBuilder::CACHE_INDEX_ON_WRITE)
+      cfdb.setCacheBloomsOnWrite(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::CACHE_BLOOMS_ON_WRITE))) if arg.include?(ColumnFamilyDescriptorBuilder::CACHE_BLOOMS_ON_WRITE)
+      cfdb.setEvictBlocksOnClose(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::EVICT_BLOCKS_ON_CLOSE))) if arg.include?(ColumnFamilyDescriptorBuilder::EVICT_BLOCKS_ON_CLOSE)
+      cfdb.setInMemory(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::IN_MEMORY))) if arg.include?(ColumnFamilyDescriptorBuilder::IN_MEMORY)
+      if arg.include?(ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION)
+        cfdb.setInMemoryCompaction(
+          org.apache.hadoop.hbase.MemoryCompactionPolicy.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION))
         )
       end
-      family.setTimeToLive(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::TTL)) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::TTL)
-      family.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING)
-      family.setBlocksize(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE)
-      family.setMaxVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS)
-      family.setMinVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS)
-      family.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS)
-      family.setCompressTags(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESS_TAGS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESS_TAGS)
-      family.setPrefetchBlocksOnOpen(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::PREFETCH_BLOCKS_ON_OPEN))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::PREFETCH_BLOCKS_ON_OPEN)
-      family.setMobEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::IS_MOB))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IS_MOB)
-      family.setMobThreshold(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::MOB_THRESHOLD))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MOB_THRESHOLD)
-      family.setNewVersionBehavior(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::NEW_VERSION_BEHAVIOR))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::NEW_VERSION_BEHAVIOR)
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER)
-        bloomtype = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER).upcase.to_sym
+      cfdb.setTimeToLive(arg.delete(ColumnFamilyDescriptorBuilder::TTL)) if arg.include?(ColumnFamilyDescriptorBuilder::TTL)
+      cfdb.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING))) if arg.include?(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING)
+      cfdb.setBlocksize(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE)) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
+      cfdb.setMaxVersions(JInteger.valueOf(arg.delete(HConstants::VERSIONS))) if arg.include?(HConstants::VERSIONS)
+      cfdb.setMinVersions(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::MIN_VERSIONS))) if arg.include?(ColumnFamilyDescriptorBuilder::MIN_VERSIONS)
+      cfdb.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS)
+      cfdb.setCompressTags(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::COMPRESS_TAGS))) if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESS_TAGS)
+      cfdb.setPrefetchBlocksOnOpen(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::PREFETCH_BLOCKS_ON_OPEN))) if arg.include?(ColumnFamilyDescriptorBuilder::PREFETCH_BLOCKS_ON_OPEN)
+      cfdb.setMobEnabled(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::IS_MOB))) if arg.include?(ColumnFamilyDescriptorBuilder::IS_MOB)
+      cfdb.setMobThreshold(JLong.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::MOB_THRESHOLD))) if arg.include?(ColumnFamilyDescriptorBuilder::MOB_THRESHOLD)
+      cfdb.setNewVersionBehavior(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::NEW_VERSION_BEHAVIOR))) if arg.include?(ColumnFamilyDescriptorBuilder::NEW_VERSION_BEHAVIOR)
+      if arg.include?(ColumnFamilyDescriptorBuilder::BLOOMFILTER)
+        bloomtype = arg.delete(ColumnFamilyDescriptorBuilder::BLOOMFILTER).upcase.to_sym
         if org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
-          family.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
+          cfdb.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         else
           raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(' '))
         end
       end
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION)
-        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION).upcase.to_sym
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION).upcase.to_sym
         if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
-          family.setCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+          cfdb.setCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         else
           raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
         end
       end
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION)
-        algorithm = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION).upcase
-        family.setEncryptionType(algorithm)
-        if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY)
-          key = org.apache.hadoop.hbase.io.crypto.Encryption.pbkdf128(
-            arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY)
+      if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION)
+        algorithm = arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION).upcase
+        cfdb.setEncryptionType(algorithm)
+        if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
+          key = org.apache.hadoop.hbase.io.crypto.Encryption.generateSecretKey(
+            @conf, algorithm, arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
           )
-          family.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
+          cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
         end
       end
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT)
-        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT).upcase.to_sym
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT).upcase.to_sym
         if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
-          family.setCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+          cfdb.setCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         else
           raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
         end
       end
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY)
-        storage_policy = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY).upcase
-        family.setStoragePolicy(storage_policy)
-      end
-      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MOB_COMPACT_PARTITION_POLICY)
-        mob_partition_policy = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::MOB_COMPACT_PARTITION_POLICY).upcase.to_sym
-        if org.apache.hadoop.hbase.client.MobCompactPartitionPolicy.constants.include?(mob_partition_policy)
-          family.setMobCompactPartitionPolicy(org.apache.hadoop.hbase.client.MobCompactPartitionPolicy.valueOf(mob_partition_policy))
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MAJOR)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MAJOR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          cfdb.setMajorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         else
-          raise(ArgumentError, "MOB_COMPACT_PARTITION_POLICY #{mob_partition_policy} is not supported. Use one of " + org.apache.hadoop.hbase.client.MobCompactPartitionPolicy.constants.join(' '))
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MINOR)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MINOR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          cfdb.setMinorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+        else
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
+      if arg.include?(ColumnFamilyDescriptorBuilder::STORAGE_POLICY)
+        storage_policy = arg.delete(ColumnFamilyDescriptorBuilder::STORAGE_POLICY).upcase
+        cfdb.setStoragePolicy(storage_policy)
+      end
+      if arg.include?(ColumnFamilyDescriptorBuilder::MOB_COMPACT_PARTITION_POLICY)
+        mob_partition_policy = arg.delete(ColumnFamilyDescriptorBuilder::MOB_COMPACT_PARTITION_POLICY).upcase.to_sym
+        if MobCompactPartitionPolicy.constants.include?(mob_partition_policy)
+          cfdb.setMobCompactPartitionPolicy(MobCompactPartitionPolicy.valueOf(mob_partition_policy))
+        else
+          raise(ArgumentError, "MOB_COMPACT_PARTITION_POLICY #{mob_partition_policy} is not supported. Use one of " + MobCompactPartitionPolicy.constants.join(' '))
         end
       end
 
-      set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
-      set_descriptor_config(family, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
-      if arg.include?(org.apache.hadoop.hbase
-        .HColumnDescriptor::DFS_REPLICATION)
-        family.setDFSReplication(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase
-          .HColumnDescriptor::DFS_REPLICATION)))
+      set_user_metadata(cfdb, arg.delete(METADATA)) if arg[METADATA]
+      set_descriptor_config(cfdb, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+      if arg.include?(ColumnFamilyDescriptorBuilder::DFS_REPLICATION)
+        cfdb.setDFSReplication(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DFS_REPLICATION)))
       end
 
       arg.each_key do |unknown_key|
         puts(format('Unknown argument ignored for column family %s: %s', name, unknown_key))
       end
 
-      family
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Enables/disables a region by name
-    def online(region_name, on_off)
-      # Open meta table
-      meta = @connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
-
-      # Read region info
-      # FIXME: fail gracefully if can't find the region
-      region_bytes = region_name.to_java_bytes
-      g = org.apache.hadoop.hbase.client.Get.new(region_bytes)
-      g.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER)
-      hri_bytes = meta.get(g).value
-
-      # Change region status
-      hri = org.apache.hadoop.hbase.util.Writables.getWritable(hri_bytes, org.apache.hadoop.hbase.HRegionInfo.new)
-      hri.setOffline(on_off)
-
-      # Write it back
-      put = org.apache.hadoop.hbase.client.Put.new(region_bytes)
-      put.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY,
-                    org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER,
-                    org.apache.hadoop.hbase.util.Writables.getBytes(hri))
-      meta.put(put)
+      cfdb.build
     end
 
     # Apply user metadata to table/column descriptor
@@ -1125,6 +1269,9 @@ module Hbase
           ttl = ttl ? ttl.to_java(:long) : -1
           snapshot_props = java.util.HashMap.new
           snapshot_props.put("TTL", ttl)
+          max_filesize = arg[MAX_FILESIZE]
+          max_filesize = max_filesize ? max_filesize.to_java(:long) : -1
+          snapshot_props.put("MAX_FILESIZE", max_filesize)
           if arg[SKIP_FLUSH] == true
             @admin.snapshot(snapshot_name, table_name,
                             org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH, snapshot_props)
@@ -1145,8 +1292,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
-    def clone_snapshot(snapshot_name, table, restore_acl = false)
-      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl)
+    def clone_snapshot(snapshot_name, table, restore_acl = false, clone_sft = nil)
+      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl, clone_sft)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1263,7 +1410,7 @@ module Hbase
       raise(ArgumentError, "#{CONFIGURATION} must be a Hash type") unless config.is_a?(Hash)
       for k, v in config
         v = v.to_s unless v.nil?
-        descriptor.setConfiguration(k, v)
+        descriptor.setValue(k, v)
       end
     end
 
@@ -1277,6 +1424,12 @@ module Hbase
     # Updates the configuration of all the regionservers.
     def update_all_config
       @admin.updateConfiguration
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Updates the configuration of all the regionservers in the rsgroup.
+    def update_rsgroup_config(groupName)
+      @admin.updateConfiguration(groupName)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1333,7 +1486,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # modify a namespace
     def alter_namespace(namespace_name, *args)
-      # Fail if table name is not a string
+      # Fail if namespace name is not a string
       raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
 
       nsd = @admin.getNamespaceDescriptor(namespace_name)
@@ -1367,6 +1520,16 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Get namespace's rsgroup
+    def get_namespace_rsgroup(namespace_name)
+      # Fail if namespace name is not a string
+      raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
+      nsd = @admin.getNamespaceDescriptor(namespace_name)
+      raise(ArgumentError, 'Namespace does not exist') unless nsd
+      nsd.getConfigurationValue("hbase.rsgroup.name")
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop_namespace(namespace_name)
       @admin.deleteNamespace(namespace_name)
@@ -1388,27 +1551,34 @@ module Hbase
       @admin.getLocks
     end
 
-    # Parse arguments and update HTableDescriptor accordingly
-    def update_htd_from_arg(htd, arg)
-      htd.setOwnerString(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::OWNER)) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::OWNER)
-      htd.setMaxFileSize(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE)
-      htd.setReadOnly(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::READONLY))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::READONLY)
-      htd.setCompactionEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::COMPACTION_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::COMPACTION_ENABLED)
-      htd.setSplitEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_ENABLED)
-      htd.setMergeEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MERGE_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MERGE_ENABLED)
-      htd.setNormalizationEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZATION_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZATION_ENABLED)
-      htd.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_COUNT)
-      htd.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_SIZE))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_SIZE)
-      htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MEMSTORE_FLUSHSIZE))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MEMSTORE_FLUSHSIZE)
-      htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::DURABILITY))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::DURABILITY)
-      htd.setPriority(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::PRIORITY))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::PRIORITY)
-      htd.setFlushPolicyClassName(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::FLUSH_POLICY)) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::FLUSH_POLICY)
-      htd.setRegionMemstoreReplication(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::REGION_MEMSTORE_REPLICATION))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::REGION_MEMSTORE_REPLICATION)
-      htd.setRegionSplitPolicyClassName(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_POLICY)) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_POLICY)
-      htd.setRegionReplication(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::REGION_REPLICATION))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::REGION_REPLICATION)
-      set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
-      set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+    # Parse arguments and update TableDescriptorBuilder accordingly
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    def update_tdb_from_arg(tdb, arg)
+      tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
+      tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
+      tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)
+      tdb.setSplitEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::SPLIT_ENABLED))) if arg.include?(TableDescriptorBuilder::SPLIT_ENABLED)
+      tdb.setMergeEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::MERGE_ENABLED))) if arg.include?(TableDescriptorBuilder::MERGE_ENABLED)
+      tdb.setNormalizationEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZATION_ENABLED))) if arg.include?(TableDescriptorBuilder::NORMALIZATION_ENABLED)
+      tdb.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT)
+      # TODO: Keeping backward compatability for NORMALIZER_TARGET_REGION_SIZE with HBASE-25651 change. Can be removed in later version
+      if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
+        warn 'Use of NORMALIZER_TARGET_REGION_SIZE has been deprecated and will be removed in future version, please use NORMALIZER_TARGET_REGION_SIZE_MB instead'
+        tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)))
+      end
+      tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB))) \
+        if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB)
+      tdb.setMemStoreFlushSize(arg.delete(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)) if arg.include?(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)
+      tdb.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(TableDescriptorBuilder::DURABILITY))) if arg.include?(TableDescriptorBuilder::DURABILITY)
+      tdb.setPriority(JInteger.valueOf(arg.delete(TableDescriptorBuilder::PRIORITY))) if arg.include?(TableDescriptorBuilder::PRIORITY)
+      tdb.setFlushPolicyClassName(arg.delete(TableDescriptorBuilder::FLUSH_POLICY)) if arg.include?(TableDescriptorBuilder::FLUSH_POLICY)
+      tdb.setRegionMemStoreReplication(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::REGION_MEMSTORE_REPLICATION))) if arg.include?(TableDescriptorBuilder::REGION_MEMSTORE_REPLICATION)
+      tdb.setRegionSplitPolicyClassName(arg.delete(TableDescriptorBuilder::SPLIT_POLICY)) if arg.include?(TableDescriptorBuilder::SPLIT_POLICY)
+      tdb.setRegionReplication(JInteger.valueOf(arg.delete(TableDescriptorBuilder::REGION_REPLICATION))) if arg.include?(TableDescriptorBuilder::REGION_REPLICATION)
+      set_user_metadata(tdb, arg.delete(METADATA)) if arg[METADATA]
+      set_descriptor_config(tdb, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
     #----------------------------------------------------------------------------------------------
     # clear compaction queues
@@ -1479,6 +1649,95 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve SlowLog Responses from RegionServers
+    def get_slowlog_responses(server_names, args, is_large_log = false)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      filter_params = get_filter_params(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 10
+      end
+      if is_large_log
+        log_type = 'LARGE_LOG'
+      else
+        log_type = 'SLOW_LOG'
+      end
+      log_dest = org.apache.hadoop.hbase.client.ServerType::REGION_SERVER
+      server_names_set = java.util.HashSet.new(server_names)
+      slow_log_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit,
+                                                filter_params)
+      slow_log_responses_arr = []
+      slow_log_responses.each { |slow_log_response|
+        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      }
+      slow_log_responses_arr
+    end
+
+    def get_filter_params(args)
+      filter_params = java.util.HashMap.new
+      if args.key? 'REGION_NAME'
+        region_name = args['REGION_NAME']
+        filter_params.put('regionName', region_name)
+      end
+      if args.key? 'TABLE_NAME'
+        table_name = args['TABLE_NAME']
+        filter_params.put('tableName', table_name)
+      end
+      if args.key? 'CLIENT_IP'
+        client_address = args['CLIENT_IP']
+        filter_params.put('clientAddress', client_address)
+      end
+      if args.key? 'USER'
+        user = args['USER']
+        filter_params.put('userName', user)
+      end
+      if args.key? 'FILTER_BY_OP'
+        filter_by_op = args['FILTER_BY_OP']
+        if filter_by_op != 'OR' && filter_by_op != 'AND'
+          raise(ArgumentError, "FILTER_BY_OP should be either OR / AND")
+        end
+        if filter_by_op == 'AND'
+          filter_params.put('filterByOperator', 'AND')
+        end
+      end
+      filter_params
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Clears SlowLog Responses from RegionServers
+    def clear_slowlog_responses(server_names)
+      unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of correct type")
+      end
+      if server_names.nil?
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      clear_log_responses = @admin.clearSlowLogResponses(java.util.HashSet.new(server_names))
+      clear_log_success_count = 0
+      clear_log_responses.each do |response|
+        if response
+          clear_log_success_count += 1
+        end
+      end
+      puts 'Cleared Slowlog responses from ' \
+           "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Decommission a list of region servers, optionally offload corresponding regions
     def decommission_regionservers(host_or_servers, should_offload)
       # Fail if host_or_servers is neither a string nor an array
@@ -1543,6 +1802,43 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer decisions made by LoadBalancers
+    def get_balancer_decisions(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+      log_type = 'BALANCER_DECISION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_decisions_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_decisions_resp_arr = []
+      balancer_decisions_responses.each { |balancer_dec_resp|
+        balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      balancer_decisions_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer rejections made by LoadBalancers
+    def get_balancer_rejections(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+
+      log_type = 'BALANCER_REJECTION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_rejections_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_rejections_resp_arr = []
+      balancer_rejections_responses.each { |balancer_dec_resp|
+        balancer_rejections_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      balancer_rejections_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Stop the active Master
     def stop_master
       @admin.stopMaster
@@ -1551,6 +1847,28 @@ module Hbase
     # Stop the given RegionServer
     def stop_regionserver(hostport)
       @admin.stopRegionServer(hostport)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Get list of server names
+    def to_server_names(server_names)
+      if server_names.is_a?(Array)
+        server_names
+      else
+        java.util.Arrays.asList(server_names)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Change table's sft
+    def modify_table_sft(tableName, sft)
+      @admin.modifyTableStoreFileTracker(tableName, sft)
+    end
+
+     #----------------------------------------------------------------------------------------------
+    # Change table column family's sft
+    def modify_table_family_sft(tableName, family_bytes, sft)
+      @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
     end
   end
   # rubocop:enable Metrics/ClassLength

@@ -28,16 +28,19 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -56,8 +59,8 @@ public class TestColumnPrefixFilter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestColumnPrefixFilter.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new
-      HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new
+      HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -65,11 +68,18 @@ public class TestColumnPrefixFilter {
   @Test
   public void testColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family))
+        .setMaxVersions(3)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
     try {
       List<String> rows = generateRandomWords(100, "row");
       List<String> columns = generateRandomWords(10000, "column");
@@ -105,7 +115,7 @@ public class TestColumnPrefixFilter {
 
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       for (String s: prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 
@@ -118,20 +128,27 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
   public void testColumnPrefixFilterWithFilterList() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family))
+        .setMaxVersions(3)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
     try {
       List<String> rows = generateRandomWords(100, "row");
       List<String> columns = generateRandomWords(10000, "column");
@@ -167,7 +184,7 @@ public class TestColumnPrefixFilter {
 
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       for (String s: prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 
@@ -183,10 +200,10 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

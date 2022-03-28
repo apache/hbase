@@ -30,11 +30,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -43,6 +42,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -68,8 +69,8 @@ public class TestTimeRangeMapRed {
       HBaseClassTestRule.forClass(TestTimeRangeMapRed.class);
 
   private final static Logger log = LoggerFactory.getLogger(TestTimeRangeMapRed.class);
-  private static final HBaseTestingUtility UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL =
+    new HBaseTestingUtil();
   private Admin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");
@@ -150,12 +151,11 @@ public class TestTimeRangeMapRed {
 
   @Test
   public void testTimeRangeMapRed()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
-    col.setMaxVersions(Integer.MAX_VALUE);
-    desc.addFamily(col);
-    admin.createTable(desc);
+    throws IOException, InterruptedException, ClassNotFoundException {
+    final TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(FAMILY_NAME).setMaxVersions(Integer.MAX_VALUE).build()).build();
+    admin.createTable(tableDescriptor);
     List<Put> puts = new ArrayList<>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
@@ -163,7 +163,7 @@ public class TestTimeRangeMapRed {
       put.addColumn(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       puts.add(put);
     }
-    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     table.put(puts);
     runTestOnTable();
     verify(table);
@@ -180,7 +180,7 @@ public class TestTimeRangeMapRed {
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
@@ -198,7 +198,7 @@ public class TestTimeRangeMapRed {
   private void verify(final Table table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
       for (Cell kv : r.listCells()) {

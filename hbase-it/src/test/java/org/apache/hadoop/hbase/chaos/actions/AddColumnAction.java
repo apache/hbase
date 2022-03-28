@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action the adds a column family to a table.
@@ -34,9 +36,14 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 public class AddColumnAction extends Action {
   private final TableName tableName;
   private Admin admin;
+  private static final Logger LOG = LoggerFactory.getLogger(AddColumnAction.class);
 
   public AddColumnAction(TableName tableName) {
     this.tableName = tableName;
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -60,7 +67,7 @@ public class AddColumnAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
+    getLogger().debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     TableDescriptor modifiedTable = TableDescriptorBuilder.newBuilder(tableDescriptor)
         .setColumnFamily(columnDescriptor).build();

@@ -34,7 +34,8 @@ EOF
         count = list.size
         list.each do |snapshot|
           creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
+          formatter.row([snapshot.getName, snapshot.getTableNameAsString +
+            ' (' + creation_time + ')'])
         end
         puts "\nDelete the above #{count} snapshots (y/n)?" unless count == 0
         answer = 'n'
@@ -53,7 +54,8 @@ EOF
         formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
         list.each do |snapshot|
           creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
+          formatter.row([snapshot.getName, snapshot.getTableNameAsString +
+            ' (' + creation_time + ')'])
         end
       end
     end

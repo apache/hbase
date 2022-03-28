@@ -21,7 +21,7 @@ module Shell
   module Commands
     class DisableRpcThrottle < Command
       def help
-        return <<-EOF
+        <<-EOF
 Disable quota rpc throttle. Returns previous rpc throttle enabled value.
 NOTE: if quota is not enabled, this will not work and always return false.
 
@@ -31,7 +31,7 @@ Examples:
       end
 
       def command
-        prev_state = quotas_admin.switch_rpc_throttle(false) ? 'true' : 'false'
+        prev_state = !!quotas_admin.switch_rpc_throttle(false)
         formatter.row(["Previous rpc throttle state : #{prev_state}"])
         prev_state
       end

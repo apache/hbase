@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -31,10 +29,11 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -45,41 +44,38 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
 
   private static final Logger LOG = LoggerFactory.getLogger(MajorCompactionTTLRequest.class);
 
-  MajorCompactionTTLRequest(Configuration conf, RegionInfo region) {
-    super(conf, region);
+  MajorCompactionTTLRequest(Connection connection, RegionInfo region) {
+    super(connection, region);
   }
 
-  static Optional<MajorCompactionRequest> newRequest(Configuration conf, RegionInfo info,
+  static Optional<MajorCompactionRequest> newRequest(Connection connection, RegionInfo info,
       TableDescriptor htd) throws IOException {
-    MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(conf, info);
-    return request.createRequest(conf, htd);
+    MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(connection, info);
+    return request.createRequest(connection, htd);
   }
 
-  @VisibleForTesting
-  private Optional<MajorCompactionRequest> createRequest(Configuration conf, TableDescriptor htd)
+  private Optional<MajorCompactionRequest> createRequest(Connection connection, TableDescriptor htd)
       throws IOException {
     Map<String, Long> familiesToCompact = getStoresRequiringCompaction(htd);
     MajorCompactionRequest request = null;
     if (!familiesToCompact.isEmpty()) {
       LOG.debug("Compaction families for region: " + region + " CF: " + familiesToCompact.keySet());
-      request = new MajorCompactionTTLRequest(conf, region);
+      request = new MajorCompactionTTLRequest(connection, region);
     }
     return Optional.ofNullable(request);
   }
 
   Map<String, Long> getStoresRequiringCompaction(TableDescriptor htd) throws IOException {
-    try(Connection connection = getConnection(configuration)) {
-      HRegionFileSystem fileSystem = getFileSystem(connection);
-      Map<String, Long> familyTTLMap = Maps.newHashMap();
-      for (ColumnFamilyDescriptor descriptor : htd.getColumnFamilies()) {
-        long ts = getColFamilyCutoffTime(descriptor);
-        // If the table's TTL is forever, lets not compact any of the regions.
-        if (ts > 0 && shouldCFBeCompacted(fileSystem, descriptor.getNameAsString(), ts)) {
-          familyTTLMap.put(descriptor.getNameAsString(), ts);
-        }
+    HRegionFileSystem fileSystem = getFileSystem();
+    Map<String, Long> familyTTLMap = Maps.newHashMap();
+    for (ColumnFamilyDescriptor descriptor : htd.getColumnFamilies()) {
+      long ts = getColFamilyCutoffTime(descriptor);
+      // If the table's TTL is forever, lets not compact any of the regions.
+      if (ts > 0 && shouldCFBeCompacted(fileSystem, descriptor.getNameAsString(), ts)) {
+        familyTTLMap.put(descriptor.getNameAsString(), ts);
       }
-      return familyTTLMap;
     }
+    return familyTTLMap;
   }
 
   // If the CF has no TTL, return -1, else return the current time - TTL.
@@ -87,7 +83,7 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
     if (colDesc.getTimeToLive() == HConstants.FOREVER) {
       return -1;
     }
-    return System.currentTimeMillis() - (colDesc.getTimeToLive() * 1000L);
+    return EnvironmentEdgeManager.currentTime() - (colDesc.getTimeToLive() * 1000L);
   }
 
   @Override

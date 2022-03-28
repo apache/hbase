@@ -50,5 +50,5 @@ EOF
   end
 end
 
-# add incr comamnd to Table
+# add append command to Table
 ::Hbase::Table.add_shell_command('append')

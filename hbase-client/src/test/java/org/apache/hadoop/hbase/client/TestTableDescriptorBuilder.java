@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +19,17 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
@@ -43,39 +45,32 @@ import org.slf4j.LoggerFactory;
 /**
  * Test setting values in the descriptor.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestTableDescriptorBuilder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableDescriptorBuilder.class);
+    HBaseClassTestRule.forClass(TestTableDescriptorBuilder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableDescriptorBuilder.class);
 
   @Rule
   public TestName name = new TestName();
 
-  @Test (expected=IOException.class)
+  @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     String cpName = "a.b.c.d";
-    TableDescriptor htd
-      = TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
-            .setCoprocessor(cpName)
-            .setCoprocessor(cpName)
-            .build();
+    TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).setCoprocessor(cpName)
+      .setCoprocessor(cpName).build();
   }
 
   @Test
   public void testPb() throws DeserializationException, IOException {
     final int v = 123;
-    TableDescriptor htd
-      = TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
-          .setMaxFileSize(v)
-          .setDurability(Durability.ASYNC_WAL)
-          .setReadOnly(true)
-          .setRegionReplication(2)
-          .build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).setMaxFileSize(v)
+        .setDurability(Durability.ASYNC_WAL).setReadOnly(true).setRegionReplication(2).build();
 
-    byte [] bytes = TableDescriptorBuilder.toByteArray(htd);
+    byte[] bytes = TableDescriptorBuilder.toByteArray(htd);
     TableDescriptor deserializedHtd = TableDescriptorBuilder.parseFrom(bytes);
     assertEquals(htd, deserializedHtd);
     assertEquals(v, deserializedHtd.getMaxFileSize());
@@ -86,74 +81,85 @@ public class TestTableDescriptorBuilder {
 
   /**
    * Test cps in the table description.
-   *
    * @throws Exception if setting a coprocessor fails
    */
   @Test
   public void testGetSetRemoveCP() throws Exception {
     // simple CP
     String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
-    TableDescriptor desc
-      = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-         .setCoprocessor(className) // add and check that it is present
-        .build();
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName())).setCoprocessor(className) // add and
+                                                                                     // check that
+                                                                                     // it is
+                                                                                     // present
+      .build();
     assertTrue(desc.hasCoprocessor(className));
-    desc = TableDescriptorBuilder.newBuilder(desc)
-         .removeCoprocessor(className) // remove it and check that it is gone
-        .build();
+    desc = TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className) // remove it and
+                                                                                // check that it is
+                                                                                // gone
+      .build();
     assertFalse(desc.hasCoprocessor(className));
   }
 
   /**
    * Test cps in the table description.
-   *
    * @throws Exception if setting a coprocessor fails
    */
   @Test
   public void testSetListRemoveCP() throws Exception {
-    TableDescriptor desc
-      = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     // Check that any coprocessor is present.
     assertTrue(desc.getCoprocessorDescriptors().isEmpty());
 
     // simple CP
     String className1 = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     String className2 = "org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver";
-    desc = TableDescriptorBuilder.newBuilder(desc)
-            .setCoprocessor(className1) // Add the 1 coprocessor and check if present.
-            .build();
+    // Add the 1 coprocessor and check if present.
+    desc = TableDescriptorBuilder.newBuilder(desc).setCoprocessor(className1).build();
     assertTrue(desc.getCoprocessorDescriptors().size() == 1);
     assertTrue(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className1)));
-
+    // Add the 2nd coprocessor and check if present.
+    // remove it and check that it is gone
     desc = TableDescriptorBuilder.newBuilder(desc)
-            // Add the 2nd coprocessor and check if present.
-            // remove it and check that it is gone
-            .setCoprocessor(className2)
-            .build();
+
+      .setCoprocessor(className2).build();
     assertTrue(desc.getCoprocessorDescriptors().size() == 2);
     assertTrue(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className2)));
-
+    // Remove one and check
     desc = TableDescriptorBuilder.newBuilder(desc)
-            // Remove one and check
-            .removeCoprocessor(className1)
-            .build();
+
+      .removeCoprocessor(className1).build();
     assertTrue(desc.getCoprocessorDescriptors().size() == 1);
     assertFalse(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className1)));
     assertTrue(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className2)));
-
+    // Remove the last and check
     desc = TableDescriptorBuilder.newBuilder(desc)
-            // Remove the last and check
-            .removeCoprocessor(className2)
-            .build();
+
+      .removeCoprocessor(className2).build();
     assertTrue(desc.getCoprocessorDescriptors().isEmpty());
     assertFalse(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className1)));
     assertFalse(desc.getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
       .anyMatch(name -> name.equals(className2)));
+  }
+
+  /**
+   * Test removing cps in the table description that does not exist
+   * @throws Exception if removing a coprocessor fails other than IllegalArgumentException
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testRemoveNonExistingCoprocessor() throws Exception {
+    String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .build();
+    assertFalse(desc.hasCoprocessor(className));
+    TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className).build();
   }
 
   /**
@@ -163,24 +169,20 @@ public class TestTableDescriptorBuilder {
   public void testRemoveString() {
     byte[] key = Bytes.toBytes("Some");
     byte[] value = Bytes.toBytes("value");
-    TableDescriptor desc
-      = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .setValue(key, value)
-            .build();
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName())).setValue(key, value).build();
     assertTrue(Bytes.equals(value, desc.getValue(key)));
-    desc = TableDescriptorBuilder.newBuilder(desc)
-            .removeValue(key)
-            .build();
+    desc = TableDescriptorBuilder.newBuilder(desc).removeValue(key).build();
     assertTrue(desc.getValue(key) == null);
   }
 
   String[] legalTableNames = { "foo", "with-dash_under.dot", "_under_start_ok",
     "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02",
     "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
-    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
+    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02" };
   String[] illegalTableNames = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
     "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
-    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
+    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2" };
 
   @Test
   public void testLegalTableNames() {
@@ -205,8 +207,8 @@ public class TestTableDescriptorBuilder {
   public void testLegalTableNamesRegex() {
     for (String tn : legalTableNames) {
       TableName tName = TableName.valueOf(tn);
-      assertTrue("Testing: '" + tn + "'", Pattern.matches(TableName.VALID_USER_TABLE_REGEX,
-          tName.getNameAsString()));
+      assertTrue("Testing: '" + tn + "'",
+        Pattern.matches(TableName.VALID_USER_TABLE_REGEX, tName.getNameAsString()));
     }
   }
 
@@ -218,18 +220,44 @@ public class TestTableDescriptorBuilder {
     }
   }
 
-    /**
+  /**
    * Test default value handling for maxFileSize
    */
   @Test
   public void testGetMaxFileSize() {
-    TableDescriptor desc = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     assertEquals(-1, desc.getMaxFileSize());
-    desc = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
-            .setMaxFileSize(1111L).build();
+    desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setMaxFileSize(1111L).build();
     assertEquals(1111L, desc.getMaxFileSize());
+  }
+
+  @Test
+  public void testSetMaxFileSize() throws HBaseException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+
+    String maxFileSize = "1073741824";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(1073741824, builder.build().getMaxFileSize());
+
+    maxFileSize = "1GB";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(1073741824, builder.build().getMaxFileSize());
+
+    maxFileSize = "10GB 25MB";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(10763632640L, builder.build().getMaxFileSize());
+
+    // ignore case
+    maxFileSize = "10GB 512mb 512KB 512b";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(11274813952L, builder.build().getMaxFileSize());
+
+    maxFileSize = "10737942528 B (10GB 512KB)";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(10737942528L, builder.build().getMaxFileSize());
   }
 
   /**
@@ -237,13 +265,39 @@ public class TestTableDescriptorBuilder {
    */
   @Test
   public void testGetMemStoreFlushSize() {
-    TableDescriptor desc = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     assertEquals(-1, desc.getMemStoreFlushSize());
-    desc = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
-            .setMemStoreFlushSize(1111L).build();
+    desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setMemStoreFlushSize(1111L).build();
     assertEquals(1111L, desc.getMemStoreFlushSize());
+  }
+
+  @Test
+  public void testSetMemStoreFlushSize() throws HBaseException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+
+    String memstoreFlushSize = "1073741824";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(1073741824, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "1GB";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(1073741824, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "10GB 25MB";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(10763632640L, builder.build().getMemStoreFlushSize());
+
+    // ignore case
+    memstoreFlushSize = "10GB 512mb 512KB 512b";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(11274813952L, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "10737942528 B (10GB 512KB)";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(10737942528L, builder.build().getMemStoreFlushSize());
   }
 
   @Test
@@ -255,50 +309,35 @@ public class TestTableDescriptorBuilder {
   public void testModifyFamily() {
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
-            .setBlocksize(1000)
-            .setDFSReplication((short) 3)
-            .build();
-    TableDescriptor htd
-      = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-              .setColumnFamily(hcd)
-              .build();
+      .setBlocksize(1000).setDFSReplication((short) 3).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(hcd).build();
 
     assertEquals(1000, htd.getColumnFamily(familyName).getBlocksize());
     assertEquals(3, htd.getColumnFamily(familyName).getDFSReplication());
-    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
-            .setBlocksize(2000)
-            .setDFSReplication((short) 1)
-            .build();
-    htd = TableDescriptorBuilder.newBuilder(htd)
-              .modifyColumnFamily(hcd)
-              .build();
+    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(2000)
+      .setDFSReplication((short) 1).build();
+    htd = TableDescriptorBuilder.newBuilder(htd).modifyColumnFamily(hcd).build();
     assertEquals(2000, htd.getColumnFamily(familyName).getBlocksize());
     assertEquals(1, htd.getColumnFamily(familyName).getDFSReplication());
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testModifyInexistentFamily() {
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    TableDescriptor htd = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
-            .modifyColumnFamily(hcd)
-            .build();
+    TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).build();
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testAddDuplicateFamilies() {
     byte[] familyName = Bytes.toBytes("cf");
-    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
-            .setBlocksize(1000)
-            .build();
+    ColumnFamilyDescriptor hcd =
+      ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(1000).build();
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .setColumnFamily(hcd)
-            .build();
+      .setColumnFamily(hcd).build();
     assertEquals(1000, htd.getColumnFamily(familyName).getBlocksize());
-    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
-            .setBlocksize(2000)
-            .build();
+    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(2000).build();
     // add duplicate column
     TableDescriptorBuilder.newBuilder(htd).setColumnFamily(hcd).build();
   }
@@ -306,8 +345,63 @@ public class TestTableDescriptorBuilder {
   @Test
   public void testPriority() {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .setPriority(42)
-            .build();
+      .setPriority(42).build();
     assertEquals(42, htd.getPriority());
+  }
+
+  @Test
+  public void testStringCustomizedValues() throws HBaseException {
+    byte[] familyName = Bytes.toBytes("cf");
+    ColumnFamilyDescriptor hcd =
+      ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(131072).build();
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(hcd).setDurability(Durability.ASYNC_WAL).build();
+
+    assertEquals(
+      "'testStringCustomizedValues', " +
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
+      htd.toStringCustomizedValues());
+
+    htd = TableDescriptorBuilder.newBuilder(htd)
+      .setMaxFileSize("10737942528")
+      .setMemStoreFlushSize("256MB")
+      .build();
+    assertEquals(
+      "'testStringCustomizedValues', " +
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
+        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
+        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
+      htd.toStringCustomizedValues());
+  }
+
+  @Test
+  public void testGetSetRegionServerGroup() {
+    String groupName = name.getMethodName();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setRegionServerGroup(groupName).build();
+    assertEquals(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP), groupName);
+    htd = TableDescriptorBuilder.newBuilder(htd).setRegionServerGroup(null).build();
+    assertNull(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP));
+  }
+
+  @Test
+  public void testSetEmptyValue() {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    String testValue = "TestValue";
+    // test setValue
+    builder.setValue(testValue, "2");
+    assertEquals("2", builder.build().getValue(testValue));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test setFlushPolicyClassName
+    builder.setFlushPolicyClassName("class");
+    assertEquals("class", builder.build().getFlushPolicyClassName());
+    builder.setFlushPolicyClassName("");
+    assertNull(builder.build().getFlushPolicyClassName());
   }
 }

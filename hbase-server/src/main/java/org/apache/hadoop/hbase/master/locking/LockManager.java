@@ -26,11 +26,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Functions to acquire lock on table/namespace/regions.
@@ -156,10 +156,12 @@ public final class LockManager {
       proc.setOwner(master.getMasterProcedureExecutor().getEnvironment().getRequestUser());
       master.getMasterProcedureExecutor().submitProcedure(proc);
 
-      long deadline = (timeoutMs > 0) ? System.currentTimeMillis() + timeoutMs : Long.MAX_VALUE;
-      while (deadline >= System.currentTimeMillis() && !proc.isLocked()) {
+      long deadline = (timeoutMs > 0) ? EnvironmentEdgeManager.currentTime() + timeoutMs :
+        Long.MAX_VALUE;
+      while (deadline >= EnvironmentEdgeManager.currentTime() && !proc.isLocked()) {
         try {
-          lockAcquireLatch.await(deadline - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+          lockAcquireLatch.await(deadline - EnvironmentEdgeManager.currentTime(),
+            TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
           LOG.info("InterruptedException when waiting for lock: " + proc.toString());
           // kind of weird, releasing a lock which is not locked. This is to make the procedure
@@ -192,7 +194,6 @@ public final class LockManager {
       return "MasterLock: proc = " + proc.toString();
     }
 
-    @VisibleForTesting
     LockProcedure getProc() {
       return proc;
     }

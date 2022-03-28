@@ -21,10 +21,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -55,8 +56,7 @@ public class TestProcedureAdmin {
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureAdmin.class);
   @Rule public TestName name = new TestName();
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -182,11 +182,10 @@ public class TestProcedureAdmin {
   @Test
   public void testAbortNonExistProcedure() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    Random randomGenerator = new Random();
     long procId;
     // Generate a non-existing procedure
     do {
-      procId = randomGenerator.nextLong();
+      procId = ThreadLocalRandom.current().nextLong();
     } while (procExec.getResult(procId) != null);
 
     boolean abortResult = procExec.abort(procId, true);

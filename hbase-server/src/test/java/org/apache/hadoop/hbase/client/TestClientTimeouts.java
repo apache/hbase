@@ -20,23 +20,22 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -61,7 +60,7 @@ public class TestClientTimeouts {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestClientTimeouts.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static int SLAVES = 1;
 
   @BeforeClass
@@ -100,9 +99,9 @@ public class TestClientTimeouts {
           connection = ConnectionFactory.createConnection(conf);
           admin = connection.getAdmin();
           admin.balancerSwitch(false, false);
-        } catch (MasterNotRunningException ex) {
+        } catch (MasterRegistryFetchException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-          // a MasterNotRunningException. It's a bug if we get other exceptions.
+          // a MasterRegistryFetchException. It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
           if (admin != null) {
@@ -136,14 +135,12 @@ public class TestClientTimeouts {
 
     // Return my own instance, one that does random timeouts
     @Override
-    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User ticket, int rpcTimeout)
-        throws UnknownHostException {
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User ticket, int rpcTimeout) {
       return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
     }
 
     @Override
-    public RpcChannel createRpcChannel(ServerName sn, User ticket, int rpcTimeout)
-        throws UnknownHostException {
+    public RpcChannel createRpcChannel(ServerName sn, User ticket, int rpcTimeout) {
       return new RandomTimeoutRpcChannel(this, sn, ticket, rpcTimeout);
     }
   }
@@ -160,7 +157,7 @@ public class TestClientTimeouts {
 
     RandomTimeoutBlockingRpcChannel(BlockingRpcClient rpcClient, ServerName sn, User ticket,
         int rpcTimeout) {
-      super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
+      super(rpcClient, Address.fromParts(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
@@ -180,8 +177,8 @@ public class TestClientTimeouts {
   private static class RandomTimeoutRpcChannel extends AbstractRpcClient.RpcChannelImplementation {
 
     RandomTimeoutRpcChannel(AbstractRpcClient<?> rpcClient, ServerName sn, User ticket,
-        int rpcTimeout) throws UnknownHostException {
-      super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
+        int rpcTimeout) {
+      super(rpcClient, Address.fromParts(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override

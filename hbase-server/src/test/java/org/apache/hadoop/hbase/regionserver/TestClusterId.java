@@ -25,14 +25,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.junit.After;
@@ -51,8 +51,8 @@ public class TestClusterId {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClusterId.class);
 
-  private final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   private JVMClusterUtil.RegionServerThread rst;
 
@@ -83,7 +83,7 @@ public class TestClusterId {
     //Make sure RS is in blocking state
     Thread.sleep(10000);
 
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(1).numRegionServers(0).build();
     TEST_UTIL.startMiniHBaseCluster(option);
 
@@ -99,13 +99,13 @@ public class TestClusterId {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
     TEST_UTIL.createRootDir();
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(TEST_UTIL.getConfiguration());
     Path filePath = new Path(rootDir, HConstants.CLUSTER_ID_FILE_NAME);
     FSDataOutputStream s = null;
     try {
       s = fs.create(filePath);
-      s.writeUTF(TEST_UTIL.getRandomUUID().toString());
+      s.writeUTF(HBaseCommonTestingUtil.getRandomUUID().toString());
     } finally {
       if (s != null) {
         s.close();
@@ -113,8 +113,7 @@ public class TestClusterId {
     }
     TEST_UTIL.startMiniHBaseCluster();
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    int expected = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 2: 1;
-    assertEquals(expected, master.getServerManager().getOnlineServersList().size());
+    assertEquals(1, master.getServerManager().getOnlineServersList().size());
   }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -25,7 +26,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -43,14 +43,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -70,7 +70,7 @@ public class TestReadOnlyZKClient {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReadOnlyZKClient.class);
 
-  private static HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static String PATH = "/test";
 
@@ -83,17 +83,18 @@ public class TestReadOnlyZKClient {
   @BeforeClass
   public static void setUp() throws Exception {
     final int port = UTIL.startMiniZKCluster().getClientPort();
+    String hostPort = UTIL.getZkCluster().getAddress().toString();
 
-    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper("localhost:" + port, 10000);
+    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper(hostPort, 10000);
     DATA = new byte[10];
-    ThreadLocalRandom.current().nextBytes(DATA);
+    Bytes.random(DATA);
     zk.create(PATH, DATA, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     for (int i = 0; i < CHILDREN; i++) {
       zk.create(PATH + "/c" + i, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
     zk.close();
     Configuration conf = UTIL.getConfiguration();
-    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
+    conf.set(HConstants.ZOOKEEPER_QUORUM, hostPort);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     conf.setInt(ReadOnlyZKClient.KEEPALIVE_MILLIS, 3000);

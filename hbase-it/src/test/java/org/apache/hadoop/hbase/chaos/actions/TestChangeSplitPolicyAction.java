@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,16 +33,14 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({MediumTests.class})
-public class TestChangeSplitPolicyAction extends Action {
+public class TestChangeSplitPolicyAction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestChangeSplitPolicyAction.class);
 
   private final static IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
-  private static ChangeSplitPolicyAction action;
-  private Admin admin;
-  private TableName tableName = TableName.valueOf("ChangeSplitPolicyAction");
+  private final TableName tableName = TableName.valueOf("ChangeSplitPolicyAction");
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -54,17 +52,17 @@ public class TestChangeSplitPolicyAction extends Action {
   }
   @Before
   public void setUp() throws Exception {
-    this.admin = TEST_UTIL.getAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     admin.createTable(builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build());
   }
 
   @Test
   public void testChangeSplitPolicyAction() throws Exception {
-    ActionContext ctx = Mockito.mock(ActionContext.class);
+    Action.ActionContext ctx = Mockito.mock(Action.ActionContext.class);
     Mockito.when(ctx.getHBaseIntegrationTestingUtility()).thenReturn(TEST_UTIL);
     Mockito.when(ctx.getHBaseCluster()).thenReturn(TEST_UTIL.getHBaseCluster());
-    action = new ChangeSplitPolicyAction(tableName);
+    ChangeSplitPolicyAction action = new ChangeSplitPolicyAction(tableName);
     action.init(ctx);
     action.perform();
   }

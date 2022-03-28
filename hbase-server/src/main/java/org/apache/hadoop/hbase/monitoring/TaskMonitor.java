@@ -87,8 +87,12 @@ public class TaskMonitor {
     }
     return instance;
   }
-  
+
   public synchronized MonitoredTask createStatus(String description) {
+    return createStatus(description, false);
+  }
+
+  public synchronized MonitoredTask createStatus(String description, boolean ignore) {
     MonitoredTask stat = new MonitoredTaskImpl();
     stat.setDescription(description);
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(
@@ -99,7 +103,9 @@ public class TaskMonitor {
     if (tasks.isFull()) {
       purgeExpiredTasks();
     }
-    tasks.add(pair);
+    if (!ignore) {
+      tasks.add(pair);
+    }
     return proxy;
   }
 

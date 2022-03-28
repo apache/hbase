@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -282,4 +283,20 @@ public interface Store {
   boolean isSloppyMemStore();
 
   int getCurrentParallelPutCount();
+
+  /**
+   * @return the number of read requests purely from the memstore.
+   */
+  long getMemstoreOnlyRowReadsCount();
+
+  /**
+   * @return the number of read requests from the files under this store.
+   */
+  long getMixedRowReadsCount();
+
+  /**
+   * @return a read only configuration of this store; throws {@link UnsupportedOperationException}
+   *         if you try to set a configuration.
+   */
+  Configuration getReadOnlyConfiguration();
 }

@@ -22,7 +22,7 @@ module Shell
     class MergeRegion < Command
       def help
         <<-EOF
-Merge two regions. Passing 'true' as the optional third parameter will force
+Merge multiple (2 or more) regions. Passing 'true' as the optional third parameter will force
 a merge ('force' merges regardless else merge will fail unless passed
 adjacent regions. 'force' is for expert use only).
 
@@ -31,18 +31,42 @@ region name is the hash suffix on region names: e.g. if the region name were
 TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396. then
 the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 
+You can either pass the list of regions as comma separated values or as an
+array of regions as shown:
+
 Examples:
 
   hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME'
-  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', true
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ..., true
+
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME']
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...]
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...], true
 
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
-  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
+  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...
+  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ..., true
+
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME']
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...]
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...], true
 EOF
       end
 
-      def command(region_a_name, region_b_name, force = 'false')
-        admin.merge_region(region_a_name, region_b_name, force)
+      def command(*args)
+        args = args.flatten.compact
+        args_len = args.length
+        raise(ArgumentError, 'Must pass at least 2 regions to merge') unless args_len > 1
+        force = false
+        if(args_len > 2)
+          last = args[args_len-1]
+          if [true, false].include? last
+            force = last
+            args = args[0...-1]
+          end
+        end
+        admin.merge_region(args, force)
       end
     end
   end

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -43,21 +44,29 @@ public class OperationStatus {
   public static final OperationStatus NOT_RUN = new OperationStatus(OperationStatusCode.NOT_RUN);
 
   private final OperationStatusCode code;
-
+  private final Result result;
   private final String exceptionMsg;
 
   public OperationStatus(OperationStatusCode code) {
-    this(code, "");
+    this(code, null, "");
+  }
+
+  public OperationStatus(OperationStatusCode code, Result result) {
+    this(code, result, "");
   }
 
   public OperationStatus(OperationStatusCode code, String exceptionMsg) {
-    this.code = code;
-    this.exceptionMsg = exceptionMsg;
+    this(code, null, exceptionMsg);
   }
 
   public OperationStatus(OperationStatusCode code, Exception e) {
+    this(code, null, (e == null) ? "" : e.getClass().getName() + ": " + e.getMessage());
+  }
+
+  private OperationStatus(OperationStatusCode code, Result result, String exceptionMsg) {
     this.code = code;
-    this.exceptionMsg = (e == null) ? "" : e.getClass().getName() + ": " + e.getMessage();
+    this.result = result;
+    this.exceptionMsg = exceptionMsg;
   }
 
   /**
@@ -65,6 +74,13 @@ public class OperationStatus {
    */
   public OperationStatusCode getOperationStatusCode() {
     return code;
+  }
+
+  /**
+   * @return result
+   */
+  public Result getResult() {
+    return result;
   }
 
   /**

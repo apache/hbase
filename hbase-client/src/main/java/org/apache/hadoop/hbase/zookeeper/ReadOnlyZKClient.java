@@ -42,8 +42,6 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A very simple read only zookeeper implementation without watcher support.
  */
@@ -88,7 +86,7 @@ public final class ReadOnlyZKClient implements Closeable {
     public void exec(ZooKeeper zk) {
     }
 
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
     }
 
     public void closed(IOException e) {
@@ -117,7 +115,6 @@ public final class ReadOnlyZKClient implements Closeable {
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  @VisibleForTesting
   ZooKeeper zookeeper;
 
   private int pendingRequests = 0;
@@ -236,7 +233,7 @@ public final class ReadOnlyZKClient implements Closeable {
     }
 
     @Override
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
       if (delay(retryIntervalMs, maxRetries)) {
         LOG.warn("{} to {} failed to connect to zk fo {} of {}, retries = {}", getId(),
           connectString, operationType, path, retries, e);
@@ -344,7 +341,7 @@ public final class ReadOnlyZKClient implements Closeable {
         ZooKeeper zk;
         try {
           zk = getZk();
-        } catch (IOException e) {
+        } catch (Exception e) {
           task.connectFailed(e);
           continue;
         }
@@ -365,7 +362,6 @@ public final class ReadOnlyZKClient implements Closeable {
     }
   }
 
-  @VisibleForTesting
   public String getConnectString() {
     return connectString;
   }

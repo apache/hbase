@@ -22,13 +22,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -46,7 +45,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
@@ -70,9 +69,9 @@ public class TestVerifyReplicationCrossDiffHdfs {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestVerifyReplicationCrossDiffHdfs.class);
 
-  private static HBaseTestingUtility util1;
-  private static HBaseTestingUtility util2;
-  private static HBaseTestingUtility mapReduceUtil = new HBaseTestingUtility();
+  private static HBaseTestingUtil util1;
+  private static HBaseTestingUtil util2;
+  private static HBaseTestingUtil mapReduceUtil = new HBaseTestingUtil();
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2;
@@ -85,14 +84,14 @@ public class TestVerifyReplicationCrossDiffHdfs {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
-    util1 = new HBaseTestingUtility(conf1);
+    util1 = new HBaseTestingUtil(conf1);
     util1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = util1.getZkCluster();
     conf1 = util1.getConfiguration();
 
     conf2 = HBaseConfiguration.create(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    util2 = new HBaseTestingUtility(conf2);
+    util2 = new HBaseTestingUtil(conf2);
     util2.setZkCluster(miniZK);
 
     util1.startMiniCluster();
@@ -165,16 +164,16 @@ public class TestVerifyReplicationCrossDiffHdfs {
 
   @Test
   public void testVerifyRepBySnapshot() throws Exception {
-    Path rootDir = FSUtils.getRootDir(conf1);
+    Path rootDir = CommonFSUtils.getRootDir(conf1);
     FileSystem fs = rootDir.getFileSystem(conf1);
-    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util1.getAdmin(), TABLE_NAME,
         Bytes.toString(FAMILY), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
-    Path peerRootDir = FSUtils.getRootDir(conf2);
+    Path peerRootDir = CommonFSUtils.getRootDir(conf2);
     FileSystem peerFs = peerRootDir.getFileSystem(conf2);
-    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util2.getAdmin(), TABLE_NAME,
         Bytes.toString(FAMILY), peerSnapshotName, peerRootDir, peerFs, true);
 
@@ -185,7 +184,7 @@ public class TestVerifyReplicationCrossDiffHdfs {
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(conf2), PEER_ID, TABLE_NAME.toString() };
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(conf2), PEER_ID, TABLE_NAME.toString() };
 
     // Use the yarn's config override the source cluster's config.
     Configuration newConf = HBaseConfiguration.create(conf1);

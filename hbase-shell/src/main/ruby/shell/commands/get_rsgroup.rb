@@ -39,7 +39,8 @@ EOF
         formatter.footer
 
         formatter.header(['TABLES'])
-        group.getTables.each do |table|
+        tables = rsgroup_admin.list_tables_in_rs_group(group_name)
+        tables.each do |table|
           formatter.row([table.getNameAsString])
         end
         formatter.footer

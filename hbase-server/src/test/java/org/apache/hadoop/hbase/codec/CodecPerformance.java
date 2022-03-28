@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.codec;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -30,12 +30,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.codec.CellCodec;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.codec.MessageCodec;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Do basic codec performance eval.
@@ -68,13 +65,13 @@ public class CodecPerformance {
   static byte [] runEncoderTest(final int index, final int initialBufferSize,
       final ByteArrayOutputStream baos, final CellOutputStream encoder, final Cell [] cells)
   throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < cells.length; i++) {
       encoder.write(cells[i]);
     }
     encoder.flush();
     LOG.info("" + index + " encoded count=" + cells.length + " in " +
-      (System.currentTimeMillis() - startTime) + "ms for encoder " + encoder);
+      (EnvironmentEdgeManager.currentTime() - startTime) + "ms for encoder " + encoder);
     // Ensure we did not have to grow the backing buffer.
     assertTrue(baos.size() < initialBufferSize);
     return baos.toByteArray();
@@ -83,22 +80,19 @@ public class CodecPerformance {
   static Cell [] runDecoderTest(final int index, final int count, final CellScanner decoder)
   throws IOException {
     Cell [] cells = new Cell[count];
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; decoder.advance(); i++) {
       cells[i] = decoder.current();
     }
     LOG.info("" + index + " decoded count=" + cells.length + " in " +
-      (System.currentTimeMillis() - startTime) + "ms for decoder " + decoder);
+      (EnvironmentEdgeManager.currentTime() - startTime) + "ms for decoder " + decoder);
     // Ensure we did not have to grow the backing buffer.
     assertTrue(cells.length == count);
     return cells;
   }
 
   static void verifyCells(final Cell [] input, final Cell [] output) {
-    assertEquals(input.length, output.length);
-    for (int i = 0; i < input.length; i ++) {
-      input[i].equals(output[i]);
-    }
+    assertArrayEquals(input, output);
   }
 
   static void doCodec(final Codec codec, final Cell [] cells, final int cycles, final int count,

@@ -47,16 +47,16 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +67,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.SingleThreadEventExecutor;
+
 
 /**
  * An asynchronous implementation of FSWAL.
@@ -130,10 +131,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWAL.class);
 
-  private static final Comparator<SyncFuture> SEQ_COMPARATOR = (o1, o2) -> {
-    int c = Long.compare(o1.getTxid(), o2.getTxid());
-    return c != 0 ? c : Integer.compare(System.identityHashCode(o1), System.identityHashCode(o2));
-  };
+  private static final Comparator<SyncFuture> SEQ_COMPARATOR = Comparator.comparingLong(
+      SyncFuture::getTxid).thenComparingInt(System::identityHashCode);
 
   public static final String WAL_BATCH_SIZE = "hbase.wal.batch.size";
   public static final long DEFAULT_WAL_BATCH_SIZE = 64L * 1024;
@@ -162,7 +161,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private static final int MAX_EPOCH = 0x3FFFFFFF;
   // the lowest bit is waitingRoll, which means new writer is created and we are waiting for old
   // writer to be closed.
-  // the second lowest bit is writerBorken which means the current writer is broken and rollWriter
+  // the second lowest bit is writerBroken which means the current writer is broken and rollWriter
   // is needed.
   // all other bits are the epoch number of the current writer, this is used to detect whether the
   // writer is still the one when you issue the sync.
@@ -202,13 +201,26 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final int waitOnShutdownInSeconds;
 
+  private final StreamSlowMonitor streamSlowMonitor;
+
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
-    super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
+        eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, "monitorForSuffix"));
+  }
+
+  public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
+      String archiveDir, Configuration conf, List<WALActionsListener> listeners,
+      boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
+      Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
+      throws FailedLogCloseException, IOException {
+    super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+        suffix);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
+    this.streamSlowMonitor = monitor;
     Supplier<Boolean> hasConsumerTask;
     if (conf.getBoolean(ASYNC_WAL_USE_SHARED_EVENT_LOOP, DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP)) {
       this.consumeExecutor = eventLoopGroup.next();
@@ -228,8 +240,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
     } else {
       ThreadPoolExecutor threadPool =
-        new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
-            new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d").setDaemon(true).build());
+        new ThreadPoolExecutor(1, 1, 0L,
+          TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+          new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-"+ rootDir.toString() +
+              "-prefix:" + (prefix == null ? "default" : prefix).replace("%", "%%"))
+            .setDaemon(true).build());
       hasConsumerTask = () -> threadPool.getQueue().peek() == consumer;
       this.consumeExecutor = threadPool;
     }
@@ -249,6 +264,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     batchSize = conf.getLong(WAL_BATCH_SIZE, DEFAULT_WAL_BATCH_SIZE);
     waitOnShutdownInSeconds = conf.getInt(ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS,
       DEFAULT_ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS);
+  }
+
+  /**
+   * Helper that marks the future as DONE and offers it back to the cache.
+   */
+  private void markFutureDoneAndOffer(SyncFuture future, long txid, Throwable t) {
+    future.done(txid, t);
+    syncFutureCache.offer(future);
   }
 
   private static boolean waitingRoll(int epochAndState) {
@@ -320,7 +343,38 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
+  private void syncCompleted(long epochWhenSync, AsyncWriter writer, long processedTxid,
+    long startTimeNs) {
+    // Please see the last several comments on HBASE-22761, it is possible that we get a
+    // syncCompleted which acks a previous sync request after we received a syncFailed on the same
+    // writer. So here we will also check on the epoch and state, if the epoch has already been
+    // changed, i.e, we have already rolled the writer, or the writer is already broken, we should
+    // just skip here, to avoid mess up the state or accidentally release some WAL entries and
+    // cause data corruption.
+    // The syncCompleted call is on the critical write path so we should try our best to make it
+    // fast. So here we do not hold consumeLock, for increasing performance. It is safe because
+    // there are only 3 possible situations:
+    // 1. For normal case, the only place where we change epochAndState is when rolling the writer.
+    // Before rolling actually happen, we will only change the state to waitingRoll which is another
+    // bit than writerBroken, and when we actually change the epoch, we can make sure that there is
+    // no out going sync request. So we will always pass the check here and there is no problem.
+    // 2. The writer is broken, but we have not called syncFailed yet. In this case, since
+    // syncFailed and syncCompleted are executed in the same thread, we will just face the same
+    // situation with #1.
+    // 3. The writer is broken, and syncFailed has been called. Then when we arrive here, there are
+    // only 2 possible situations:
+    // a. we arrive before we actually roll the writer, then we will find out the writer is broken
+    // and give up.
+    // b. we arrive after we actually roll the writer, then we will find out the epoch is changed
+    // and give up.
+    // For both #a and #b, we do not need to hold the consumeLock as we will always update the
+    // epochAndState as a whole.
+    // So in general, for all the cases above, we do not need to hold the consumeLock.
+    int epochAndState = this.epochAndState;
+    if (epoch(epochAndState) != epochWhenSync || writerBroken(epochAndState)) {
+      LOG.warn("Got a sync complete call after the writer is broken, skip");
+      return;
+    }
     highestSyncedTxid.set(processedTxid);
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
@@ -331,7 +385,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         break;
       }
     }
-    postSync(System.nanoTime() - startTimeNs, finishSync(true));
+    postSync(System.nanoTime() - startTimeNs, finishSync());
     if (trySetReadyForRolling()) {
       // we have just finished a roll, then do not need to check for log rolling, the writer will be
       // closed soon.
@@ -347,38 +401,48 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
+  // find all the sync futures between these two txids to see if we need to issue a hsync, if no
+  // sync futures then just use the default one.
+  private boolean isHsync(long beginTxid, long endTxid) {
+    SortedSet<SyncFuture> futures =
+      syncFutures.subSet(new SyncFuture().reset(beginTxid, false),
+          new SyncFuture().reset(endTxid + 1, false));
+    if (futures.isEmpty()) {
+      return useHsync;
+    }
+    for (SyncFuture future : futures) {
+      if (future.isForceSync()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private void sync(AsyncWriter writer) {
     fileLengthAtLastSync = writer.getLength();
     long currentHighestProcessedAppendTxid = highestProcessedAppendTxid;
+    boolean shouldUseHsync =
+      isHsync(highestProcessedAppendTxidAtLastSync, currentHighestProcessedAppendTxid);
     highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
     final long epoch = (long) epochAndState >>> 2L;
-    addListener(writer.sync(), (result, error) -> {
+    addListener(writer.sync(shouldUseHsync), (result, error) -> {
       if (error != null) {
         syncFailed(epoch, error);
       } else {
-        syncCompleted(writer, currentHighestProcessedAppendTxid, startTimeNs);
+        syncCompleted(epoch, writer, currentHighestProcessedAppendTxid, startTimeNs);
       }
     }, consumeExecutor);
   }
 
-  private void addTimeAnnotation(SyncFuture future, String annotation) {
-    TraceUtil.addTimelineAnnotation(annotation);
-    // TODO handle htrace API change, see HBASE-18895
-    // future.setSpan(scope.getSpan());
-  }
-
-  private int finishSyncLowerThanTxid(long txid, boolean addSyncTrace) {
+  private int finishSyncLowerThanTxid(long txid) {
     int finished = 0;
     for (Iterator<SyncFuture> iter = syncFutures.iterator(); iter.hasNext();) {
       SyncFuture sync = iter.next();
       if (sync.getTxid() <= txid) {
-        sync.done(txid, null);
+        markFutureDoneAndOffer(sync, txid, null);
         iter.remove();
         finished++;
-        if (addSyncTrace) {
-          addTimeAnnotation(sync, "writer synced");
-        }
       } else {
         break;
       }
@@ -387,7 +451,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   // try advancing the highestSyncedTxid as much as possible
-  private int finishSync(boolean addSyncTrace) {
+  private int finishSync() {
     if (unackedAppends.isEmpty()) {
       // All outstanding appends have been acked.
       if (toWriteAppends.isEmpty()) {
@@ -395,10 +459,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         long maxSyncTxid = highestSyncedTxid.get();
         for (SyncFuture sync : syncFutures) {
           maxSyncTxid = Math.max(maxSyncTxid, sync.getTxid());
-          sync.done(maxSyncTxid, null);
-          if (addSyncTrace) {
-            addTimeAnnotation(sync, "writer synced");
-          }
+          markFutureDoneAndOffer(sync, maxSyncTxid, null);
         }
         highestSyncedTxid.set(maxSyncTxid);
         int finished = syncFutures.size();
@@ -412,7 +473,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         assert lowestUnprocessedAppendTxid > highestProcessedAppendTxid;
         long doneTxid = lowestUnprocessedAppendTxid - 1;
         highestSyncedTxid.set(doneTxid);
-        return finishSyncLowerThanTxid(doneTxid, addSyncTrace);
+        return finishSyncLowerThanTxid(doneTxid);
       }
     } else {
       // There are still unacked appends. So let's move the highestSyncedTxid to the txid of the
@@ -420,21 +481,29 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       long lowestUnackedAppendTxid = unackedAppends.peek().getTxid();
       long doneTxid = Math.max(lowestUnackedAppendTxid - 1, highestSyncedTxid.get());
       highestSyncedTxid.set(doneTxid);
-      return finishSyncLowerThanTxid(doneTxid, addSyncTrace);
+      return finishSyncLowerThanTxid(doneTxid);
     }
+  }
+
+  // confirm non-empty before calling
+  private static long getLastTxid(Deque<FSWALEntry> queue) {
+    return queue.peekLast().getTxid();
   }
 
   private void appendAndSync() {
     final AsyncWriter writer = this.writer;
     // maybe a sync request is not queued when we issue a sync, so check here to see if we could
     // finish some.
-    finishSync(false);
+    finishSync();
     long newHighestProcessedAppendTxid = -1L;
+    // this is used to avoid calling peedLast every time on unackedAppends, appendAndAsync is single
+    // threaded, this could save us some cycles
+    boolean addedToUnackedAppends = false;
     for (Iterator<FSWALEntry> iter = toWriteAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
       boolean appended;
       try {
-        appended = append(writer, entry);
+        appended = appendEntry(writer, entry);
       } catch (IOException e) {
         throw new AssertionError("should not happen", e);
       }
@@ -443,10 +512,21 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (appended) {
         // This is possible, when we fail to sync, we will add the unackedAppends back to
         // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
-        if (unackedAppends.isEmpty() || unackedAppends.peekLast().getTxid() < entry.getTxid()) {
+        if (addedToUnackedAppends || unackedAppends.isEmpty() ||
+          getLastTxid(unackedAppends) < entry.getTxid()) {
           unackedAppends.addLast(entry);
+          addedToUnackedAppends = true;
         }
-        if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
+        // See HBASE-25905, here we need to make sure that, we will always write all the entries in
+        // unackedAppends out. As the code in the consume method will assume that, the entries in
+        // unackedAppends have all been sent out so if there is roll request and unackedAppends is
+        // not empty, we could just return as later there will be a syncCompleted call to clear the
+        // unackedAppends, or a syncFailed to lead us to another state.
+        // There could be other ways to fix, such as changing the logic in the consume method, but
+        // it will break the assumption and then (may) lead to a big refactoring. So here let's use
+        // this way to fix first, can optimize later.
+        if (writer.getLength() - fileLengthAtLastSync >= batchSize &&
+          (addedToUnackedAppends || entry.getTxid() >= getLastTxid(unackedAppends))) {
           break;
         }
       }
@@ -469,7 +549,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       // stamped some region sequence id.
       if (unackedAppends.isEmpty()) {
         highestSyncedTxid.set(highestProcessedAppendTxid);
-        finishSync(false);
+        finishSync();
         trySetReadyForRolling();
       }
       return;
@@ -513,7 +593,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       for (Iterator<SyncFuture> syncIter = syncFutures.iterator(); syncIter.hasNext();) {
         SyncFuture future = syncIter.next();
         if (future.getTxid() < txid) {
-          future.done(future.getTxid(), error);
+          markFutureDoneAndOffer(future, future.getTxid(), error);
           syncIter.remove();
         } else {
           break;
@@ -615,8 +695,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  public long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
-      throws IOException {
+  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+    throws IOException {
     if (markerEditOnly() && !edits.isMetaEdit()) {
       throw new IOException("WAL is closing, only marker edit is allowed");
     }
@@ -629,50 +709,46 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  public void sync() throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
-      long txid = waitingConsumePayloads.next();
-      SyncFuture future;
-      try {
-        future = getSyncFuture(txid);
-        RingBufferTruck truck = waitingConsumePayloads.get(txid);
-        truck.load(future);
-      } finally {
-        waitingConsumePayloads.publish(txid);
-      }
-      if (shouldScheduleConsumer()) {
-        consumeExecutor.execute(consumer);
-      }
-      blockOnSync(future);
+  protected void doSync(boolean forceSync) throws IOException {
+    long txid = waitingConsumePayloads.next();
+    SyncFuture future;
+    try {
+      future = getSyncFuture(txid, forceSync);
+      RingBufferTruck truck = waitingConsumePayloads.get(txid);
+      truck.load(future);
+    } finally {
+      waitingConsumePayloads.publish(txid);
     }
+    if (shouldScheduleConsumer()) {
+      consumeExecutor.execute(consumer);
+    }
+    blockOnSync(future);
   }
 
   @Override
-  public void sync(long txid) throws IOException {
+  protected void doSync(long txid, boolean forceSync) throws IOException {
     if (highestSyncedTxid.get() >= txid) {
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
-      // here we do not use ring buffer sequence as txid
-      long sequence = waitingConsumePayloads.next();
-      SyncFuture future;
-      try {
-        future = getSyncFuture(txid);
-        RingBufferTruck truck = waitingConsumePayloads.get(sequence);
-        truck.load(future);
-      } finally {
-        waitingConsumePayloads.publish(sequence);
-      }
-      if (shouldScheduleConsumer()) {
-        consumeExecutor.execute(consumer);
-      }
-      blockOnSync(future);
+    // here we do not use ring buffer sequence as txid
+    long sequence = waitingConsumePayloads.next();
+    SyncFuture future;
+    try {
+      future = getSyncFuture(txid, forceSync);
+      RingBufferTruck truck = waitingConsumePayloads.get(sequence);
+      truck.load(future);
+    } finally {
+      waitingConsumePayloads.publish(sequence);
     }
+    if (shouldScheduleConsumer()) {
+      consumeExecutor.execute(consumer);
+    }
+    blockOnSync(future);
   }
 
   protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path) throws IOException {
     return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, this.blocksize,
-      eventLoopGroup, channelClass);
+      eventLoopGroup, channelClass, streamSlowMonitor);
   }
 
   @Override
@@ -699,14 +775,17 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  protected final long closeWriter(AsyncWriter writer) {
+  protected final long closeWriter(AsyncWriter writer, Path path) {
     if (writer != null) {
+      inflightWALClosures.put(path.getName(), writer);
       long fileLength = writer.getLength();
       closeExecutor.execute(() -> {
         try {
           writer.close();
         } catch (IOException e) {
           LOG.warn("close old writer failed", e);
+        } finally {
+          inflightWALClosures.remove(path.getName());
         }
       });
       return fileLength;
@@ -720,7 +799,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       throws IOException {
     Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
-    long oldFileLen = closeWriter(this.writer);
+    long oldFileLen = closeWriter(this.writer, oldPath);
     logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
     if (nextWriter instanceof AsyncProtobufLogWriter) {
@@ -746,7 +825,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   protected void doShutdown() throws IOException {
     waitForSafePoint();
-    closeWriter(this.writer);
+    closeWriter(this.writer, getOldPath());
     this.writer = null;
     closeExecutor.shutdown();
     try {
@@ -779,7 +858,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
     }
     // and fail them
-    syncFutures.forEach(f -> f.done(f.getTxid(), error));
+    syncFutures.forEach(f -> markFutureDoneAndOffer(f, f.getTxid(), error));
     if (!(consumeExecutor instanceof EventLoop)) {
       consumeExecutor.shutdown();
     }

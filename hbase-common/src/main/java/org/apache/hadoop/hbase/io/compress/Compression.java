@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
@@ -22,20 +22,16 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.util.BlockIOUtils;
-import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.DoNotPool;
-import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -48,6 +44,58 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class Compression {
   private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
+
+
+  // LZO
+
+  public static final String LZO_CODEC_CLASS_KEY =
+      "hbase.io.compress.lzo.codec";
+  public static final String LZO_CODEC_CLASS_DEFAULT =
+      "com.hadoop.compression.lzo.LzoCodec";
+
+  // GZ
+
+  public static final String GZ_CODEC_CLASS_KEY =
+      "hbase.io.compress.gz.codec";
+  // Our ReusableStreamGzipCodec fixes an inefficiency in Hadoop's Gzip codec, allowing us to
+  // reuse compression streams, but still requires the Hadoop native codec.
+  public static final String GZ_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec";
+
+  // SNAPPY
+
+  public static final String SNAPPY_CODEC_CLASS_KEY =
+      "hbase.io.compress.snappy.codec";
+  public static final String SNAPPY_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.io.compress.SnappyCodec";
+
+  // LZ4
+
+  public static final String LZ4_CODEC_CLASS_KEY =
+      "hbase.io.compress.lz4.codec";
+  public static final String LZ4_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.io.compress.Lz4Codec";
+
+  // ZSTD
+
+  public static final String ZSTD_CODEC_CLASS_KEY =
+      "hbase.io.compress.zstd.codec";
+  public static final String ZSTD_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.io.compress.ZStandardCodec";
+
+  // BZIP2
+
+  public static final String BZIP2_CODEC_CLASS_KEY =
+      "hbase.io.compress.bzip2.codec";
+  public static final String BZIP2_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.io.compress.BZip2Codec";
+
+  // LZMA
+
+  public static final String LZMA_CODEC_CLASS_KEY =
+      "hbase.io.compress.lzma.codec";
+  public static final String LZMA_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.hbase.io.compress.xz.LzmaCodec";
 
   /**
    * Prevent the instantiation of class.
@@ -102,61 +150,65 @@ public final class Compression {
       justification="We are not serializing so doesn't apply (not sure why transient though)")
   @InterfaceAudience.Public
   public static enum Algorithm {
-    LZO("lzo") {
+    // LZO is GPL and requires extra install to setup. See
+    // https://stackoverflow.com/questions/23441142/class-com-hadoop-compression-lzo-lzocodec-not-found-for-spark-on-cdh-5
+    LZO("lzo", LZO_CODEC_CLASS_KEY, LZO_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzoCodec;
       private final transient Object lock = new Object();
-
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
           synchronized (lock) {
             if (lzoCodec == null) {
-              lzoCodec = buildCodec(conf);
+              lzoCodec = buildCodec(conf, this);
             }
           }
         }
         return lzoCodec;
       }
-
-      private CompressionCodec buildCodec(Configuration conf) {
-        try {
-          Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
-          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
-              new Configuration(conf));
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          lzoCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return lzoCodec;
         }
       }
     },
-    GZ("gz") {
-      private volatile transient GzipCodec codec;
-      private final transient Object lock = new Object();
 
+    GZ("gz", GZ_CODEC_CLASS_KEY, GZ_CODEC_CLASS_DEFAULT) {
+      private volatile transient CompressionCodec gzCodec;
+      private final transient Object lock = new Object();
       @Override
-      DefaultCodec getCodec(Configuration conf) {
-        if (codec == null) {
+      CompressionCodec getCodec(Configuration conf) {
+        if (gzCodec == null) {
           synchronized (lock) {
-            if (codec == null) {
-              codec = buildCodec(conf);
+            if (gzCodec == null) {
+              gzCodec = buildCodec(conf, this);
             }
           }
         }
-
-        return codec;
+        return gzCodec;
       }
-
-      private GzipCodec buildCodec(Configuration conf) {
-        GzipCodec gzcodec = new ReusableStreamGzipCodec();
-        gzcodec.setConf(new Configuration(conf));
-        return gzcodec;
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          gzCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return gzCodec;
+        }
       }
     },
 
-    NONE("none") {
+    NONE("none", "", "") {
       @Override
-      DefaultCodec getCodec(Configuration conf) {
+      CompressionCodec getCodec(Configuration conf) {
+        return null;
+      }
+
+      @Override
+      public CompressionCodec reload(Configuration conf) {
         return null;
       }
 
@@ -181,129 +233,157 @@ public final class Compression {
         return downStream;
       }
     },
-    SNAPPY("snappy") {
+    SNAPPY("snappy", SNAPPY_CODEC_CLASS_KEY, SNAPPY_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec snappyCodec;
       private final transient Object lock = new Object();
-
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (snappyCodec == null) {
           synchronized (lock) {
             if (snappyCodec == null) {
-              snappyCodec = buildCodec(conf);
+              snappyCodec = buildCodec(conf, this);
             }
           }
         }
         return snappyCodec;
       }
-
-      private CompressionCodec buildCodec(Configuration conf) {
-        try {
-          Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
-          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          snappyCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return snappyCodec;
         }
       }
     },
-    LZ4("lz4") {
+    LZ4("lz4", LZ4_CODEC_CLASS_KEY, LZ4_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lz4Codec;
       private final transient Object lock = new Object();
-
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lz4Codec == null) {
           synchronized (lock) {
             if (lz4Codec == null) {
-              lz4Codec = buildCodec(conf);
+              lz4Codec = buildCodec(conf, this);
             }
           }
         }
         return lz4Codec;
       }
-
-      private CompressionCodec buildCodec(Configuration conf) {
-        try {
-          Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
-          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          lz4Codec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return lz4Codec;
         }
       }
     },
-    BZIP2("bzip2") {
+    BZIP2("bzip2", BZIP2_CODEC_CLASS_KEY, BZIP2_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec bzipCodec;
       private final transient Object lock = new Object();
-
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (bzipCodec == null) {
           synchronized (lock) {
             if (bzipCodec == null) {
-              bzipCodec = buildCodec(conf);
+              bzipCodec = buildCodec(conf, this);
             }
           }
         }
         return bzipCodec;
       }
-
-      private CompressionCodec buildCodec(Configuration conf) {
-        try {
-          Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.BZip2Codec");
-          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          bzipCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return bzipCodec;
         }
       }
     },
-    ZSTD("zstd") {
+    ZSTD("zstd", ZSTD_CODEC_CLASS_KEY, ZSTD_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec zStandardCodec;
       private final transient Object lock = new Object();
-
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (zStandardCodec == null) {
           synchronized (lock) {
             if (zStandardCodec == null) {
-              zStandardCodec = buildCodec(conf);
+              zStandardCodec = buildCodec(conf, this);
             }
           }
         }
         return zStandardCodec;
       }
-
-      private CompressionCodec buildCodec(Configuration conf) {
-        try {
-          Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.ZStandardCodec");
-          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          zStandardCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return zStandardCodec;
+        }
+      }
+    },
+    LZMA("lzma", LZMA_CODEC_CLASS_KEY, LZMA_CODEC_CLASS_DEFAULT) {
+      // Use base type to avoid compile-time dependencies.
+      private volatile transient CompressionCodec lzmaCodec;
+      private final transient Object lock = new Object();
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (lzmaCodec == null) {
+          synchronized (lock) {
+            if (lzmaCodec == null) {
+              lzmaCodec = buildCodec(conf, this);
+            }
+          }
+        }
+        return lzmaCodec;
+      }
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          lzmaCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return lzmaCodec;
         }
       }
     };
 
     private final Configuration conf;
     private final String compressName;
+    private final String confKey;
+    private final String confDefault;
     /** data input buffer size to absorb small reads from application. */
     private static final int DATA_IBUF_SIZE = 1 * 1024;
     /** data output buffer size to absorb small writes from application. */
     private static final int DATA_OBUF_SIZE = 4 * 1024;
 
-    Algorithm(String name) {
-      this.conf = new Configuration();
+    Algorithm(String name, String confKey, String confDefault) {
+      this.conf = HBaseConfiguration.create();
       this.conf.setBoolean("io.native.lib.available", true);
       this.compressName = name;
+      this.confKey = confKey;
+      this.confDefault = confDefault;
     }
 
     abstract CompressionCodec getCodec(Configuration conf);
+
+    /**
+     * Reload configuration for the given algorithm.
+     * <p>
+     * NOTE: Experts only. This can only be done safely during process startup, before
+     * the algorithm's codecs are in use. If the codec implementation is changed, the
+     * new implementation may not be fully compatible with what was loaded at static
+     * initialization time, leading to potential data corruption.
+     * Mostly used by unit tests.
+     * @param conf configuration
+     */
+    public abstract CompressionCodec reload(Configuration conf);
 
     public InputStream createDecompressionStream(
         InputStream downStream, Decompressor decompressor,
@@ -382,7 +462,7 @@ public final class Compression {
         if (decompressor != null) {
           if (decompressor.finished()) {
             // Somebody returns the decompressor to CodecPool but is still using it.
-            LOG.warn("Deompressor obtained from CodecPool is already finished()");
+            LOG.warn("Decompressor {} obtained from CodecPool is already finished", decompressor);
           }
           decompressor.reset();
         }
@@ -439,33 +519,47 @@ public final class Compression {
   }
 
   /**
-   * Decompresses data from the given stream using the configured compression algorithm. It will
-   * throw an exception if the dest buffer does not have enough space to hold the decompressed data.
-   * @param dest the output buffer
-   * @param bufferedBoundedStream a stream to read compressed data from, bounded to the exact amount
-   *          of compressed data
-   * @param uncompressedSize uncompressed data size, header not included
-   * @param compressAlgo compression algorithm used
-   * @throws IOException if any IO error happen
+   * Load a codec implementation for an algorithm using the supplied configuration.
+   * @param conf the configuration to use
+   * @param algo the algorithm to implement
    */
-  public static void decompress(ByteBuff dest, InputStream bufferedBoundedStream,
-      int uncompressedSize, Compression.Algorithm compressAlgo) throws IOException {
-    if (dest.remaining() < uncompressedSize) {
-      throw new IllegalArgumentException("Output buffer does not have enough space to hold "
-          + uncompressedSize + " decompressed bytes, available: " + dest.remaining());
-    }
-
-    Decompressor decompressor = null;
+  private static CompressionCodec buildCodec(final Configuration conf, final Algorithm algo) {
     try {
-      decompressor = compressAlgo.getDecompressor();
-      try (InputStream is =
-          compressAlgo.createDecompressionStream(bufferedBoundedStream, decompressor, 0)) {
-        BlockIOUtils.readFullyWithHeapBuffer(is, dest, uncompressedSize);
+      String codecClassName = conf.get(algo.confKey, algo.confDefault);
+      if (codecClassName == null) {
+        throw new RuntimeException("No codec configured for " + algo.confKey);
       }
-    } finally {
-      if (decompressor != null) {
-        compressAlgo.returnDecompressor(decompressor);
-      }
+      Class<?> codecClass = getClassLoaderForCodec().loadClass(codecClassName);
+      CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass,
+          new Configuration(conf));
+      LOG.info("Loaded codec {} for compression algorithm {}",
+        codec.getClass().getCanonicalName(), algo.name());
+      return codec;
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
     }
   }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    java.util.Map<String, CompressionCodec> implMap = new java.util.HashMap<>();
+    for (Algorithm algo: Algorithm.class.getEnumConstants()) {
+      try {
+        implMap.put(algo.name(), algo.getCodec(conf));
+      } catch (Exception e) {
+        // Ignore failures to load codec native implementations while building the report.
+        // We are to report what is configured.
+      }
+    }
+    for (Algorithm algo: Algorithm.class.getEnumConstants()) {
+      System.out.println(algo.name() + ":");
+      System.out.println("    name: " + algo.getName());
+      System.out.println("    confKey: " + algo.confKey);
+      System.out.println("    confDefault: " + algo.confDefault);
+      CompressionCodec codec = implMap.get(algo.name());
+      System.out.println("    implClass: " +
+        (codec != null ? codec.getClass().getCanonicalName() : "<none>"));
+    }
+  }
+
 }

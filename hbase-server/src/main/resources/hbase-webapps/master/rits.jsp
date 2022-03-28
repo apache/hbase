@@ -21,11 +21,17 @@
          import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
          import="java.util.Collections"
          import="java.util.Comparator"
+         import="java.util.ArrayList"
          import="java.util.List"
+         import="java.util.HashMap"
+         import="java.util.Map"
          import="java.util.stream.Collectors"
          import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.master.RegionState"
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
          import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure"
+         import="org.apache.hadoop.hbase.util.GsonUtil"
+         import="org.apache.hbase.thirdparty.com.google.gson.Gson"
 %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -69,6 +75,7 @@
         <div class="page-header">
             <a href="/rits.jsp?format=txt&filter=region&table=<%=table%>&state=<%=state%>" class="btn btn-primary">Regions in text format</a>
             <a href="/rits.jsp?format=txt&filter=procedure&table=<%=table%>&state=<%=state%>" class="btn btn-info">Procedures in text format</a>
+            <a href="/rits.jsp?format=json&table=<%=table%>&state=<%=state%>" class="btn btn-info">RIT info as JSON</a>
             <p>regions and procedures in text format can be copied and passed to command-line utils such as hbck2</p>
         </div>
     </div>
@@ -79,14 +86,18 @@
                 <th>Region</th>
                 <th>Table</th>
                 <th>RegionState</th>
+                <th>Server</th>
                 <th>Procedure</th>
                 <th>ProcedureState</th>
+                <th>Start Time</th>
+                <th>Duration (ms)</th>
             </tr>
             <% for (RegionStateNode regionStateNode : rit) { %>
             <tr>
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
+                <td><%= regionStateNode.getRegionLocation().getServerName() %></td>
                 <%
                     TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
 
@@ -98,6 +109,10 @@
                     <td><%= procedure.getProcId() %></td>
                     <td><%= escapeXml(procedure.getState().toString() + (procedure.isBypass() ? "(Bypassed)" : "")) %></td>
                 <% } %>
+
+                <% RegionState rs = regionStateNode.toRegionState(); %>
+                <td><%= rs.getStamp() %></td>
+                <td><%= System.currentTimeMillis() - rs.getStamp() %></td>
             </tr>
             <% } %>
             <p><%= rit.size() %> region(s) in transition.</p>
@@ -105,9 +120,36 @@
     <% } else { %>
     <p> no region in transition right now. </p>
     <% } %>
+
 </div>
 <jsp:include page="footer.jsp" />
+<% } else if (format.equals("json")) { %>
+    <%
+        Gson GSON = GsonUtil.createGson().create();
+        Map<String, List<Map<String, Object>>> map = new HashMap<>();
+        List<Map<String, Object>> rits = new ArrayList<>();
+        map.put("rits", rits);
+        for (RegionStateNode regionStateNode : rit) {
+            Map<String, Object> r = new HashMap<>();
+            r.put("region", regionStateNode.getRegionInfo().getEncodedName());
+            r.put("table", regionStateNode.getRegionInfo().getTable().getNameAsString());
+            r.put("state", regionStateNode.getState());
+            r.put("server", regionStateNode.getRegionLocation().getServerName());
 
+            TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
+            if (procedure != null) {
+                r.put("procedureId", procedure.getProcId());
+                r.put("procedureState", procedure.getState().toString());
+            }
+
+            RegionState rs = regionStateNode.toRegionState();
+            r.put("startTime", rs.getStamp());
+            r.put("duration", System.currentTimeMillis() - rs.getStamp());
+
+            rits.add(r);
+        }
+    %>
+    <%= GSON.toJson(map) %>
 <% } else { %>
 <div class="container-fluid content">
     <div class="row">

@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -52,7 +52,7 @@ import org.junit.rules.TestName;
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestCompactorMemLeak {
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = UTIL.getConfiguration();
   private static final AtomicBoolean IS_LAST_CELL_ON_HEAP = new AtomicBoolean(false);
   private static final byte[] FAMILY = Bytes.toBytes("f");
@@ -128,13 +128,13 @@ public class TestCompactorMemLeak {
     }
 
     @Override
-    protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
+    protected List<Path> commitWriter(FileDetails fd,
         CompactionRequestImpl request) throws IOException {
       HFileWriterImpl writerImpl = (HFileWriterImpl) writer.writer;
       Cell cell = writerImpl.getLastCell();
       // The cell should be backend with an KeyOnlyKeyValue.
       IS_LAST_CELL_ON_HEAP.set(cell instanceof KeyOnlyKeyValue);
-      return super.commitWriter(writer, fd, request);
+      return super.commitWriter(fd, request);
     }
   }
 }

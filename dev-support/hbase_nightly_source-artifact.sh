@@ -154,7 +154,6 @@ echo "Checking against things we don't expect to include in the source tarball (
 # e.g. prior to HBASE-19152 we'd have the following lines (ignoring the bash comment marker):
 #Only in .: .gitattributes
 #Only in .: .gitignore
-#Only in .: hbase-native-client
 cat >known_excluded <<END
 Only in .: .git
 END
@@ -172,7 +171,7 @@ fi
 
 cd "${unpack_dir}"
 echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
-if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
+if mvn --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
     assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
   for artifact in "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz; do
     if [ -f "${artifact}" ]; then
@@ -182,7 +181,7 @@ if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" cl
     fi
   done
 fi
-echo "Building a binary tarball from the source tarball failed. see srctarball_install.log for details."
+echo "Building a binary tarball from the source tarball failed. see ${working_dir}/srctarball_install.log for details."
 # Copy up the rat.txt to the working dir so available in build archive in case rat complaints.
 # rat.txt can be under any module target dir... copy them all up renaming them to include parent dir as we go.
 find ${unpack_dir} -name rat.txt -type f | while IFS= read -r NAME; do cp -v "$NAME" "${working_dir}/${NAME//\//_}"; done

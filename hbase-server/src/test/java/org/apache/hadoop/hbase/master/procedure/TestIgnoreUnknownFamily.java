@@ -17,18 +17,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -49,7 +50,7 @@ public class TestIgnoreUnknownFamily {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestIgnoreUnknownFamily.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -80,11 +81,11 @@ public class TestIgnoreUnknownFamily {
   private void addStoreFileToKnownFamily(RegionInfo region) throws IOException {
     MasterFileSystem mfs = UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path regionDir =
-        FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(mfs.getConfiguration()), region);
+      FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(mfs.getConfiguration()), region);
     Path familyDir = new Path(regionDir, Bytes.toString(UNKNOWN_FAMILY));
     StoreFileWriter writer =
         new StoreFileWriter.Builder(mfs.getConfiguration(), mfs.getFileSystem())
-            .withOutputDir(familyDir).withFileContext(new HFileContext()).build();
+            .withOutputDir(familyDir).withFileContext(new HFileContextBuilder().build()).build();
     writer.close();
   }
 

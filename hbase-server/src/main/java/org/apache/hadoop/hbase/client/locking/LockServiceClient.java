@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client.locking;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
@@ -89,7 +87,7 @@ public class LockServiceClient {
     return new EntityLock(conf, stub, lockRequest, abort);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static LockRequest buildLockRequest(final LockType type,
       final String namespace, final TableName tableName, final List<RegionInfo> regionInfos,
       final String description, final long nonceGroup, final long nonce) {

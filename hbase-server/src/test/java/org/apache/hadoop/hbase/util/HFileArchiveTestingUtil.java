@@ -25,12 +25,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.slf4j.Logger;
@@ -211,10 +210,8 @@ public class HFileArchiveTestingUtil {
    * @return {@link Path} to the archive directory for the given region
    */
   public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
-    return HFileArchiveUtil.getRegionArchiveDir(
-        FSUtils.getRootDir(conf),
-        region.getTableDescriptor().getTableName(),
-        region.getRegionInfo().getEncodedName());
+    return HFileArchiveUtil.getRegionArchiveDir(CommonFSUtils.getRootDir(conf),
+      region.getTableDescriptor().getTableName(), region.getRegionInfo().getEncodedName());
   }
 
   /**
@@ -230,7 +227,7 @@ public class HFileArchiveTestingUtil {
         region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
   }
 
-  public static Path getStoreArchivePath(HBaseTestingUtility util, String tableName,
+  public static Path getStoreArchivePath(HBaseTestingUtil util, String tableName,
       byte[] storeName) throws IOException {
     byte[] table = Bytes.toBytes(tableName);
     // get the RS and region serving our table

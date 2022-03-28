@@ -34,15 +34,21 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Manages the interactions with an already deployed distributed cluster (as opposed to
- * a pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
+ * Manages the interactions with an already deployed distributed cluster (as opposed to a
+ * pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
  */
 @InterfaceAudience.Private
-public class DistributedHBaseCluster extends HBaseCluster {
+public class DistributedHBaseCluster extends HBaseClusterInterface {
+
+  private static final Logger LOG = LoggerFactory.getLogger(DistributedHBaseCluster.class);
+
   private Admin admin;
   private final Connection connection;
 
@@ -97,13 +103,13 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void startRegionServer(String hostname, int port) throws IOException {
-    LOG.info("Starting RS on: " + hostname);
+    LOG.info("Starting RS on: {}", hostname);
     clusterManager.start(ServiceType.HBASE_REGIONSERVER, hostname, port);
   }
 
   @Override
   public void killRegionServer(ServerName serverName) throws IOException {
-    LOG.info("Aborting RS: " + serverName.getServerName());
+    LOG.info("Aborting RS: {}", serverName.getServerName());
     killedRegionServers.add(serverName);
     clusterManager.kill(ServiceType.HBASE_REGIONSERVER,
       serverName.getHostname(), serverName.getPort());
@@ -116,7 +122,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void stopRegionServer(ServerName serverName) throws IOException {
-    LOG.info("Stopping RS: " + serverName.getServerName());
+    LOG.info("Stopping RS: {}", serverName.getServerName());
     clusterManager.stop(ServiceType.HBASE_REGIONSERVER,
       serverName.getHostname(), serverName.getPort());
   }
@@ -127,21 +133,35 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void suspendRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Suspend RS: {}", serverName.getServerName());
+    clusterManager.suspend(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void resumeRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Resume RS: {}", serverName.getServerName());
+    clusterManager.resume(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
   public void startZkNode(String hostname, int port) throws IOException {
-    LOG.info("Starting ZooKeeper node on: " + hostname);
+    LOG.info("Starting ZooKeeper node on: {}", hostname);
     clusterManager.start(ServiceType.ZOOKEEPER_SERVER, hostname, port);
   }
 
   @Override
   public void killZkNode(ServerName serverName) throws IOException {
-    LOG.info("Aborting ZooKeeper node on: " + serverName.getServerName());
+    LOG.info("Aborting ZooKeeper node on: {}", serverName.getServerName());
     clusterManager.kill(ServiceType.ZOOKEEPER_SERVER,
       serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void stopZkNode(ServerName serverName) throws IOException {
-    LOG.info("Stopping ZooKeeper node: " + serverName.getServerName());
+    LOG.info("Stopping ZooKeeper node: {}", serverName.getServerName());
     clusterManager.stop(ServiceType.ZOOKEEPER_SERVER,
       serverName.getHostname(), serverName.getPort());
   }
@@ -158,21 +178,21 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void startDataNode(ServerName serverName) throws IOException {
-    LOG.info("Starting data node on: " + serverName.getServerName());
+    LOG.info("Starting data node on: {}", serverName.getServerName());
     clusterManager.start(ServiceType.HADOOP_DATANODE,
       serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void killDataNode(ServerName serverName) throws IOException {
-    LOG.info("Aborting data node on: " + serverName.getServerName());
+    LOG.info("Aborting data node on: {}", serverName.getServerName());
     clusterManager.kill(ServiceType.HADOOP_DATANODE,
       serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void stopDataNode(ServerName serverName) throws IOException {
-    LOG.info("Stopping data node on: " + serverName.getServerName());
+    LOG.info("Stopping data node on: {}", serverName.getServerName());
     clusterManager.stop(ServiceType.HADOOP_DATANODE,
       serverName.getHostname(), serverName.getPort());
   }
@@ -189,21 +209,21 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void startNameNode(ServerName serverName) throws IOException {
-    LOG.info("Starting name node on: " + serverName.getServerName());
+    LOG.info("Starting name node on: {}", serverName.getServerName());
     clusterManager.start(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
       serverName.getPort());
   }
 
   @Override
   public void killNameNode(ServerName serverName) throws IOException {
-    LOG.info("Aborting name node on: " + serverName.getServerName());
+    LOG.info("Aborting name node on: {}", serverName.getServerName());
     clusterManager.kill(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
       serverName.getPort());
   }
 
   @Override
   public void stopNameNode(ServerName serverName) throws IOException {
-    LOG.info("Stopping name node on: " + serverName.getServerName());
+    LOG.info("Stopping name node on: {}", serverName.getServerName());
     clusterManager.stop(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
       serverName.getPort());
   }
@@ -220,47 +240,47 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting for service: " + service + " to stop: " + serverName.getServerName());
-    long start = System.currentTimeMillis();
+    LOG.info("Waiting for service: {} to stop: {}", service, serverName.getServerName());
+    long start = EnvironmentEdgeManager.currentTime();
 
-    while ((System.currentTimeMillis() - start) < timeout) {
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       if (!clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
         return;
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for service to stop:" + serverName);
+    throw new IOException("Timed-out waiting for service to stop: " + serverName);
   }
 
   private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting for service: " + service + " to start: " + serverName.getServerName());
-    long start = System.currentTimeMillis();
+    LOG.info("Waiting for service: {} to start: ", service, serverName.getServerName());
+    long start = EnvironmentEdgeManager.currentTime();
 
-    while ((System.currentTimeMillis() - start) < timeout) {
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       if (clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
         return;
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for service to start:" + serverName);
+    throw new IOException("Timed-out waiting for service to start: " + serverName);
   }
 
   @Override
   public void startMaster(String hostname, int port) throws IOException {
-    LOG.info("Starting Master on: " + hostname + ":" + port);
+    LOG.info("Starting Master on: {}:{}", hostname, port);
     clusterManager.start(ServiceType.HBASE_MASTER, hostname, port);
   }
 
   @Override
   public void killMaster(ServerName serverName) throws IOException {
-    LOG.info("Aborting Master: " + serverName.getServerName());
+    LOG.info("Aborting Master: {}", serverName.getServerName());
     clusterManager.kill(ServiceType.HBASE_MASTER, serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void stopMaster(ServerName serverName) throws IOException {
-    LOG.info("Stopping Master: " + serverName.getServerName());
+    LOG.info("Stopping Master: {}", serverName.getServerName());
     clusterManager.stop(ServiceType.HBASE_MASTER, serverName.getHostname(), serverName.getPort());
   }
 
@@ -271,8 +291,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public boolean waitForActiveAndReadyMaster(long timeout) throws IOException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timeout) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() - start < timeout) {
       try {
         connection.getAdmin().getClusterMetrics(EnumSet.of(ClusterMetrics.Option.HBASE_VERSION));
         return true;
@@ -294,7 +314,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       regionLoc = locator.getRegionLocation(startKey, true);
     }
     if (regionLoc == null) {
-      LOG.warn("Cannot find region server holding region " + Bytes.toStringBinary(regionName));
+      LOG.warn("Cannot find region server holding region {}", Bytes.toStringBinary(regionName));
       return null;
     }
     return regionLoc.getServerName();
@@ -338,15 +358,15 @@ public class DistributedHBaseCluster extends HBaseCluster {
     //check whether current master has changed
     final ServerName initMaster = initial.getMasterName();
     if (!ServerName.isSameAddress(initMaster, current.getMasterName())) {
-      LOG.info("Restoring cluster - Initial active master : " + initMaster.getAddress() +
-        " has changed to : " + current.getMasterName().getAddress());
+      LOG.info("Restoring cluster - Initial active master : {} has changed to : {}",
+          initMaster.getAddress(), current.getMasterName().getAddress());
       // If initial master is stopped, start it, before restoring the state.
       // It will come up as a backup master, if there is already an active master.
       try {
         if (!clusterManager.isRunning(ServiceType.HBASE_MASTER,
                 initMaster.getHostname(), initMaster.getPort())) {
-          LOG.info("Restoring cluster - starting initial active master at:"
-                  + initMaster.getAddress());
+          LOG.info("Restoring cluster - starting initial active master at:{}",
+              initMaster.getAddress());
           startMaster(initMaster.getHostname(), initMaster.getPort());
         }
 
@@ -356,11 +376,11 @@ public class DistributedHBaseCluster extends HBaseCluster {
         // 3. Start backup masters
         for (ServerName currentBackup : current.getBackupMasterNames()) {
           if (!ServerName.isSameAddress(currentBackup, initMaster)) {
-            LOG.info("Restoring cluster - stopping backup master: " + currentBackup);
+            LOG.info("Restoring cluster - stopping backup master: {}", currentBackup);
             stopMaster(currentBackup);
           }
         }
-        LOG.info("Restoring cluster - stopping active master: " + current.getMasterName());
+        LOG.info("Restoring cluster - stopping active master: {}", current.getMasterName());
         stopMaster(current.getMasterName());
         waitForActiveAndReadyMaster(); // wait so that active master takes over
       } catch (IOException ex) {
@@ -376,8 +396,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
           if (!clusterManager.isRunning(ServiceType.HBASE_MASTER,
                   backup.getHostname(),
                   backup.getPort())) {
-            LOG.info("Restoring cluster - starting initial backup master: "
-                    + backup.getAddress());
+            LOG.info("Restoring cluster - starting initial backup master: {}",
+                backup.getAddress());
             startMaster(backup.getHostname(), backup.getPort());
           }
         } catch (IOException ex) {
@@ -401,7 +421,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       for (ServerName sn:toStart) {
         try {
           if(!clusterManager.isRunning(ServiceType.HBASE_MASTER, sn.getHostname(), sn.getPort())) {
-            LOG.info("Restoring cluster - starting initial backup master: " + sn.getAddress());
+            LOG.info("Restoring cluster - starting initial backup master: {}", sn.getAddress());
             startMaster(sn.getHostname(), sn.getPort());
           }
         } catch (IOException ex) {
@@ -412,7 +432,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       for (ServerName sn:toKill) {
         try {
           if(clusterManager.isRunning(ServiceType.HBASE_MASTER, sn.getHostname(), sn.getPort())) {
-            LOG.info("Restoring cluster - stopping backup master: " + sn.getAddress());
+            LOG.info("Restoring cluster - stopping backup master: {}", sn.getAddress());
             stopMaster(sn);
           }
         } catch (IOException ex) {
@@ -421,8 +441,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
     }
     if (!deferred.isEmpty()) {
-      LOG.warn("Restoring cluster - restoring region servers reported "
-              + deferred.size() + " errors:");
+      LOG.warn("Restoring cluster - restoring region servers reported {} errors:",
+          deferred.size());
       for (int i=0; i<deferred.size() && i < 3; i++) {
         LOG.warn(Objects.toString(deferred.get(i)));
       }
@@ -464,7 +484,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       try {
         if (!clusterManager.isRunning(ServiceType.HBASE_REGIONSERVER, sn.getHostname(),
           sn.getPort()) && master.getPort() != sn.getPort()) {
-          LOG.info("Restoring cluster - starting initial region server: " + sn.getAddress());
+          LOG.info("Restoring cluster - starting initial region server: {}", sn.getAddress());
           startRegionServer(sn.getHostname(), sn.getPort());
         }
       } catch (IOException ex) {
@@ -476,7 +496,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       try {
         if (clusterManager.isRunning(ServiceType.HBASE_REGIONSERVER, sn.getHostname(),
           sn.getPort()) && master.getPort() != sn.getPort()) {
-          LOG.info("Restoring cluster - stopping initial region server: " + sn.getAddress());
+          LOG.info("Restoring cluster - stopping initial region server: {}", sn.getAddress());
           stopRegionServer(sn);
         }
       } catch (IOException ex) {
@@ -484,8 +504,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
     }
     if (!deferred.isEmpty()) {
-      LOG.warn("Restoring cluster - restoring region servers reported "
-              + deferred.size() + " errors:");
+      LOG.warn("Restoring cluster - restoring region servers reported {} errors:",
+          deferred.size());
       for (int i=0; i<deferred.size() && i < 3; i++) {
         LOG.warn(Objects.toString(deferred.get(i)));
       }

@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -44,6 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -64,7 +64,7 @@ public class TestWALFiltering {
   private static final byte[] CF2 = Bytes.toBytes("MyCF2");
   private static final byte[][] FAMILIES = { CF1, CF2 };
 
-  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Before
   public void setUp() throws Exception {

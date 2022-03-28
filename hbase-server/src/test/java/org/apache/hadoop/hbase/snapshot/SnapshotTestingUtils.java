@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -62,8 +62,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -157,7 +158,7 @@ public final class SnapshotTestingUtils {
         tableName);
   }
 
-  public static void confirmSnapshotValid(HBaseTestingUtility testUtil,
+  public static void confirmSnapshotValid(HBaseTestingUtil testUtil,
       SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
       throws IOException {
     MasterFileSystem mfs = testUtil.getHBaseCluster().getMaster().getMasterFileSystem();
@@ -398,12 +399,12 @@ public final class SnapshotTestingUtils {
   /**
    * Corrupt the specified snapshot by deleting some files.
    *
-   * @param util {@link HBaseTestingUtility}
+   * @param util {@link HBaseTestingUtil}
    * @param snapshotName name of the snapshot to corrupt
    * @return array of the corrupted HFiles
    * @throws IOException on unexecpted error reading the FS
    */
-  public static ArrayList corruptSnapshot(final HBaseTestingUtility util, final String snapshotName)
+  public static ArrayList corruptSnapshot(final HBaseTestingUtil util, final String snapshotName)
       throws IOException {
     final MasterFileSystem mfs = util.getHBaseCluster().getMaster().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
@@ -479,8 +480,8 @@ public final class SnapshotTestingUtils {
         this.desc = desc;
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
-        new FSTableDescriptors(conf)
-          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+        FSTableDescriptors.createTableDescriptorForTableDirectory(
+          this.snapshotDir.getFileSystem(conf), snapshotDir, htd, false);
       }
 
       public TableDescriptor getTableDescriptor() {
@@ -500,15 +501,13 @@ public final class SnapshotTestingUtils {
       }
 
       public Path[] addRegionV1() throws IOException {
-        return addRegion(desc.toBuilder()
-                          .setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION)
-                          .build());
+        return addRegion(
+          desc.toBuilder().setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION).build());
       }
 
       public Path[] addRegionV2() throws IOException {
-        return addRegion(desc.toBuilder()
-                          .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION)
-                          .build());
+        return addRegion(
+          desc.toBuilder().setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION).build());
       }
 
       private Path[] addRegion(final SnapshotProtos.SnapshotDescription desc) throws IOException {
@@ -519,6 +518,7 @@ public final class SnapshotTestingUtils {
         RegionData regionData = tableRegions[this.snapshotted++];
         ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addTableDescriptor(htd);
         manifest.addRegion(regionData.tableDir, regionData.hri);
         return regionData.files;
       }
@@ -553,7 +553,7 @@ public final class SnapshotTestingUtils {
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptOneRegionManifest() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
           @Override public boolean accept(Path path) {
             return path.getName().startsWith(SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX);
           }
@@ -567,7 +567,7 @@ public final class SnapshotTestingUtils {
       }
 
       public void missOneRegionSnapshotFile() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir);
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir);
         for (FileStatus fileStatus : manifestFiles) {
           String fileName = fileStatus.getPath().getName();
           if (fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOTINFO_FILE)
@@ -584,7 +584,7 @@ public final class SnapshotTestingUtils {
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptDataManifest() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
           @Override
           public boolean accept(Path path) {
             return path.getName().startsWith(SnapshotManifest.DATA_MANIFEST_NAME);
@@ -603,7 +603,9 @@ public final class SnapshotTestingUtils {
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
         manifest.addTableDescriptor(htd);
         manifest.consolidate();
-        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
+        Path finishedDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+        SnapshotDescriptionUtils.completeSnapshot(finishedDir, snapshotDir, fs,
+          snapshotDir.getFileSystem(conf), conf);
         snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
         return snapshotDir;
       }
@@ -642,6 +644,12 @@ public final class SnapshotTestingUtils {
       return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV2.DESCRIPTOR_VERSION);
     }
 
+    public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName,
+        final int numRegions, final long ttl) throws IOException {
+      return createSnapshot(snapshotName, tableName, numRegions,
+          SnapshotManifestV2.DESCRIPTOR_VERSION, ttl);
+    }
+
     private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
         final int version) throws IOException {
       return createSnapshot(snapshotName, tableName, TEST_NUM_REGIONS, version);
@@ -659,6 +667,23 @@ public final class SnapshotTestingUtils {
         .build();
 
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
+      FileSystem workingFs = workingDir.getFileSystem(conf);
+      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, workingFs);
+      return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
+    }
+
+    private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
+        final int numRegions, final int version, final long ttl) throws IOException {
+      TableDescriptor htd = createHtd(tableName);
+      RegionData[] regions = createTable(htd, numRegions);
+      SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
+          .setTable(htd.getTableName().getNameAsString())
+          .setName(snapshotName)
+          .setVersion(version)
+          .setCreationTime(EnvironmentEdgeManager.currentTime())
+          .setTtl(ttl)
+          .build();
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
       SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }
@@ -671,7 +696,7 @@ public final class SnapshotTestingUtils {
 
     private RegionData[] createTable(final TableDescriptor htd, final int nregions)
         throws IOException {
-      Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, htd.getTableName());
       new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
 
       assertTrue(nregions % 2 == 0);
@@ -723,7 +748,7 @@ public final class SnapshotTestingUtils {
   // ==========================================================================
   //  Table Helpers
   // ==========================================================================
-  public static void waitForTableToBeOnline(final HBaseTestingUtility util,
+  public static void waitForTableToBeOnline(final HBaseTestingUtil util,
                                             final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
@@ -735,7 +760,7 @@ public final class SnapshotTestingUtils {
     util.waitFor(60000, util.predicateTableAvailable(tableName));
   }
 
-  public static void createTable(final HBaseTestingUtility util, final TableName tableName,
+  public static void createTable(final HBaseTestingUtil util, final TableName tableName,
       int regionReplication, int nRegions, final byte[]... families)
       throws IOException, InterruptedException {
     TableDescriptorBuilder builder
@@ -767,34 +792,34 @@ public final class SnapshotTestingUtils {
     return splitKeys;
   }
 
-  public static void createTable(final HBaseTestingUtility util, final TableName tableName,
+  public static void createTable(final HBaseTestingUtil util, final TableName tableName,
       final byte[]... families) throws IOException, InterruptedException {
     createTable(util, tableName, 1, families);
   }
 
-  public static void createTable(final HBaseTestingUtility util, final TableName tableName,
+  public static void createTable(final HBaseTestingUtil util, final TableName tableName,
       final int regionReplication, final byte[]... families) throws IOException, InterruptedException {
     createTable(util, tableName, regionReplication, KEYS.length, families);
   }
 
-  public static void createPreSplitTable(final HBaseTestingUtility util, final TableName tableName,
+  public static void createPreSplitTable(final HBaseTestingUtil util, final TableName tableName,
       final int nRegions, final byte[]... families) throws IOException, InterruptedException {
     createTable(util, tableName, 1, nRegions, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
+  public static void loadData(final HBaseTestingUtil util, final TableName tableName, int rows,
       byte[]... families) throws IOException, InterruptedException {
     BufferedMutator mutator = util.getConnection().getBufferedMutator(tableName);
     loadData(util, mutator, rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final BufferedMutator mutator, int rows,
-      byte[]... families) throws IOException, InterruptedException {
+  public static void loadData(final HBaseTestingUtil util, final BufferedMutator mutator,
+      int rows, byte[]... families) throws IOException, InterruptedException {
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);
     for (byte k0: KEYS) {
       byte[] k = new byte[] { k0 };
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       final byte[][] families1 = families;
       final byte[] key1 = key;
@@ -805,7 +830,8 @@ public final class SnapshotTestingUtils {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
+        Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       final byte[][] families1 = families;
       final byte[] key1 = key;
@@ -836,7 +862,7 @@ public final class SnapshotTestingUtils {
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-  public static void deleteArchiveDirectory(final HBaseTestingUtility util)
+  public static void deleteArchiveDirectory(final HBaseTestingUtil util)
       throws IOException {
     // Ensure the archiver to be empty
     MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
@@ -844,7 +870,7 @@ public final class SnapshotTestingUtils {
     mfs.getFileSystem().delete(archiveDir, true);
   }
 
-  public static void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  public static void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     Table table = util.getConnection().getTable(tableName);
     try {

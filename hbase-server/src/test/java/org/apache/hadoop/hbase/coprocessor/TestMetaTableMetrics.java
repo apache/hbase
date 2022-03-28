@@ -1,16 +1,25 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -25,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -33,10 +43,9 @@ import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -46,7 +55,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
@@ -59,7 +68,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Category({ CoprocessorTests.class, LargeTests.class })
 public class TestMetaTableMetrics {
 
   @ClassRule
@@ -67,7 +76,7 @@ public class TestMetaTableMetrics {
       HBaseClassTestRule.forClass(TestMetaTableMetrics.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableMetrics.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName NAME1 = TableName.valueOf("TestExampleMetaTableMetricsOne");
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -92,12 +101,12 @@ public class TestMetaTableMetrics {
     UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
       MetaTableMetrics.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10; i++) {
       do {
         int sign = i % 2 == 0 ? 1 : -1;
         connectorPort += sign * rand.nextInt(100);
-      } while (!HBaseTestingUtility.available(connectorPort));
+      } while (!HBaseTestingUtil.available(connectorPort));
       try {
         conf.setInt("regionserver.rmi.registry.port", connectorPort);
         UTIL.startMiniCluster(1);
@@ -133,7 +142,8 @@ public class TestMetaTableMetrics {
   public void testMetaTableMetricsInJmx() throws Exception {
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME1).setColumnFamily(CFD).build());
-    writeData(NAME1);
+    assertTrue(UTIL.getAdmin().isTableEnabled(NAME1));
+    readWriteData(NAME1);
     UTIL.deleteTable(NAME1);
 
     UTIL.waitFor(30000, 2000, true, () -> {
@@ -179,7 +189,7 @@ public class TestMetaTableMetrics {
     }
   }
 
-  private void writeData(TableName tableName) throws IOException {
+  private void readWriteData(TableName tableName) throws IOException {
     try (Table t = UTIL.getConnection().getTable(tableName)) {
       List<Put> puts = new ArrayList<>(NUM_ROWS);
       for (int i = 0; i < NUM_ROWS; i++) {
@@ -188,6 +198,10 @@ public class TestMetaTableMetrics {
         puts.add(p);
       }
       t.put(puts);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        Get get = new Get(Bytes.toBytes(i + 1));
+        assertArrayEquals(Bytes.toBytes(value), t.get(get).getValue(FAMILY, QUALIFIER));
+      }
     }
   }
 

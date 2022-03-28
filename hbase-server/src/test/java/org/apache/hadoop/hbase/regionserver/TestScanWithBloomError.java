@@ -35,15 +35,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -85,7 +85,7 @@ public class TestScanWithBloomError {
   private FileSystem fs;
   private Configuration conf;
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -109,26 +109,28 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = TEST_UTIL.createTestRegion(TABLE_NAME,
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(Compression.Algorithm.GZ)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(TestMultiColumnScanner.MAX_VERSIONS));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(FAMILY))
+        .setCompressionType(Compression.Algorithm.GZ)
+        .setBloomFilterType(bloomType)
+        .setMaxVersions(TestMultiColumnScanner.MAX_VERSIONS).build();
+    region = TEST_UTIL.createTestRegion(TABLE_NAME, columnFamilyDescriptor);
     createStoreFile(new int[] {1, 2, 6});
     createStoreFile(new int[] {1, 2, 3, 7});
     createStoreFile(new int[] {1, 9});
     scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)
       throws IOException {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
-    Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
+    Scan scan = new Scan().withStartRow(ROW_BYTES).withStopRow(ROW_BYTES, true);
     addColumnSetToScan(scan, colSet);
     RegionScannerImpl scanner = region.getScanner(scan);
-    KeyValueHeap storeHeap = scanner.getStoreHeapForTesting();
+    KeyValueHeap storeHeap = scanner.storeHeap;
     assertEquals(0, storeHeap.getHeap().size());
     StoreScanner storeScanner =
         (StoreScanner) storeHeap.getCurrentForTesting();

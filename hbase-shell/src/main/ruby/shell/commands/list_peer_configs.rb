@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListPeerConfigs < Command
       def help
-        <<-EOF
+        <<~EOF
           No-argument method that outputs the replication peer configuration for each peer defined on this cluster.
         EOF
       end

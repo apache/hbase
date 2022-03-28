@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Durability;
@@ -58,7 +58,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
   private static final Logger LOG = LoggerFactory.getLogger(
     TestRegionServerCoprocessorExceptionWithAbort.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
   @Test
@@ -69,7 +69,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     TEST_UTIL.startMiniCluster(2);
     try {
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       // Trigger one regionserver to fail as if it came up with a coprocessor
       // that fails during initialization
       final HRegionServer regionServer = cluster.getRegionServer(0);

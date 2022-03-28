@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,9 +101,13 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
     // Create the thread pool that will execute RPCs
     threadPool = Threads.getBoundedCachedThreadPool(corePoolSize, 60L, TimeUnit.SECONDS,
-      Threads.newDaemonThreadFactory(this.getClass().getSimpleName(),
-          getUncaughtExceptionHandler()));
+      new ThreadFactoryBuilder().setNameFormat(this.getClass().getSimpleName() + "-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(getUncaughtExceptionHandler()).build());
     return true;
+  }
+
+  protected void setTimeoutExecutorUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
+    timeoutExecutor.setUncaughtExceptionHandler(eh);
   }
 
   public boolean stop() {
@@ -147,8 +152,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    */
   public void addNode(final TRemote key) {
     assert key != null: "Tried to add a node with a null key";
-    final BufferNode newNode = new BufferNode(key);
-    nodeMap.putIfAbsent(key, newNode);
+    nodeMap.computeIfAbsent(key, k -> new BufferNode(k));
   }
 
   /**
@@ -306,8 +310,14 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     @Override
     public void run() {
       while (running.get()) {
-        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
+        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue,
+          20, TimeUnit.SECONDS);
         if (task == null || task == DelayedUtil.DELAYED_POISON) {
+          if (task == null && queue.size() > 0) {
+            LOG.error("DelayQueue for RemoteProcedureDispatcher is not empty when timed waiting"
+              + " elapsed. If this is repeated consistently, it means no element is getting expired"
+              + " from the queue and it might freeze the system. Queue: {}", queue);
+          }
           // the executor may be shutting down, and the task is just the shutdown request
           continue;
         }

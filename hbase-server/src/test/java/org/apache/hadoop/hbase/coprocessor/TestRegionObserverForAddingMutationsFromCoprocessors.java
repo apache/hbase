@@ -28,10 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,6 +39,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,7 +69,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   private static final Logger LOG
     = LoggerFactory.getLogger(TestRegionObserverForAddingMutationsFromCoprocessors.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
   private static final byte[] row2 = Bytes.toBytes("r2");
@@ -83,7 +84,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY, TestWALObserver.class.getName());
-    util = new HBaseTestingUtility(conf);
+    util = new HBaseTestingUtil(conf);
     util.startMiniCluster();
   }
 
@@ -98,16 +99,14 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   }
 
   private void createTable(String coprocessor) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName)
-        .addFamily(new HColumnDescriptor(dummy))
-        .addFamily(new HColumnDescriptor(test))
-        .addCoprocessor(coprocessor);
-    util.getAdmin().createTable(htd);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(dummy))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(test)).setCoprocessor(coprocessor).build();
+    util.getAdmin().createTable(tableDescriptor);
   }
 
   /**
    * Test various multiput operations.
-   * @throws Exception
    */
   @Test
   public void testMulti() throws Exception {

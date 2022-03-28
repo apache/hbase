@@ -30,12 +30,13 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -69,8 +70,8 @@ public class TestChecksum {
   static final int[] BYTES_PER_CHECKSUM = {
       50, 500, 688, 16*1024, (16*1024+980), 64 * 1024};
 
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+    new HBaseTestingUtil();
   private FileSystem fs;
   private HFileSystem hfs;
 
@@ -85,7 +86,7 @@ public class TestChecksum {
     Path path = new Path(TEST_UTIL.getDataTestDir(), "default_checksum");
     FSDataOutputStream os = fs.create(path);
     HFileContext meta = new HFileContextBuilder().build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int i = 0; i < 1000; ++i)
       dos.writeInt(i);
@@ -98,8 +99,14 @@ public class TestChecksum {
 
     FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
     meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
-        meta, ByteBuffAllocator.HEAP);
+    ReaderContext context = new ReaderContextBuilder()
+        .withInputStreamWrapper(is)
+        .withFileSize(totalSize)
+        .withFileSystem((HFileSystem) fs)
+        .withFilePath(path)
+        .build();
+    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
+        meta, ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
     HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
     assertTrue(!b.isSharedMem());
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
@@ -131,7 +138,7 @@ public class TestChecksum {
       HFileContext meta = new HFileContextBuilder()
             .withChecksumType(ckt)
             .build();
-      HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+      HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
       DataOutputStream dos = hbw.startWriting(BlockType.DATA);
       for (int i = 0; i < intCount; ++i) {
         dos.writeInt(i);
@@ -145,8 +152,14 @@ public class TestChecksum {
 
       FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
       meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
-          meta, ByteBuffAllocator.HEAP);
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(is)
+          .withFileSize(totalSize)
+          .withFileSystem((HFileSystem) fs)
+          .withFilePath(path)
+          .build();
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
+          meta, ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
       HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
       assertTrue(!b.isSharedMem());
 
@@ -194,7 +207,7 @@ public class TestChecksum {
                             .withIncludesTags(useTags)
                             .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                             .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+        HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
           DataOutputStream dos = hbw.startWriting(BlockType.DATA);
@@ -216,7 +229,14 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(is, totalSize, fs, path, meta);
+        ReaderContext context = new ReaderContextBuilder()
+           .withInputStreamWrapper(is)
+           .withFileSize(totalSize)
+           .withFileSystem(fs)
+           .withFilePath(path)
+           .build();
+        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(context, meta,
+          TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
@@ -258,10 +278,17 @@ public class TestChecksum {
         // Now, use a completely new reader. Switch off hbase checksums in
         // the configuration. In this case, we should not detect
         // any retries within hbase.
-        HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
+        Configuration conf = TEST_UTIL.getConfiguration();
+        HFileSystem newfs = new HFileSystem(conf, false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new CorruptedFSReaderImpl(is, totalSize, newfs, path, meta);
+        context = new ReaderContextBuilder()
+            .withInputStreamWrapper(is)
+            .withFileSize(totalSize)
+            .withFileSystem(newfs)
+            .withFilePath(path)
+            .build();
+        hbr = new CorruptedFSReaderImpl(context, meta, conf);
         b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         b.sanityCheck();
@@ -305,7 +332,7 @@ public class TestChecksum {
                             .withHBaseCheckSum(true)
                             .withBytesPerCheckSum(bytesPerChecksum)
                             .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+        HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null,
            meta);
 
         // write one block. The block has data
@@ -342,9 +369,15 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
+        ReaderContext context = new ReaderContextBuilder()
+            .withInputStreamWrapper(new FSDataInputStreamWrapper(is, nochecksum))
+            .withFileSize(totalSize)
+            .withFileSystem(hfs)
+            .withFilePath(path)
+            .build();
         HFileBlock.FSReader hbr =
-            new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is, nochecksum), totalSize,
-                hfs, path, meta, ByteBuffAllocator.HEAP);
+            new HFileBlock.FSReaderImpl(context, meta, ByteBuffAllocator.HEAP,
+              TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
@@ -384,9 +417,9 @@ public class TestChecksum {
      */
     boolean corruptDataStream = false;
 
-    public CorruptedFSReaderImpl(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
-        Path path, HFileContext meta) throws IOException {
-      super(istream, fileSize, (HFileSystem) fs, path, meta, ByteBuffAllocator.HEAP);
+    public CorruptedFSReaderImpl(ReaderContext context, HFileContext meta, Configuration conf)
+        throws IOException {
+      super(context, meta, ByteBuffAllocator.HEAP, conf);
     }
 
     @Override

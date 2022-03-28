@@ -18,7 +18,7 @@
 
 set -e
 function usage {
-  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
+  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/share/hadoop/yarn/timelineservice /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
   echo ""
   echo "    --zookeeper-data /path/to/use                                     Where the embedded zookeeper instance should write its data."
   echo "                                                                      defaults to 'zk-data' in the working-dir."
@@ -67,9 +67,10 @@ if [ $# -lt 5 ]; then
 fi
 component_install="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 hadoop_exec="$(cd "$(dirname "$2")"; pwd)/$(basename "$2")"
-yarn_server_tests_test_jar="$(cd "$(dirname "$3")"; pwd)/$(basename "$3")"
-mapred_jobclient_test_jar="$(cd "$(dirname "$4")"; pwd)/$(basename "$4")"
-mapred_exec="$(cd "$(dirname "$5")"; pwd)/$(basename "$5")"
+timeline_service_dir="$(cd "$(dirname "$3")"; pwd)/$(basename "$3")"
+yarn_server_tests_test_jar="$(cd "$(dirname "$4")"; pwd)/$(basename "$4")"
+mapred_jobclient_test_jar="$(cd "$(dirname "$5")"; pwd)/$(basename "$5")"
+mapred_exec="$(cd "$(dirname "$6")"; pwd)/$(basename "$6")"
 
 if [ ! -x "${hadoop_exec}" ]; then
   echo "hadoop cli does not appear to be executable." >&2
@@ -175,7 +176,7 @@ fi
 
 echo "HBase version information:"
 "${component_install}/bin/hbase" version 2>/dev/null
-hbase_version=$("${component_install}/bin/hbase" version | head -n 1 2>/dev/null)
+hbase_version=$("${component_install}/bin/hbase" version 2>&1 | grep ^HBase | head -n 1)
 hbase_version="${hbase_version#HBase }"
 
 if [ ! -s "${hbase_client}/lib/shaded-clients/hbase-shaded-mapreduce-${hbase_version}.jar" ]; then
@@ -197,23 +198,21 @@ echo "Writing out configuration for HBase."
 rm -rf "${working_dir}/hbase-conf"
 mkdir "${working_dir}/hbase-conf"
 
-if [ -f "${component_install}/conf/log4j.properties" ]; then
-  cp "${component_install}/conf/log4j.properties" "${working_dir}/hbase-conf/log4j.properties"
+if [ -f "${component_install}/conf/log4j2.properties" ]; then
+  cp "${component_install}/conf/log4j2.properties" "${working_dir}/hbase-conf/log4j2.properties"
 else
-  cat >"${working_dir}/hbase-conf/log4j.properties" <<EOF
-# Define some default values that can be overridden by system properties
-hbase.root.logger=INFO,console
+  cat >"${working_dir}/hbase-conf/log4j2.properties" <<EOF
+status = debug
+dest = err
+name = PropertiesConfig
 
-# Define the root logger to the system property "hbase.root.logger".
-log4j.rootLogger=${hbase.root.logger}
+appender.console.type = Console
+appender.console.target = SYSTEM_ERR
+appender.console.name = Console
+appender.console.layout.type = PatternLayout
+appender.console.layout.pattern = %d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
 
-# Logging Threshold
-log4j.threshold=ALL
-# console
-log4j.appender.console=org.apache.log4j.ConsoleAppender
-log4j.appender.console.target=System.err
-log4j.appender.console.layout=org.apache.log4j.PatternLayout
-log4j.appender.console.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+rootLogger = ${sys:hbase.root.logger:-INFO,console}
 EOF
 fi
 
@@ -285,21 +284,32 @@ echo "Starting up Hadoop"
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 else
-  HADOOP_CLASSPATH="${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+  HADOOP_CLASSPATH="${timeline_service_dir}/*:${timeline_service_dir}/lib/*:${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 fi
 
 echo "$!" > "${working_dir}/hadoop.pid"
 
+# 2 + 4 + 8 + .. + 256 ~= 8.5 minutes.
+max_sleep_time=512
 sleep_time=2
-until [ -s "${working_dir}/hbase-conf/core-site.xml" ]; do
+until [[ -s "${working_dir}/hbase-conf/core-site.xml" || "${sleep_time}" -ge "${max_sleep_time}" ]]; do
   printf '\twaiting for Hadoop to finish starting up.\n'
   sleep "${sleep_time}"
   sleep_time="$((sleep_time*2))"
 done
 
+if [ "${sleep_time}" -ge "${max_sleep_time}" ] ; then
+  echo "time out waiting for Hadoop to startup" >&2
+  exit 1
+fi
+
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   echo "Verifying configs"
-  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest
+  hadoop_conf_files=""
+  for f in "${working_dir}"/hbase-conf/*-site.xml; do
+    hadoop_conf_files="$hadoop_conf_files -conffile $f"
+  done
+  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest $hadoop_conf_files
 fi
 
 if [ -n "${clean}" ]; then

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -31,7 +31,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @ClassRule
@@ -55,12 +55,21 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(Scan scan) throws Exception {
+  protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     BufferingScanResultConsumer scanConsumer = new BufferingScanResultConsumer();
     ASYNC_CONN.getTable(TABLE_NAME).scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
+    // these tests batch settings with the sample data result in each result being
+    // split in two. so we must allow twice the expected results in order to reach
+    // our true limit. see convertFromBatchResult for details.
+    if (closeAfter > 0 && scan.getBatch() > 0) {
+      closeAfter = closeAfter * 2;
+    }
     for (Result result; (result = scanConsumer.take()) != null;) {
       results.add(result);
+      if (closeAfter > 0 && results.size() >= closeAfter) {
+        break;
+      }
     }
     if (scan.getBatch() > 0) {
       results = convertFromBatchResult(results);

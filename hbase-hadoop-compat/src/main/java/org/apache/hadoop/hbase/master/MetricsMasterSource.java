@@ -55,8 +55,10 @@ public interface MetricsMasterSource extends BaseSource {
   String AVERAGE_LOAD_NAME = "averageLoad";
   String LIVE_REGION_SERVERS_NAME = "liveRegionServers";
   String DEAD_REGION_SERVERS_NAME = "deadRegionServers";
+  String DRAINING_REGION_SERVER_NAME = "draininigRegionServers";
   String NUM_REGION_SERVERS_NAME = "numRegionServers";
   String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
+  String NUM_DRAINING_REGION_SERVERS_NAME = "numDrainingRegionServers";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
   String CLUSTER_ID_NAME = "clusterId";
@@ -67,6 +69,8 @@ public interface MetricsMasterSource extends BaseSource {
   String OFFLINE_REGION_COUNT_NAME = "offlineRegionCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
+  String CLUSTER_WRITE_REQUESTS_NAME = "clusterWriteRequests";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
@@ -76,6 +80,8 @@ public interface MetricsMasterSource extends BaseSource {
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
   String DEAD_REGION_SERVERS_DESC = "Names of dead RegionServers";
   String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
+  String DRAINING_REGION_SERVER_DESC = "Names of draining RegionServers";
+  String NUMBER_OF_DRAINING_REGION_SERVERS_DESC = "Number of draining RegionServers";
   String ZOOKEEPER_QUORUM_DESC = "ZooKeeper Quorum";
   String SERVER_NAME_DESC = "Server Name";
   String CLUSTER_ID_DESC = "Cluster Id";
@@ -93,6 +99,22 @@ public interface MetricsMasterSource extends BaseSource {
    * @param inc Ammount to increment the total by.
    */
   void incRequests(final long inc);
+
+  /**
+   * Increment the number of read requests the cluster has seen.
+   *
+   * @param inc Ammount to increment the total by.
+   */
+  void incReadRequests(final long inc);
+
+
+  /**
+   * Increment the number of write requests the cluster has seen.
+   *
+   * @param inc Ammount to increment the total by.
+   */
+  void incWriteRequests(final long inc);
+
 
   /**
    * @return {@link OperationMetrics} containing common metrics for server crash operation

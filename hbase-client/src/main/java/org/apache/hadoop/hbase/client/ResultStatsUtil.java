@@ -17,63 +17,30 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@link Result} with some statistics about the server/region status
+ * Statistics update about a server/region
  */
 @InterfaceAudience.Private
 public final class ResultStatsUtil {
-
   private ResultStatsUtil() {
     //private ctor for util class
   }
 
   /**
-   * Update the stats for the specified region if the result is an instance of {@link
-   * ResultStatsUtil}
+   * Update the statistics for the specified region.
    *
-   * @param r object that contains the result and possibly the statistics about the region
-   * @param serverStats stats tracker to update from the result
+   * @param tracker tracker to update
    * @param server server from which the result was obtained
-   * @param regionName full region name for the stats.
-   * @return the underlying {@link Result} if the passed result is an {@link
-   * ResultStatsUtil} or just returns the result;
+   * @param regionName full region name for the statistics
+   * @param stats statistics to update for the specified region
    */
-  public static <T> T updateStats(T r, ServerStatisticTracker serverStats,
-      ServerName server, byte[] regionName) {
-    if (!(r instanceof Result)) {
-      return r;
-    }
-    Result result = (Result) r;
-    // early exit if there are no stats to collect
-    RegionLoadStats stats = result.getStats();
-    if(stats == null){
-      return r;
-    }
-
-    updateStats(serverStats, server, regionName, stats);
-    return r;
-  }
-
   public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
     RegionLoadStats stats) {
     if (regionName != null && stats != null && tracker != null) {
       tracker.updateRegionStats(server, regionName, stats);
     }
-  }
-
-  public static <T> T updateStats(T r, ServerStatisticTracker stats,
-      HRegionLocation regionLocation) {
-    byte[] regionName = null;
-    ServerName server = null;
-    if (regionLocation != null) {
-      server = regionLocation.getServerName();
-      regionName = regionLocation.getRegion().getRegionName();
-    }
-
-    return updateStats(r, stats, server, regionName);
   }
 }

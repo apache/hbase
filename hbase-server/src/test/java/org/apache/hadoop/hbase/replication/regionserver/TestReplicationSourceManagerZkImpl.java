@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
@@ -55,7 +55,7 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
       ReplicationSourceDummy.class.getCanonicalName());
     conf.setLong("replication.sleep.before.failover", 2000);
     conf.setInt("replication.source.maxretriesmultiplier", 10);
-    utility = new HBaseTestingUtility(conf);
+    utility = new HBaseTestingUtil(conf);
     utility.startMiniZKCluster();
     setupZkAndReplication();
   }

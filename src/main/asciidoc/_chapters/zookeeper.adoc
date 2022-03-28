@@ -137,7 +137,7 @@ Just make sure to set `HBASE_MANAGES_ZK` to `false`      if you want it to stay 
 
 For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:https://zookeeper.apache.org/doc/current/zookeeperStarted.html[Getting
         Started Guide].
-Additionally, see the link:https://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKeeper Wiki] or the link:https://zookeeper.apache.org/doc/r3.4.10/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
+Additionally, see the link:https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+FAQ#ZooKeeperFAQ-7[ZooKeeper Wiki] or the link:https://zookeeper.apache.org/doc/r3.4.10/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
         documentation] for more information on ZooKeeper sizing.
 
 [[zk.sasl.auth]]

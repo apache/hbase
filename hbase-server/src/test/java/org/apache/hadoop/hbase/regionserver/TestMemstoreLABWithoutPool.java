@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
@@ -59,8 +61,9 @@ public class TestMemstoreLABWithoutPool {
     long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax() * 0.8);
     // disable pool
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT + Bytes.SIZEOF_LONG, false, globalMemStoreLimit,
-      0.0f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT + Bytes.SIZEOF_LONG,
+      false, globalMemStoreLimit, 0.0f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+      null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   /**
@@ -68,7 +71,6 @@ public class TestMemstoreLABWithoutPool {
    */
   @Test
   public void testLABRandomAllocation() {
-    Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
@@ -76,6 +78,7 @@ public class TestMemstoreLABWithoutPool {
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100000; i++) {
       int valSize = rand.nextInt(1000);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);

@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -31,14 +31,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
+  public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       DataBlockEncoding encoding, byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
+    return new HFileBlockDefaultEncodingContext(conf, encoding, header, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(conf, meta);
   }
 
   protected void postEncoding(HFileBlockEncodingContext encodingCtx)
@@ -59,14 +60,13 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  protected abstract static class AbstractEncodedSeeker implements
-      EncodedSeeker {
+  /**
+   * Decorates EncodedSeeker with a {@link HFileBlockDecodingContext}
+   */
+  protected abstract static class AbstractEncodedSeeker implements EncodedSeeker {
     protected HFileBlockDecodingContext decodingCtx;
-    protected final CellComparator comparator;
 
-    public AbstractEncodedSeeker(CellComparator comparator,
-        HFileBlockDecodingContext decodingCtx) {
-      this.comparator = comparator;
+    public AbstractEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
       this.decodingCtx = decodingCtx;
     }
 
@@ -77,7 +77,5 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
     protected boolean includesTags() {
       return this.decodingCtx.getHFileContext().isIncludesTags();
     }
-
   }
-
 }

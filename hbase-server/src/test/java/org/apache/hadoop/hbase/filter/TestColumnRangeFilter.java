@@ -30,7 +30,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -152,7 +152,7 @@ public class TestColumnRangeFilter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestColumnRangeFilter.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnRangeFilter.class);
 
@@ -226,7 +226,7 @@ public class TestColumnRangeFilter {
 
     ColumnRangeFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     for (StringRange s : rangeMap.keySet()) {
       filter = new ColumnRangeFilter(s.getStart() == null ? null : Bytes.toBytes(s.getStart()),
           s.isStartInclusive(), s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),

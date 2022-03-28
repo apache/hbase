@@ -49,7 +49,9 @@ public interface Server extends Abortable, Stoppable {
    * Important note: this method returns a reference to Connection which is managed
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
-  Connection getConnection();
+  default Connection getConnection() {
+    return getAsyncConnection().toConnection();
+  }
 
   Connection createConnection(Configuration conf) throws IOException;
 
@@ -89,8 +91,7 @@ public interface Server extends Abortable, Stoppable {
   /**
    * @return Return the FileSystem object used (can return null!).
    */
-  // TODO: On Master, return Master's. On RegionServer, return RegionServers. The FileSystems
-  // may differ. TODO.
+  // TODO: Distinguish between "dataFs" and "walFs".
   default FileSystem getFileSystem() {
     // This default is pretty dodgy!
     Configuration c = getConfiguration();

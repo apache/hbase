@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,15 +31,16 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -651,13 +653,13 @@ public class TestMasterObserver {
 
     @Override
     public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       preUnassignCalled = true;
     }
 
     @Override
     public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       postUnassignCalled = true;
     }
 
@@ -690,13 +692,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
-        throws IOException {
+    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+      BalanceRequest request) throws IOException {
       preBalanceCalled = true;
     }
 
     @Override
     public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+        BalanceRequest request,
         List<RegionPlan> plans) throws IOException {
       postBalanceCalled = true;
     }
@@ -1162,12 +1165,12 @@ public class TestMasterObserver {
 
     @Override
     public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  String groupName) throws IOException {
+                                  String groupName, BalanceRequest request) throws IOException {
     }
 
     @Override
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
     }
 
     @Override
@@ -1272,7 +1275,7 @@ public class TestMasterObserver {
 
   }
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static String TEST_SNAPSHOT = "observed_snapshot";
   private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
@@ -1295,7 +1298,7 @@ public class TestMasterObserver {
 
   @Test
   public void testStarted() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     assertTrue("Master should be active", master.isActiveMaster());
@@ -1314,7 +1317,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableOperations() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1323,13 +1326,13 @@ public class TestMasterObserver {
     assertFalse("No table created yet", cp.wasCreateTableCalled());
 
     // create a table
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
       tableCreationLatch = new CountDownLatch(1);
-      admin.createTable(htd, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
-        1, HBaseTestingUtility.KEYS.length));
+      admin.createTable(tableDescriptor, Arrays.copyOfRange(HBaseTestingUtil.KEYS,
+        1, HBaseTestingUtil.KEYS.length));
 
       assertTrue("Test table should be created", cp.wasCreateTableCalled());
       tableCreationLatch.await();
@@ -1338,7 +1341,7 @@ public class TestMasterObserver {
       assertTrue("Table create handler should be called.",
         cp.wasCreateTableActionCalled());
 
-      RegionLocator regionLocator = connection.getRegionLocator(htd.getTableName());
+      RegionLocator regionLocator = connection.getRegionLocator(tableDescriptor.getTableName());
       List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
 
       admin.mergeRegionsAsync(regions.get(0).getRegion().getEncodedNameAsBytes(),
@@ -1367,8 +1370,9 @@ public class TestMasterObserver {
       assertTrue(admin.isTableDisabled(tableName));
 
       // modify table
-      htd.setMaxFileSize(512 * 1024 * 1024);
-      modifyTableSync(admin, tableName, htd);
+      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
+        .setMaxFileSize(512 * 1024 * 1024).build();
+      modifyTableSync(admin, tableName, tableDescriptor);
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
 
@@ -1389,7 +1393,7 @@ public class TestMasterObserver {
       // When bypass was supported, we'd turn off bypass and rerun tests. Leaving rerun in place.
       cp.resetStates();
 
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
       assertTrue("Test table should be created", cp.wasCreateTableCalled());
       tableCreationLatch.await();
       assertTrue("Table pre create handler called.", cp
@@ -1408,8 +1412,9 @@ public class TestMasterObserver {
         cp.wasDisableTableActionCalled());
 
       // modify table
-      htd.setMaxFileSize(512 * 1024 * 1024);
-      modifyTableSync(admin, tableName, htd);
+      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
+        .setMaxFileSize(512 * 1024 * 1024).build();
+      modifyTableSync(admin, tableName, tableDescriptor);
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
 
@@ -1444,19 +1449,19 @@ public class TestMasterObserver {
   @Test
   public void testSnapshotOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     // create a table
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     Admin admin = UTIL.getAdmin();
 
     tableCreationLatch = new CountDownLatch(1);
-    admin.createTable(htd);
+    admin.createTable(tableDescriptor);
     tableCreationLatch.await();
     tableCreationLatch = new CountDownLatch(1);
 
@@ -1504,7 +1509,7 @@ public class TestMasterObserver {
 
   @Test
   public void testNamespaceOperations() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     String testNamespace = "observed_ns";
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1527,13 +1532,13 @@ public class TestMasterObserver {
     // been removed so the testing code was removed.
   }
 
-  private void modifyTableSync(Admin admin, TableName tableName, HTableDescriptor htd)
-      throws IOException {
-    admin.modifyTable(htd);
-    //wait until modify table finishes
-    for (int t = 0; t < 100; t++) { //10 sec timeout
-      HTableDescriptor td = new HTableDescriptor(admin.getDescriptor(htd.getTableName()));
-      if (td.equals(htd)) {
+  private void modifyTableSync(Admin admin, TableName tableName, TableDescriptor tableDescriptor)
+    throws IOException {
+    admin.modifyTable(tableDescriptor);
+    // wait until modify table finishes
+    for (int t = 0; t < 100; t++) { // 10 sec timeout
+      TableDescriptor td = admin.getDescriptor(tableDescriptor.getTableName());
+      if (td.equals(tableDescriptor)) {
         break;
       }
       Threads.sleep(100);
@@ -1543,7 +1548,7 @@ public class TestMasterObserver {
   @Test
   public void testRegionTransitionOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1619,7 +1624,7 @@ public class TestMasterObserver {
       UTIL.waitUntilNoRegionsInTransition();
       // now trigger a balance
       master.balanceSwitch(true);
-      boolean balanceRun = master.balance();
+      master.balance();
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {
@@ -1631,7 +1636,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableDescriptorsEnumeration() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1648,7 +1653,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableNamesEnumeration() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1663,7 +1668,7 @@ public class TestMasterObserver {
 
   @Test
   public void testAbortProcedureOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1678,7 +1683,7 @@ public class TestMasterObserver {
 
   @Test
   public void testGetProceduresOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1693,7 +1698,7 @@ public class TestMasterObserver {
 
   @Test
   public void testGetLocksOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();

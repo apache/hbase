@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -39,8 +39,8 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 public abstract class TestReplicationSyncUpToolBase {
 
-  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
-  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
   protected static final TableName TN1 = TableName.valueOf("t1_syncup");
   protected static final TableName TN2 = TableName.valueOf("t2_syncup");
@@ -108,7 +108,7 @@ public abstract class TestReplicationSyncUpToolBase {
     UTIL1.shutdownMiniCluster();
   }
 
-  protected final void setupReplication() throws Exception {
+  final void setupReplication() throws Exception {
     Admin admin1 = UTIL1.getAdmin();
     admin1.createTable(t1SyncupSource);
     admin1.createTable(t2SyncupSource);
@@ -135,7 +135,37 @@ public abstract class TestReplicationSyncUpToolBase {
     admin1.addReplicationPeer("1", rpc);
   }
 
-  protected final void syncUp(HBaseTestingUtility util) throws Exception {
+  final void syncUp(HBaseTestingUtil util) throws Exception {
     ToolRunner.run(util.getConfiguration(), new ReplicationSyncUp(), new String[0]);
+  }
+
+  // Utilities that manager shutdown / restart of source / sink clusters. They take care of
+  // invalidating stale connections after shutdown / restarts.
+  final void shutDownSourceHBaseCluster() throws Exception {
+    Closeables.close(ht1Source, true);
+    Closeables.close(ht2Source, true);
+    UTIL1.shutdownMiniHBaseCluster();
+  }
+
+  final void shutDownTargetHBaseCluster() throws Exception {
+    Closeables.close(ht1TargetAtPeer1, true);
+    Closeables.close(ht2TargetAtPeer1, true);
+    UTIL2.shutdownMiniHBaseCluster();
+  }
+
+  final void restartSourceHBaseCluster(int numServers) throws Exception {
+    Closeables.close(ht1Source, true);
+    Closeables.close(ht2Source, true);
+    UTIL1.restartHBaseCluster(numServers);
+    ht1Source = UTIL1.getConnection().getTable(TN1);
+    ht2Source = UTIL1.getConnection().getTable(TN2);
+  }
+
+  final void restartTargetHBaseCluster(int numServers) throws Exception {
+    Closeables.close(ht1TargetAtPeer1, true);
+    Closeables.close(ht2TargetAtPeer1, true);
+    UTIL2.restartHBaseCluster(numServers);
+    ht1TargetAtPeer1 = UTIL2.getConnection().getTable(TN1);
+    ht2TargetAtPeer1 = UTIL2.getConnection().getTable(TN2);
   }
 }

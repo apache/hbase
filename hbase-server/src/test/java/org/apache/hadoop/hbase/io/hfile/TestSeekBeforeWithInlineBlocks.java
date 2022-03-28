@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -54,8 +54,8 @@ public class TestSeekBeforeWithInlineBlocks {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekBeforeWithInlineBlocks.class);
 
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   private static final int NUM_KV = 10000;
 
@@ -150,7 +150,7 @@ public class TestSeekBeforeWithInlineBlocks {
           // Check that we can seekBefore in either direction and with both pread
           // enabled and disabled
           for (boolean pread : new boolean[] { false, true }) {
-            HFileScanner scanner = reader.getScanner(true, pread);
+            HFileScanner scanner = reader.getScanner(conf, true, pread);
             checkNoSeekBefore(cells, scanner, 0);
             for (int i = 1; i < NUM_KV; i++) {
               checkSeekBefore(cells, scanner, i);

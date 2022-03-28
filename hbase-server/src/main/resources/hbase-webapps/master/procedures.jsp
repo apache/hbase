@@ -27,25 +27,29 @@
   import="java.util.Set"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
-  import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
   import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
+<%@ page import="org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.OpenRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.CloseRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.OperationMetrics" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManagerSource" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManager" %>
+<%@ page import="org.apache.hadoop.hbase.procedure2.ProcedureMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Snapshot" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
+<%@ page import="java.util.TreeMap" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
-  WALProcedureStore walStore = master.getWalProcedureStore();
-
-  ArrayList<WALProcedureStore.SyncMetrics> syncMetricsBuff = walStore.getSyncMetrics();
-  long millisToNextRoll = walStore.getMillisToNextPeriodicRoll();
-  long millisFromLastRoll = walStore.getMillisFromLastRoll();
-  ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
-  Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
   List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
@@ -65,11 +69,61 @@
 
 <div class="container-fluid content">
   <div class="row">
+    <div class="page-header">
+      <h1>Procedure Time Statistics</h1>
+    </div>
+  </div>
+  <p>We list proceduces completed successfully of the following types only: ServerCrashProcedure, TransitRegionStateProcedure,
+    OpenRegionProcedure, CloseRegionProcedure.</p>
+  <table class="table table-striped" width="90%" >
+    <tr>
+      <th>Type</th>
+      <th>min(ms)</th>
+      <th>50-percentile(ms)</th>
+      <th>90-percentile(ms)</th>
+      <th>max(ms)</th>
+    </tr>
+    <%
+      Map<String, ProcedureMetrics> latencyMetrics = new TreeMap<>();
+      MetricsAssignmentManager metricsAssignmentManagerSource =
+        procExecutor.getEnvironment().getAssignmentManager().getAssignmentManagerMetrics();
+      latencyMetrics.put("OpenRegionProcedure", metricsAssignmentManagerSource.getOpenProcMetrics());
+      latencyMetrics.put("CloseRegionProcedure", metricsAssignmentManagerSource.getCloseProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#assignRegion", metricsAssignmentManagerSource.getAssignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#unassignRegion", metricsAssignmentManagerSource.getUnassignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#moveRegion", metricsAssignmentManagerSource.getMoveProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#reopenRegion", metricsAssignmentManagerSource.getReopenProcMetrics());
+      latencyMetrics.put("ServerCrashProcedure", master.getMasterMetrics().getServerCrashProcMetrics());
+
+      double[] percentiles = new double[] { 0.5, 0.9};
+      for (Map.Entry<String, ProcedureMetrics> e : latencyMetrics.entrySet()) {
+        Histogram histogram = e.getValue().getTimeHisto();
+        if (histogram.getCount() == 0 || !(histogram instanceof HistogramImpl)) {
+          continue;
+        }
+        HistogramImpl histogramImpl = (HistogramImpl)histogram;
+        long[] percentileLatencies = histogramImpl.getQuantiles(percentiles);
+
+    %>
+    <tr>
+      <td><%= e.getKey() %></td>
+      <td><%= histogramImpl.getMin() %></td>
+      <td><%= percentileLatencies[0] %></td>
+      <td><%= percentileLatencies[1] %></td>
+      <td><%= histogramImpl.getMax() %></td>
+    </tr>
+    <% } %>
+  </table>
+</div>
+<br />
+<div class="container-fluid content">
+  <div class="row">
       <div class="page-header">
           <h1>Procedures</h1>
       </div>
   </div>
-  <table class="table table-striped" width="90%" >
+  <p>We do not list procedures that have completed successfully; their number makes it hard to spot the problematics.</p>
+  <table class="table table-striped" id="tab_Procedures" width="90%" >
     <tr>
         <th>Id</th>
         <th>Parent</th>
@@ -81,7 +135,15 @@
         <th>Errors</th>
         <th>Parameters</th>
     </tr>
-    <% for (Procedure<?> proc : procedures) { %>
+    <%
+      int displayCount = 0;
+      for (Procedure<?> proc : procedures) {
+      // Don't show SUCCESS procedures.
+      if (proc.isSuccess()) {
+        continue;
+      }
+      displayCount++;
+    %>
       <tr>
         <td><%= proc.getProcId() %></td>
         <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
@@ -91,122 +153,33 @@
         <td><%= new Date(proc.getSubmittedTime()) %></td>
         <td><%= new Date(proc.getLastUpdate()) %></td>
         <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
-        <td><%= escapeXml(ProcedureDescriber.describeParameters(proc)) %></td>
+        <td><%= escapeXml(proc.toString()) %></td>
       </tr>
     <% } %>
+    <%
+    if (displayCount > 0) {
+    %>
+      <p><%= displayCount %> procedure(s).</p>
+    <%
+    }
+    %>
   </table>
 </div>
 <br />
-<div class="container-fluid content">
-  <div class="row">
-    <div class="page-header">
-      <h2>Procedure WAL State</h2>
-    </div>
-  </div>
-  <div class="tabbable">
-    <ul class="nav nav-pills">
-      <li class="active">
-        <a href="#tab_WALFiles" data-toggle="tab">WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALFilesCorrupted" data-toggle="tab">Corrupted WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALRollTime" data-toggle="tab">WAL roll time</a>
-      </li>
-      <li class="">
-        <a href="#tab_SyncStats" data-toggle="tab">Sync stats</a>
-      </li>
-    </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_WALFiles">
-        <% if (procedureWALFiles != null && procedureWALFiles.size() > 0) { %>
-          <table class="table table-striped">
-            <tr>
-              <th>LogID</th>
-              <th>Size</th>
-              <th>Timestamp</th>
-              <th>Path</th>
-            </tr>
-            <% for (int i = procedureWALFiles.size() - 1; i >= 0; --i) { %>
-            <%    ProcedureWALFile pwf = procedureWALFiles.get(i); %>
-            <tr>
-              <td> <%= pwf.getLogId() %></td>
-              <td> <%= TraditionalBinaryPrefix.long2String(pwf.getSize(), "B", 1) %> </td>
-              <td> <%= new Date(pwf.getTimestamp()) %> </td>
-              <td> <%= escapeXml(pwf.toString()) %> </td>
-            </tr>
-            <% } %>
-          </table>
-        <% } else {%>
-          <p> No WAL files</p>
-        <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALFilesCorrupted">
-      <% if (corruptedWALFiles != null && corruptedWALFiles.size() > 0) { %>
-        <table class="table table-striped">
-          <tr>
-            <th>LogID</th>
-            <th>Size</th>
-            <th>Timestamp</th>
-            <th>Path</th>
-          </tr>
-          <% for (ProcedureWALFile cwf:corruptedWALFiles) { %>
-          <tr>
-            <td> <%= cwf.getLogId() %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String(cwf.getSize(), "B", 1) %> </td>
-            <td> <%= new Date(cwf.getTimestamp()) %> </td>
-            <td> <%= escapeXml(cwf.toString()) %> </td>
-          </tr>
-          <% } %>
-          </table>
-      <% } else {%>
-        <p> No corrupted WAL files</p>
-      <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALRollTime">
-        <table class="table table-striped">
-          <tr>
-            <th> Milliseconds to next roll</th>
-            <th> Milliseconds from last roll</th>
-          </tr>
-          <tr>
-            <td> <%=StringUtils.humanTimeDiff(millisToNextRoll)  %></td>
-            <td> <%=StringUtils.humanTimeDiff(millisFromLastRoll) %></td>
-          </tr>
-        </table>
-      </div>
-      <div class="tab-pane" id="tab_SyncStats">
-        <table class="table table-striped">
-          <tr>
-            <th> Time</th>
-            <th> Sync Wait</th>
-            <th> Last num of synced entries</th>
-            <th> Total Synced</th>
-            <th> Synced per second</th>
-          </tr>
-          <% for (int i = syncMetricsBuff.size() - 1; i >= 0; --i) { %>
-          <%    WALProcedureStore.SyncMetrics syncMetrics = syncMetricsBuff.get(i); %>
-          <tr>
-            <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
-            <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
-            <td> <%= syncMetrics.getSyncedEntries() %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String(syncMetrics.getTotalSyncedBytes(), "B", 1) %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String((long)syncMetrics.getSyncedPerSec(), "B", 1) %></td>
-          </tr>
-          <%} %>
-        </table>
-        </div>
-      </div>
-  </div>
-</div>
-<br />
+
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Locks</h1>
       </div>
   </div>
+    <%
+    if (lockedResources.size() > 0) {
+    %>
+    <p><%= lockedResources.size() %> lock(s).</p>
+    <%
+    }
+    %>
   <% for (LockedResource lockedResource : lockedResources) { %>
     <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
     <%
@@ -214,7 +187,7 @@
       case EXCLUSIVE:
     %>
     <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure: <%= escapeXml(ProcedureDescriber.describe(lockedResource.getExclusiveLockOwnerProcedure())) %></p>
+    <p>Owner procedure: <%= escapeXml(lockedResource.getExclusiveLockOwnerProcedure().toStringDetails()) %></p>
     <%
         break;
       case SHARED:
@@ -233,12 +206,12 @@
         <table class="table table-striped" width="90%" >
         <% for (Procedure<?> proc : procedures) { %>
          <tr>
-            <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
+            <td><%= escapeXml(proc.toStringDetails()) %></td>
           </tr>
         <% } %>
         </table>
     <% } %>
   <% } %>
 </div>
-
+<br />
 <jsp:include page="footer.jsp" />

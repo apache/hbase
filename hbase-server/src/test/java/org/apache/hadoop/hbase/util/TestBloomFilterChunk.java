@@ -17,24 +17,29 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
-public class TestBloomFilterChunk extends TestCase {
+public class TestBloomFilterChunk {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBloomFilterChunk.class);
 
+  @Test
   public void testBasicBloom() throws Exception {
     BloomFilterChunk bf1 = new BloomFilterChunk(1000, (float)0.01, Hash.MURMUR_HASH, 0);
     BloomFilterChunk bf2 = new BloomFilterChunk(1000, (float)0.01, Hash.MURMUR_HASH, 0);
@@ -94,6 +99,7 @@ public class TestBloomFilterChunk extends TestCase {
     assertTrue(bOut.size() - bf1.byteSize < 10); //... allow small padding
   }
 
+  @Test
   public void testBloomFold() throws Exception {
     // test: foldFactor < log(max/actual)
     BloomFilterChunk b = new BloomFilterChunk(1003, (float) 0.01,
@@ -123,29 +129,30 @@ public class TestBloomFilterChunk extends TestCase {
     // test: foldFactor > log(max/actual)
   }
 
+  @Test
   public void testBloomPerf() throws Exception {
     // add
     float err = (float)0.01;
     BloomFilterChunk b = new BloomFilterChunk(10*1000*1000, (float)err, Hash.MURMUR_HASH, 3);
     b.allocBloom();
-    long startTime =  System.currentTimeMillis();
+    long startTime =  EnvironmentEdgeManager.currentTime();
     long origSize = b.getByteSize();
     for (int i = 0; i < 1*1000*1000; ++i) {
       byte[] ib = Bytes.toBytes(i);
       b.add(ib, 0, ib.length);
     }
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Add time = " + (endTime - startTime) + "ms");
 
     // fold
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     b.compactBloom();
-    endTime = System.currentTimeMillis();
+    endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Fold time = " + (endTime - startTime) + "ms");
     assertTrue(origSize >= b.getByteSize()<<3);
 
     // test
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     int falsePositives = 0;
     for (int i = 0; i < 2*1000*1000; ++i) {
 
@@ -158,7 +165,7 @@ public class TestBloomFilterChunk extends TestCase {
         assertFalse(i < 1*1000*1000);
       }
     }
-    endTime = System.currentTimeMillis();
+    endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Contains time = " + (endTime - startTime) + "ms");
     System.out.println("False Positive = " + falsePositives);
     assertTrue(falsePositives <= (1*1000*1000)*err);
@@ -166,6 +173,7 @@ public class TestBloomFilterChunk extends TestCase {
     // test: foldFactor > log(max/actual)
   }
 
+  @Test
   public void testSizing() {
     int bitSize = 8 * 128 * 1024; // 128 KB
     double errorRate = 0.025; // target false positive rate
@@ -183,11 +191,10 @@ public class TestBloomFilterChunk extends TestCase {
     assertTrue(Math.abs(bitSize2 - bitSize) * 1.0 / bitSize < 1e-5);
   }
 
+  @Test
   public void testFoldableByteSize() {
     assertEquals(128, BloomFilterUtil.computeFoldableByteSize(1000, 5));
     assertEquals(640, BloomFilterUtil.computeFoldableByteSize(5001, 4));
   }
-
-
 }
 

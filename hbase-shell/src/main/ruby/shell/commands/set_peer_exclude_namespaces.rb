@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerExcludeNamespaces < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the namespaces which not replicated for the specified peer.
 
   Note:

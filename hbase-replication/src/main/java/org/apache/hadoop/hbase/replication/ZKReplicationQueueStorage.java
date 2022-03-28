@@ -51,7 +51,6 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
@@ -103,7 +102,6 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    */
   private final String hfileRefsZNode;
 
-  @VisibleForTesting
   final String regionsZNode;
 
   public ZKReplicationQueueStorage(ZKWatcher zookeeper, Configuration conf) {
@@ -158,7 +156,6 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * @return ZNode path to persist the max sequence id that we've pushed for the given region and
    *         peer.
    */
-  @VisibleForTesting
   String getSerialReplicationRegionPeerNode(String encodedRegionName, String peerId) {
     if (encodedRegionName == null || encodedRegionName.length() != RegionInfo.MD5_HEX_LENGTH) {
       throw new IllegalArgumentException(
@@ -264,7 +261,6 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * Return the {lastPushedSequenceId, ZNodeDataVersion} pair. if ZNodeDataVersion is -1, it means
    * that the ZNode does not exist.
    */
-  @VisibleForTesting
   protected Pair<Long, Integer> getLastSequenceIdWithVersion(String encodedRegionName,
       String peerId) throws KeeperException {
     Stat stat = new Stat();
@@ -383,6 +379,11 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     return 0;
   }
 
+  /**
+   * This implement must update the cversion of root {@link #queuesZNode}. The optimistic lock of
+   * the {@link #getAllWALs()} method is based on the cversion of root {@link #queuesZNode}.
+   * @see #getAllWALs() to show the usage of the cversion of root {@link #queuesZNode} .
+   */
   @Override
   public Pair<String, SortedSet<String>> claimQueue(ServerName sourceServerName, String queueId,
       ServerName destServerName) throws ReplicationException {
@@ -421,6 +422,12 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       }
       // add delete op for peer
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldQueueNode));
+      // Append new queue id for prevent lock competition in zookeeper server.
+      String claimLockZNode = ZNodePaths.joinZNode(queuesZNode, "cversion_" + newQueueId);
+      // A trick for update the cversion of root queuesZNode .
+      // The optimistic lock of the getAllWALs() method is based on the cversion of root queuesZNode
+      listOfOps.add(ZKUtilOp.createAndFailSilent(claimLockZNode, HConstants.EMPTY_BYTE_ARRAY));
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(claimLockZNode));
 
       LOG.trace("The multi list size is {}", listOfOps.size());
       ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
@@ -503,13 +510,19 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   // will be overridden in UTs
-  @VisibleForTesting
   protected int getQueuesZNodeCversion() throws KeeperException {
     Stat stat = new Stat();
     ZKUtil.getDataNoWatch(this.zookeeper, this.queuesZNode, stat);
     return stat.getCversion();
   }
 
+  /**
+   * The optimistic lock of this implement is based on the cversion of root {@link #queuesZNode}.
+   * Therefore, we must update the cversion of root {@link #queuesZNode} when migrate wal nodes to
+   * other queues.
+   * @see #claimQueue(ServerName, String, ServerName) as an example of updating root
+   * {@link #queuesZNode} cversion.
+   */
   @Override
   public Set<String> getAllWALs() throws ReplicationException {
     try {
@@ -641,7 +654,6 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   // will be overridden in UTs
-  @VisibleForTesting
   protected int getHFileRefsZNodeCversion() throws ReplicationException {
     Stat stat = new Stat();
     try {

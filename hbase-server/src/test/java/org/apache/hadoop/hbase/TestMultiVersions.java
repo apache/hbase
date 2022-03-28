@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,12 +28,15 @@ import java.util.List;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.TimestampTestBase.FlushCache;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,7 +54,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
- * from old testing framework to {@link HBaseTestingUtility}.
+ * from old testing framework to {@link HBaseTestingUtil}.
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
@@ -61,7 +64,7 @@ public class TestMultiVersions {
       HBaseClassTestRule.forClass(TestMultiVersions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private Admin admin;
 
   private static final int NUM_SLAVES = 3;
@@ -96,12 +99,13 @@ public class TestMultiVersions {
    */
   @Test
   public void testTimestamps() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(TimestampTestBase.FAMILY_NAME);
-    hcd.setMaxVersions(3);
-    desc.addFamily(hcd);
-    this.admin.createTable(desc);
-    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(TimestampTestBase.FAMILY_NAME)
+          .setMaxVersions(3).build())
+        .build();
+    this.admin.createTable(tableDescriptor);
+    Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
     TimestampTestBase.doTestDelete(table, new FlushCache() {
@@ -137,24 +141,25 @@ public class TestMultiVersions {
     final byte [] value2 = Bytes.toBytes("value2");
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(contents);
-    hcd.setMaxVersions(3);
-    desc.addFamily(hcd);
-    this.admin.createTable(desc);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(contents)
+          .setMaxVersions(3).build())
+        .build();
+    this.admin.createTable(tableDescriptor);
     Put put = new Put(row, timestamp1);
     put.addColumn(contents, contents, value1);
-    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     table.put(put);
     // Shut down and restart the HBase cluster
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(NUM_SLAVES).build();
     UTIL.startMiniHBaseCluster(option);
     // Make a new connection.
-    table = UTIL.getConnection().getTable(desc.getTableName());
+    table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     // Overwrite previous value
     put = new Put(row, timestamp2);
     put.addColumn(contents, contents, value2);
@@ -194,20 +199,17 @@ public class TestMultiVersions {
    * crazyness.
    *
    * <p>Tests five cases of scans and timestamps.
-   * @throws Exception
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    final byte [][] rows = new byte[][] {
-      Bytes.toBytes("row_0200"),
-      Bytes.toBytes("row_0800")
-    };
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+
+    final byte[][] rows = new byte[][] { Bytes.toBytes("row_0200"), Bytes.toBytes("row_0800") };
     final byte [][] splitRows = new byte[][] {Bytes.toBytes("row_0500")};
     final long [] timestamp = new long[] {100L, 1000L};
-    this.admin.createTable(desc, splitRows);
+    this.admin.createTable(tableDescriptor, splitRows);
     Table table = UTIL.getConnection().getTable(tableName);
     // Assert we got the region layout wanted.
     Pair<byte[][], byte[][]> keys = UTIL.getConnection()

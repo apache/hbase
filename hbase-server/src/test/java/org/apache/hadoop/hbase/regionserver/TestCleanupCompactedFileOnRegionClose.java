@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
@@ -52,11 +52,11 @@ public class TestCleanupCompactedFileOnRegionClose {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCleanupCompactedFileOnRegionClose.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     util.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,100);
     util.getConfiguration().set("dfs.blocksize", "64000");
     util.getConfiguration().set("dfs.namenode.fs-limits.min-block-size", "1024");
@@ -101,7 +101,7 @@ public class TestCleanupCompactedFileOnRegionClose {
 
     //Create a scanner and keep it open to add references to StoreFileReaders
     Scan scan = new Scan();
-    scan.setStopRow(Bytes.toBytes(refSFCount-2));
+    scan.withStopRow(Bytes.toBytes(refSFCount-2));
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
     Result res = scanner.next();

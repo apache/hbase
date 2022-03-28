@@ -24,11 +24,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -41,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int32Value;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestProcedureEvents {
 
   @ClassRule
@@ -54,13 +54,13 @@ public class TestProcedureEvents {
   private ProcedureStore procStore;
   private ProcedureExecutor<TestProcEnv> procExecutor;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path logDir;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     Path testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
     logDir = new Path(testDir, "proc-logs");

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,7 +47,7 @@ public class TestPutDeleteEtcCellIteration {
       HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
 
   private static final byte [] ROW = new byte [] {'r'};
-  private static final long TIMESTAMP = System.currentTimeMillis();
+  private static final long TIMESTAMP = EnvironmentEdgeManager.currentTime();
   private static final int COUNT = 10;
 
   @Test
@@ -60,7 +61,7 @@ public class TestPutDeleteEtcCellIteration {
     for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
-      cell.equals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes));
+      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
     }
     assertEquals(COUNT, index);
   }
@@ -73,15 +74,13 @@ public class TestPutDeleteEtcCellIteration {
       p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
     int index = 0;
-    int trigger = 3;
     for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
       // When we hit the trigger, try inserting a new KV; should trigger exception
-      if (trigger == 3) p.addColumn(bytes, bytes, TIMESTAMP, bytes);
-      cell.equals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes));
+      p.addColumn(bytes, bytes, TIMESTAMP, bytes);
+      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
     }
-    assertEquals(COUNT, index);
   }
 
   @Test
@@ -95,7 +94,7 @@ public class TestPutDeleteEtcCellIteration {
     for (CellScanner cellScanner = d.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
-      cell.equals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, KeyValue.Type.DeleteColumn));
+      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, KeyValue.Type.Delete), cell);
     }
     assertEquals(COUNT, index);
   }
@@ -150,7 +149,7 @@ public class TestPutDeleteEtcCellIteration {
     for (CellScanner cellScanner = r.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
-      cell.equals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes));
+      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
     }
     assertEquals(COUNT, index);
   }

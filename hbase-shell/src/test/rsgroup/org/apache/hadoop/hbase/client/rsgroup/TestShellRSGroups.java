@@ -52,11 +52,9 @@ public class TestShellRSGroups {
   final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static ScriptingContainer jruby = new ScriptingContainer();
-  private static String basePath;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    basePath = System.getProperty("basedir");
 
     // Start mini cluster
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
@@ -80,8 +78,7 @@ public class TestShellRSGroups {
 
     // Configure jruby runtime
     List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add(basePath+"/src/main/ruby");
-    loadPaths.add(basePath+"/src/test/ruby");
+    loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
     System.setProperty("jruby.jit.logging.verbose", "true");
@@ -99,8 +96,7 @@ public class TestShellRSGroups {
     try {
       // Start only GroupShellTest
       System.setProperty("shell.test", "Hbase::RSGroupShellTest");
-      jruby.runScriptlet(PathType.ABSOLUTE,
-          basePath + "/src/test/ruby/tests_runner.rb");
+      jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
     } finally {
       System.clearProperty("shell.test");
     }

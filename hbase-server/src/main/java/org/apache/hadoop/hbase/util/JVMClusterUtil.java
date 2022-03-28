@@ -26,12 +26,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility used running a cluster all in the one JVM.
@@ -91,9 +93,7 @@ public class JVMClusterUtil {
         hrsc.toString() + ((target.getCause() != null)?
           target.getCause().getMessage(): ""), target);
     } catch (Exception e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
+      throw new IOException(e);
     }
     return new JVMClusterUtil.RegionServerThread(server, index);
   }
@@ -136,10 +136,13 @@ public class JVMClusterUtil {
         hmc.toString() + ((target.getCause() != null)?
           target.getCause().getMessage(): ""), target);
     } catch (Exception e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
+      throw new IOException(e);
     }
+    // Needed if a master based registry is configured for internal cluster connections. Here, we
+    // just add the current master host port since we do not know other master addresses up front
+    // in mini cluster tests.
+    c.set(HConstants.MASTER_ADDRS_KEY,
+        Preconditions.checkNotNull(server.getServerName().getAddress()).toString());
     return new JVMClusterUtil.MasterThread(server, index);
   }
 
@@ -279,14 +282,14 @@ public class JVMClusterUtil {
       }
     }
     boolean wasInterrupted = false;
-    final long maxTime = System.currentTimeMillis() + 30 * 1000;
+    final long maxTime = EnvironmentEdgeManager.currentTime() + 30 * 1000;
     if (regionservers != null) {
       // first try nicely.
       for (RegionServerThread t : regionservers) {
         t.getRegionServer().stop("Shutdown requested");
       }
       for (RegionServerThread t : regionservers) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (t.isAlive() && !wasInterrupted && now < maxTime) {
           try {
             t.join(maxTime - now);
@@ -333,7 +336,7 @@ public class JVMClusterUtil {
             // The below has been replaced to debug sometime hangs on end of
             // tests.
             // this.master.join():
-            Threads.threadDumpingIsAlive(t.master.getThread());
+            Threads.threadDumpingIsAlive(t.master);
           } catch(InterruptedException e) {
             LOG.info("Got InterruptedException on shutdown - " +
                 "not waiting anymore on master ends", e);

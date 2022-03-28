@@ -19,18 +19,19 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.Random;
-
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -41,7 +42,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
  * Number of tables, regions and operations can be set using cli args.
  */
 public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBaseTool {
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Command line options and defaults.
   public static final int DEFAULT_NUM_TABLES = 5;
@@ -79,7 +80,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class RegionProcedure extends TestMasterProcedureScheduler.TestRegionProcedure {
-    RegionProcedure(long procId, HRegionInfo hri) {
+    RegionProcedure(long procId, RegionInfo hri) {
       super(procId, hri.getTable(), TableOperationType.REGION_UNASSIGN, hri);
     }
 
@@ -96,9 +97,9 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class RegionProcedureFactory implements ProcedureFactory {
-    final HRegionInfo hri;
+    final RegionInfo hri;
 
-    RegionProcedureFactory(HRegionInfo hri) {
+    RegionProcedureFactory(RegionInfo hri) {
       this.hri = hri;
     }
 
@@ -150,8 +151,8 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     for (int i = 0; i < numTables; ++i) {
       for (int j = 0; j < regionsPerTable; ++j) {
         regionOps[i * regionsPerTable + j] = new RegionProcedureFactory(
-            new HRegionInfo(((TableProcedureFactory)tableOps[i]).tableName, Bytes.toBytes(j),
-                Bytes.toBytes(j + 1)));
+          RegionInfoBuilder.newBuilder(((TableProcedureFactory) tableOps[i]).tableName)
+            .setStartKey(Bytes.toBytes(j)).setEndKey(Bytes.toBytes(j + 1)).build());
       }
     }
 
@@ -200,11 +201,10 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private class AddProcsWorker extends Thread {
     @Override
     public void run() {
-      final Random rand = new Random(System.currentTimeMillis());
       long procId = procIds.incrementAndGet();
       int index;
       while (procId <= numOps) {
-        index = rand.nextInt(ops.length);
+        index = ThreadLocalRandom.current().nextInt(ops.length);
         procedureScheduler.addBack(ops[index].newProcedure(procId));
         procId = procIds.incrementAndGet();
       }
@@ -244,14 +244,14 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
    * @return time taken by threads to complete, in milliseconds.
    */
   long runThreads(Thread[] threads) throws Exception {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
     for (Thread t : threads) {
       t.start();
     }
     for (Thread t : threads) {
       t.join();
     }
-    return System.currentTimeMillis() - startTime;
+    return EnvironmentEdgeManager.currentTime() - startTime;
   }
 
   @Override

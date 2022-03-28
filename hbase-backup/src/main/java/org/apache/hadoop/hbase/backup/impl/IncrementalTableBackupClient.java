@@ -24,12 +24,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +43,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -127,7 +125,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     } catch (URISyntaxException use) {
       throw new IOException("Unable to get FileSystem", use);
     }
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
 
     for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry :
@@ -142,7 +140,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       if (mapForSrc[srcIdx] == null) {
         mapForSrc[srcIdx] = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       }
-      Path tblDir = FSUtils.getTableDir(rootdir, srcTable);
+      Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path tgtTable = new Path(new Path(tgtRoot, srcTable.getNamespaceAsString()),
           srcTable.getQualifierAsString());
       for (Map.Entry<String,Map<String,List<Pair<String, Boolean>>>> regionEntry :
@@ -289,8 +287,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       convertWALsToHFiles();
       incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
               backupInfo.getBackupRootDir());
-      // Save list of WAL files copied
-      backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
     } catch (Exception e) {
       String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
       // fail the overall backup and return
@@ -302,7 +298,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // After this checkpoint, even if entering cancel process, will let the backup finished
     try {
       // Set the previousTimestampMap which is before this current log roll to the manifest.
-      HashMap<TableName, HashMap<String, Long>> previousTimestampMap =
+      Map<TableName, Map<String, Long>> previousTimestampMap =
           backupManager.readLogTimestampMap();
       backupInfo.setIncrTimestampMap(previousTimestampMap);
 
@@ -310,9 +306,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // For incremental backup, it contains the incremental backup table set.
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-      HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
+      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       Long newStartCode =
           BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);

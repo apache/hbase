@@ -20,57 +20,57 @@ package org.apache.hadoop.hbase.rest;
 
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.EnumSet;
 import java.util.concurrent.ArrayBlockingQueue;
-
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
-import org.apache.hadoop.hbase.http.HttpServerUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
-
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.jmx.MBeanContainer;
-import org.eclipse.jetty.servlet.FilterHolder;
-
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.servlet.DispatcherType;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.jmx.MBeanContainer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
@@ -93,6 +93,9 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
   static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
+  static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
+  static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
+  static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE -1;
 
   private static final String PATH_SPEC_ANY = "/*";
 
@@ -120,7 +123,7 @@ public class RESTServer implements Constants {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("hbase rest start", "", options,
       "\nTo run the REST server as a daemon, execute " +
-      "hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
+      "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 
@@ -135,6 +138,24 @@ public class RESTServer implements Constants {
       holder.setInitParameters(restCsrfParams);
       ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
     }
+  }
+
+  private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
+      Configuration conf) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("clickjackingprevention");
+    holder.setClassName(ClickjackingPreventionFilter.class.getName());
+    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
+  }
+
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler,
+    Configuration conf, boolean isSecure) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("securityheaders");
+    holder.setClassName(SecurityHeadersFilter.class.getName());
+    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf, isSecure));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
   // login the server principal (if using secure Hadoop)
@@ -171,7 +192,7 @@ public class RESTServer implements Constants {
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
-    options.addOption(null, "infoport", true, "Port for web UI");
+    options.addOption("i", "infoport", true, "Port for WEB UI");
 
     CommandLine commandLine = null;
     try {
@@ -203,7 +224,7 @@ public class RESTServer implements Constants {
       String val = commandLine.getOptionValue("infoport");
       conf.setInt("hbase.rest.info.port", Integer.parseInt(val));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Web UI port set to " + val);
+        LOG.debug("WEB UI port set to " + val);
       }
     }
 
@@ -273,26 +294,51 @@ public class RESTServer implements Constants {
 
     String host = servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0");
     int servicePort = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
+    int httpHeaderCacheSize = servlet.getConfiguration().getInt(HTTP_HEADER_CACHE_SIZE,
+      DEFAULT_HTTP_HEADER_CACHE_SIZE);
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
+    httpConfig.setHeaderCacheSize(httpHeaderCacheSize);
+    httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
+    boolean isSecure = false;
     if (conf.getBoolean(REST_SSL_ENABLED, false)) {
+      isSecure = true;
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
       SslContextFactory sslCtxFactory = new SslContextFactory();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
+      String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
       String password = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_PASSWORD, null);
       String keyPassword = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_KEYPASSWORD, password);
       sslCtxFactory.setKeyStorePath(keystore);
+      if(StringUtils.isNotBlank(keystoreType)) {
+        sslCtxFactory.setKeyStoreType(keystoreType);
+      }
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
+
+      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      if(StringUtils.isNotBlank(trustStore)) {
+        sslCtxFactory.setTrustStorePath(trustStore);
+      }
+      String trustStorePassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+      if(StringUtils.isNotBlank(trustStorePassword)) {
+        sslCtxFactory.setTrustStorePassword(trustStorePassword);
+      }
+      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      if(StringUtils.isNotBlank(trustStoreType)) {
+        sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
 
       String[] excludeCiphers = servlet.getConfiguration().getStrings(
           REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
@@ -349,25 +395,22 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
+    addClickjackingPreventionFilter(ctxHandler, conf);
+    addSecurityHeadersFilter(ctxHandler, conf, isSecure);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
         .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
     if (port >= 0) {
-      conf.setLong("startcode", System.currentTimeMillis());
+      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
       String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
       this.infoServer = new InfoServer("rest", a, port, false, conf);
       this.infoServer.setAttribute("hbase.conf", conf);
       this.infoServer.start();
     }
-    try {
-      // start server
-      server.start();
-    } catch (Exception e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
-      throw e;
-    }
+    // start server
+    server.start();
   }
 
   public synchronized void join() throws Exception {
@@ -421,6 +464,7 @@ public class RESTServer implements Constants {
       server.run();
       server.join();
     } catch (Exception e) {
+      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
       System.exit(1);
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,17 +23,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,6 +39,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -75,22 +75,15 @@ public class QuotaUtil extends QuotaTableUtil {
   public static final long DEFAULT_WRITE_CAPACITY_UNIT = 1024;
 
   /** Table descriptor for Quota internal table */
-  public static final HTableDescriptor QUOTA_TABLE_DESC =
-    new HTableDescriptor(QUOTA_TABLE_NAME);
-  static {
-    QUOTA_TABLE_DESC.addFamily(
-      new HColumnDescriptor(QUOTA_FAMILY_INFO)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .setBloomFilterType(BloomType.ROW)
-        .setMaxVersions(1)
-    );
-    QUOTA_TABLE_DESC.addFamily(
-      new HColumnDescriptor(QUOTA_FAMILY_USAGE)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .setBloomFilterType(BloomType.ROW)
-        .setMaxVersions(1)
-    );
-  }
+  public static final TableDescriptor QUOTA_TABLE_DESC =
+    TableDescriptorBuilder.newBuilder(QUOTA_TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_INFO)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
+        .setMaxVersions(1).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_USAGE)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
+        .setMaxVersions(1).build())
+      .build();
 
   /** Returns true if the support for quota is enabled */
   public static boolean isQuotaEnabled(final Configuration conf) {
@@ -265,6 +258,14 @@ public class QuotaUtil extends QuotaTableUtil {
     Delete delete = new Delete(rowKey);
     if (qualifier != null) {
       delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
+    }
+    if (isNamespaceRowKey(rowKey)) {
+      String ns = getNamespaceFromRowKey(rowKey);
+      Quotas namespaceQuota = getNamespaceQuota(connection,ns);
+      if (namespaceQuota != null && namespaceQuota.hasSpace()) {
+        // When deleting namespace space quota, also delete table usage(u:p) snapshots
+        deleteTableUsageSnapshotsForNamespace(connection, ns);
+      }
     }
     doDelete(connection, delete);
   }

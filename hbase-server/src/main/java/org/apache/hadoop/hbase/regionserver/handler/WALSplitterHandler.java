@@ -34,10 +34,15 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Handles log splitting a wal
- */
+ * Used by the zk-based distributed log splitting. Created by ZKSplitLogWorkerCoordination.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+  *   distributed WAL splitter, see SplitWALManager
+  */
+@Deprecated
 @InterfaceAudience.Private
 public class WALSplitterHandler extends EventHandler {
   private static final Logger LOG = LoggerFactory.getLogger(WALSplitterHandler.class);
@@ -64,7 +69,7 @@ public class WALSplitterHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     Status status = null;
     try {
       status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), reporter);
@@ -97,7 +102,7 @@ public class WALSplitterHandler extends EventHandler {
       }
     } finally {
       LOG.info("Worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
-          + (System.currentTimeMillis() - startTime) + "ms. Status = " + status);
+          + (EnvironmentEdgeManager.currentTime() - startTime) + "ms. Status = " + status);
       this.inProgressTasks.decrementAndGet();
     }
   }

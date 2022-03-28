@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
  * because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ClientTests.class, MediumTests.class})
 public class TestMobFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
 
   @ClassRule
@@ -66,7 +66,7 @@ public class TestMobFlushSnapshotFromClient extends TestFlushSnapshotFromClient 
   }
 
   @Override
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }

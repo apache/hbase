@@ -20,22 +20,20 @@ package org.apache.hadoop.hbase.rest;
 import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.IOException;
 import java.util.Collection;
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -55,10 +53,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+
 @Category({RestTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestMultiRowResource {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiRowResource.class);
@@ -73,8 +73,7 @@ public class TestMultiRowResource {
   private static final String ROW_2 = "testrow6";
   private static final String VALUE_2 = "testvalue6";
 
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
   private static Client client;
@@ -88,13 +87,12 @@ public class TestMultiRowResource {
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   public TestMultiRowResource(Boolean csrf) {
     csrfEnabled = csrf;
   }
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -117,10 +115,15 @@ public class TestMultiRowResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(CFA));
-    htd.addFamily(new HColumnDescriptor(CFB));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLE);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
   }
 
   @AfterClass
@@ -129,12 +132,10 @@ public class TestMultiRowResource {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-
   @Test
-  public void testMultiCellGetJSON() throws IOException, JAXBException {
+  public void testMultiCellGetJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
-
 
     StringBuilder path = new StringBuilder();
     path.append("/");
@@ -152,21 +153,18 @@ public class TestMultiRowResource {
     client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
-
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
-
   }
 
   @Test
-  public void testMultiCellGetXML() throws IOException, JAXBException {
+  public void testMultiCellGetXML() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
-
 
     StringBuilder path = new StringBuilder();
     path.append("/");
@@ -179,18 +177,16 @@ public class TestMultiRowResource {
     client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
-
     Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
-
   }
 
   @Test
-  public void testMultiCellGetWithColsJSON() throws IOException, JAXBException {
+  public void testMultiCellGetWithColsJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
 
@@ -209,8 +205,8 @@ public class TestMultiRowResource {
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
-    ObjectMapper mapper =
-        new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
     assertEquals(2, cellSet.getRows().size());
     assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));
@@ -220,11 +216,10 @@ public class TestMultiRowResource {
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
-
   }
 
   @Test
-  public void testMultiCellGetJSONNotFound() throws IOException, JAXBException {
+  public void testMultiCellGetJSONNotFound() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
 
     StringBuilder path = new StringBuilder();
@@ -248,7 +243,7 @@ public class TestMultiRowResource {
   }
 
   @Test
-  public void testMultiCellGetWithColsInQueryPathJSON() throws IOException, JAXBException {
+  public void testMultiCellGetWithColsInQueryPathJSON() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
 
@@ -280,4 +275,3 @@ public class TestMultiRowResource {
     client.delete(row_6_url, extraHdr);
   }
 }
-

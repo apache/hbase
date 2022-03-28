@@ -50,7 +50,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 /**
  * ProcedureWALPrettyPrinter prints the contents of a given ProcedureWAL file
  * @see WALProcedureStore#main(String[]) if you want to check parse of a directory of WALs.
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class ProcedureWALPrettyPrinter extends Configured implements Tool {

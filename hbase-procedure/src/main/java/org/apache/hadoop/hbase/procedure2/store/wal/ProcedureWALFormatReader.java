@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureTree;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +31,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 
 /**
  * Helper class that loads the procedures stored in a WAL.
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
-public class ProcedureWALFormatReader {
+class ProcedureWALFormatReader {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALFormatReader.class);
 
   /**
@@ -44,8 +47,8 @@ public class ProcedureWALFormatReader {
    * See the comments of {@link WALProcedureMap} for more details.
    * <p/>
    * After reading all the proc wal files, we will use the procedures in the procedureMap to build a
-   * {@link WALProcedureTree}, and then give the result to the upper layer. See the comments of
-   * {@link WALProcedureTree} and the code in {@link #finish()} for more details.
+   * {@link ProcedureTree}, and then give the result to the upper layer. See the comments of
+   * {@link ProcedureTree} and the code in {@link #finish()} for more details.
    */
   private final WALProcedureMap localProcedureMap = new WALProcedureMap();
   private final WALProcedureMap procedureMap = new WALProcedureMap();
@@ -144,7 +147,7 @@ public class ProcedureWALFormatReader {
 
     // build the procedure execution tree. When building we will verify that whether a procedure is
     // valid.
-    WALProcedureTree tree = WALProcedureTree.build(procedureMap.getProcedures());
+    ProcedureTree tree = ProcedureTree.build(procedureMap.getProcedures());
     loader.load(tree.getValidProcs());
     loader.handleCorrupted(tree.getCorruptedProcs());
   }

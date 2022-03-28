@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
@@ -27,7 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -35,7 +34,9 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -55,22 +56,18 @@ public class TestRegionStates {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionStates.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static ThreadPoolExecutor threadPool;
-  private static ExecutorCompletionService executorService;
+  private static ExecutorCompletionService<Object> executorService;
 
   @BeforeClass
   public static void setUp() throws Exception {
     threadPool = Threads.getBoundedCachedThreadPool(32, 60L, TimeUnit.SECONDS,
-      Threads.newDaemonThreadFactory("ProcedureDispatcher",
-        new UncaughtExceptionHandler() {
-          @Override
-          public void uncaughtException(Thread t, Throwable e) {
-            LOG.warn("Failed thread " + t.getName(), e);
-          }
-        }));
-    executorService = new ExecutorCompletionService(threadPool);
+      new ThreadFactoryBuilder().setNameFormat("ProcedureDispatcher-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler((t, e) -> LOG.warn("Failed thread " + t.getName(), e))
+        .build());
+    executorService = new ExecutorCompletionService<>(threadPool);
   }
 
   @AfterClass
@@ -133,13 +130,13 @@ public class TestRegionStates {
     checkTableRegions(stateMap, TABLE_NAME_C, NSMALL_RUNS);
   }
 
-  private void checkTableRegions(final RegionStates stateMap,
-      final TableName tableName, final int nregions) {
-    List<RegionInfo> hris = stateMap.getRegionsOfTable(tableName, true);
-    assertEquals(nregions, hris.size());
-    for (int i = 1; i < hris.size(); ++i) {
-      long a = Bytes.toLong(hris.get(i - 1).getStartKey());
-      long b = Bytes.toLong(hris.get(i + 0).getStartKey());
+  private void checkTableRegions(final RegionStates stateMap, final TableName tableName,
+    final int nregions) {
+    List<RegionStateNode> rns = stateMap.getTableRegionStateNodes(tableName);
+    assertEquals(nregions, rns.size());
+    for (int i = 1; i < rns.size(); ++i) {
+      long a = Bytes.toLong(rns.get(i - 1).getRegionInfo().getStartKey());
+      long b = Bytes.toLong(rns.get(i + 0).getRegionInfo().getStartKey());
       assertEquals(b, a + 1);
     }
   }
@@ -159,11 +156,6 @@ public class TestRegionStates {
     });
   }
 
-  private Object createRegionNode(final RegionStates stateMap,
-      final TableName tableName, final long regionId) {
-    return stateMap.getOrCreateRegionStateNode(createRegionInfo(tableName, regionId));
-  }
-
   private RegionInfo createRegionInfo(final TableName tableName, final long regionId) {
     return RegionInfoBuilder.newBuilder(tableName)
         .setStartKey(Bytes.toBytes(regionId))
@@ -179,7 +171,7 @@ public class TestRegionStates {
     final int NRUNS = 1000000; // 1M
     final RegionStates stateMap = new RegionStates();
 
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       final int regionId = i;
       executorService.submit(new Callable<Object>() {
@@ -191,12 +183,12 @@ public class TestRegionStates {
       });
     }
     waitExecutorService(NRUNS);
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF STATEMAP INSERT: %s %s/sec",
       StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));
 
-    st = System.currentTimeMillis();
+    st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       final int regionId = i;
       executorService.submit(new Callable<Object>() {
@@ -209,7 +201,7 @@ public class TestRegionStates {
     }
 
     waitExecutorService(NRUNS);
-    et = System.currentTimeMillis();
+    et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF STATEMAP GET: %s %s/sec",
       StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));
@@ -221,11 +213,11 @@ public class TestRegionStates {
     final int NRUNS = 1 * 1000000; // 1M
 
     final RegionStates stateMap = new RegionStates();
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       stateMap.createRegionStateNode(createRegionInfo(TABLE_NAME, i));
     }
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF SingleThread: %s %s/sec",
         StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));

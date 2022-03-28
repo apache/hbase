@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -71,15 +70,19 @@ public abstract class RegionSplitPolicy extends Configured {
   protected abstract boolean shouldSplit();
 
   /**
+   * @return {@code true} if the specified region can be split.
+   */
+  protected boolean canSplit() {
+    return !region.getRegionInfo().isMetaRegion() && region.isAvailable() &&
+      region.getStores().stream().allMatch(HStore::canSplit);
+  }
+
+  /**
    * @return the key at which the region should be split, or null
    * if it cannot be split. This will only be called if shouldSplit
    * previously returned true.
    */
   protected byte[] getSplitPoint() {
-    byte[] explicitSplitPoint = this.region.getExplicitSplitPoint();
-    if (explicitSplitPoint != null) {
-      return explicitSplitPoint;
-    }
     List<HStore> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;

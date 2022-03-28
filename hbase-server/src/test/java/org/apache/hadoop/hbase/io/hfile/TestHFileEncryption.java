@@ -26,8 +26,10 @@ import static org.junit.Assert.fail;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,11 +37,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -64,8 +68,7 @@ public class TestHFileEncryption {
       HBaseClassTestRule.forClass(TestHFileEncryption.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileEncryption.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final SecureRandom RNG = new SecureRandom();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static FileSystem fs;
   private static Encryption.Context cryptoContext;
@@ -88,13 +91,13 @@ public class TestHFileEncryption {
     assertNotNull(aes);
     cryptoContext.setCipher(aes);
     byte[] key = new byte[aes.getKeyLength()];
-    RNG.nextBytes(key);
+    Bytes.secureRandom(key);
     cryptoContext.setKey(key);
   }
 
-  private int writeBlock(FSDataOutputStream os, HFileContext fileContext, int size)
-      throws IOException {
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, fileContext);
+  private int writeBlock(Configuration conf, FSDataOutputStream os, HFileContext fileContext,
+      int size) throws IOException {
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, fileContext);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int j = 0; j < size; j++) {
       dos.writeInt(j);
@@ -112,7 +115,8 @@ public class TestHFileEncryption {
     HFileBlock b = hbr.readBlockData(pos, -1, false, false, true);
     assertEquals(0, HFile.getAndResetChecksumFailuresCount());
     b.sanityCheck();
-    assertFalse(b.isUnpacked());
+    assertFalse((b.getHFileContext().getCompression() != Compression.Algorithm.NONE)
+      && b.isUnpacked());
     b = b.unpack(ctx, hbr);
     LOG.info("Read a block at " + pos + " with" +
         " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader() +
@@ -132,10 +136,11 @@ public class TestHFileEncryption {
   public void testDataBlockEncryption() throws IOException {
     final int blocks = 10;
     final int[] blockSizes = new int[blocks];
+    final Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < blocks; i++) {
-      blockSizes[i] = (1024 + RNG.nextInt(1024 * 63)) / Bytes.SIZEOF_INT;
+      blockSizes[i] = (1024 + rand.nextInt(1024 * 63)) / Bytes.SIZEOF_INT;
     }
-    for (Compression.Algorithm compression : TestHFileBlock.COMPRESSION_ALGORITHMS) {
+    for (Compression.Algorithm compression : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "block_v3_" + compression + "_AES");
       LOG.info("testDataBlockEncryption: encryption=AES compression=" + compression);
       long totalSize = 0;
@@ -146,15 +151,20 @@ public class TestHFileEncryption {
       FSDataOutputStream os = fs.create(path);
       try {
         for (int i = 0; i < blocks; i++) {
-          totalSize += writeBlock(os, fileContext, blockSizes[i]);
+          totalSize += writeBlock(TEST_UTIL.getConfiguration(), os, fileContext, blockSizes[i]);
         }
       } finally {
         os.close();
       }
       FSDataInputStream is = fs.open(path);
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+          .withFilePath(path)
+          .withFileSystem(fs)
+          .withFileSize(totalSize).build();
       try {
-        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(is, totalSize, fileContext,
-            ByteBuffAllocator.HEAP);
+        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, fileContext,
+            ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
           pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
@@ -192,7 +202,6 @@ public class TestHFileEncryption {
     // read it back in and validate correct crypto metadata
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     try {
-      reader.loadFileInfo();
       FixedFileTrailer trailer = reader.getTrailer();
       assertNotNull(trailer.getEncryptionKey());
       Encryption.Context readerContext = reader.getFileContext().getEncryptionContext();
@@ -214,7 +223,7 @@ public class TestHFileEncryption {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
     for (DataBlockEncoding encoding: DataBlockEncoding.values()) {
-      for (Compression.Algorithm compression: TestHFileBlock.COMPRESSION_ALGORITHMS) {
+      for (Compression.Algorithm compression: HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
         HFileContext fileContext = new HFileContextBuilder()
           .withBlockSize(4096) // small blocks
           .withEncryptionContext(cryptoContext)
@@ -224,7 +233,7 @@ public class TestHFileEncryption {
         // write a new test HFile
         LOG.info("Writing with " + fileContext);
         Path path = new Path(TEST_UTIL.getDataTestDir(),
-                        TEST_UTIL.getRandomUUID().toString() + ".hfile");
+          HBaseCommonTestingUtil.getRandomUUID().toString() + ".hfile");
         FSDataOutputStream out = fs.create(path);
         HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
           .withOutputStream(out)
@@ -245,10 +254,9 @@ public class TestHFileEncryption {
         HFileScanner scanner = null;
         HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
-          reader.loadFileInfo();
           FixedFileTrailer trailer = reader.getTrailer();
           assertNotNull(trailer.getEncryptionKey());
-          scanner = reader.getScanner(false, false);
+          scanner = reader.getScanner(conf, false, false);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           do {
             Cell kv = scanner.getCell();
@@ -265,12 +273,13 @@ public class TestHFileEncryption {
 
         // Test random seeks with pread
         LOG.info("Random seeking with " + fileContext);
+        Random rand = ThreadLocalRandom.current();
         reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
-          scanner = reader.getScanner(false, true);
+          scanner = reader.getScanner(conf, false, true);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           for (i = 0; i < 100; i++) {
-            KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));
+            KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));
             assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
           }
         } finally {

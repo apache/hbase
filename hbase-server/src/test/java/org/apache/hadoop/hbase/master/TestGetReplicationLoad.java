@@ -18,10 +18,10 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -48,27 +48,22 @@ public class TestGetReplicationLoad {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestGetReplicationLoad.class);
 
-  private static MiniHBaseCluster cluster;
+  private static SingleProcessHBaseCluster cluster;
   private static HMaster master;
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   public static class MyMaster extends HMaster {
     public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
       super(conf);
-    }
-
-    @Override
-    protected void tryRegionServerReport(long reportStartTime, long reportEndTime) {
-      // do nothing
     }
   }
 
   @BeforeClass
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     // Set master class and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .masterClass(TestMasterMetrics.MyMaster.class).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();

@@ -28,12 +28,8 @@ org.apache.hadoop.hbase.io.ByteBuffAllocator;
 org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapper;
 org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
-org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
-org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;
 org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 java.lang.management.MemoryUsage;
@@ -90,8 +86,8 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
     <tr>
         <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
         <td><% mWrap.getNumOnlineRegions() %></td>
-        <td><% mWrap.getPercentFileLocal() %></td>
-        <td><% mWrap.getPercentFileLocalSecondaryRegions() %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocal()) %><% "%" %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocalSecondaryRegions()) %><% "%" %></td>
         <td><% mWrap.getNumWALSlowAppend() %></td>
     </tr>
 </table>
@@ -153,11 +149,17 @@ MetricsRegionServerWrapper mWrap;
     <tr>
         <th>Num. WAL Files</th>
         <th>Size. WAL Files</th>
+        <th>WAL exclude DNs</th>
     </tr>
 </tr>
 <tr>
     <td><% mWrap.getNumWALFiles() %></td>
     <td><% TraditionalBinaryPrefix.long2String(mWrap.getWALFileSize(), "B", 1) %></td>
+    <td>
+        <%for String exclude: mWrap.getWALExcludeDNs() %>
+            <% exclude %><br>
+        </%for>
+    </td>
 </tr>
 </table>
 </%def>
@@ -238,20 +240,20 @@ ByteBuffAllocator bbAllocator;
 </%args>
 <table class="table table-striped">
 <tr>
-    <th>Total Heap Allocation(Bytes)</th>
-    <th>Total Pool Allocation(Bytes)</th>
+    <th>Total Heap Allocation</th>
+    <th>Total Pool Allocation</th>
     <th>Heap Allocation Ratio</th>
     <th>Total Buffer Count</th>
     <th>Used Buffer Count</th>
-    <th>Buffer Size(Bytes)</th>
+    <th>Buffer Size</th>
 </tr>
 <tr>
-    <td><% bbAllocator.getHeapAllocationBytes() %></td>
-    <td><% bbAllocator.getPoolAllocationBytes() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(ByteBuffAllocator.getHeapAllocationBytes(bbAllocator, ByteBuffAllocator.HEAP), "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getPoolAllocationBytes(), "B", 1) %></td>
     <td><% String.format("%.3f", ByteBuffAllocator.getHeapAllocationRatio(bbAllocator, ByteBuffAllocator.HEAP) * 100) %><% "%" %></td>
     <td><% bbAllocator.getTotalBufferCount() %></td>
     <td><% bbAllocator.getUsedBufferCount() %></td>
-    <td><% bbAllocator.getBufferSize() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getBufferSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>

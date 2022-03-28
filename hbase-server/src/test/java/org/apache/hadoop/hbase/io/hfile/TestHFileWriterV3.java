@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,17 +35,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -75,9 +75,8 @@ public class TestHFileWriterV3 {
       HBaseClassTestRule.forClass(TestHFileWriterV3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileWriterV3.class);
-
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
   private Configuration conf;
   private FileSystem fs;
@@ -87,7 +86,7 @@ public class TestHFileWriterV3 {
   }
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   @Before
@@ -124,29 +123,27 @@ public class TestHFileWriterV3 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
-                           .withBlockSize(4096)
-                           .withIncludesTags(useTags)
-                           .withCompression(compressAlgo).build();
-    HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
-            .withPath(fs, hfilePath)
-            .withFileContext(context)
-            .withComparator(CellComparatorImpl.COMPARATOR)
-            .create();
+      .withBlockSize(4096)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withCompression(compressAlgo).build();
+    CacheConfig cacheConfig = new CacheConfig(conf);
+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig)
+      .withPath(fs, hfilePath)
+      .withFileContext(context)
+      .create();
 
-    Random rand = new Random(9713312); // Just a fixed seed.
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
-
     for (int i = 0; i < entryCount; ++i) {
-      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
-
+      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(RNG, i);
       // A random-length random value.
-      byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+      byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
       KeyValue keyValue = null;
       if (useTags) {
         ArrayList<Tag> tags = new ArrayList<>();
-        for (int j = 0; j < 1 + rand.nextInt(4); j++) {
+        for (int j = 0; j < 1 + RNG.nextInt(4); j++) {
           byte[] tagBytes = new byte[16];
-          rand.nextBytes(tagBytes);
+          RNG.nextBytes(tagBytes);
           tags.add(new ArrayBackedTag((byte) 1, tagBytes));
         }
         keyValue = new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP,
@@ -177,12 +174,18 @@ public class TestHFileWriterV3 {
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder()
-                        .withCompression(compressAlgo)
-                        .withIncludesMvcc(false)
-                        .withIncludesTags(useTags)
-                        .withHBaseCheckSum(true).build();
+      .withCompression(compressAlgo)
+      .withIncludesMvcc(false)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withHBaseCheckSum(true).build();
+    ReaderContext readerContext = new ReaderContextBuilder()
+      .withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
+      .withFilePath(hfilePath)
+      .withFileSystem(fs)
+      .withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta, ByteBuffAllocator.HEAP);
+        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP, conf);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -199,8 +202,18 @@ public class TestHFileWriterV3 {
     dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
 
+    FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fs, hfilePath);
+    readerContext = new ReaderContextBuilder()
+        .withFilePath(hfilePath)
+        .withFileSize(fileSize)
+        .withFileSystem(wrapper.getHfs())
+        .withInputStreamWrapper(wrapper)
+        .build();
+    HFileInfo hfile = new HFileInfo(readerContext, conf);
+    HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
+    hfile.initMetaAndIndex(reader);
     if (findMidKey) {
-      Cell midkey = dataBlockIndexReader.midkey();
+      Cell midkey = dataBlockIndexReader.midkey(reader);
       assertNotNull("Midkey should not be null", midkey);
     }
 
@@ -209,7 +222,7 @@ public class TestHFileWriterV3 {
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
           .getByteStream(), trailer.getMetaIndexCount());
     // File info
-    FileInfo fileInfo = new FileInfo();
+    HFileInfo fileInfo = new HFileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
@@ -304,6 +317,7 @@ public class TestHFileWriterV3 {
     }
 
     fsdis.close();
+    reader.close();
   }
 }
 

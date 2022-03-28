@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
@@ -27,6 +27,9 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '50'))
     timeout (time: 15, unit: 'MINUTES')
     timestamps()
+  }
+  environment {
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
@@ -40,27 +43,33 @@ pipeline {
             set -x
           fi
           declare -a flaky_args
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 5)
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
+          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 20)
+          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 50)
           docker build -t hbase-dev-support dev-support
-          docker run -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
-'''
+          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase -u `id -u`:`id -g` --workdir=/hbase hbase-dev-support \
+            python dev-support/flaky-tests/report-flakies.py --mvn -v -o output "${flaky_args[@]}"
+        '''
+        sshPublisher(publishers: [
+          sshPublisherDesc(configName: 'Nightlies',
+            transfers: [
+              sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                sourceFiles: "output/dashboard.html"
+              )
+            ]
+          )
+        ])
+        sh '''
+          if [ -f "output/dashboard.html" ]; then
+            ./dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/output/dashboard.html" > output/dashboard.html
+          fi
+        '''
       }
     }
   }
   post {
     always {
       // Has to be relative to WORKSPACE.
-      archive "includes,excludes,dashboard.html"
-      publishHTML target: [
-        allowMissing: true,
-        keepAll: true,
-        alwaysLinkToLastBuild: true,
-        // Has to be relative to WORKSPACE
-        reportDir: ".",
-        reportFiles: 'dashboard.html',
-        reportName: 'Flaky Test Report'
-      ]
+      archiveArtifacts artifacts: "output/*"
     }
   }
 }

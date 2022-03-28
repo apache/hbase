@@ -18,37 +18,171 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.BoundedDelegatingInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Context that holds the various dictionaries for compression in WAL.
+ * <p>
+ * CompressionContexts are not expected to be shared among threads. Multithreaded use may
+ * produce unexpected results.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class CompressionContext {
 
-  static final String ENABLE_WAL_TAGS_COMPRESSION =
-      "hbase.regionserver.wal.tags.enablecompression";
+  private static final Logger LOG = LoggerFactory.getLogger(CompressionContext.class);
+
+  public static final String ENABLE_WAL_TAGS_COMPRESSION =
+    "hbase.regionserver.wal.tags.enablecompression";
+
+  public static final String ENABLE_WAL_VALUE_COMPRESSION =
+    "hbase.regionserver.wal.value.enablecompression";
+
+  public static final String WAL_VALUE_COMPRESSION_TYPE =
+    "hbase.regionserver.wal.value.compression.type";
 
   public enum DictionaryIndex {
     REGION, TABLE, FAMILY, QUALIFIER, ROW
+  }
+
+  /**
+   * Encapsulates the compression algorithm and its streams that we will use for value
+   * compression in this WAL.
+   */
+  static class ValueCompressor {
+
+    static final int IO_BUFFER_SIZE = 4096;
+
+    private final Compression.Algorithm algorithm;
+    private Compressor compressor;
+    private Decompressor decompressor;
+    private BoundedDelegatingInputStream lowerIn;
+    private ByteArrayOutputStream lowerOut;
+    private InputStream compressedIn;
+    private OutputStream compressedOut;
+
+    public ValueCompressor(Compression.Algorithm algorithm) {
+      this.algorithm = algorithm;
+    }
+
+    public Compression.Algorithm getAlgorithm() {
+      return algorithm;
+    }
+
+    public byte[] compress(byte[] valueArray, int valueOffset, int valueLength)
+        throws IOException {
+      if (compressedOut == null) {
+        // Create the output streams here the first time around.
+        lowerOut = new ByteArrayOutputStream();
+        if (compressor == null) {
+          compressor = algorithm.getCompressor();
+        }
+        compressedOut = algorithm.createCompressionStream(lowerOut, compressor,
+          IO_BUFFER_SIZE);
+      } else {
+        lowerOut.reset();
+      }
+      compressedOut.write(valueArray, valueOffset, valueLength);
+      compressedOut.flush();
+      return lowerOut.toByteArray();
+    }
+
+    public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
+        int outLength) throws IOException {
+
+      // Our input is a sequence of bounded byte ranges (call them segments), with
+      // BoundedDelegatingInputStream providing a way to switch in a new segment when the
+      // previous segment has been fully consumed.
+
+      // Create the input streams here the first time around.
+      if (compressedIn == null) {
+        lowerIn = new BoundedDelegatingInputStream(in, inLength);
+        if (decompressor == null) {
+          decompressor = algorithm.getDecompressor();
+        }
+        compressedIn = algorithm.createDecompressionStream(lowerIn, decompressor,
+          IO_BUFFER_SIZE);
+      } else {
+        lowerIn.setDelegate(in, inLength);
+      }
+
+      // Caller must handle short reads.
+      // With current Hadoop compression codecs all 'outLength' bytes are read in here, so not
+      // an issue for now.
+      return compressedIn.read(outArray, outOffset, outLength);
+    }
+
+    public void clear() {
+      if (compressedOut != null) {
+        try {
+          compressedOut.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing compressed output stream", e);
+        }
+      }
+      compressedOut = null;
+      if (lowerOut != null) {
+        try {
+          lowerOut.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing lower output stream", e);
+        }
+      }
+      lowerOut = null;
+      if (compressedIn != null) {
+        try {
+          compressedIn.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing compressed input stream", e);
+        }
+      }
+      compressedIn = null;
+      if (lowerIn != null) {
+        try {
+          lowerIn.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing lower input stream", e);
+        }
+      }
+      lowerIn = null;
+      if (compressor != null) {
+        compressor.reset();
+      }
+      if (decompressor != null) {
+        decompressor.reset();
+      }
+    }
+
   }
 
   private final Map<DictionaryIndex, Dictionary> dictionaries =
       new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
+  ValueCompressor valueCompressor = null;
 
-  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
-      InstantiationException, IllegalAccessException, InvocationTargetException {
+  public CompressionContext(Class<? extends Dictionary> dictType,
+      boolean recoveredEdits, boolean hasTagCompression, boolean hasValueCompression,
+      Compression.Algorithm valueCompressionType)
+      throws SecurityException, NoSuchMethodException, InstantiationException,
+        IllegalAccessException, InvocationTargetException, IOException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
     for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
@@ -70,10 +204,32 @@ public class CompressionContext {
     if (hasTagCompression) {
       tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
+    if (hasValueCompression && valueCompressionType != null) {
+      valueCompressor = new ValueCompressor(valueCompressionType);
+    }
+  }
+
+  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
+      boolean hasTagCompression)
+      throws SecurityException, NoSuchMethodException, InstantiationException,
+        IllegalAccessException, InvocationTargetException, IOException {
+    this(dictType, recoveredEdits, hasTagCompression, false, null);
+  }
+
+  public boolean hasTagCompression() {
+    return tagCompressionContext != null;
+  }
+
+  public boolean hasValueCompression() {
+    return valueCompressor != null;
   }
 
   public Dictionary getDictionary(Enum dictIndex) {
     return dictionaries.get(dictIndex);
+  }
+
+  public ValueCompressor getValueCompressor() {
+    return valueCompressor;
   }
 
   void clear() {
@@ -83,5 +239,20 @@ public class CompressionContext {
     if (tagCompressionContext != null) {
       tagCompressionContext.clear();
     }
+    if (valueCompressor != null) {
+      valueCompressor.clear();
+    }
   }
+
+  public static Compression.Algorithm getValueCompressionAlgorithm(Configuration conf) {
+    if (conf.getBoolean(ENABLE_WAL_VALUE_COMPRESSION, true)) {
+      String compressionType = conf.get(WAL_VALUE_COMPRESSION_TYPE);
+      if (compressionType != null) {
+        return Compression.getCompressionAlgorithmByName(compressionType);
+      }
+      return Compression.Algorithm.GZ;
+    }
+    return Compression.Algorithm.NONE;
+  }
+
 }

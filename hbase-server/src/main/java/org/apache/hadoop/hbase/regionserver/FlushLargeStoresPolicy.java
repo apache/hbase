@@ -43,6 +43,11 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
 
   protected long flushSizeLowerBound = -1;
 
+  @Override
+  public String toString() {
+    return "FlushLargeStoresPolicy{" + "flushSizeLowerBound=" + flushSizeLowerBound + '}';
+  }
+
   protected void setFlushSizeLowerBounds(HRegion region) {
     int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     // For multiple families, lower bound is the "average flush size" by default

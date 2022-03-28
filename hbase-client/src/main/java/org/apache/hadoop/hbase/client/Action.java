@@ -80,7 +80,7 @@ public class Action implements Comparable<Action> {
 
   @Override
   public int compareTo(Action other) {
-    return action.compareTo(other.getAction());
+    return Row.COMPARATOR.compare(action, other.getAction());
   }
 
   @Override

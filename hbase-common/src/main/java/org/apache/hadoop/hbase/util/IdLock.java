@@ -21,12 +21,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -131,7 +129,7 @@ public class IdLock {
     Thread currentThread = Thread.currentThread();
     Entry entry = new Entry(id, currentThread);
     Entry existing;
-    long waitUtilTS = System.currentTimeMillis() + time;
+    long waitUtilTS = EnvironmentEdgeManager.currentTime() + time;
     long remaining = time;
     while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
       synchronized (existing) {
@@ -141,7 +139,7 @@ public class IdLock {
             while (existing.locked) {
               existing.wait(remaining);
               if (existing.locked) {
-                long currentTS = System.currentTimeMillis();
+                long currentTS = EnvironmentEdgeManager.currentTime();
                 if (currentTS >= waitUtilTS) {
                   // time is up
                   return null;
@@ -213,12 +211,10 @@ public class IdLock {
     }
   }
 
-  @VisibleForTesting
   void assertMapEmpty() {
     assert map.isEmpty();
   }
 
-  @VisibleForTesting
   public void waitForWaiters(long id, int numWaiters) throws InterruptedException {
     for (Entry entry;;) {
       entry = map.get(id);

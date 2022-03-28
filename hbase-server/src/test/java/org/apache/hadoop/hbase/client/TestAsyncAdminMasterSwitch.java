@@ -48,8 +48,6 @@ public class TestAsyncAdminMasterSwitch extends TestAsyncAdminBase {
     assertEquals(TEST_UTIL.getHBaseCluster().getRegionServerThreads().size(),
       admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME)).join()
         .getServersName().size());
-    // stop the old master, and start a new one
-    TEST_UTIL.getMiniHBaseCluster().startMaster();
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0).join();
     assertTrue(TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(30000));
     // make sure that we could still call master

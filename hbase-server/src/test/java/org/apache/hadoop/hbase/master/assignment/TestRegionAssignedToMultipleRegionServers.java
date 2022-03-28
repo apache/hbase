@@ -26,22 +26,22 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -81,8 +81,8 @@ public class TestRegionAssignedToMultipleRegionServers {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override
@@ -110,13 +110,14 @@ public class TestRegionAssignedToMultipleRegionServers {
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
+    public HMasterForTest(Configuration conf) throws IOException {
       super(conf);
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
 
     @Override
@@ -126,7 +127,7 @@ public class TestRegionAssignedToMultipleRegionServers {
     }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Assign");
 
@@ -135,8 +136,8 @@ public class TestRegionAssignedToMultipleRegionServers {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    UTIL
-      .startMiniCluster(StartMiniClusterOption.builder().numMasters(2).numRegionServers(2).build());
+    UTIL.startMiniCluster(
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -164,7 +165,7 @@ public class TestRegionAssignedToMultipleRegionServers {
     KILL = true;
     HMaster activeMaster = UTIL.getMiniHBaseCluster().getMaster();
     activeMaster.abort("For testing");
-    activeMaster.getThread().join();
+    activeMaster.join();
     KILL = false;
 
     // sleep a while to reproduce the problem, as after the fix in HBASE-21472 the execution logic

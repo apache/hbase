@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -164,4 +166,21 @@ public interface MetricsRegionWrapper {
    * @return the number of references active on the store
    */
   long getStoreRefCount();
+
+  /**
+   * @return the max number of references active on any store file among
+   *   all compacted store files that belong to this region
+   */
+  long getMaxCompactedStoreFileRefCount();
+
+  /**
+   * @return the number of row reads completely on memstore per store
+   */
+  Map<String, Long> getMemstoreOnlyRowReadsCount();
+
+  /**
+   * @return the number of row reads on memstore and file per store
+   */
+  Map<String, Long> getMixedRowReadsCount();
+
 }

@@ -24,22 +24,18 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DefaultOperationQuota implements OperationQuota {
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultOperationQuota.class);
 
   protected final List<QuotaLimiter> limiters;
   private final long writeCapacityUnit;
   private final long readCapacityUnit;
 
   // the available read/write quota size in bytes
-  protected long writeAvailable = 0;
   protected long readAvailable = 0;
   // estimated quota
   protected long writeConsumed = 0;
@@ -81,7 +77,6 @@ public class DefaultOperationQuota implements OperationQuota {
   public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
     updateEstimateConsumeQuota(numWrites, numReads, numScans);
 
-    writeAvailable = Long.MAX_VALUE;
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
       if (limiter.isBypass()) continue;
@@ -89,7 +84,6 @@ public class DefaultOperationQuota implements OperationQuota {
       limiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
-      writeAvailable = Math.min(writeAvailable, limiter.getWriteAvailable());
     }
 
     for (final QuotaLimiter limiter : limiters) {
@@ -123,11 +117,6 @@ public class DefaultOperationQuota implements OperationQuota {
   @Override
   public long getReadAvailable() {
     return readAvailable;
-  }
-
-  @Override
-  public long getWriteAvailable() {
-    return writeAvailable;
   }
 
   @Override

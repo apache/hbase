@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Filter for WAL entries before being sent over to replication. Multiple
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public interface WALEntryFilter {
-
   /**
    * <p>
    * Applies the filter, possibly returning a different Entry instance. If null is returned, the
@@ -49,5 +47,5 @@ public interface WALEntryFilter {
    * @return a (possibly modified) Entry to use. Returning null or an entry with no cells will cause
    *         the entry to be skipped for replication.
    */
-  public Entry filter(Entry entry);
+  Entry filter(Entry entry);
 }

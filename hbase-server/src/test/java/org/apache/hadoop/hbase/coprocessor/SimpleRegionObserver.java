@@ -38,7 +38,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -57,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -99,11 +104,20 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPostIncrement = new AtomicInteger(0);
   final AtomicInteger ctPostAppend = new AtomicInteger(0);
   final AtomicInteger ctPreCheckAndPut = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndPutWithFilter = new AtomicInteger(0);
   final AtomicInteger ctPreCheckAndPutAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndPutWithFilterAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndPut = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndPutWithFilter = new AtomicInteger(0);
   final AtomicInteger ctPreCheckAndDelete = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndDeleteWithFilter = new AtomicInteger(0);
   final AtomicInteger ctPreCheckAndDeleteAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndDeleteWithFilterAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndDeleteWithFilter = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutate = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutateAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndMutate = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerFilterRow = new AtomicInteger(0);
@@ -493,10 +507,24 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Put put, boolean result) throws IOException {
+    ctPreCheckAndPutWithFilter.incrementAndGet();
+    return true;
+  }
+
+  @Override
   public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
       byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
       ByteArrayComparable comparator, Put put, boolean result) throws IOException {
     ctPreCheckAndPutAfterRowLock.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
+    ctPreCheckAndPutWithFilterAfterRowLock.incrementAndGet();
     return true;
   }
 
@@ -509,10 +537,24 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Put put, boolean result) throws IOException {
+    ctPostCheckAndPutWithFilter.incrementAndGet();
+    return true;
+  }
+
+  @Override
   public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
                                    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
                                    Delete delete, boolean result) throws IOException {
     ctPreCheckAndDelete.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Delete delete, boolean result) throws IOException {
+    ctPreCheckAndDeleteWithFilter.incrementAndGet();
     return true;
   }
 
@@ -525,11 +567,47 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
+    ctPreCheckAndDeleteWithFilterAfterRowLock.incrementAndGet();
+    return true;
+  }
+
+  @Override
   public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
                                     byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
                                     Delete delete, boolean result) throws IOException {
     ctPostCheckAndDelete.incrementAndGet();
     return true;
+  }
+
+  @Override
+  public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
+    Filter filter, Delete delete, boolean result) throws IOException {
+    ctPostCheckAndDeleteWithFilter.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult preCheckAndMutateAfterRowLock(
+    ObserverContext<RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutateAfterRowLock.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult postCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPostCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.postCheckAndMutate(c, checkAndMutate, result);
   }
 
   @Override
@@ -637,6 +715,41 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
+    if (options.getScan().getTimeRange().isAllTime()) {
+      setScanOptions(options);
+    }
+  }
+
+  @Override
+  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanOptions options,FlushLifeCycleTracker tracker) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preMemStoreCompactionCompactScannerOpen(
+    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    throws IOException {
+    setScanOptions(options);
+  }
+
+  private void setScanOptions(ScanOptions options) {
+    options.setMaxVersions(TestRegionCoprocessorHost.MAX_VERSIONS);
+    options.setMinVersions(TestRegionCoprocessorHost.MIN_VERSIONS);
+    options.setKeepDeletedCells(KeepDeletedCells.TRUE);
+    options.setTTL(TestRegionCoprocessorHost.TTL);
+    options.setTimeToPurgeDeletes(TestRegionCoprocessorHost.TIME_TO_PURGE_DELETES);
+  }
+
+
+  @Override
   public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  WALKey key, WALEdit edit) throws IOException {
     ctPreWALAppend.incrementAndGet();
@@ -665,12 +778,24 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     return ctPreBatchMutate.get() > 0;
   }
 
+  public int getPreBatchMutate() {
+    return ctPreBatchMutate.get();
+  }
+
   public boolean hadPostBatchMutate() {
     return ctPostBatchMutate.get() > 0;
   }
 
+  public int getPostBatchMutate() {
+    return ctPostBatchMutate.get();
+  }
+
   public boolean hadPostBatchMutateIndispensably() {
     return ctPostBatchMutateIndispensably.get() > 0;
+  }
+
+  public int getPostBatchMutateIndispensably() {
+    return ctPostBatchMutateIndispensably.get();
   }
 
   public boolean hadPostStartRegionOperation() {
@@ -693,28 +818,64 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     return ctPostCloseRegionOperation.get();
   }
 
-  public boolean hadPreCheckAndPut() {
-    return ctPreCheckAndPut.get() > 0;
+  public int getPreCheckAndPut() {
+    return ctPreCheckAndPut.get();
   }
 
-  public boolean hadPreCheckAndPutAfterRowLock() {
-    return ctPreCheckAndPutAfterRowLock.get() > 0;
+  public int getPreCheckAndPutWithFilter() {
+    return ctPreCheckAndPutWithFilter.get();
   }
 
-  public boolean hadPostCheckAndPut() {
-    return ctPostCheckAndPut.get() > 0;
+  public int getPreCheckAndPutAfterRowLock() {
+    return ctPreCheckAndPutAfterRowLock.get();
   }
 
-  public boolean hadPreCheckAndDelete() {
-    return ctPreCheckAndDelete.get() > 0;
+  public int getPreCheckAndPutWithFilterAfterRowLock() {
+    return ctPreCheckAndPutWithFilterAfterRowLock.get();
   }
 
-  public boolean hadPreCheckAndDeleteAfterRowLock() {
-    return ctPreCheckAndDeleteAfterRowLock.get() > 0;
+  public int getPostCheckAndPut() {
+    return ctPostCheckAndPut.get();
   }
 
-  public boolean hadPostCheckAndDelete() {
-    return ctPostCheckAndDelete.get() > 0;
+  public int getPostCheckAndPutWithFilter() {
+    return ctPostCheckAndPutWithFilter.get();
+  }
+
+  public int getPreCheckAndDelete() {
+    return ctPreCheckAndDelete.get();
+  }
+
+  public int getPreCheckAndDeleteWithFilter() {
+    return ctPreCheckAndDeleteWithFilter.get();
+  }
+
+  public int getPreCheckAndDeleteAfterRowLock() {
+    return ctPreCheckAndDeleteAfterRowLock.get();
+  }
+
+  public int getPreCheckAndDeleteWithFilterAfterRowLock() {
+    return ctPreCheckAndDeleteWithFilterAfterRowLock.get();
+  }
+
+  public int getPostCheckAndDelete() {
+    return ctPostCheckAndDelete.get();
+  }
+
+  public int getPostCheckAndDeleteWithFilter() {
+    return ctPostCheckAndDeleteWithFilter.get();
+  }
+
+  public int getPreCheckAndMutate() {
+    return ctPreCheckAndMutate.get();
+  }
+
+  public int getPreCheckAndMutateAfterRowLock() {
+    return ctPreCheckAndMutateAfterRowLock.get();
+  }
+
+  public int getPostCheckAndMutate() {
+    return ctPostCheckAndMutate.get();
   }
 
   public boolean hadPreIncrement() {

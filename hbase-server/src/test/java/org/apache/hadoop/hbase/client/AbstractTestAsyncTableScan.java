@@ -28,8 +28,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,7 +39,7 @@ import org.junit.Test;
 
 public abstract class AbstractTestAsyncTableScan {
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static TableName TABLE_NAME = TableName.valueOf("async");
 
@@ -130,7 +129,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   protected abstract Scan createScan();
 
-  protected abstract List<Result> doScan(Scan scan) throws Exception;
+  protected abstract List<Result> doScan(Scan scan, int closeAfter) throws Exception;
 
   protected final List<Result> convertFromBatchResult(List<Result> results) {
     assertTrue(results.size() % 2 == 0);
@@ -146,7 +145,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testScanAll() throws Exception {
-    List<Result> results = doScan(createScan());
+    List<Result> results = doScan(createScan(), -1);
     // make sure all scanners are closed at RS side
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
         .forEach(
@@ -170,7 +169,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanAll() throws Exception {
-    List<Result> results = doScan(createScan().setReversed(true));
+    List<Result> results = doScan(createScan().setReversed(true), -1);
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> assertResultEquals(results.get(i), COUNT - i - 1));
   }
@@ -179,7 +178,7 @@ public abstract class AbstractTestAsyncTableScan {
   public void testScanNoStopKey() throws Exception {
     int start = 345;
     List<Result> results =
-      doScan(createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))));
+      doScan(createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))), -1);
     assertEquals(COUNT - start, results.size());
     IntStream.range(0, COUNT - start).forEach(i -> assertResultEquals(results.get(i), start + i));
   }
@@ -188,7 +187,7 @@ public abstract class AbstractTestAsyncTableScan {
   public void testReverseScanNoStopKey() throws Exception {
     int start = 765;
     List<Result> results = doScan(
-      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true));
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true), -1);
     assertEquals(start + 1, results.size());
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
   }
@@ -196,7 +195,7 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testScanWrongColumnFamily() throws Exception {
     try {
-      doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")));
+      doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")), -1);
     } catch (Exception e) {
       assertTrue(e instanceof NoSuchColumnFamilyException ||
         e.getCause() instanceof NoSuchColumnFamilyException);
@@ -204,19 +203,27 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
+    int limit) throws Exception {
+    testScan(start, startInclusive, stop, stopInclusive, limit, -1);
+  }
+
+  private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
+      int limit, int closeAfter) throws Exception {
     Scan scan =
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
           .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
     if (limit > 0) {
       scan.setLimit(limit);
     }
-    List<Result> results = doScan(scan);
+    List<Result> results = doScan(scan, closeAfter);
     int actualStart = startInclusive ? start : start + 1;
     int actualStop = stopInclusive ? stop + 1 : stop;
     int count = actualStop - actualStart;
     if (limit > 0) {
       count = Math.min(count, limit);
+    }
+    if (closeAfter > 0) {
+      count = Math.min(count, closeAfter);
     }
     assertEquals(count, results.size());
     IntStream.range(0, count).forEach(i -> assertResultEquals(results.get(i), actualStart + i));
@@ -230,7 +237,7 @@ public abstract class AbstractTestAsyncTableScan {
     if (limit > 0) {
       scan.setLimit(limit);
     }
-    List<Result> results = doScan(scan);
+    List<Result> results = doScan(scan, -1);
     int actualStart = startInclusive ? start : start - 1;
     int actualStop = stopInclusive ? stop - 1 : stop;
     int count = actualStart - actualStop;
@@ -309,5 +316,14 @@ public abstract class AbstractTestAsyncTableScan {
     testReversedScan(654, true, 432, false, 200);
     testReversedScan(765, false, 543, true, 200);
     testReversedScan(876, false, 654, false, 200);
+  }
+
+  @Test
+  public void testScanEndingEarly() throws Exception {
+    testScan(1, true, 998, false, 0, 900); // from first region to last region
+    testScan(123, true, 234, true, 0, 100);
+    testScan(234, true, 456, false, 0, 100);
+    testScan(345, false, 567, true, 0, 100);
+    testScan(456, false, 678, false, 0, 100);
   }
 }

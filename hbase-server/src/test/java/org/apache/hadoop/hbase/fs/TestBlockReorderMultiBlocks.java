@@ -28,13 +28,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -42,7 +41,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -81,7 +81,7 @@ public class TestBlockReorderMultiBlocks {
 
   private Configuration conf;
   private MiniDFSCluster cluster;
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private DistributedFileSystem dfs;
   private static final String host1 = "host1";
   private static final String host2 = "host2";
@@ -92,7 +92,7 @@ public class TestBlockReorderMultiBlocks {
 
   @Before
   public void setUp() throws Exception {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
     htu.startMiniDFSCluster(3,
@@ -116,10 +116,9 @@ public class TestBlockReorderMultiBlocks {
     byte[] sb = Bytes.toBytes("sb");
     htu.startMiniZKCluster();
 
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
+    SingleProcessHBaseCluster hbm = htu.startMiniHBaseCluster();
     hbm.waitForActiveAndReadyMaster();
-    HRegionServer targetRs = LoadBalancer.isTablesOnMaster(hbm.getConf())? hbm.getMaster():
-      hbm.getRegionServer(0);
+    HRegionServer targetRs = hbm.getRegionServer(0);
 
     // We want to have a datanode with the same name as the region server, so
     //  we're going to get the regionservername, and start a new datanode with this name.
@@ -141,8 +140,8 @@ public class TestBlockReorderMultiBlocks {
 
     // Now we need to find the log file, its locations, and look at it
 
-    String rootDir = new Path(FSUtils.getWALRootDir(conf) + "/" + HConstants.HREGION_LOGDIR_NAME +
-            "/" + targetRs.getServerName().toString()).toUri().getPath();
+    String rootDir = new Path(CommonFSUtils.getWALRootDir(conf) + "/" +
+      HConstants.HREGION_LOGDIR_NAME + "/" + targetRs.getServerName().toString()).toUri().getPath();
 
     DistributedFileSystem mdfs = (DistributedFileSystem)
         hbm.getMaster().getMasterFileSystem().getFileSystem();
@@ -249,10 +248,10 @@ public class TestBlockReorderMultiBlocks {
     for (int i = 0; i < 10; i++) {
       LocatedBlocks l;
       // The NN gets the block list asynchronously, so we may need multiple tries to get the list
-      final long max = System.currentTimeMillis() + 10000;
+      final long max = EnvironmentEdgeManager.currentTime() + 10000;
       boolean done;
       do {
-        Assert.assertTrue("Can't get enouth replica.", System.currentTimeMillis() < max);
+        Assert.assertTrue("Can't get enouth replica", EnvironmentEdgeManager.currentTime() < max);
         l = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
         Assert.assertNotNull("Can't get block locations for " + src, l);
         Assert.assertNotNull(l.getLocatedBlocks());

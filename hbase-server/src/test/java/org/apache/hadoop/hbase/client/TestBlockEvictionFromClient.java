@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -81,7 +83,7 @@ public class TestBlockEvictionFromClient {
       HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[][] ROWS = new byte[2][];
   private static int NO_OF_THREADS = 3;
   private static byte[] ROW = Bytes.toBytes("testRow");
@@ -572,7 +574,15 @@ public class TestBlockEvictionFromClient {
     Table table = null;
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());
-      table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
+      TableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
+      // This test expects rpc refcount of cached data blocks to be 0 after split. After split,
+      // two daughter regions are opened and a compaction is scheduled to get rid of reference
+      // of the parent region hfiles. Compaction will increase refcount of cached data blocks by 1.
+      // It is flakey since compaction can kick in anytime. To solve this issue, table is created
+      // with compaction disabled.
+      table = TEST_UTIL.createTable(
+        TableDescriptorBuilder.newBuilder(desc).setCompactionEnabled(false).build(), FAMILIES_1,
+        null, BloomType.ROW, 1024, null);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
@@ -601,11 +611,18 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
       int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
-      LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
+      LOG.info("About to SPLIT on {} {}, count={}", Bytes.toString(ROW1), region.getRegionInfo(),
+        regionCount);
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
       TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
       region.compact(true);
+      List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegionServer(rs).getRegions();
+      for (HRegion r: regions) {
+        LOG.info("" + r.getCompactionState());
+        TEST_UTIL.waitFor(30000, () -> r.getCompactionState().equals(CompactionState.NONE));
+      }
+      LOG.info("Split finished, is region closed {} {}", region.isClosed(), cache);
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
@@ -1212,8 +1229,10 @@ public class TestBlockEvictionFromClient {
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
         refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("BucketCache {} {}", cacheKey, refCount);
       } else if (cache instanceof CombinedBlockCache) {
         refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("CombinedBlockCache {} {}", cacheKey, refCount);
       } else {
         continue;
       }
@@ -1460,12 +1479,13 @@ public class TestBlockEvictionFromClient {
 
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
+        store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

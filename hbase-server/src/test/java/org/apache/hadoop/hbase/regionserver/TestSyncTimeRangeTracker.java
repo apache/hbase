@@ -18,16 +18,15 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
-
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
 
   @ClassRule
@@ -51,7 +50,6 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
    * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive
    * at right range.  Here we do ten threads each incrementing over 100k at an offset
    * of the thread index; max is 10 * 10k and min is 0.
-   * @throws InterruptedException
    */
   @Test
   public void testArriveAtRightAnswer() throws InterruptedException {
@@ -66,10 +64,14 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
           int offset = Integer.parseInt(getName());
           boolean even = offset % 2 == 0;
           if (even) {
-            for (int i = (offset * calls); i < calls; i++) trr.includeTimestamp(i);
+            for (int i = (offset * calls); i < calls; i++) {
+              trr.includeTimestamp(i);
+            }
           } else {
             int base = offset * calls;
-            for (int i = base + calls; i >= base; i--) trr.includeTimestamp(i);
+            for (int i = base + calls; i >= base; i--) {
+              trr.includeTimestamp(i);
+            }
           }
         }
       };
@@ -93,14 +95,22 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
       if (ThreadLocalRandom.current().nextInt(NUM_OF_THREADS) % 2 == 0) {
         for (int i = 0; i < NUM_KEYS; i++) {
           keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
-          if (keys[i] < min) min = keys[i];
-          if (keys[i] > max) max = keys[i];
+          if (keys[i] < min) {
+            min = keys[i];
+          }
+          if (keys[i] > max) {
+            max = keys[i];
+          }
         }
       } else {
         for (int i = NUM_KEYS - 1; i >= 0; i--) {
           keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
-          if (keys[i] < min) min = keys[i];
-          if (keys[i] > max) max = keys[i];
+          if (keys[i] < min) {
+            min = keys[i];
+          }
+          if (keys[i] > max) {
+            max = keys[i];
+          }
         }
       }
     }

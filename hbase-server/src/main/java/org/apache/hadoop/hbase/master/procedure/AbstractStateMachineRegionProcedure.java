@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -76,19 +74,6 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   public void toStringClassDetails(final StringBuilder sb) {
     super.toStringClassDetails(sb);
     sb.append(", region=").append(getRegion().getShortNameToLog());
-  }
-
-  /**
-   * Check whether a table is modifiable - exists and either offline or online with config set
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  @Override
-  protected void checkTableModifiable(final MasterProcedureEnv env) throws IOException {
-    // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
-      throw new TableNotFoundException(getTableName());
-    }
   }
 
   @Override

@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,12 +46,11 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Handles backup requests, creates backup info records in backup system table to keep track of
@@ -101,7 +99,6 @@ public class BackupManager implements Closeable {
    * (TESTs only)
    * @param conf configuration
    */
-  @VisibleForTesting
   public static void decorateMasterConfiguration(Configuration conf) {
     if (!isBackupEnabled(conf)) {
       return;
@@ -137,7 +134,6 @@ public class BackupManager implements Closeable {
    * TESTs only.
    * @param conf configuration
    */
-  @VisibleForTesting
   public static void decorateRegionServerConfiguration(Configuration conf) {
     if (!isBackupEnabled(conf)) {
       return;
@@ -299,6 +295,15 @@ public class BackupManager implements Closeable {
           .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
           .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
 
+      // Only direct ancestors for a backup are required and not entire history of backup for this
+      // table resulting in verifying all of the previous backups which is unnecessary and backup
+      // paths need not be valid beyond the lifetime of a backup.
+      //
+      // RootDir is way of grouping a single backup including one full and many incremental backups
+      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
+        continue;
+      }
+
       // add the full backup image as an ancestor until the last incremental backup
       if (backup.getType().equals(BackupType.FULL)) {
         // check the backup image coverage, if previous image could be covered by the newer ones,
@@ -377,11 +382,11 @@ public class BackupManager implements Closeable {
    * @throws IOException if active session already exists
    */
   public void startBackupSession() throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = conf.getInt(BACKUP_EXCLUSIVE_OPERATION_TIMEOUT_SECONDS_KEY,
       DEFAULT_BACKUP_EXCLUSIVE_OPERATION_TIMEOUT) * 1000L;
     long lastWarningOutputTime = 0;
-    while (System.currentTimeMillis() - startTime < timeout) {
+    while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       try {
         systemTable.startBackupExclusiveOperation();
         return;
@@ -395,8 +400,8 @@ public class BackupManager implements Closeable {
             Thread.currentThread().interrupt();
           }
           if (lastWarningOutputTime == 0
-              || (System.currentTimeMillis() - lastWarningOutputTime) > 60000) {
-            lastWarningOutputTime = System.currentTimeMillis();
+              || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000) {
+            lastWarningOutputTime = EnvironmentEdgeManager.currentTime();
             LOG.warn("Waiting to acquire backup exclusive lock for {}s",
                 +(lastWarningOutputTime - startTime) / 1000);
           }
@@ -476,7 +481,7 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      HashMap<String, Long> newTimestamps) throws IOException {
+      Map<String, Long> newTimestamps) throws IOException {
     systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 
@@ -487,7 +492,7 @@ public class BackupManager implements Closeable {
    *         RegionServer,PreviousTimeStamp
    * @throws IOException exception
    */
-  public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap() throws IOException {
+  public Map<TableName, Map<String, Long>> readLogTimestampMap() throws IOException {
     return systemTable.readLogTimestampMap(backupInfo.getBackupRootDir());
   }
 
@@ -507,24 +512,6 @@ public class BackupManager implements Closeable {
    */
   public void addIncrementalBackupTableSet(Set<TableName> tables) throws IOException {
     systemTable.addIncrementalBackupTableSet(tables, backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Saves list of WAL files after incremental backup operation. These files will be stored until
-   * TTL expiration and are used by Backup Log Cleaner plug-in to determine which WAL files can be
-   * safely purged.
-   */
-  public void recordWALFiles(List<String> files) throws IOException {
-    systemTable.addWALFiles(files, backupInfo.getBackupId(), backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Get WAL files iterator.
-   * @return WAL files iterator from backup system table
-   * @throws IOException if getting the WAL files iterator fails
-   */
-  public Iterator<BackupSystemTable.WALItem> getWALFilesFromBackupSystem() throws IOException {
-    return systemTable.getWALFilesIterator(backupInfo.getBackupRootDir());
   }
 
   public Connection getConnection() {

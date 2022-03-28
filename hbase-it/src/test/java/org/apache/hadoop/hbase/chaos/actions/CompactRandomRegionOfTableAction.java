@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,60 +19,66 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Region that queues a compaction of a random region from the table.
  */
 public class CompactRandomRegionOfTableAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
+
   private final int majorRatio;
   private final long sleepTime;
   private final TableName tableName;
 
-  public CompactRandomRegionOfTableAction(
-      TableName tableName, float majorRatio) {
+  public CompactRandomRegionOfTableAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
   }
 
-  public CompactRandomRegionOfTableAction(
-      int sleepTime, TableName tableName, float majorRatio) {
+  public CompactRandomRegionOfTableAction(int sleepTime, TableName tableName, float majorRatio) {
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-    boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
+    boolean major = ThreadLocalRandom.current().nextInt(100) < majorRatio;
 
-    LOG.info("Performing action: Compact random region of table "
+    getLogger().info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);
     List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to compact");
+      getLogger().info("Table " + tableName + " doesn't have regions to compact");
       return;
     }
 
     RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new RegionInfo[regions.size()]));
+      regions.toArray(new RegionInfo[0]));
 
     try {
       if (major) {
-        LOG.debug("Major compacting region " + region.getRegionNameAsString());
+        getLogger().debug("Major compacting region " + region.getRegionNameAsString());
         admin.majorCompactRegion(region.getRegionName());
       } else {
-        LOG.debug("Compacting region " + region.getRegionNameAsString());
+        getLogger().debug("Compacting region " + region.getRegionNameAsString());
         admin.compactRegion(region.getRegionName());
       }
     } catch (Exception ex) {
-      LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

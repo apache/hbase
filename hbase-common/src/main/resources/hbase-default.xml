@@ -72,7 +72,10 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
+    <!--Ideally we should be using a hostname here instead of IP address. Please refer to
+    https://issues.apache.org/jira/browse/HBASE-23764 for why we switched to IP address. Should be
+    changed once we fix the underlying ZK issue.-->
+    <value>127.0.0.1</value>
     <description>Comma separated list of servers in the ZooKeeper ensemble
     (This config. should have been named hbase.zookeeper.ensemble).
     For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
@@ -122,7 +125,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALCleaner</value>
     <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
@@ -137,21 +140,14 @@ possible configurations would overwhelm and obscure the important.
     after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.master.procedurewalcleaner.ttl</name>
-    <value>604800000</value>
-    <description>How long a Procedure WAL will remain in the
-    archive directory, after which it will be cleaned
-    by a Master thread. The value is in milliseconds.</description>
-  </property>
-  <property>
     <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreHFileCleaner</value>
     <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in
+    default hfile cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
   </property>
   <property>
@@ -598,6 +594,13 @@ possible configurations would overwhelm and obscure the important.
     0 means never give up.</description>
   </property>
   <property>
+    <name>hbase.compaction.after.bulkload.enable</name>
+    <value>false</value>
+    <description>Request Compaction after bulkload immediately.
+      If bulkload is continuous, the triggered compactions may increase load,
+      bring about performance side effect.</description>
+  </property>
+  <property>
     <name>hbase.master.balancer.maxRitPercent</name>
     <value>1.0</value>
     <description>The max percent of regions in transition when balancing.
@@ -608,24 +611,61 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.balancer.period</name>
     <value>300000</value>
-    <description>Period at which the region balancer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.period</name>
-    <value>300000</value>
-    <description>Period at which the region normalizer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.min.region.count</name>
-    <value>3</value>
-    <description>configure the minimum number of regions</description>
+    <description>Period at which the region balancer runs in the Master, in
+      milliseconds.</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
-      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load balancer),
-      while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).</description>
+      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load
+      balancer), while the default is 0.2 in other load balancers (i.e.,
+      SimpleLoadBalancer).</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.period</name>
+    <value>300000</value>
+    <description>Period at which the region normalizer runs in the Master, in
+      milliseconds.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.split.enabled</name>
+    <value>true</value>
+    <description>Whether to split a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.enabled</name>
+    <value>true</value>
+    <description>Whether to merge a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min.region.count</name>
+    <value>3</value>
+    <description>The minimum number of regions in a table to consider it for merge
+      normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_size.mb</name>
+    <value>1</value>
+    <description>The minimum size for a region to be considered for a merge, in whole
+      MBs.</description>
+  </property>
+  <property>
+    <name>hbase.table.normalization.enabled</name>
+    <value>false</value>
+    <description>This config is used to set default behaviour of normalizer at table level.
+      To override this at table level one can set NORMALIZATION_ENABLED at table descriptor level
+      and that property will be honored</description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>
@@ -742,9 +782,16 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hregion.max.filesize</name>
     <value>10737418240</value>
-    <description>
-    Maximum HFile size. If the sum of the sizes of a region's HFiles has grown to exceed this
-    value, the region is split in two.</description>
+    <description>Maximum file size. If the sum of the sizes of a region's HFiles has
+      grown to exceed this value, the region is split in two. There are two choices of
+      how this option works, the first is when any store's size exceed the threshold
+      then split, and the other is overall region's size exceed the threshold then split,
+      it can be configed by hbase.hregion.split.overallfiles.</description>
+  </property>
+  <property>
+    <name>hbase.hregion.split.overallfiles</name>
+    <value>true</value>
+    <description>If we should sum overall region files size when check to split.</description>
   </property>
   <property>
     <name>hbase.hregion.majorcompaction</name>
@@ -804,14 +851,15 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.compaction.min</name>
-    <value>3</value>
+    <value></value>
     <description>The minimum number of StoreFiles which must be eligible for compaction before
       compaction can run. The goal of tuning hbase.hstore.compaction.min is to avoid ending up with
       too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction
       each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
       set this value too high, all the other values will need to be adjusted accordingly. For most
-      cases, the default value is appropriate. In previous versions of HBase, the parameter
-      hbase.hstore.compaction.min was named hbase.hstore.compactionThreshold.</description>
+      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In 
+      previous versions of HBase, the parameter hbase.hstore.compaction.min was named 
+      hbase.hstore.compactionThreshold.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.max</name>
@@ -999,9 +1047,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.bucketcache.size</name>
     <value></value>
-    <description>A float that EITHER represents a percentage of total heap memory
-    size to give to the cache (if &lt; 1.0) OR, it is the total capacity in
-    megabytes of BucketCache. Default: 0.0</description>
+    <description>It is the total capacity in megabytes of BucketCache. Default: 0.0</description>
   </property>
   <property>
     <name>hbase.bucketcache.bucket.sizes</name>
@@ -1085,19 +1131,19 @@ possible configurations would overwhelm and obscure the important.
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()</description>
   </property>
   <property>
-    <name>hbase.regionserver.hostname</name>
+    <name>hbase.unsafe.regionserver.hostname</name>
     <value></value>
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to a non-empty value, this represents the (external facing) hostname for the underlying server.
     See https://issues.apache.org/jira/browse/HBASE-12954 for details.</description>
   </property>
   <property>
-    <name>hbase.regionserver.hostname.disable.master.reversedns</name>
+    <name>hbase.unsafe.regionserver.hostname.disable.master.reversedns</name>
     <value>false</value>
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to true, regionserver will use the current node hostname for the servername and HMaster will
     skip reverse DNS lookup and use the hostname sent by regionserver instead. Note that this config and
-    hbase.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
+    hbase.unsafe.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
     for more details.</description>
   </property>
   <!-- The following properties configure authentication information for
@@ -1181,6 +1227,14 @@ possible configurations would overwhelm and obscure the important.
       to SIMPLE authentication, and will reject the connection.  WARNING: This setting should ONLY
       be used as a temporary measure while converting clients over to secure authentication.  It
       MUST BE DISABLED for secure operation.</description>
+  </property>
+  <property>
+    <name>hbase.unsafe.client.kerberos.hostname.disable.reversedns</name>
+    <value>false</value>
+    <description>This config is for experts: don't set its value unless you really know what you are doing.
+      When set to true, HBase client using SASL Kerberos will skip reverse DNS lookup and use provided
+      hostname of the destination for the principal instead. See https://issues.apache.org/jira/browse/HBASE-25665
+      for more details.</description>
   </property>
   <property>
     <name>hbase.display.keys</name>
@@ -1429,7 +1483,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>dfs.client.read.shortcircuit</name>
-    <value>false</value>
+    <value></value>
     <description>
       If set to true, this configuration parameter enables short-circuit local
       reads.
@@ -1437,7 +1491,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>dfs.domain.socket.path</name>
-    <value>none</value>
+    <value></value>
     <description>
       This is a path to a UNIX domain socket that will be used for
       communication between the DataNode and local HDFS clients, if
@@ -1688,11 +1742,8 @@ possible configurations would overwhelm and obscure the important.
     <value>false</value>
     <description>
       Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
-      If this is enabled, a replication peer named "region_replica_replication" will be created
-      which will tail the logs and replicate the mutations to region replicas for tables that
-      have region replication > 1. If this is enabled once, disabling this replication also
-      requires disabling the replication peer using shell or Admin java class.
-      Replication to secondary region replicas works over standard inter-cluster replication.
+      We have a separated implementation for replicating the WAL without using the general
+      inter-cluster replication framework, so now we will not add any replication peers.
     </description>
   </property>
   <property>
@@ -1794,10 +1845,10 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.master.mob.ttl.cleaner.period</name>
+    <name>hbase.master.mob.cleaner.period</name>
     <value>86400</value>
     <description>
-      The period that ExpiredMobFileCleanerChore runs. The unit is second.
+      The period that MobFileCleanerChore runs. The unit is second.
       The default value is one day. The MOB file name uses only the date part of
       the file creation time in it. We use this time for deciding TTL expiry of
       the files. So the removal of TTL expired files might be delayed. The max
@@ -1805,32 +1856,13 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.mob.compaction.mergeable.threshold</name>
-    <value>1342177280</value>
+    <name>hbase.mob.major.compaction.region.batch.size</name>
+    <value>0</value>
     <description>
-      If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged in mob compaction. The default value is 1280MB.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.delfile.max.count</name>
-    <value>3</value>
-    <description>
-      The max number of del files that is allowed in the mob compaction.
-      In the mob compaction, when the number of existing del files is larger than
-      this value, they are merged until number of del files is not larger this value.
-      The default value is 3.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compaction.batch.size</name>
-    <value>100</value>
-    <description>
-      The max number of the mob files that is allowed in a batch of the mob compaction.
-      The mob compaction merges the small mob files to bigger ones. If the number of the
-      small files is very large, it could lead to a "too many opened file handlers" in the merge.
-      And the merge has to be split into batches. This value limits the number of mob files
-      that are selected in a batch of the mob compaction. The default value is 100.
+      The max number of a MOB table regions that is allowed in a batch of the mob compaction. By
+      setting this number to a custom value, users can control the overall effect of a major
+      compaction of a large MOB-enabled table.
+      Default is 0 - means no limit - all regions of a MOB table will be compacted at once
     </description>
   </property>
   <property>
@@ -1839,20 +1871,6 @@ possible configurations would overwhelm and obscure the important.
     <description>
       The period that MobCompactionChore runs. The unit is second.
       The default value is one week.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compactor.class</name>
-    <value>org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor</value>
-    <description>
-      Implementation of mob compactor, the default one is PartitionedMobCompactor.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compaction.threads.max</name>
-    <value>1</value>
-    <description>
-      The max number of threads used in MobCompactor.
     </description>
   </property>
   <property>
@@ -1899,6 +1917,145 @@ possible configurations would overwhelm and obscure the important.
       Default Snapshot TTL to be considered when the user does not specify TTL while
       creating snapshot. Default value 0 indicates FOREVERE - snapshot should not be
       automatically deleted until it is manually deleted
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.regions.recovery.check.interval</name>
+    <value>1200000</value>
+    <description>
+      Regions Recovery Chore interval in milliseconds.
+      This chore keeps running at this interval to
+      find all regions with configurable max store file ref count
+      and reopens them.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regions.recovery.store.file.ref.count</name>
+    <value>-1</value>
+    <description>
+      Very large number of ref count on a compacted
+      store file indicates that it is a ref leak
+      on that object(compacted store file).
+      Such files can not be removed after
+      it is invalidated via compaction.
+      Only way to recover in such scenario is to
+      reopen the region which can release
+      all resources, like the refcount,
+      leases, etc. This config represents Store files Ref
+      Count threshold value considered for reopening
+      regions. Any region with compacted store files
+      ref count > this value would be eligible for
+      reopening by master. Here, we get the max
+      refCount among all refCounts on all
+      compacted away store files that belong to a
+      particular region. Default value -1 indicates
+      this feature is turned off. Only positive
+      integer value should be provided to
+      enable this feature.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.ringbuffer.size</name>
+    <value>256</value>
+    <description>
+      Default size of ringbuffer to be maintained by each RegionServer in order
+      to store online slowlog responses. This is an in-memory ring buffer of
+      requests that were judged to be too slow in addition to the responseTooSlow
+      logging. The in-memory representation would be complete.
+      For more details, please look into Doc Section:
+      Get Slow Response Log from shell
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether RegionServers have ring buffer running for storing
+      Online Slow logs in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
+      The default value is false, turn this on and get latest slowlog
+      responses with complete data.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.systable.enabled</name>
+    <value>false</value>
+    <description>
+      Should be enabled only if hbase.regionserver.slowlog.buffer.enabled is enabled. If enabled
+      (true), all slow/large RPC logs would be persisted to system table hbase:slowlog (in addition
+      to in-memory ring buffer at each RegionServer). The records are stored in increasing
+      order of time. Operators can scan the table with various combination of ColumnValueFilter.
+      More details are provided in the doc section:
+      "Get Slow/Large Response Logs from System table hbase:slowlog"
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.metafixer.max.merge.count</name>
+    <value>64</value>
+    <description>
+      Maximum regions to merge at a time when we fix overlaps noted in
+      CJ consistency report, but avoid merging 100 regions in one go!
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.rows.size.threshold.reject</name>
+    <value>false</value>
+    <description>
+      If value is true, RegionServer will abort batch requests of Put/Delete with number of rows
+      in a batch operation exceeding threshold defined by value of config:
+      hbase.rpc.rows.warning.threshold. The default value is false and hence, by default, only
+      warning will be logged. This config should be turned on to prevent RegionServer from serving
+      very large batch size of rows and this way we can improve CPU usages by discarding
+      too large batch request.
+    </description>
+  </property>
+  <property>
+    <name>hbase.namedqueue.provider.classes</name>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService</value>
+    <description>
+      Default values for NamedQueueService implementors. This comma separated full class names
+      represent all implementors of NamedQueueService that we would like to be invoked by
+      LogEvent handler service. One example of NamedQueue service is SlowLogQueueService which
+      is used to store slow/large RPC logs in ringbuffer at each RegionServer.
+      All implementors of NamedQueueService should be found under package:
+      "org.apache.hadoop.hbase.namequeues.impl"
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.balancer.decision.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer decisions in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.master.balancer.decision.queue.size
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.balancer.rejection.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer rejection in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.master.balancer.rejection.queue.size
+    </description>
+  </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.enabled</name>
+    <value>false</value>
+    <description>
+      If true, derive StoreFile locality metrics from the underlying DFSInputStream
+      backing reads for that StoreFile. This value will update as the DFSInputStream's
+      block locations are updated over time. Otherwise, locality is computed on StoreFile
+      open, and cached until the StoreFile is closed.
+    </description>
+  </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.cache.period</name>
+    <value>60000</value>
+    <description>
+      If deriving StoreFile locality metrics from the underlying DFSInputStream, how
+      long should the derived values be cached for. The derivation process may involve
+      hitting the namenode, if the DFSInputStream's block list is incomplete.
     </description>
   </property>
 </configuration>

@@ -18,24 +18,23 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.FileNotFoundException;
 import java.util.List;
-
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -115,7 +114,7 @@ public class FileLink {
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
         throws IOException {
-      this(fs, fileLink, FSUtils.getDefaultBufferSize(fs));
+      this(fs, fileLink, CommonFSUtils.getDefaultBufferSize(fs));
     }
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
@@ -125,6 +124,10 @@ public class FileLink {
       this.fs = fs;
 
       this.in = tryOpen();
+    }
+
+    private FSDataInputStream getUnderlyingInputStream() {
+      return in;
     }
 
     @Override
@@ -362,7 +365,7 @@ public class FileLink {
 
   @Override
   public String toString() {
-    StringBuilder str = new StringBuilder(getClass().getName());
+    StringBuilder str = new StringBuilder(getClass().getSimpleName());
     str.append(" locations=[");
     for (int i = 0; i < locations.length; ++i) {
       if (i > 0) str.append(", ");
@@ -393,7 +396,7 @@ public class FileLink {
         return locations[i];
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw new FileNotFoundException(toString());
   }
 
   /**
@@ -416,7 +419,7 @@ public class FileLink {
   }
 
   /**
-   * Handle exceptions which are threw when access locations of file link
+   * Handle exceptions which are thrown when access locations of file link
    * @param fileLink the file link
    * @param newException the exception caught by access the current location
    * @param previousException the previous exception caught by access the other locations
@@ -436,7 +439,7 @@ public class FileLink {
     if (newException instanceof FileNotFoundException) {
       // Try another file location
       if (previousException == null) {
-        previousException = new FileNotFoundException("Unable to open link: " + fileLink);
+        previousException = new FileNotFoundException(fileLink.toString());
       }
     } else if (newException instanceof AccessControlException) {
       // Try another file location
@@ -474,6 +477,17 @@ public class FileLink {
    */
   public FSDataInputStream open(final FileSystem fs, int bufferSize) throws IOException {
     return new FSDataInputStream(new FileLinkInputStream(fs, this, bufferSize));
+  }
+
+  /**
+   * If the passed FSDataInputStream is backed by a FileLink, returns the underlying
+   * InputStream for the resolved link target. Otherwise, returns null.
+   */
+  public static FSDataInputStream getUnderlyingFileLinkInputStream(FSDataInputStream stream) {
+    if (stream.getWrappedStream() instanceof FileLinkInputStream) {
+      return ((FileLinkInputStream) stream.getWrappedStream()).getUnderlyingInputStream();
+    }
+    return null;
   }
 
   /**
@@ -522,12 +536,13 @@ public class FileLink {
 
   /**
    * Checks if the specified directory path is a back reference links folder.
-   *
    * @param dirPath Directory path to verify
    * @return True if the specified directory is a link references folder
    */
   public static boolean isBackReferencesDir(final Path dirPath) {
-    if (dirPath == null) return false;
+    if (dirPath == null) {
+      return false;
+    }
     return dirPath.getName().startsWith(BACK_REFERENCES_DIRECTORY_PREFIX);
   }
 

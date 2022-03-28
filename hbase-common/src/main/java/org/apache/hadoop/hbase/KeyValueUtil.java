@@ -128,7 +128,13 @@ public class KeyValueUtil {
   }
 
   public static byte[] copyToNewByteArray(final Cell cell) {
-    int v1Length = cell.getSerializedSize();
+    //Cell#getSerializedSize returns the serialized size of the Source cell, which may
+    //not serialize all fields. We are constructing a KeyValue backing array here,
+    //which does include all fields, and must allocate accordingly.
+    //TODO we could probably use Cell#getSerializedSize safely, the errors were
+    //caused by cells corrupted by use-after-free bugs
+    int v1Length = length(cell.getRowLength(), cell.getFamilyLength(),
+      cell.getQualifierLength(), cell.getValueLength(), cell.getTagsLength(), true);
     byte[] backingBytes = new byte[v1Length];
     appendToByteArray(cell, backingBytes, 0, true);
     return backingBytes;
@@ -284,7 +290,7 @@ public class KeyValueUtil {
       final byte[] family, final int foffset, final int flength, final byte[] qualifier,
       final int qoffset, final int qlength) {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-        qlength, HConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+        qlength, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
   }
 
   /**

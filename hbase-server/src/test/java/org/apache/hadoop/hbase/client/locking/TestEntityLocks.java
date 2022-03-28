@@ -28,7 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -96,18 +97,18 @@ public class TestEntityLocks {
     admin = getAdmin();
     lockReqArgCaptor = ArgumentCaptor.forClass(LockRequest.class);
     lockHeartbeatReqArgCaptor = ArgumentCaptor.forClass(LockHeartbeatRequest.class);
-    procId = new Random().nextLong();
+    procId = ThreadLocalRandom.current().nextLong();
   }
 
   private boolean waitLockTimeOut(EntityLock lock, long maxWaitTimeMillis) {
-    long startMillis = System.currentTimeMillis();
+    long startMillis = EnvironmentEdgeManager.currentTime();
     while (lock.isLocked()) {
       LOG.info("Sleeping...");
       Threads.sleepWithoutInterrupt(100);
       if (!lock.isLocked()) {
         return true;
       }
-      if (System.currentTimeMillis() - startMillis > maxWaitTimeMillis) {
+      if (EnvironmentEdgeManager.currentTime() - startMillis > maxWaitTimeMillis) {
         LOG.info("Timedout...");
         return false;
       }
@@ -173,9 +174,12 @@ public class TestEntityLocks {
     lock.requestLock();
     lock.await();
     assertTrue(lock.isLocked());
-    // Should get unlocked in next heartbeat i.e. after workerSleepTime. Wait 2x time.
-    assertTrue(waitLockTimeOut(lock, 2 * workerSleepTime));
-    assertFalse(lock.getWorker().isAlive());
+    // Should get unlocked in next heartbeat i.e. after workerSleepTime. Wait 10x time to be sure.
+    assertTrue(waitLockTimeOut(lock, 10 * workerSleepTime));
+
+    // Works' run() returns, there is a small gap that the thread is still alive(os
+    // has not declare it is dead yet), so remove the following assertion.
+    // assertFalse(lock.getWorker().isAlive());
     verify(abortable, times(1)).abort(any(), eq(null));
   }
 

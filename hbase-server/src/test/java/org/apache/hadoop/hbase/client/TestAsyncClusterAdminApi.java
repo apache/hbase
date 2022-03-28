@@ -22,12 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -65,19 +62,19 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
 
-  private final Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
-  private final Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");
-  private final Path cnf3Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site3.xml");
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+
+    setUpConfigurationFiles(TEST_UTIL);
     TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
+
     TEST_UTIL.startMiniCluster(2);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    addResourceToRegionServerConfiguration(TEST_UTIL);
   }
 
   @Test
@@ -135,18 +132,6 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     });
 
     restoreHBaseSiteXML();
-  }
-
-  private void replaceHBaseSiteXML() throws IOException {
-    // make a backup of hbase-site.xml
-    Files.copy(cnfPath, cnf3Path, StandardCopyOption.REPLACE_EXISTING);
-    // update hbase-site.xml by overwriting it
-    Files.copy(cnf2Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
-  }
-
-  private void restoreHBaseSiteXML() throws IOException {
-    // restore hbase-site.xml
-    Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
   }
 
   @Test
@@ -265,6 +250,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterMetrics clusterStatus = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get();
+    assertEquals(servers.size(), clusterStatus.getLiveServerMetrics().size());
     for (Map.Entry<ServerName, ServerMetrics> entry :
       clusterStatus.getLiveServerMetrics().entrySet()) {
       ServerName sn = entry.getKey();
@@ -275,6 +261,26 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(serverName);
 
     }
+  }
+
+  @Test
+  public void testGetRegionServers() throws Exception{
+    List<ServerName> serverNames = new ArrayList<>(admin.getRegionServers(true).get());
+    assertEquals(2, serverNames.size());
+
+    List<ServerName> serversToDecom = new ArrayList<>();
+    ServerName serverToDecommission = serverNames.get(0);
+
+    serversToDecom.add(serverToDecommission);
+    admin.decommissionRegionServers(serversToDecom, false).join();
+
+    assertEquals(1, admin.getRegionServers(true).get().size());
+    assertEquals(2, admin.getRegionServers(false).get().size());
+
+    admin.recommissionRegionServer(serverToDecommission, Collections.emptyList()).join();
+
+    assertEquals(2, admin.getRegionServers(true).get().size());
+    assertEquals(2, admin.getRegionServers(false).get().size());
   }
 
   private void compareRegionLoads(Collection<RegionMetrics> regionLoadCluster,
@@ -317,7 +323,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       admin.createTable(builder.build(), Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), 16).join();
       AsyncTable<?> asyncTable = ASYNC_CONN.getTable(table);
       List<Put> puts = new ArrayList<>();
-      for (byte[] row : HBaseTestingUtility.ROWS) {
+      for (byte[] row : HBaseTestingUtil.ROWS) {
         puts.add(new Put(row).addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes("v")));
       }
       asyncTable.putAll(puts).join();

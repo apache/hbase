@@ -47,4 +47,10 @@ public interface MetricHistogram {
    */
   void add(long value);
 
+  /**
+   * Return the total number of values added to the histogram.
+   * @return the total number of values.
+   */
+  long getCount();
+
 }

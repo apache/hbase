@@ -35,10 +35,8 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -46,6 +44,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -55,13 +54,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
@@ -81,6 +81,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsReplication {
@@ -105,8 +107,8 @@ public class TestVisibilityLabelsReplication {
   public static final String SECRET = "secret";
   public static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
       + "\u0027&\\";
-  public static HBaseTestingUtility TEST_UTIL;
-  public static HBaseTestingUtility TEST_UTIL1;
+  public static HBaseTestingUtil TEST_UTIL;
+  public static HBaseTestingUtil TEST_UTIL1;
   public static final byte[] row1 = Bytes.toBytes("row1");
   public static final byte[] row2 = Bytes.toBytes("row2");
   public static final byte[] row3 = Bytes.toBytes("row3");
@@ -162,7 +164,7 @@ public class TestVisibilityLabelsReplication {
     // User.createUserForTesting(conf, User.getCurrent().getShortName(), new
     // String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZKWatcher(conf, "cluster1", null, true);
@@ -178,7 +180,7 @@ public class TestVisibilityLabelsReplication {
         TestCoprocessorForTagsAtSink.class.getName());
     // setVisibilityLabelServiceImpl(conf1);
     USER1 = User.createUserForTesting(conf1, "user1", new String[] {});
-    TEST_UTIL1 = new HBaseTestingUtility(conf1);
+    TEST_UTIL1 = new HBaseTestingUtil(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
     zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 
@@ -188,17 +190,16 @@ public class TestVisibilityLabelsReplication {
     TEST_UTIL1.startMiniCluster(1);
 
     admin = TEST_UTIL.getAdmin();
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(TEST_UTIL1.getClusterKey());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(TEST_UTIL1.getClusterKey()).build();
     admin.addReplicationPeer("2", rpc);
 
     Admin hBaseAdmin = TEST_UTIL.getAdmin();
-    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor desc = new HColumnDescriptor(fam);
-    desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(desc);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(fam).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     try {
-      hBaseAdmin.createTable(table);
+      hBaseAdmin.createTable(tableDescriptor);
     } finally {
       if (hBaseAdmin != null) {
         hBaseAdmin.close();
@@ -206,7 +207,7 @@ public class TestVisibilityLabelsReplication {
     }
     Admin hBaseAdmin1 = TEST_UTIL1.getAdmin();
     try {
-      hBaseAdmin1.createTable(table);
+      hBaseAdmin1.createTable(tableDescriptor);
     } finally {
       if (hBaseAdmin1 != null) {
         hBaseAdmin1.close();

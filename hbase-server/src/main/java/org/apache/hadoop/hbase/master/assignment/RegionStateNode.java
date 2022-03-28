@@ -36,8 +36,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Current Region State. Most fields are synchronized with meta region, i.e, we will update meta
  * immediately after we modify this RegionStateNode, and usually under the lock. The only exception
@@ -77,7 +75,6 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
-  @VisibleForTesting
   final Lock lock = new ReentrantLock();
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
@@ -167,6 +164,18 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return getProcedure() != null;
   }
 
+  /**
+   * Return whether the region has been split and not online.
+   * <p/>
+   * In this method we will test both region info and state, and will return true if either of the
+   * test returns true. Please see the comments in
+   * {@link AssignmentManager#markRegionAsSplit(RegionInfo, ServerName, RegionInfo, RegionInfo)} for
+   * more details on why we need to test two conditions.
+   */
+  public boolean isSplit() {
+    return regionInfo.isSplit() || isInState(State.SPLIT);
+  }
+
   public long getLastUpdate() {
     TransitRegionStateProcedure proc = this.procedure;
     if (proc != null) {
@@ -194,10 +203,11 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return lastRegionLocation;
   }
 
-  public void setProcedure(TransitRegionStateProcedure proc) {
+  public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
     ritMap.put(regionInfo, this);
+    return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
@@ -282,7 +292,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   public String toShortString() {
     // rit= is the current Region-In-Transition State -- see State enum.
-    return String.format("rit=%s, location=%s", getState(), getRegionLocation());
+    return String.format("state=%s, location=%s", getState(), getRegionLocation());
   }
 
   public String toDescriptiveString() {
@@ -294,7 +304,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     RegionInfo ri = getRegionInfo();
     State s = state;
     if (s != State.OPEN) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() + " is no OPEN; state=" + s);
+      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN; state=" + s);
     }
     if (ri.isSplitParent()) {
       throw new DoNotRetryRegionException(

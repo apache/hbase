@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Do different kinds of data block encoding according to column family
@@ -47,7 +47,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   public static HFileDataBlockEncoder createFromFileInfo(
-      FileInfo fileInfo) throws IOException {
+      HFileInfo fileInfo) throws IOException {
     DataBlockEncoding encoding = DataBlockEncoding.NONE;
     byte[] dataBlockEncodingType = fileInfo.get(DATA_BLOCK_ENCODING);
     if (dataBlockEncodingType != null) {
@@ -92,9 +92,9 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    return this.encoding.getEncoder().encode(cell, encodingCtx, out);
+    this.encoding.getEncoder().encode(cell, encodingCtx, out);
   }
 
   @Override
@@ -109,22 +109,23 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
+  public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       byte[] dummyHeader, HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
-      return encoder.newDataBlockEncodingContext(encoding, dummyHeader, fileContext);
+      return encoder.newDataBlockEncodingContext(conf, encoding, dummyHeader, fileContext);
     }
-    return new HFileBlockDefaultEncodingContext(null, dummyHeader, fileContext);
+    return new HFileBlockDefaultEncodingContext(conf, null, dummyHeader, fileContext);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext fileContext) {
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
-      return encoder.newDataBlockDecodingContext(fileContext);
+      return encoder.newDataBlockDecodingContext(conf, fileContext);
     }
-    return new HFileBlockDefaultDecodingContext(fileContext);
+    return new HFileBlockDefaultDecodingContext(conf, fileContext);
   }
 
   @Override

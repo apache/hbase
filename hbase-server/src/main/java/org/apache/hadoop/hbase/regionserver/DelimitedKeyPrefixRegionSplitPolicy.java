@@ -37,7 +37,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <code>userid_eventtype_eventid</code>, and use prefix delimiter _, this split policy
  * ensures that all rows starting with the same userid, belongs to the same region.
  * @see KeyPrefixRegionSplitPolicy
+ *
+ * @deprecated since 3.0.0 and will be removed in 4.0.0. Use {@link RegionSplitRestriction},
+ *   instead.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
 
@@ -46,6 +50,12 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
   public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
 
   private byte[] delimiter = null;
+
+  @Override
+  public String toString() {
+    return "DelimitedKeyPrefixRegionSplitPolicy{" + "delimiter=" + Bytes.toStringBinary(delimiter) +
+      ", " + super.toString() + '}';
+  }
 
   @Override
   protected void configureForRegion(HRegion region) {

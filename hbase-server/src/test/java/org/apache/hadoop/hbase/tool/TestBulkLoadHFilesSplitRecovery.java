@@ -41,7 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -90,7 +90,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
-  static HBaseTestingUtility util;
+  static HBaseTestingUtil util;
   // used by secure subclass
   static boolean useSecure = false;
 
@@ -227,7 +227,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     util.startMiniCluster(1);
   }
@@ -267,7 +267,8 @@ public class TestBulkLoadHFilesSplitRecovery {
   private static AsyncClusterConnection mockAndInjectError(AsyncClusterConnection conn) {
     AsyncClusterConnection errConn = spy(conn);
     doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn)
-      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean());
+      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(),
+        anyBoolean());
     return errConn;
   }
 
@@ -406,6 +407,33 @@ public class TestBulkLoadHFilesSplitRecovery {
     assertEquals(20, countedLqis.get());
   }
 
+  @Test
+  public void testCorrectSplitPoint() throws Exception {
+    final TableName table = TableName.valueOf(name.getMethodName());
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
+        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+        Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"),
+        Bytes.toBytes("row_00000070") };
+    setupTableWithSplitkeys(table, NUM_CFS, SPLIT_KEYS);
+
+    final AtomicInteger bulkloadRpcTimes = new AtomicInteger();
+    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(util.getConfiguration()) {
+
+      @Override
+      protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
+          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        bulkloadRpcTimes.addAndGet(1);
+        super.bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, item2RegionMap);
+      }
+    };
+
+    Path dir = buildBulkFiles(table, 1);
+    loader.bulkLoad(table, dir);
+    // before HBASE-25281 we need invoke bulkload rpc 8 times
+    assertEquals(4, bulkloadRpcTimes.get());
+  }
+
   /**
    * This test creates a table with many small regions. The bulk load files would be splitted
    * multiple times before all of them can be loaded successfully.
@@ -431,7 +459,8 @@ public class TestBulkLoadHFilesSplitRecovery {
     // HFiles have been splitted, there is TMP_DIR
     assertTrue(fs.exists(tmpPath));
     // TMP_DIR should have been cleaned-up
-    assertNull(BulkLoadHFilesTool.TMP_DIR + " should be empty.", FSUtils.listStatus(fs, tmpPath));
+    assertNull(BulkLoadHFilesTool.TMP_DIR + " should be empty.",
+      CommonFSUtils.listStatus(fs, tmpPath));
     assertExpectedTable(util.getConnection(), table, ROWCOUNT, 2);
   }
 
@@ -463,6 +492,55 @@ public class TestBulkLoadHFilesSplitRecovery {
     Path dir = buildBulkFiles(tableName, 1);
     loader.bulkLoad(tableName, dir);
   }
+
+  /**
+   * We are testing a split after initial validation but before the atomic bulk load call.
+   * We cannot use presplitting to test this path, so we actually inject a
+   * split just before the atomic region load. However, we will pass null item2RegionMap
+   * and that should not affect the bulk load behavior.
+   */
+  @Test
+  public void testSplitWhileBulkLoadPhaseWithoutItemMap() throws Exception {
+    final TableName table = TableName.valueOf(name.getMethodName());
+    setupTable(util.getConnection(), table, 10);
+    populateTable(util.getConnection(), table, 1);
+    assertExpectedTable(table, ROWCOUNT, 1);
+
+    // Now let's cause trouble. This will occur after checks and cause bulk
+    // files to fail when attempt to atomically import. This is recoverable.
+    final AtomicInteger attemptedCalls = new AtomicInteger();
+    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(util.getConfiguration()) {
+
+      @Override
+      protected void bulkLoadPhase(final AsyncClusterConnection conn, final TableName tableName,
+        final Deque<LoadQueueItem> queue, final Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        final boolean copyFiles,
+        final Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+
+        int i = attemptedCalls.incrementAndGet();
+        if (i == 1) {
+          // On first attempt force a split.
+          forceSplit(table);
+        }
+
+        // Passing item2RegionMap null
+        // In the absence of LoadQueueItem, bulk load should work as expected
+        super.bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, null);
+      }
+
+    };
+
+    // create HFiles for different column families
+    Path dir = buildBulkFiles(table, 2);
+    loader.bulkLoad(table, dir);
+
+    // check that data was loaded
+    // The three expected attempts are 1) failure because need to split, 2)
+    // load of split top 3) load of split bottom
+    assertEquals(3, attemptedCalls.get());
+    assertExpectedTable(table, ROWCOUNT, 2);
+  }
+
 
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.

@@ -26,17 +26,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -58,7 +57,7 @@ public class HFileTestUtil {
         + "compression) to use for data blocks in the test column family, "
         + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
   public static final String OPT_DATA_BLOCK_ENCODING =
-      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
+      ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
   /** Column family used by the test */
   public static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
   /** Column families used by the test */
@@ -120,12 +119,13 @@ public class HFileTestUtil {
     HFileContext meta = new HFileContextBuilder()
         .withIncludesTags(withTag)
         .withDataBlockEncoding(encoding)
+        .withColumnFamily(family)
         .build();
     HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
         .withPath(fs, path)
         .withFileContext(meta)
         .create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows - 2)) {
@@ -144,7 +144,8 @@ public class HFileTestUtil {
         writer.append(kv);
       }
     } finally {
-      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
       writer.close();
     }
   }

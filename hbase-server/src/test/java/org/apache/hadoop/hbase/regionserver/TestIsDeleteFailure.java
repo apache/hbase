@@ -20,8 +20,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -29,6 +28,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -49,7 +50,7 @@ import org.junit.rules.TestName;
  */
 @Category({ RegionServerTests.class, FilterTests.class, MediumTests.class })
 public class TestIsDeleteFailure {
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -73,7 +74,8 @@ public class TestIsDeleteFailure {
 
   @Test
   public void testIsDeleteFailure() throws Exception {
-    final HTableDescriptor table = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    final TableDescriptor table =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     final byte[] family = Bytes.toBytes("0");
     final byte[] c1 = Bytes.toBytes("C01");
     final byte[] c2 = Bytes.toBytes("C02");

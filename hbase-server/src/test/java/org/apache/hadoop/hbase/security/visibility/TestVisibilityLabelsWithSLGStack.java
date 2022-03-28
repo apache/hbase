@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -48,6 +47,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithSLGStack {
 
@@ -57,7 +58,7 @@ public class TestVisibilityLabelsWithSLGStack {
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
-  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] ROW_1 = Bytes.toBytes("row1");
   private final static byte[] CF = Bytes.toBytes("f");
   private final static byte[] Q1 = Bytes.toBytes("q1");

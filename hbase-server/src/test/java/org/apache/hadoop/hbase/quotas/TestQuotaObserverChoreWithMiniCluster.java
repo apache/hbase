@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
@@ -71,7 +71,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestQuotaObserverChoreWithMiniCluster.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final long DEFAULT_WAIT_MILLIS = 500;
 

@@ -46,7 +46,7 @@ public class BalancerChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      master.balance();
+      master.balanceOrUpdateMetrics();
     } catch (IOException e) {
       LOG.error("Failed to balance.", e);
     }

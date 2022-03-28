@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * member), {@link #insideBarrier()} (execute while globally barriered and release barrier) and
  * {@link #cleanup(Exception)} (release state associated with subprocedure.)
  *
- * When submitted to a ProcedureMemeber, the call method is executed in a separate thread.
+ * When submitted to a ProcedureMember, the call method is executed in a separate thread.
  * Latches are use too block its progress and trigger continuations when barrier conditions are
  * met.
  *
@@ -147,7 +147,7 @@ abstract public class Subprocedure implements Callable<Void> {
    * Execute the Subprocedure {@link #acquireBarrier()} and {@link #insideBarrier()} methods
    * while keeping some state for other threads to access.
    *
-   * This would normally be executed by the ProcedureMemeber when a acquire message comes from the
+   * This would normally be executed by the ProcedureMember when a acquire message comes from the
    * coordinator.  Rpcs are used to spend message back to the coordinator after different phases
    * are executed.  Any exceptions caught during the execution (except for InterruptedException) get
    * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendMemberAborted(

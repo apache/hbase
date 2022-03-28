@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is an abstraction of a segment maintained in a memstore, e.g., the active
@@ -181,7 +180,6 @@ public abstract class Segment implements MemStoreSizing {
   /**
    * Get cell length after serialized in {@link KeyValue}
    */
-  @VisibleForTesting
   static int getCellLength(Cell cell) {
     return cell.getSerializedSize();
   }
@@ -414,7 +412,6 @@ public abstract class Segment implements MemStoreSizing {
     return getCellSet().tailSet(firstCell);
   }
 
-  @VisibleForTesting
   MemStoreLAB getMemStoreLAB() {
     return memStoreLAB;
   }

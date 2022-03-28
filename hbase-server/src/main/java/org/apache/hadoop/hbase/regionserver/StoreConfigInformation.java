@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -53,4 +54,8 @@ public interface StoreConfigInformation {
    * The number of files required before flushes for this store will be blocked.
    */
   long getBlockingFileCount();
+
+  RegionInfo getRegionInfo();
+
+  String getColumnFamilyName();
 }

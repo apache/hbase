@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,21 +43,21 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   private static AsyncMetaRegionLocator LOCATOR;
 
-  private static final class FaultyAsyncRegistry extends DoNothingAsyncRegistry {
+  private static final class FaultyConnectionRegistry extends DoNothingConnectionRegistry {
 
-    public FaultyAsyncRegistry(Configuration conf) {
+    public FaultyConnectionRegistry(Configuration conf) {
       super(conf);
     }
 
     @Override
-    public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+    public CompletableFuture<RegionLocations> getMetaRegionLocations() {
       return FutureUtils.failedFuture(new DoNotRetryRegionException("inject error"));
     }
   }
 
   @BeforeClass
   public static void setUp() {
-    LOCATOR = new AsyncMetaRegionLocator(new FaultyAsyncRegistry(CONF));
+    LOCATOR = new AsyncMetaRegionLocator(new FaultyConnectionRegistry(CONF));
   }
 
   @Test(expected = DoNotRetryIOException.class)

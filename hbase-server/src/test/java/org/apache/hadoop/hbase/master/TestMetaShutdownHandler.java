@@ -24,14 +24,15 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -56,12 +57,12 @@ public class TestMetaShutdownHandler {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetaShutdownHandler.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   final static Configuration conf = TEST_UTIL.getConfiguration();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(3).rsClass(MyRegionServer.class).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
@@ -83,24 +84,26 @@ public class TestMetaShutdownHandler {
    */
   @Test
   public void testExpireMetaRegionServer() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    ServerName metaServerName = regionStates.getRegionServerOfRegion(
-      HRegionInfo.FIRST_META_REGIONINFO);
-    if (master.getServerName().equals(metaServerName) || metaServerName == null
-        || !metaServerName.equals(cluster.getServerHoldingMeta())) {
+    ServerName metaServerName =
+      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    if (master.getServerName().equals(metaServerName) || metaServerName == null ||
+      !metaServerName.equals(cluster.getServerHoldingMeta())) {
       // Move meta off master
       metaServerName =
-          cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
-      master.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+        cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
+      master.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(metaServerName.getServerName()));
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      metaServerName = regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
+      metaServerName =
+        regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
     }
     RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
     assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
     assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
+    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerName);
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
@@ -112,6 +115,7 @@ public class TestMetaShutdownHandler {
     // Wait for SSH to finish
     final ServerManager serverManager = master.getServerManager();
     final ServerName priorMetaServerName = metaServerName;
+    TEST_UTIL.waitFor(60000, 100, () -> metaRegionServer.isStopped());
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -123,15 +127,14 @@ public class TestMetaShutdownHandler {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     // Now, make sure meta is assigned
     assertTrue("Meta should be assigned",
-      regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+      regionStates.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // Now, make sure meta is registered in zk
     metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Meta should not be in transition", RegionState.State.OPEN,
-        metaState.getState());
+    assertEquals("Meta should not be in transition", RegionState.State.OPEN, metaState.getState());
     assertEquals("Meta should be assigned", metaState.getServerName(),
-      regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
-    assertNotEquals("Meta should be assigned on a different server",
-      metaState.getServerName(), metaServerName);
+      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    assertNotEquals("Meta should be assigned on a different server", metaState.getServerName(),
+      metaServerName);
   }
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {

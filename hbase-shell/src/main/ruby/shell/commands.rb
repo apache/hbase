@@ -137,7 +137,11 @@ module Shell
           raise "Table #{cause.message} should be disabled!"
         end
         if cause.is_a?(org.apache.hadoop.hbase.UnknownRegionException)
-          raise "Unknown region #{args.first}!"
+          raise cause.message
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.exceptions.MergeRegionException)
+          strs = cause.message.split("\n")
+          raise(strs[0]).to_s unless strs.empty?
         end
         if cause.is_a?(org.apache.hadoop.hbase.NamespaceNotFoundException)
           s = /.*NamespaceNotFoundException: (?<namespace>[^\n]+).*/.match(cause.message)

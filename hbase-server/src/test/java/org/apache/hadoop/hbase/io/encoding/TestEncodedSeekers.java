@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.util.Strings;
@@ -58,7 +58,7 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Tests encoded seekers by loading and reading values.
  */
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestEncodedSeekers {
 
@@ -79,7 +79,7 @@ public class TestEncodedSeekers {
   private static final int NUM_HFILES = 4;
   private static final int NUM_ROWS_PER_FLUSH = NUM_ROWS / NUM_HFILES;
 
-  private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private final DataBlockEncoding encoding;
   private final boolean includeTags;
   private final boolean compressTags;

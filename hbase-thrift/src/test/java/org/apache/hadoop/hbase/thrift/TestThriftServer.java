@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,28 +25,34 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -58,9 +64,15 @@ import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
+import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -82,7 +94,7 @@ public class TestThriftServer {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestThriftServer.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftServer.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
@@ -241,7 +253,9 @@ public class TestThriftServer {
 
   public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
-    assertEquals(0, handler.getTableNames().size());
+    List<java.nio.ByteBuffer> bbs = handler.getTableNames();
+    assertEquals(bbs.stream().map(b -> Bytes.toString(b.array())).
+      collect(Collectors.joining(",")), 0, bbs.size());
     handler.createTable(tableAname, getColumnDescriptors());
     assertEquals(1, handler.getTableNames().size());
     assertEquals(2, handler.getColumnDescriptors(tableAname).size());
@@ -402,13 +416,13 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
+    long time1 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
+    long time2 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     // Apply an overlapping timestamped mutation to rowB
@@ -480,7 +494,7 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
+    long time1 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     // Sleep to assure that 'time1' and 'time2' will be different even with a
@@ -488,7 +502,7 @@ public class TestThriftServer {
     Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
+    long time2 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     time1 += 1;
@@ -640,7 +654,7 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
     try {
       handler.mutateRow(tableAname, rowAname, getMutations(), null);
-      byte[] searchRow = HRegionInfo.createRegionName(
+      byte[] searchRow = RegionInfo.createRegionName(
           TableName.valueOf(tableAname.array()), rowAname.array(),
           HConstants.NINES, false);
       TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));
@@ -713,50 +727,84 @@ public class TestThriftServer {
   }
 
   @Test
+  public void testGetTableNamesWithStatus() throws Exception{
+    ThriftHBaseServiceHandler handler =
+      new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+        UserProvider.instantiate(UTIL.getConfiguration()));
+
+    createTestTables(handler);
+
+    assertEquals(2, handler.getTableNamesWithIsTableEnabled().size());
+    assertEquals(2, countTablesByStatus(true, handler));
+    handler.disableTable(tableBname);
+    assertEquals(1, countTablesByStatus(true, handler));
+    assertEquals(1, countTablesByStatus(false, handler));
+    assertEquals(2, handler.getTableNamesWithIsTableEnabled().size());
+    handler.enableTable(tableBname);
+    assertEquals(2, countTablesByStatus(true, handler));
+
+    dropTestTables(handler);
+  }
+
+  private static int countTablesByStatus(Boolean isEnabled, Hbase.Iface handler) throws Exception {
+    AtomicInteger counter = new AtomicInteger(0);
+    handler.getTableNamesWithIsTableEnabled().forEach(
+      (table, tableStatus) -> {
+        if (tableStatus.equals(isEnabled)) counter.getAndIncrement();
+      });
+    return counter.get();
+  }
+
+  @Test
   public void testMetricsWithException() throws Exception {
     String rowkey = "row1";
     String family = "f";
     String col = "c";
     // create a table which will throw exceptions for requests
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
+    try {
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setCoprocessor(ErrorThrowingGetObserver.class.getName())
+        .setColumnFamily(columnFamilyDescriptor).build();
 
-    Table table = UTIL.createTable(tableDesc, null);
-    long now = System.currentTimeMillis();
-    table.put(new Put(Bytes.toBytes(rowkey))
+      Table table = UTIL.createTable(tableDescriptor, null);
+      long now = EnvironmentEdgeManager.currentTime();
+      table.put(new Put(Bytes.toBytes(rowkey))
         .addColumn(Bytes.toBytes(family), Bytes.toBytes(col), now, Bytes.toBytes("val1")));
 
-    Configuration conf = UTIL.getConfiguration();
-    ThriftMetrics metrics = getMetrics(conf);
-    ThriftHBaseServiceHandler hbaseHandler =
-        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
-            UserProvider.instantiate(UTIL.getConfiguration()));
-    Hbase.Iface handler = HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, conf);
+      Configuration conf = UTIL.getConfiguration();
+      ThriftMetrics metrics = getMetrics(conf);
+      ThriftHBaseServiceHandler hbaseHandler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(), UserProvider.instantiate(UTIL.getConfiguration()));
+      Hbase.Iface handler = HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, conf);
 
-    ByteBuffer tTableName = asByteBuffer(tableName.getNameAsString());
+      ByteBuffer tTableName = asByteBuffer(tableName.getNameAsString());
 
-    // check metrics increment with a successful get
-    long preGetCounter = metricsHelper.checkCounterExists("getRow_num_ops", metrics.getSource()) ?
+      // check metrics increment with a successful get
+      long preGetCounter = metricsHelper.checkCounterExists("getRow_num_ops", metrics.getSource()) ?
         metricsHelper.getCounter("getRow_num_ops", metrics.getSource()) :
         0;
-    List<TRowResult> tRowResult = handler.getRow(tTableName, asByteBuffer(rowkey), null);
-    assertEquals(1, tRowResult.size());
-    TRowResult tResult = tRowResult.get(0);
+      List<TRowResult> tRowResult = handler.getRow(tTableName, asByteBuffer(rowkey), null);
+      assertEquals(1, tRowResult.size());
+      TRowResult tResult = tRowResult.get(0);
 
-    TCell expectedColumnValue = new TCell(asByteBuffer("val1"), now);
+      TCell expectedColumnValue = new TCell(asByteBuffer("val1"), now);
 
-    assertArrayEquals(Bytes.toBytes(rowkey), tResult.getRow());
-    Collection<TCell> returnedColumnValues = tResult.getColumns().values();
-    assertEquals(1, returnedColumnValues.size());
-    assertEquals(expectedColumnValue, returnedColumnValues.iterator().next());
+      assertArrayEquals(Bytes.toBytes(rowkey), tResult.getRow());
+      Collection<TCell> returnedColumnValues = tResult.getColumns().values();
+      assertEquals(1, returnedColumnValues.size());
+      assertEquals(expectedColumnValue, returnedColumnValues.iterator().next());
 
-    metricsHelper.assertCounter("getRow_num_ops", preGetCounter + 1, metrics.getSource());
+      metricsHelper.assertCounter("getRow_num_ops", preGetCounter + 1, metrics.getSource());
 
-    // check metrics increment when the get throws each exception type
-    for (ErrorThrowingGetObserver.ErrorType type : ErrorThrowingGetObserver.ErrorType.values()) {
-      testExceptionType(handler, metrics, tTableName, rowkey, type);
+      // check metrics increment when the get throws each exception type
+      for (ErrorThrowingGetObserver.ErrorType type : ErrorThrowingGetObserver.ErrorType.values()) {
+        testExceptionType(handler, metrics, tTableName, rowkey, type);
+      }
+    } finally {
+      UTIL.deleteTable(tableName);
     }
   }
 
@@ -870,5 +918,36 @@ public class TestThriftServer {
       int scannerId, ThriftHBaseServiceHandler handler) throws Exception {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
+  }
+
+  @Test
+  public void testGetThriftServerType() throws Exception {
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
+    assertEquals(TThriftServerType.ONE, handler.getThriftServerType());
+  }
+
+  /**
+   * Verify that thrift client calling thrift2 server can get the thrift2 server type correctly.
+   */
+  @Test
+  public void testGetThriftServerOneType() throws Exception {
+    // start a thrift2 server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+
+    LOG.info("Starting HBase Thrift Server Two");
+    THRIFT_TEST_UTIL.startThriftServer(UTIL.getConfiguration(), ThriftServerType.TWO);
+    try (TTransport transport = new TSocket(InetAddress.getLocalHost().getHostName(),
+        THRIFT_TEST_UTIL.getServerPort())){
+      TProtocol protocol = new TBinaryProtocol(transport);
+      // This is our thrift client.
+      Hbase.Client client = new Hbase.Client(protocol);
+      // open the transport
+      transport.open();
+      assertEquals(TThriftServerType.TWO.name(), client.getThriftServerType().name());
+    } finally {
+      THRIFT_TEST_UTIL.stopThriftServer();
+    }
   }
 }

@@ -24,21 +24,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -85,7 +82,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -157,7 +153,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   public static class SlowMeCoproScanOperations implements RegionCoprocessor, RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
-    Random r = new Random();
     AtomicLong countOfNext = new AtomicLong(0);
     AtomicLong countOfOpen = new AtomicLong(0);
     public SlowMeCoproScanOperations() {}
@@ -213,7 +208,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     TableDescriptor desc = admin.getDescriptor(t);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(desc);
     builder.setCoprocessor(SlowMeCoproScanOperations.class.getName());
-    HBaseTestingUtility.modifyTableSync(admin, builder.build());
+    admin.modifyTable(builder.build());
   }
 
   @Test
@@ -254,7 +249,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
     TableName t = getTablename();
-    HBaseTestingUtility.setReplicas(util.getAdmin(), t, replicaCount);
+    HBaseTestingUtil.setReplicas(util.getAdmin(), t, replicaCount);
   }
 
   private void runLinkedListMRJob(int iteration) throws Exception {
@@ -375,7 +370,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       taskId = taskId + iteration * numMapTasks;
       numMapTasks = numMapTasks * numIterations;
 
-      long chainId = Math.abs(new Random().nextLong());
+      long chainId = Math.abs(ThreadLocalRandom.current().nextLong());
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per task and across iterations
       LongWritable[] keys = new LongWritable[] {new LongWritable(chainId)};
 
@@ -393,8 +388,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   public static class LinkedListCreationMapper
       extends Mapper<LongWritable, LongWritable, ImmutableBytesWritable, KeyValue> {
 
-    private Random rand = new Random();
-
     @Override
     protected void map(LongWritable key, LongWritable value, Context context)
         throws IOException, InterruptedException {
@@ -406,6 +399,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
       long chainLength = context.getConfiguration().getLong(CHAIN_LENGTH_KEY, CHAIN_LENGTH);
       long nextRow = getNextRow(0, chainLength);
+      byte[] valueBytes = new byte[50];
 
       for (long i = 0; i < chainLength; i++) {
         byte[] rk = Bytes.toBytes(currentRow);
@@ -415,9 +409,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         // What link in the chain this is.
         KeyValue sortKv = new KeyValue(rk, SORT_FAM, chainIdArray, Bytes.toBytes(i));
         // Added data so that large stores are created.
-        KeyValue dataKv = new KeyValue(rk, DATA_FAM, chainIdArray,
-          Bytes.toBytes(RandomStringUtils.randomAlphabetic(50))
-        );
+        Bytes.random(valueBytes);
+        KeyValue dataKv = new KeyValue(rk, DATA_FAM, chainIdArray, valueBytes);
 
         // Emit the key values.
         context.write(new ImmutableBytesWritable(rk), linkKv);
@@ -431,7 +424,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     /** Returns a unique row id within this chain for this index */
     private long getNextRow(long index, long chainLength) {
-      long nextRow = Math.abs(rand.nextLong());
+      long nextRow = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
       // use significant bits from the random number, but pad with index to ensure it is unique
       // this also ensures that we do not reuse row = 0
       // row collisions from multiple mappers are fine, since we guarantee unique chainIds
@@ -707,7 +700,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     Scan scan = new Scan();
     scan.addFamily(CHAIN_FAM);
     scan.addFamily(SORT_FAM);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     scan.setCacheBlocks(false);
     scan.setBatch(1000);
 
@@ -749,10 +742,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     // Scale this up on a real cluster
     if (util.isDistributedCluster()) {
       util.getConfiguration().setIfUnset(NUM_MAPS_KEY,
-          Integer.toString(util.getAdmin()
-                               .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-                               .getLiveServerMetrics().size() * 10)
-      );
+        Integer.toString(util.getAdmin().getRegionServers().size() * 10));
       util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "5");
     } else {
       util.startMiniMapReduceCluster();

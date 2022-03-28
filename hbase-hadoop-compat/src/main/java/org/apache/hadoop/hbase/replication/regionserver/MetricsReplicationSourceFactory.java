@@ -24,5 +24,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MetricsReplicationSourceFactory {
   public MetricsReplicationSinkSource getSink();
   public MetricsReplicationSourceSource getSource(String id);
-  public MetricsReplicationSourceSource getGlobalSource();
+  public MetricsReplicationTableSource getTableSource(String tableName);
+  public MetricsReplicationGlobalSourceSourceImpl getGlobalSource();
 }

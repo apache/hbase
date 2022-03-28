@@ -30,7 +30,7 @@ sys.path.append(gen_py_path)
 from thrift import Thrift
 from thrift.transport import TSocket, TTransport
 from thrift.protocol import TBinaryProtocol
-from hbase import ttypes
+from hbase.ttypes import TThriftServerType
 from hbase.Hbase import Client, ColumnDescriptor, Mutation
 
 def printVersions(row, versions):
@@ -65,6 +65,11 @@ def demo_client(host, port, is_framed_transport):
 
   # Connect!
   transport.open()
+
+  # Check Thrift Server Type
+  serverType = client.getThriftServerType()
+  if serverType != TThriftServerType.ONE:
+    raise Exception("Mismatch between client and server, server type is %s" % serverType)
 
   t = "demo_table"
 

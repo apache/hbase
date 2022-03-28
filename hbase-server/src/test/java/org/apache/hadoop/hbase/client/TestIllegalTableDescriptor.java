@@ -26,12 +26,10 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -56,7 +54,7 @@ public class TestIllegalTableDescriptor {
   // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
   private static final Logger LOGGER;
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
 
@@ -85,115 +83,125 @@ public class TestIllegalTableDescriptor {
 
   @Test
   public void testIllegalTableDescriptor() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
     // create table with 0 families
-    checkTableIsIllegal(htd);
-    htd.addFamily(hcd);
-    checkTableIsLegal(htd);
+    checkTableIsIllegal(builder.build());
+    checkTableIsLegal(builder.setColumnFamily(cfBuilder.build()).build());
 
-    htd.setMaxFileSize(1024); // 1K
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(1024 * 1024 * 1024); // 1G
-    checkTableIsLegal(htd);
+    builder.setMaxFileSize(1024); // 1K
+    checkTableIsIllegal(builder.build());
+    builder.setMaxFileSize(0);
+    checkTableIsIllegal(builder.build());
+    builder.setMaxFileSize(1024 * 1024 * 1024); // 1G
+    checkTableIsLegal(builder.build());
 
-    htd.setMemStoreFlushSize(1024);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
-    checkTableIsLegal(htd);
+    builder.setMemStoreFlushSize(1024);
+    checkTableIsIllegal(builder.build());
+    builder.setMemStoreFlushSize(0);
+    checkTableIsIllegal(builder.build());
+    builder.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
+    checkTableIsLegal(builder.build());
 
-    htd.setRegionSplitPolicyClassName("nonexisting.foo.class");
-    checkTableIsIllegal(htd);
-    htd.setRegionSplitPolicyClassName(null);
-    checkTableIsLegal(htd);
+    builder.setRegionSplitPolicyClassName("nonexisting.foo.class");
+    checkTableIsIllegal(builder.build());
+    builder.setRegionSplitPolicyClassName(null);
+    checkTableIsLegal(builder.build());
 
-    hcd.setBlocksize(0);
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024 * 1024 * 128); // 128M
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024);
-    checkTableIsLegal(htd);
+    builder.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
+    checkTableIsIllegal(builder.build());
+    builder.removeValue(Bytes.toBytes(HConstants.HBASE_REGION_SPLIT_POLICY_KEY));
+    checkTableIsLegal(builder.build());
 
-    hcd.setTimeToLive(0);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(-1);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(1);
-    checkTableIsLegal(htd);
+    cfBuilder.setBlocksize(0);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setBlocksize(1024 * 1024 * 128); // 128M
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setBlocksize(1024);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    hcd.setMinVersions(-1);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
+    cfBuilder.setTimeToLive(0);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setTimeToLive(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setTimeToLive(1);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+
+    cfBuilder.setMinVersions(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setMinVersions(3);
     try {
-      hcd.setMaxVersions(2);
+      cfBuilder.setMaxVersions(2);
       fail();
     } catch (IllegalArgumentException ex) {
       // expected
-      hcd.setMaxVersions(10);
+      cfBuilder.setMaxVersions(10);
     }
-    checkTableIsLegal(htd);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
     // HBASE-13776 Setting illegal versions for HColumnDescriptor
     //  does not throw IllegalArgumentException
     // finally, minVersions must be less than or equal to maxVersions
-    hcd.setMaxVersions(4);
-    hcd.setMinVersions(5);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
+    cfBuilder.setMaxVersions(4);
+    cfBuilder.setMinVersions(5);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setMinVersions(3);
 
-    hcd.setScope(-1);
-    checkTableIsIllegal(htd);
-    hcd.setScope(0);
-    checkTableIsLegal(htd);
+    cfBuilder.setScope(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setScope(0);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
     try {
-      hcd.setDFSReplication((short) -1);
+      cfBuilder.setDFSReplication((short) -1);
       fail("Illegal value for setDFSReplication did not throw");
     } catch (IllegalArgumentException e) {
       // pass
     }
     // set an illegal DFS replication value by hand
-    hcd.setValue(HColumnDescriptor.DFS_REPLICATION, "-1");
-    checkTableIsIllegal(htd);
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.DFS_REPLICATION, "-1");
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
     try {
-      hcd.setDFSReplication((short) -1);
+      cfBuilder.setDFSReplication((short) -1);
       fail("Should throw exception if an illegal value is explicitly being set");
     } catch (IllegalArgumentException e) {
       // pass
     }
 
     // check the conf settings to disable sanity checks
-    htd.setMemStoreFlushSize(0);
+    builder.setMemStoreFlushSize(0);
 
     // Check that logs warn on invalid table but allow it.
-    htd.setConfiguration(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
-    checkTableIsLegal(htd);
+    builder.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
+    checkTableIsLegal(builder.build());
 
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
         + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
         + "cause very frequent flushing."));
   }
 
-  private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
+  private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
-    assertTrue(admin.tableExists(htd.getTableName()));
-    TEST_UTIL.deleteTable(htd.getTableName());
+    admin.createTable(tableDescriptor);
+    assertTrue(admin.tableExists(tableDescriptor.getTableName()));
+    TEST_UTIL.deleteTable(tableDescriptor.getTableName());
   }
 
-  private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
+  private void checkTableIsIllegal(TableDescriptor tableDescriptor) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     try {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
       fail();
     } catch(Exception ex) {
       // should throw ex
     }
-    assertFalse(admin.tableExists(htd.getTableName()));
+    assertFalse(admin.tableExists(tableDescriptor.getTableName()));
   }
 }

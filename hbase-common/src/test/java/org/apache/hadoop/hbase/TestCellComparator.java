@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -139,14 +140,14 @@ public class TestCellComparator {
    */
   @Test
   public void testMetaComparisons() throws Exception {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     // Meta compares
     Cell aaa = createByteBufferKeyValueFromKeyValue(new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now));
     Cell bbb = createByteBufferKeyValueFromKeyValue(new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now));
-    CellComparator c = CellComparatorImpl.META_COMPARATOR;
+    CellComparator c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(bbb, aaa) < 0);
 
     Cell ccc = createByteBufferKeyValueFromKeyValue(
@@ -176,8 +177,8 @@ public class TestCellComparator {
    */
   @Test
   public void testMetaComparisons2() {
-    long now = System.currentTimeMillis();
-    CellComparator c = CellComparatorImpl.META_COMPARATOR;
+    long now = EnvironmentEdgeManager.currentTime();
+    CellComparator c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
             Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)),
         createByteBufferKeyValueFromKeyValue(new KeyValue(
@@ -240,7 +241,7 @@ public class TestCellComparator {
     }
     assertTrue(assertion);
     // Make set with good comparator
-    set = new TreeSet<>(CellComparatorImpl.META_COMPARATOR);
+    set = new TreeSet<>(MetaCellComparator.META_COMPARATOR);
     Collections.addAll(set, keys);
     count = 0;
     for (Cell k: set) {

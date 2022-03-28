@@ -21,9 +21,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -195,36 +193,43 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
-      @Override
-      protected void decodeNext() {
-        current.keyLength = ByteBuff.readCompressedInt(currentBuffer);
-        current.valueLength = ByteBuff.readCompressedInt(currentBuffer);
-        current.lastCommonPrefix = ByteBuff.readCompressedInt(currentBuffer);
-        current.keyLength += current.lastCommonPrefix;
-        current.ensureSpaceForKey();
-        currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.keyLength - current.lastCommonPrefix);
-        current.valueOffset = currentBuffer.position();
-        currentBuffer.skip(current.valueLength);
-        if (includesTags()) {
-          decodeTags();
-        }
-        if (includesMvcc()) {
-          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
-        } else {
-          current.memstoreTS = 0;
-        }
-        current.nextKvOffset = currentBuffer.position();
-      }
+  public EncodedSeeker createSeeker(final HFileBlockDecodingContext decodingCtx) {
+    return new SeekerStateBufferedEncodedSeeker(decodingCtx);
+  }
 
-      @Override
-      protected void decodeFirst() {
-        currentBuffer.skip(Bytes.SIZEOF_INT);
-        decodeNext();
+  private static class SeekerStateBufferedEncodedSeeker
+      extends BufferedEncodedSeeker<SeekerState> {
+
+    private SeekerStateBufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
+      super(decodingCtx);
+    }
+
+    @Override
+    protected void decodeNext() {
+      current.keyLength = ByteBuff.readCompressedInt(currentBuffer);
+      current.valueLength = ByteBuff.readCompressedInt(currentBuffer);
+      current.lastCommonPrefix = ByteBuff.readCompressedInt(currentBuffer);
+      current.keyLength += current.lastCommonPrefix;
+      current.ensureSpaceForKey();
+      currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
+          current.keyLength - current.lastCommonPrefix);
+      current.valueOffset = currentBuffer.position();
+      currentBuffer.skip(current.valueLength);
+      if (includesTags()) {
+        decodeTags();
       }
-    };
+      if (includesMvcc()) {
+        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+      } else {
+        current.memstoreTS = 0;
+      }
+      current.nextKvOffset = currentBuffer.position();
+    }
+
+    @Override
+    protected void decodeFirst() {
+      currentBuffer.skip(Bytes.SIZEOF_INT);
+      decodeNext();
+    }
   }
 }

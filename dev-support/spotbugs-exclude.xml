@@ -1,0 +1,274 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<FindBugsFilter>
+  <!-- Nested packages are not included by the Package filter, so we need a regexp... -->
+  <Match>
+    <Class name="~.*\.generated\..*"/>
+  </Match>
+
+  <Match>
+    <Package name="~org\.apache\.hadoop\.hbase\.tmpl\..*"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost"/>
+    <Or>
+      <Method name="preExists"/>
+      <Method name="preCheckAndPut"/>
+      <Method name="preCheckAndDelete"/>
+      <Method name="preScannerNext"/>
+    </Or>
+    <Bug pattern="NP_BOOLEAN_RETURN_NULL"/>
+  </Match>
+
+  <!-- This is read by a thread from hadoop and findbugs never finds it -->
+  <Match>
+    <Bug code="UrF"/>
+    <Class name="org.apache.hadoop.hbase.metrics.BaseSourceImpl"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.regionserver.StoreFile$Writer"/>
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader"/>
+    <Or>
+      <Method name="addFileInfoToException"/>
+    </Or>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.KeyValue"/>
+    <Or>
+      <Method name="createEmptyByteArray"/>
+      <Method name="createByteArray"/>
+    </Or>
+    <Bug pattern="INT_VACUOUS_COMPARISON"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.util.ByteBufferUtils"/>
+    <Or>
+      <Method name="putInt"/>
+    </Or>
+    <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.mapreduce.MultithreadedTableMapper"/>
+    <Or>
+      <Method name="MapRunner"/>
+    </Or>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.util.PoolMap$RoundRobinPool"/>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.ipc.RpcClient$Connection"/>
+    <Or>
+      <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+      <Bug pattern="NN_NAKED_NOTIFY"/>
+    </Or>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.regionserver.HRegion"/>
+    <Or>
+      <Method name="startRegionOperation"/>
+      <Method name="startBulkRegionOperation"/>
+    </Or>
+    <Bug pattern="UL_UNRELEASED_LOCK"/>
+  </Match>
+
+  <Match>
+    <!--
+    A mutable static field could be changed by malicious code or by accident. The field could be
+    made package protected to avoid this vulnerability.
+
+    We have a set of stuff like:
+    public static final byte [] SKIP_ARRAY = new byte [ ] {'S', 'K', 'I', 'P'};
+
+    Warning is not wrong, but difficult to avoid...
+    !-->
+    <Bug pattern="MS_PKGPROTECT"/>
+  </Match>
+  <Match>
+    <Bug pattern="MS_OOI_PKGPROTECT"/>
+  </Match>
+
+
+  <Match>
+    <!--
+    Returning a reference to a mutable object value stored in one of the object's fields exposes
+    the internal representation of the object.  If instances are accessed by untrusted code,
+    and unchecked changes to the mutable object would compromise security or other important
+    properties, you will need to do something different. Returning a new copy of the object is
+    better approach in many situations.
+
+    We have getters on our internal fields. Questionable, but out of findbugs scope. Returning a
+    copy is not practical in most cases.
+    !-->
+    <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+
+  <Match>
+    <!--
+    This class implements the Comparator interface. You should consider whether or not it should
+    also implement the Serializable interface. If a comparator is used to construct an ordered
+    collection such as a TreeMap, then the TreeMap will be serializable only if the comparator
+    is also serializable. As most comparators have little or no state, making them serializable
+    is generally easy and good defensive programming.
+    !-->
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE"/>
+  </Match>
+
+  <Match>
+
+    <!--
+    This method performs synchronization an object that is an instance of a class from
+    the java.util.concurrent package (or its subclasses). Instances of these classes have their own
+    concurrency control mechanisms that are orthogonal to the synchronization provided by the Java
+    keyword synchronized. For example, synchronizing on an AtomicBoolean will not prevent other
+    threads from modifying the AtomicBoolean.
+
+    Such code may be correct, but should be carefully reviewed and documented, and may confuse people
+    who have to maintain the code at a later date.
+
+    We do that all the time to save lock objects.
+    !-->
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
+  </Match>
+
+  <Match>
+    <!--
+    Found a call to a method which will perform a byte to String (or String to byte) conversion,
+    and will assume that the default platform encoding is suitable. This will cause the
+    application behaviour to vary between platforms. Use an alternative API and specify a
+    charset name or Charset object explicitly.
+    !-->
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+
+  <Match>
+    <!--
+     Invoking System.exit shuts down the entire Java virtual machine. This should only been
+     done when it is appropriate. Such calls make it hard or impossible for your code to be
+     invoked by other code. Consider throwing a RuntimeException instead.
+
+     It's so bad that the reviews will catch all the wrong cases.
+    !-->
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+
+  <Match>
+    <!--
+     This method returns a value that is not checked. The return value should be checked since
+     it can indicate an unusual or unexpected function execution. For example, the
+     File.delete() method returns false if the file could not be successfully deleted
+     (rather than throwing an Exception). If you don't check the result, you won't notice
+     if the method invocation signals unexpected behavior by returning an atypical return
+     value.
+
+     It's so bad that the reviews will catch all the wrong cases.
+    !-->
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+  </Match>
+  <Match>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_INFERRED"/>
+  </Match>
+
+
+  <Match>
+    <!--
+     This method contains a redundant check of a known non-null value against the constant null.
+
+     Most of the time we're securing ourselves, does no much harm.
+    !-->
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+  </Match>
+
+  <Match>
+    <!--
+    A final static field references an array and can be accessed by malicious code or by
+    accident from another package. This code can freely modify the contents of the array.
+
+     We've got this all over the place... Cloning the array by security is not a general
+     solution from a performance point of view
+    !-->
+    <Bug pattern="MS_MUTABLE_ARRAY"/>
+  </Match>
+
+  <Match>
+    <!--
+     The logic explicitly checks equality of two floating point numbers. Ignore the warning
+    !-->
+    <Class name="org.apache.hadoop.hbase.master.AssignmentVerificationReport"/>
+    <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.HRegionInfo"/>
+    <Or>
+      <Method name="getEndKeyForDisplay"/>
+      <Method name="getStartKeyForDisplay"/>
+    </Or>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.io.hfile.LruBlockCache"/>
+    <Bug pattern="SC_START_IN_CTOR"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hbase.io.hfile.LruAdaptiveBlockCache"/>
+    <Bug pattern="SC_START_IN_CTOR"/>
+  </Match>
+
+  <Match>
+    <!--
+      False positives, NettyRpcServer#start & SimpleRpcServer#start are already synchronized and
+      there is check to ensure single initialization of authTokenSecretMgr field.
+      Ignore the warning, see HBASE-25875.
+    !-->
+    <Or>
+      <And>
+        <Class name="org.apache.hadoop.hbase.ipc.NettyRpcServer"/>
+        <Method name="start"/>
+      </And>
+      <And>
+        <Class name="org.apache.hadoop.hbase.ipc.SimpleRpcServer"/>
+        <Method name="start"/>
+      </And>
+    </Or>
+    <Bug pattern="ML_SYNC_ON_UPDATED_FIELD"/>
+  </Match>
+
+</FindBugsFilter>

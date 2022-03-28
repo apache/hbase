@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -30,13 +31,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -57,7 +61,10 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -112,6 +119,7 @@ public class MasterProcedureTestingUtility {
           AssignmentManager am = env.getAssignmentManager();
           try {
             am.joinCluster();
+            am.wakeMetaLoadedEvent();
             master.setInitialized(true);
           } catch (Exception e) {
             LOG.warn("Failed to load meta", e);
@@ -124,9 +132,9 @@ public class MasterProcedureTestingUtility {
   // ==========================================================================
   //  Master failover utils
   // ==========================================================================
-  public static void masterFailover(final HBaseTestingUtility testUtil)
+  public static void masterFailover(final HBaseTestingUtil testUtil)
       throws Exception {
-    MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     // Kill the master
     HMaster oldMaster = cluster.getMaster();
@@ -136,9 +144,9 @@ public class MasterProcedureTestingUtility {
     waitBackupMaster(testUtil, oldMaster);
   }
 
-  public static void waitBackupMaster(final HBaseTestingUtility testUtil,
+  public static void waitBackupMaster(final HBaseTestingUtil testUtil,
       final HMaster oldMaster) throws Exception {
-    MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     HMaster newMaster = cluster.getMaster();
     while (newMaster == null || newMaster == oldMaster) {
@@ -181,9 +189,10 @@ public class MasterProcedureTestingUtility {
       final RegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
-    FSUtils.logFileSystemState(fs, tableDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> unwantedRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
     for (int i = 0; i < regions.length; ++i) {
       Path regionDir = new Path(tableDir, regions[i].getEncodedName());
@@ -209,7 +218,7 @@ public class MasterProcedureTestingUtility {
     LOG.debug("Table directory layout is as expected.");
 
     // check meta
-    assertTrue(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertTrue(tableExists(master.getConnection(), tableName));
     assertEquals(regions.length, countMetaRegions(master, tableName));
 
     // check htd
@@ -219,17 +228,23 @@ public class MasterProcedureTestingUtility {
       assertTrue("family not found " + family[i], htd.getColumnFamily(Bytes.toBytes(family[i])) != null);
     }
     assertEquals(family.length, htd.getColumnFamilyCount());
+
+    // checks store file tracker impl has been properly set in htd
+    String storeFileTrackerImpl =
+      StoreFileTrackerFactory.getStoreFileTrackerName(master.getConfiguration());
+    assertEquals(storeFileTrackerImpl, htd.getValue(TRACKER_IMPL));
   }
 
   public static void validateTableDeletion(
       final HMaster master, final TableName tableName) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertFalse(fs.exists(tableDir));
 
     // check meta
-    assertFalse(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertFalse(tableExists(master.getConnection(), tableName));
     assertEquals(0, countMetaRegions(master, tableName));
 
     // check htd
@@ -240,10 +255,10 @@ public class MasterProcedureTestingUtility {
   private static int countMetaRegions(final HMaster master, final TableName tableName)
       throws IOException {
     final AtomicInteger actualRegCount = new AtomicInteger(0);
-    final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    final ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result rowResult) throws IOException {
-        RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
+        RegionLocations list = CatalogFamilyFormat.getRegionLocations(rowResult);
         if (list == null) {
           LOG.warn("No serialized RegionInfo in " + rowResult);
           return true;
@@ -264,7 +279,7 @@ public class MasterProcedureTestingUtility {
           if (location == null) continue;
           ServerName serverName = location.getServerName();
           // Make sure that regions are assigned to server
-          if (serverName != null && serverName.getHostAndPort() != null) {
+          if (serverName != null && serverName.getAddress() != null) {
             actualRegCount.incrementAndGet();
           }
         }
@@ -304,8 +319,9 @@ public class MasterProcedureTestingUtility {
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    for (Path regionDir : FSUtils.getRegionDirs(fs, tableDir)) {
       final Path familyDir = new Path(regionDir, family);
       assertFalse(family + " family dir should not exist", fs.exists(familyDir));
     }
@@ -333,7 +349,7 @@ public class MasterProcedureTestingUtility {
     // Ensure one row per region
     assertTrue(rows >= splitKeys.length);
     for (byte[] k: splitKeys) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       mutator.mutate(createPut(families, key, value));
       rows--;
@@ -341,7 +357,8 @@ public class MasterProcedureTestingUtility {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
+        Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       mutator.mutate(createPut(families, key, value));
     }
@@ -573,6 +590,12 @@ public class MasterProcedureTestingUtility {
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     } finally {
       assertTrue(procExec.unregisterListener(abortListener));
+    }
+  }
+
+  public static boolean tableExists(Connection conn, TableName tableName) throws IOException {
+    try (Admin admin = conn.getAdmin()) {
+      return admin.tableExists(tableName);
     }
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapred;
 
 import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
-
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -58,15 +58,12 @@ public class TableRecordReaderImpl {
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
-   *
-   * @param firstRow
-   * @throws IOException
    */
   public void restart(byte[] firstRow) throws IOException {
     Scan currentScan;
     if ((endRow != null) && (endRow.length > 0)) {
       if (trrRowFilter != null) {
-        Scan scan = new Scan(firstRow, endRow);
+        Scan scan = new Scan().withStartRow(firstRow).withStopRow(endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
@@ -76,7 +73,7 @@ public class TableRecordReaderImpl {
         LOG.debug("TIFB.restart, firstRow: " +
             Bytes.toStringBinary(firstRow) + ", endRow: " +
             Bytes.toStringBinary(endRow));
-        Scan scan = new Scan(firstRow, endRow);
+        Scan scan = new Scan().withStartRow(firstRow).withStopRow(endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
         currentScan = scan;
@@ -85,7 +82,7 @@ public class TableRecordReaderImpl {
       LOG.debug("TIFB.restart, firstRow: " +
           Bytes.toStringBinary(firstRow) + ", no endRow");
 
-      Scan scan = new Scan(firstRow);
+      Scan scan = new Scan().withStartRow(firstRow);
       TableInputFormat.addColumns(scan, trrInputColumns);
       scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);
@@ -93,15 +90,13 @@ public class TableRecordReaderImpl {
     }
     if (logScannerActivity) {
       LOG.info("Current scan=" + currentScan.toString());
-      timestamp = System.currentTimeMillis();
+      timestamp = EnvironmentEdgeManager.currentTime();
       rowcount = 0;
     }
   }
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
    */
   public void init() throws IOException {
     restart(startRow);
@@ -110,13 +105,13 @@ public class TableRecordReaderImpl {
   byte[] getStartRow() {
     return this.startRow;
   }
+
   /**
-   * @param htable the {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
+   * @param htable the table to scan.
    */
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
-    logScannerActivity = conf.getBoolean(
-      ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
+    logScannerActivity = conf.getBoolean(ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
@@ -194,10 +189,8 @@ public class TableRecordReaderImpl {
    * @param key HStoreKey as input key.
    * @param value MapWritable as input value
    * @return true if there was more data
-   * @throws IOException
    */
-  public boolean next(ImmutableBytesWritable key, Result value)
-  throws IOException {
+  public boolean next(ImmutableBytesWritable key, Result value) throws IOException {
     Result result;
     try {
       try {
@@ -205,7 +198,7 @@ public class TableRecordReaderImpl {
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
             LOG.info("Mapper took " + (now-timestamp)
               + "ms to process " + rowcount + " rows");
             timestamp = now;
@@ -244,7 +237,7 @@ public class TableRecordReaderImpl {
       return false;
     } catch (IOException ioe) {
       if (logScannerActivity) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         LOG.info("Mapper took " + (now-timestamp)
           + "ms to process " + rowcount + " rows");
         LOG.info(ioe.toString(), ioe);

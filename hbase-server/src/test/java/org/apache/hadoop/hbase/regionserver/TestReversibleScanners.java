@@ -33,17 +33,18 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -79,10 +81,10 @@ public class TestReversibleScanners {
       HBaseClassTestRule.forClass(TestReversibleScanners.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
-  HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");
-  private static long TS = System.currentTimeMillis();
+  private static long TS = EnvironmentEdgeManager.currentTime();
   private static int MAXMVCC = 7;
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static final int ROWSIZE = 200;
@@ -99,7 +101,8 @@ public class TestReversibleScanners {
 
   @BeforeClass
   public static void setUp() {
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
   @Test
   public void testReversibleStoreFileScanner() throws IOException {
@@ -323,9 +326,9 @@ public class TestReversibleScanners {
   @Test
   public void testReversibleRegionScanner() throws IOException {
     byte[] FAMILYNAME2 = Bytes.toBytes("testCf2");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-        .addFamily(new HColumnDescriptor(FAMILYNAME))
-        .addFamily(new HColumnDescriptor(FAMILYNAME2));
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME2)).build();
     HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 

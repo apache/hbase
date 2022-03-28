@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.protobuf.ServiceException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedActionException;
@@ -28,12 +30,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -52,17 +53,17 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * Utility methods for testing security
@@ -249,6 +250,9 @@ public class SecureTestUtil {
           // is buried in the stack trace
           Throwable ex = e;
           do {
+            if (ex instanceof RemoteWithExtrasException) {
+              ex = ((RemoteWithExtrasException) ex).unwrapRemoteException();
+            }
             if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
               break;
@@ -276,7 +280,7 @@ public class SecureTestUtil {
     }
   }
 
-  private static List<AccessController> getAccessControllers(MiniHBaseCluster cluster) {
+  private static List<AccessController> getAccessControllers(SingleProcessHBaseCluster cluster) {
     List<AccessController> result = Lists.newArrayList();
     for (RegionServerThread t: cluster.getLiveRegionServerThreads()) {
       for (HRegion region: t.getRegionServer().getOnlineRegionsLocalContext()) {
@@ -289,16 +293,17 @@ public class SecureTestUtil {
     return result;
   }
 
-  private static Map<AccessController,Long> getAuthManagerMTimes(MiniHBaseCluster cluster) {
-    Map<AccessController,Long> result = Maps.newHashMap();
-    for (AccessController ac: getAccessControllers(cluster)) {
+  private static Map<AccessController, Long>
+    getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
+    Map<AccessController, Long> result = Maps.newHashMap();
+    for (AccessController ac : getAccessControllers(cluster)) {
       result.put(ac, ac.getAuthManager().getMTime());
     }
     return result;
   }
 
   @SuppressWarnings("rawtypes")
-  private static void updateACLs(final HBaseTestingUtility util, Callable c) throws Exception {
+  private static void updateACLs(final HBaseTestingUtil util, Callable c) throws Exception {
     // Get the current mtimes for all access controllers
     final Map<AccessController,Long> oldMTimes = getAuthManagerMTimes(util.getHBaseCluster());
 
@@ -336,7 +341,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantGlobal(final HBaseTestingUtility util, final String user,
+  public static void grantGlobal(final HBaseTestingUtil util, final String user,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -355,7 +360,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantGlobal(final User caller, final HBaseTestingUtility util,
+  public static void grantGlobal(final User caller, final HBaseTestingUtil util,
       final String user, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -375,7 +380,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeGlobal(final HBaseTestingUtility util, final String user,
+  public static void revokeGlobal(final HBaseTestingUtil util, final String user,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -394,7 +399,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeGlobal(final User caller, final HBaseTestingUtility util,
+  public static void revokeGlobal(final User caller, final HBaseTestingUtil util,
       final String user, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -414,7 +419,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnNamespace(final HBaseTestingUtility util, final String user,
+  public static void grantOnNamespace(final HBaseTestingUtil util, final String user,
       final String namespace, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -434,7 +439,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnNamespace(final User caller, final HBaseTestingUtility util,
+  public static void grantOnNamespace(final User caller, final HBaseTestingUtil util,
       final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -456,7 +461,7 @@ public class SecureTestUtil {
    * Will wait until all active AccessController instances have updated their permissions caches
    * or will throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -477,7 +482,7 @@ public class SecureTestUtil {
    * Will wait until all active AccessController instances have updated their permissions caches
    * or will throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -498,7 +503,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromNamespace(final HBaseTestingUtility util, final String user,
+  public static void revokeFromNamespace(final HBaseTestingUtil util, final String user,
       final String namespace, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -517,7 +522,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromNamespace(final User caller, final HBaseTestingUtility util,
+  public static void revokeFromNamespace(final User caller, final HBaseTestingUtil util,
       final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -538,7 +543,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnTable(final HBaseTestingUtility util, final String user,
+  public static void grantOnTable(final HBaseTestingUtil util, final String user,
       final TableName table, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -559,7 +564,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnTable(final User caller, final HBaseTestingUtility util,
+  public static void grantOnTable(final User caller, final HBaseTestingUtil util,
       final String user, final TableName table, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -581,7 +586,7 @@ public class SecureTestUtil {
    * active AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -602,7 +607,7 @@ public class SecureTestUtil {
    * active AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -623,7 +628,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromTable(final HBaseTestingUtility util, final String user,
+  public static void revokeFromTable(final HBaseTestingUtil util, final String user,
       final TableName table, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -643,7 +648,7 @@ public class SecureTestUtil {
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromTable(final User caller, final HBaseTestingUtility util,
+  public static void revokeFromTable(final User caller, final HBaseTestingUtil util,
       final String user, final TableName table, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -664,7 +669,7 @@ public class SecureTestUtil {
    * all active AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -685,7 +690,7 @@ public class SecureTestUtil {
    * all active AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
    */
-  public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+  public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user,final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -733,7 +738,7 @@ public class SecureTestUtil {
     }
   }
 
-  public static Table createTable(HBaseTestingUtility testUtil, TableName tableName,
+  public static Table createTable(HBaseTestingUtil testUtil, TableName tableName,
       byte[][] families) throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
@@ -743,22 +748,22 @@ public class SecureTestUtil {
     return testUtil.getConnection().getTable(tableName);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor htd)
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd)
       throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor htd,
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd,
       byte[][] splitKeys) throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd, splitKeys);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, Admin admin, TableDescriptor htd)
+  public static void createTable(HBaseTestingUtil testUtil, Admin admin, TableDescriptor htd)
       throws Exception {
     createTable(testUtil, admin, htd, null);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, Admin admin, TableDescriptor htd,
+  public static void createTable(HBaseTestingUtil testUtil, Admin admin, TableDescriptor htd,
       byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
@@ -775,22 +780,34 @@ public class SecureTestUtil {
     testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
-  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+  public static void createTable(HBaseTestingUtil testUtil, User user, TableDescriptor htd)
+    throws Exception {
+    createTable(testUtil, user, htd, null);
+  }
+
+  public static void createTable(HBaseTestingUtil testUtil, User user, TableDescriptor htd,
+    byte[][] splitKeys) throws Exception {
+    try (Connection con = testUtil.getConnection(user); Admin admin = con.getAdmin()) {
+      createTable(testUtil, admin, htd, splitKeys);
+    }
+  }
+
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
       throws Exception {
     deleteTable(testUtil, testUtil.getAdmin(), tableName);
   }
 
-  public static void createNamespace(HBaseTestingUtility testUtil, NamespaceDescriptor nsDesc)
+  public static void createNamespace(HBaseTestingUtil testUtil, NamespaceDescriptor nsDesc)
       throws Exception {
     testUtil.getAdmin().createNamespace(nsDesc);
   }
 
-  public static void deleteNamespace(HBaseTestingUtility testUtil, String namespace)
+  public static void deleteNamespace(HBaseTestingUtil testUtil, String namespace)
       throws Exception {
     testUtil.getAdmin().deleteNamespace(namespace);
   }
 
-  public static void deleteTable(HBaseTestingUtility testUtil, Admin admin, TableName tableName)
+  public static void deleteTable(HBaseTestingUtil testUtil, Admin admin, TableName tableName)
       throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
@@ -811,7 +828,7 @@ public class SecureTestUtil {
     return PermissionStorage.NAMESPACE_PREFIX + namespace;
   }
 
-  public static void checkGlobalPerms(HBaseTestingUtility testUtil, Permission.Action... actions)
+  public static void checkGlobalPerms(HBaseTestingUtil testUtil, Permission.Action... actions)
       throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
@@ -820,7 +837,7 @@ public class SecureTestUtil {
     checkPermissions(testUtil.getConfiguration(), perms);
   }
 
-  public static void checkTablePerms(HBaseTestingUtility testUtil, TableName table, byte[] family,
+  public static void checkTablePerms(HBaseTestingUtil testUtil, TableName table, byte[] family,
       byte[] column, Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
@@ -830,7 +847,7 @@ public class SecureTestUtil {
     checkTablePerms(testUtil, perms);
   }
 
-  public static void checkTablePerms(HBaseTestingUtility testUtil, Permission... perms)
+  public static void checkTablePerms(HBaseTestingUtil testUtil, Permission... perms)
       throws IOException {
     checkPermissions(testUtil.getConfiguration(), perms);
   }

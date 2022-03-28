@@ -190,15 +190,11 @@ public class AuthenticationTokenSecretManager
   public synchronized void addKey(AuthenticationKey key) throws IOException {
     // ignore zk changes when running as master
     if (leaderElector.isMaster()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Running as master, ignoring new key "+key.getKeyId());
-      }
+      LOG.debug("Running as master, ignoring new key {}", key);
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Adding key "+key.getKeyId());
-    }
+    LOG.debug("Adding key {}", key.getKeyId());
 
     allKeys.put(key.getKeyId(), key);
     if (currentKey == null || key.getKeyId() > currentKey.getKeyId()) {
@@ -213,14 +209,12 @@ public class AuthenticationTokenSecretManager
   synchronized boolean removeKey(Integer keyId) {
     // ignore zk changes when running as master
     if (leaderElector.isMaster()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Running as master, ignoring removed key "+keyId);
-      }
+      LOG.debug("Running as master, ignoring removed keyid={}", keyId);
       return false;
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing key "+keyId);
+      LOG.debug("Removing keyid={}", keyId);
     }
 
     allKeys.remove(keyId);
@@ -246,9 +240,7 @@ public class AuthenticationTokenSecretManager
     while (iter.hasNext()) {
       AuthenticationKey key = iter.next();
       if (key.getExpiration() < now) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing expired key "+key.getKeyId());
-        }
+        LOG.debug("Removing expired key {}", key);
         iter.remove();
         zkWatcher.removeKeyFromZK(key);
       }

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,7 +41,7 @@ public abstract class WALCorruptionDueToDanglingByteBufferTestBase {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static CountDownLatch ARRIVE;
 

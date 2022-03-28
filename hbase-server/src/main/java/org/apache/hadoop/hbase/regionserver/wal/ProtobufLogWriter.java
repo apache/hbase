@@ -19,14 +19,20 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
+import org.apache.hadoop.hbase.util.AtomicUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +50,8 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogWriter.class);
 
   protected FSDataOutputStream output;
+
+  private final AtomicLong syncedLength = new AtomicLong(0);
 
   @Override
   public void append(Entry entry) throws IOException {
@@ -84,24 +92,52 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
     } else {
       fsdos.hflush();
     }
+    AtomicUtils.updateMax(this.syncedLength, fsdos.getPos());
+  }
+
+  @Override
+  public long getSyncedLength() {
+    return this.syncedLength.get();
   }
 
   public FSDataOutputStream getStream() {
     return this.output;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
-    this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
-        blockSize, false);
+      short replication, long blockSize, StreamSlowMonitor monitor) throws IOException,
+      StreamLacksCapabilityException {
+    FSDataOutputStreamBuilder<?, ?> builder = fs
+      .createFile(path)
+      .overwrite(overwritable)
+      .bufferSize(bufferSize)
+      .replication(replication)
+      .blockSize(blockSize);
+    if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
+      this.output = ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder)
+        .replicate().build();
+    } else {
+      this.output = builder.build();
+    }
+
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
-      if (!CommonFSUtils.hasCapability(output, "hflush")) {
-        throw new StreamLacksCapabilityException("hflush");
+      if (!output.hasCapability(StreamCapabilities.HFLUSH)) {
+        throw new StreamLacksCapabilityException(StreamCapabilities.HFLUSH);
       }
-      if (!CommonFSUtils.hasCapability(output, "hsync")) {
-        throw new StreamLacksCapabilityException("hsync");
+      if (!output.hasCapability(StreamCapabilities.HSYNC)) {
+        throw new StreamLacksCapabilityException(StreamCapabilities.HSYNC);
+      }
+    }
+  }
+
+  @Override
+  protected void closeOutput() {
+    if (this.output != null) {
+      try {
+        this.output.close();
+      } catch (IOException e) {
+        LOG.warn("Close output failed", e);
       }
     }
   }

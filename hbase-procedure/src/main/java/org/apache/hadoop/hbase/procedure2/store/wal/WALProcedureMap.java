@@ -46,7 +46,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * {@link #merge(WALProcedureMap)} method of the global one and pass the local one in. In this
  * method, for the same procedure, the one comes earlier will win, as we read the proc wal files
  * from new to old(the reverse order).
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
 class WALProcedureMap {
 

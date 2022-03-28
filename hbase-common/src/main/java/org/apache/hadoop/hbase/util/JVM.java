@@ -61,6 +61,21 @@ public class JVM {
   private static final String JVMVersion = System.getProperty("java.version");
 
   /**
+   * The raw String of java specification version.
+   * "1.8" for java8, "9","10"... for Java 9, 10...
+   */
+  private static final String JVM_SPEC_VERSION_STRING =
+    System.getProperty("java.specification.version");
+
+  /**
+   * The Integer represent of JVM_SPEC_VERSION, for the JVM version comparison.
+   * Java 8, 9, 10 ... will be noted as 8, 9 10 ...
+   */
+  private static final int JVM_SPEC_VERSION = JVM_SPEC_VERSION_STRING.contains(".") ?
+    (int) (Float.parseFloat(JVM_SPEC_VERSION_STRING) * 10 % 10) :
+    Integer.parseInt(JVM_SPEC_VERSION_STRING);
+
+  /**
    * Constructor. Get the running Operating System instance
    */
   public JVM() {
@@ -104,6 +119,10 @@ public class JVM {
    */
   public static boolean isGZIPOutputStreamFinishBroken() {
     return ibmvendor && JVMVersion.contains("1.6.0");
+  }
+
+  public static int getJVMSpecVersion() {
+    return JVM_SPEC_VERSION;
   }
 
   /**

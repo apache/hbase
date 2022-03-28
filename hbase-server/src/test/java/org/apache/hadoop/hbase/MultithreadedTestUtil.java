@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,9 +65,9 @@ public abstract class MultithreadedTestUtil {
     }
 
     public void waitFor(long millis) throws Exception {
-      long endTime = System.currentTimeMillis() + millis;
+      long endTime = EnvironmentEdgeManager.currentTime() + millis;
       while (!stopped) {
-        long left = endTime - System.currentTimeMillis();
+        long left = endTime - EnvironmentEdgeManager.currentTime();
         if (left <= 0) break;
         synchronized (this) {
           checkException();

@@ -50,6 +50,11 @@ public final class CombinedAsyncWriter implements AsyncWriter {
   }
 
   @Override
+  public long getSyncedLength() {
+    return writers.get(0).getSyncedLength();
+  }
+
+  @Override
   public void close() throws IOException {
     Exception error = null;
     for (AsyncWriter writer : writers) {
@@ -74,10 +79,10 @@ public final class CombinedAsyncWriter implements AsyncWriter {
   }
 
   @Override
-  public CompletableFuture<Long> sync() {
+  public CompletableFuture<Long> sync(boolean forceSync) {
     CompletableFuture<Long> future = new CompletableFuture<>();
     AtomicInteger remaining = new AtomicInteger(writers.size());
-    writers.forEach(w -> addListener(w.sync(), (length, error) -> {
+    writers.forEach(w -> addListener(w.sync(forceSync), (length, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;

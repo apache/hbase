@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,23 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HBaseServerBase;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
+import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
@@ -32,38 +49,21 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecode
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.Server;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.security.HBasePolicyProvider;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-
 /**
  * An RPC server with Netty4 implementation.
  * @since 2.0.0
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class NettyRpcServer extends RpcServer {
-
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
+
+  /**
+   * Name of property to change netty rpc server eventloop thread count. Default is 0.
+   * Tests may set this down from unlimited.
+   */
+  public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
+    "hbase.netty.eventloop.rpcserver.thread.count";
+  private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
   private final InetSocketAddress bindAddress;
 
@@ -80,17 +80,21 @@ public class NettyRpcServer extends RpcServer {
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
     if (server instanceof HRegionServer) {
-      NettyEventLoopGroupConfig config = ((HRegionServer) server).getEventLoopGroupConfig();
+      NettyEventLoopGroupConfig config = ((HBaseServerBase) server).getEventLoopGroupConfig();
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
-      eventLoopGroup = new NioEventLoopGroup(0,
-          new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
+      int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
+        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+          EVENTLOOP_THREADCOUNT_DEFAULT);
+      eventLoopGroup = new NioEventLoopGroup(threadCount,
+        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
         .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
         .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
+        .childOption(ChannelOption.SO_REUSEADDR, true)
         .childHandler(new ChannelInitializer<Channel>() {
 
           @Override
@@ -115,7 +119,7 @@ public class NettyRpcServer extends RpcServer {
     this.scheduler.init(new RpcSchedulerContext(this));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
     return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
   }
@@ -127,8 +131,12 @@ public class NettyRpcServer extends RpcServer {
     }
     authTokenSecretMgr = createSecretManager();
     if (authTokenSecretMgr != null) {
-      setSecretManager(authTokenSecretMgr);
-      authTokenSecretMgr.start();
+      // Start AuthenticationTokenSecretManager in synchronized way to avoid race conditions in
+      // LeaderElector start. See HBASE-25875
+      synchronized (authTokenSecretMgr) {
+        setSecretManager(authTokenSecretMgr);
+        authTokenSecretMgr.start();
+      }
     }
     this.authManager = new ServiceAuthorizationManager();
     HBasePolicyProvider.init(conf, authManager);
@@ -172,22 +180,5 @@ public class NettyRpcServer extends RpcServer {
     int channelsCount = allChannels.size();
     // allChannels also contains the server channel, so exclude that from the count.
     return channelsCount > 0 ? channelsCount - 1 : channelsCount;
-  }
-
-  @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status) throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status,
-        System.currentTimeMillis(), 0);
-  }
-
-  @Override
-  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      long startTime, int timeout) throws IOException {
-    NettyServerCall fakeCall = new NettyServerCall(-1, service, md, null, param, cellScanner, null,
-        -1, null, receiveTime, timeout, bbAllocator, cellBlockBuilder, null);
-    return call(fakeCall, status);
   }
 }

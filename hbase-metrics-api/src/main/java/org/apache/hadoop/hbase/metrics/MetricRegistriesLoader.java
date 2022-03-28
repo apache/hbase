@@ -28,8 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
 public final class MetricRegistriesLoader {
   private static final Logger LOG = LoggerFactory.getLogger(MetricRegistries.class);
@@ -57,7 +55,6 @@ public final class MetricRegistriesLoader {
    * implementation will be loaded.
    * @return A {@link MetricRegistries} implementation.
    */
-  @VisibleForTesting
   static MetricRegistries load(List<MetricRegistries> availableImplementations) {
 
     if (availableImplementations.size() == 1) {

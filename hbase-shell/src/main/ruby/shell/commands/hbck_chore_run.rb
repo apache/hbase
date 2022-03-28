@@ -23,7 +23,8 @@ module Shell
         <<-EOF
 Request HBCK chore to run at master side. It will try to find the orphan
 regions on RegionServer or FileSystem and find the inconsistent regions.
-You can check the HBCK report at Master web UI.
+You can check the HBCK report at Master web UI. Returns true if HBCK chore
+ran, or false if HBCK chore is already running.
 
   hbase> hbck_chore_run
 

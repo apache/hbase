@@ -28,7 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
@@ -119,7 +121,7 @@ public class RegionGroupingProvider implements WALProvider {
   public static final String REGION_GROUPING_STRATEGY = "hbase.wal.regiongrouping.strategy";
   public static final String DEFAULT_REGION_GROUPING_STRATEGY = Strategies.defaultStrategy.name();
 
-  /** delegate provider for WAL creation/roll/close */
+  /** delegate provider for WAL creation/roll/close, but not support multiwal */
   public static final String DELEGATE_PROVIDER = "hbase.wal.regiongrouping.delegate.provider";
   public static final String DEFAULT_DELEGATE_PROVIDER = WALFactory.Providers.defaultProvider
       .name();
@@ -137,14 +139,17 @@ public class RegionGroupingProvider implements WALProvider {
   private List<WALActionsListener> listeners = new ArrayList<>();
   private String providerId;
   private Class<? extends WALProvider> providerClass;
+  private Abortable abortable;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (null != strategy) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.conf = conf;
     this.factory = factory;
+    this.abortable = abortable;
 
     if (META_WAL_PROVIDER_ID.equals(providerId)) {
       // do not change the provider id if it is for meta
@@ -162,12 +167,16 @@ public class RegionGroupingProvider implements WALProvider {
     }
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
     this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
+    if (providerClass.equals(this.getClass())) {
+      LOG.warn("delegate provider not support multiwal, falling back to defaultProvider.");
+      providerClass = factory.getDefaultProvider().clazz;
+    }
   }
 
   private WALProvider createProvider(String group) throws IOException {
     WALProvider provider = WALFactory.createProvider(providerClass);
     provider.init(factory, conf,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : group);
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : group, this.abortable);
     provider.addWALActionsListener(new MetricsWAL());
     return provider;
   }

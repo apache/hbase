@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.chaos.actions.DecreaseMaxHFileSizeAction;
 import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
+import org.apache.hadoop.hbase.chaos.actions.GracefulRollingRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
+import org.apache.hadoop.hbase.chaos.actions.RollingBatchSuspendResumeRsAction;
 import org.apache.hadoop.hbase.chaos.actions.SnapshotTableAction;
 import org.apache.hadoop.hbase.chaos.actions.SplitAllRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.SplitRandomRegionOfTableAction;
@@ -66,6 +68,53 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private float compactTableRatio;
   private float compactRandomRegionRatio;
   private long decreaseHFileSizeSleepTime;
+  private long gracefulRollingRestartTSSLeepTime;
+  private long rollingBatchSuspendRSSleepTime;
+  private float rollingBatchSuspendtRSRatio;
+
+  protected Action[] getLightWeightedActions(){
+    return new Action[] {
+      new CompactTableAction(tableName, compactTableRatio),
+      new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
+      new FlushTableAction(tableName),
+      new FlushRandomRegionOfTableAction(tableName),
+      new MoveRandomRegionOfTableAction(tableName)
+    };
+  }
+
+  protected Action[] getMidWeightedActions(){
+    return new Action[] {
+      new SplitRandomRegionOfTableAction(tableName),
+      new MergeRandomAdjacentRegionsOfTableAction(tableName),
+      new SnapshotTableAction(tableName),
+      new AddColumnAction(tableName),
+      new RemoveColumnAction(tableName, columnFamilies),
+      new ChangeEncodingAction(tableName),
+      new ChangeCompressionAction(tableName),
+      new ChangeBloomFilterAction(tableName),
+      new ChangeVersionsAction(tableName),
+      new ChangeSplitPolicyAction(tableName),
+    };
+  }
+
+  protected Action[] getHeavyWeightedActions() {
+    return new Action[] {
+      new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
+        tableName),
+      new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
+      new RestartRandomRsAction(restartRandomRSSleepTime),
+      new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
+      new RestartActiveMasterAction(restartActiveMasterSleepTime),
+      new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
+        rollingBatchRestartRSRatio),
+      new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
+      new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
+      new SplitAllRegionOfTableAction(tableName),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
+      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
+        rollingBatchSuspendtRSRatio)
+    };
+  }
 
   @Override
   public ChaosMonkey build() {
@@ -73,51 +122,22 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     // Actions such as compact/flush a table/region,
     // move one region around. They are not so destructive,
     // can be executed more frequently.
-    Action[] actions1 = new Action[] {
-        new CompactTableAction(tableName, compactTableRatio),
-        new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
-        new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName)
-    };
+    Action[] actions1 = getLightWeightedActions();
 
     // Actions such as split/merge/snapshot.
     // They should not cause data loss, or unreliability
     // such as region stuck in transition.
-    Action[] actions2 = new Action[] {
-        new SplitRandomRegionOfTableAction(tableName),
-        new MergeRandomAdjacentRegionsOfTableAction(tableName),
-        new SnapshotTableAction(tableName),
-        new AddColumnAction(tableName),
-        new RemoveColumnAction(tableName, columnFamilies),
-        new ChangeEncodingAction(tableName),
-        new ChangeCompressionAction(tableName),
-        new ChangeBloomFilterAction(tableName),
-        new ChangeVersionsAction(tableName),
-        new ChangeSplitPolicyAction(tableName),
-    };
+    Action[] actions2 = getMidWeightedActions();
 
     // Destructive actions to mess things around.
-    Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
-            tableName),
-        new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
-        new RestartRandomRsAction(restartRandomRSSleepTime),
-        new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
-        new RestartActiveMasterAction(restartActiveMasterSleepTime),
-        new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
-            rollingBatchRestartRSRatio),
-        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
-        new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
-        new SplitAllRegionOfTableAction(tableName),
-    };
+    Action[] actions3 = getHeavyWeightedActions();
 
     // Action to log more info for debugging
     Action[] actions4 = new Action[] {
         new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
         new PeriodicRandomActionPolicy(action1Period, actions1),
         new PeriodicRandomActionPolicy(action2Period, actions2),
         new CompositeSequentialPolicy(
@@ -179,5 +199,14 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     decreaseHFileSizeSleepTime = Long.parseLong(this.properties.getProperty(
         MonkeyConstants.DECREASE_HFILE_SIZE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME + ""));
+    gracefulRollingRestartTSSLeepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
+    rollingBatchSuspendRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME+ ""));
+    rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
   }
 }

@@ -19,17 +19,17 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
@@ -45,7 +45,6 @@ public class MetricsWAL implements WALActionsListener {
     this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 
-  @VisibleForTesting
   MetricsWAL(MetricsWALSource s) {
     this.source = s;
   }
@@ -58,9 +57,10 @@ public class MetricsWAL implements WALActionsListener {
   @Override
   public void postAppend(final long size, final long time, final WALKey logkey,
       final WALEdit logEdit) throws IOException {
-    source.incrementAppendCount();
+    TableName tableName = logkey.getTableName();
+    source.incrementAppendCount(tableName);
     source.incrementAppendTime(time);
-    source.incrementAppendSize(size);
+    source.incrementAppendSize(tableName, size);
     source.incrementWrittenBytes(size);
 
     if (time > 1000) {
@@ -90,6 +90,15 @@ public class MetricsWAL implements WALActionsListener {
         break;
       default:
         break;
+    }
+  }
+
+  @Override
+  public void postLogRoll(Path oldPath, Path newPath) {
+    // oldPath can be null if this is the first time we created a wal
+    // Also newPath can be equal to oldPath if AbstractFSWAL#replaceWriter fails
+    if (newPath != oldPath) {
+      source.incrementSuccessfulLogRolls();
     }
   }
 }

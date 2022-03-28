@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -81,6 +82,8 @@ public class ProtobufLogReader extends ReaderBase {
   protected WALCellCodec.ByteStringUncompressor byteStringUncompressor;
   protected boolean hasCompression = false;
   protected boolean hasTagCompression = false;
+  protected boolean hasValueCompression = false;
+  protected Compression.Algorithm valueCompressionType = null;
   // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit
   // entry in the wal, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
@@ -205,6 +208,10 @@ public class ProtobufLogReader extends ReaderBase {
   private String initInternal(FSDataInputStream stream, boolean isFirst)
       throws IOException {
     close();
+    if (!isFirst) {
+      // Re-compute the file length.
+      this.fileLength = fs.getFileStatus(path).getLen();
+    }
     long expectedPos = PB_WAL_MAGIC.length;
     if (stream == null) {
       stream = fs.open(path);
@@ -227,6 +234,16 @@ public class ProtobufLogReader extends ReaderBase {
       WALProtos.WALHeader header = builder.build();
       this.hasCompression = header.hasHasCompression() && header.getHasCompression();
       this.hasTagCompression = header.hasHasTagCompression() && header.getHasTagCompression();
+      this.hasValueCompression = header.hasHasValueCompression() &&
+        header.getHasValueCompression();
+      if (header.hasValueCompressionAlgorithm()) {
+        try {
+          this.valueCompressionType =
+            Compression.Algorithm.values()[header.getValueCompressionAlgorithm()];
+        } catch (ArrayIndexOutOfBoundsException e) {
+          throw new IOException("Invalid compression type", e);
+        }
+      }
     }
     this.inputStream = stream;
     this.walEditsStopOffset = this.fileLength;
@@ -235,7 +252,9 @@ public class ProtobufLogReader extends ReaderBase {
     this.seekOnFs(currentPosition);
     if (LOG.isTraceEnabled()) {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
-          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") + ", currentPosition: " + currentPosition);
+          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " +
+          (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") +
+          ", currentPosition: " + currentPosition);
     }
     
     codecClsName = hdrCtxt.getCellCodecClsName();
@@ -328,109 +347,119 @@ public class ProtobufLogReader extends ReaderBase {
   }
 
   @Override
+  protected boolean hasValueCompression() {
+    return this.hasValueCompression;
+  }
+
+  @Override
+  protected Compression.Algorithm getValueCompressionAlgorithm() {
+    return this.valueCompressionType;
+  }
+
+  @Override
   protected boolean readNext(Entry entry) throws IOException {
-    while (true) {
-      // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
-      long originalPosition = this.inputStream.getPos();
-      if (trailerPresent && originalPosition > 0 && originalPosition == this.walEditsStopOffset) {
-        LOG.trace("Reached end of expected edits area at offset {}", originalPosition);
-        return false;
-      }
-      WALKey.Builder builder = WALKey.newBuilder();
-      long size = 0;
-      boolean resetPosition = false;
-      try {
-        long available = -1;
-        try {
-          int firstByte = this.inputStream.read();
-          if (firstByte == -1) {
-            throw new EOFException();
-          }
-          size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
-          // available may be < 0 on local fs for instance.  If so, can't depend on it.
-          available = this.inputStream.available();
-          if (available > 0 && available < size) {
-            throw new EOFException("Available stream not enough for edit, " +
-                "inputStream.available()= " + this.inputStream.available() + ", " +
-                "entry size= " + size + " at offset = " + this.inputStream.getPos());
-          }
-          ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size),
-            (int)size);
-        } catch (InvalidProtocolBufferException ipbe) {
-          resetPosition = true;
-          throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
-            originalPosition + ", currentPosition=" + this.inputStream.getPos() +
-            ", messageSize=" + size + ", currentAvailable=" + available).initCause(ipbe);
-        }
-        if (!builder.isInitialized()) {
-          // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
-          //       If we can get the KV count, we could, theoretically, try to get next record.
-          throw new EOFException("Partial PB while reading WAL, " +
-              "probably an unexpected EOF, ignoring. current offset=" + this.inputStream.getPos());
-        }
-        WALKey walKey = builder.build();
-        entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
-        if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
-          LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset={}",
-              this.inputStream.getPos());
-          seekOnFs(originalPosition);
-          return false;
-        }
-        int expectedCells = walKey.getFollowingKvCount();
-        long posBefore = this.inputStream.getPos();
-        try {
-          int actualCells = entry.getEdit().readFromCells(cellDecoder, expectedCells);
-          if (expectedCells != actualCells) {
-            resetPosition = true;
-            throw new EOFException("Only read " + actualCells); // other info added in catch
-          }
-        } catch (Exception ex) {
-          String posAfterStr = "<unknown>";
-          try {
-            posAfterStr = this.inputStream.getPos() + "";
-          } catch (Throwable t) {
-            LOG.trace("Error getting pos for error message - ignoring", t);
-          }
-          String message = " while reading " + expectedCells + " WAL KVs; started reading at "
-              + posBefore + " and read up to " + posAfterStr;
-          IOException realEofEx = extractHiddenEof(ex);
-          throw (EOFException) new EOFException("EOF " + message).
-              initCause(realEofEx != null ? realEofEx : ex);
-        }
-        if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
-          LOG.error("Read WALTrailer while reading WALEdits. wal: " + this.path
-              + ", inputStream.getPos(): " + this.inputStream.getPos() + ", walEditsStopOffset: "
-              + this.walEditsStopOffset);
-          throw new EOFException("Read WALTrailer while reading WALEdits");
-        }
-      } catch (EOFException eof) {
-        // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
-        if (originalPosition < 0) {
-          LOG.warn("Encountered a malformed edit, but can't seek back to last good position "
-              + "because originalPosition is negative. last offset={}",
-              this.inputStream.getPos(), eof);
-          throw eof;
-        }
-        // If stuck at the same place and we got and exception, lets go back at the beginning.
-        if (inputStream.getPos() == originalPosition) {
-          if (resetPosition) {
-            LOG.warn("Encountered a malformed edit, seeking to the beginning of the WAL since " +
-              "current position and original position match at {}", originalPosition);
-            seekOnFs(0);
-          } else {
-            LOG.info("Reached the end of file at position {}", originalPosition);
-          }
-        } else {
-          // Else restore our position to original location in hope that next time through we will
-          // read successfully.
-          LOG.warn("Encountered a malformed edit, seeking back to last good position in file, " +
-            "from {} to {}", inputStream.getPos(), originalPosition, eof);
-          seekOnFs(originalPosition);
-        }
-        return false;
-      }
-      return true;
+    // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
+    long originalPosition = this.inputStream.getPos();
+    if (trailerPresent && originalPosition > 0 && originalPosition == this.walEditsStopOffset) {
+      LOG.trace("Reached end of expected edits area at offset {}", originalPosition);
+      return false;
     }
+    WALKey.Builder builder = WALKey.newBuilder();
+    long size = 0;
+    boolean resetPosition = false;
+    try {
+      long available = -1;
+      try {
+        int firstByte = this.inputStream.read();
+        if (firstByte == -1) {
+          throw new EOFException();
+        }
+        size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
+        // available may be < 0 on local fs for instance.  If so, can't depend on it.
+        available = this.inputStream.available();
+        if (available > 0 && available < size) {
+          throw new EOFException(
+            "Available stream not enough for edit, " + "inputStream.available()= "
+              + this.inputStream.available() + ", " + "entry size= " + size + " at offset = "
+              + this.inputStream.getPos());
+        }
+        ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size), (int) size);
+      } catch (InvalidProtocolBufferException ipbe) {
+        resetPosition = true;
+        throw (EOFException) new EOFException(
+          "Invalid PB, EOF? Ignoring; originalPosition=" + originalPosition + ", currentPosition="
+            + this.inputStream.getPos() + ", messageSize=" + size + ", currentAvailable="
+            + available).initCause(ipbe);
+      }
+      if (!builder.isInitialized()) {
+        // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
+        //       If we can get the KV count, we could, theoretically, try to get next record.
+        throw new EOFException(
+          "Partial PB while reading WAL, " + "probably an unexpected EOF, ignoring. current offset="
+            + this.inputStream.getPos());
+      }
+      WALKey walKey = builder.build();
+      entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
+      if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
+        LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset={}",
+          this.inputStream.getPos());
+        seekOnFs(originalPosition);
+        return false;
+      }
+      int expectedCells = walKey.getFollowingKvCount();
+      long posBefore = this.inputStream.getPos();
+      try {
+        int actualCells = entry.getEdit().readFromCells(cellDecoder, expectedCells);
+        if (expectedCells != actualCells) {
+          resetPosition = true;
+          throw new EOFException("Only read " + actualCells); // other info added in catch
+        }
+      } catch (Exception ex) {
+        String posAfterStr = "<unknown>";
+        try {
+          posAfterStr = this.inputStream.getPos() + "";
+        } catch (Throwable t) {
+          LOG.trace("Error getting pos for error message - ignoring", t);
+        }
+        String message =
+          " while reading " + expectedCells + " WAL KVs; started reading at " + posBefore
+            + " and read up to " + posAfterStr;
+        IOException realEofEx = extractHiddenEof(ex);
+        throw (EOFException) new EOFException("EOF " + message).
+          initCause(realEofEx != null ? realEofEx : ex);
+      }
+      if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
+        LOG.error(
+          "Read WALTrailer while reading WALEdits. wal: " + this.path + ", inputStream.getPos(): "
+            + this.inputStream.getPos() + ", walEditsStopOffset: " + this.walEditsStopOffset);
+        throw new EOFException("Read WALTrailer while reading WALEdits");
+      }
+    } catch (EOFException eof) {
+      // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
+      if (originalPosition < 0) {
+        LOG.debug("Encountered a malformed edit, but can't seek back to last good position "
+          + "because originalPosition is negative. last offset={}", this.inputStream.getPos(), eof);
+        throw eof;
+      }
+      // If stuck at the same place and we got an exception, lets go back at the beginning.
+      if (inputStream.getPos() == originalPosition) {
+        if (resetPosition) {
+          LOG.debug("Encountered a malformed edit, seeking to the beginning of the WAL since "
+            + "current position and original position match at {}", originalPosition);
+          seekOnFs(0);
+        } else {
+          LOG.debug("EOF at position {}", originalPosition);
+        }
+      } else {
+        // Else restore our position to original location in hope that next time through we will
+        // read successfully.
+        LOG.debug("Encountered a malformed edit, seeking back to last good position in file, "
+          + "from {} to {}", inputStream.getPos(), originalPosition, eof);
+        seekOnFs(originalPosition);
+      }
+      return false;
+    }
+    return true;
   }
 
   private IOException extractHiddenEof(Exception ex) {
@@ -445,7 +474,7 @@ public class ProtobufLogReader extends ReaderBase {
         && ex.getCause() != null && ex.getCause() instanceof IOException) {
       ioEx = (IOException)ex.getCause();
     }
-    if (ioEx != null) {
+    if ((ioEx != null) && (ioEx.getMessage() != null)) {
       if (ioEx.getMessage().contains("EOF")) return ioEx;
       return null;
     }

@@ -22,20 +22,21 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -47,7 +48,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
@@ -57,17 +58,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestHBaseFsckEncryption {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private Configuration conf;
-  private HTableDescriptor htd;
+  private TableDescriptor tableDescriptor;
   private Key cfKey;
 
   @Before
@@ -78,9 +79,8 @@ public class TestHBaseFsckEncryption {
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 
     // Create the test encryption key
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     cfKey = new SecretKeySpec(keyBytes,algorithm);
@@ -89,15 +89,19 @@ public class TestHBaseFsckEncryption {
     TEST_UTIL.startMiniCluster(3);
 
     // Create the table
-    htd = new HTableDescriptor(TableName.valueOf("default", "TestHBaseFsckEncryption"));
-    HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType(algorithm);
-    hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
-      conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
-      cfKey));
-    htd.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("default", "TestHBaseFsckEncryption"));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes("cf"))
+        .setEncryptionType(algorithm)
+        .setEncryptionKey(EncryptionUtil.wrapKey(conf,
+          conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
+          cfKey)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    tableDescriptor = tableDescriptorBuilder.build();
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
+    TEST_UTIL.waitTableAvailable(tableDescriptor.getTableName(), 5000);
   }
 
   @After
@@ -108,7 +112,7 @@ public class TestHBaseFsckEncryption {
   @Test
   public void testFsckWithEncryption() throws Exception {
     // Populate the table with some data
-    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(tableDescriptor.getTableName());
     try {
       byte[] values = { 'A', 'B', 'C', 'D' };
       for (int i = 0; i < values.length; i++) {
@@ -123,10 +127,10 @@ public class TestHBaseFsckEncryption {
       table.close();
     }
     // Flush it
-    TEST_UTIL.getAdmin().flush(htd.getTableName());
+    TEST_UTIL.getAdmin().flush(tableDescriptor.getTableName());
 
     // Verify we have encrypted store files on disk
-    final List<Path> paths = findStorefilePaths(htd.getTableName());
+    final List<Path> paths = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(paths.size() > 0);
     for (Path path: paths) {
       assertTrue("Store file " + path + " has incorrect key",
@@ -134,7 +138,7 @@ public class TestHBaseFsckEncryption {
     }
 
     // Insure HBck doesn't consider them corrupt
-    HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, htd.getTableName());
+    HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, tableDescriptor.getTableName());
     assertEquals(0, res.getRetCode());
     HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
     assertEquals(0, hfcc.getCorrupted().size());
@@ -146,7 +150,7 @@ public class TestHBaseFsckEncryption {
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getRegions(htd.getTableName())) {
+        .getRegions(tableDescriptor.getTableName())) {
       for (HStore store : ((HRegion) region).getStores()) {
         for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
@@ -160,7 +164,6 @@ public class TestHBaseFsckEncryption {
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
       new CacheConfig(conf), true, conf);
     try {
-      reader.loadFileInfo();
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
       assertNotNull("Reader has a null crypto context", cryptoContext);
       Key key = cryptoContext.getKey();

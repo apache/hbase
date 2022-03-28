@@ -33,8 +33,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -588,7 +586,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor to assign the ID to the newly created procedure.
    */
-  @VisibleForTesting
   protected void setProcId(long procId) {
     this.procId = procId;
     this.submittedTime = EnvironmentEdgeManager.currentTime();
@@ -609,12 +606,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor to set the value to the newly created procedure.
    */
-  @VisibleForTesting
   protected void setNonceKey(NonceKey nonceKey) {
     this.nonceKey = nonceKey;
   }
 
-  @VisibleForTesting
   public void setOwner(String owner) {
     this.owner = StringUtils.isEmpty(owner) ? null : owner;
   }
@@ -784,7 +779,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return false;
   }
 
-  @VisibleForTesting
   protected synchronized void setState(final ProcedureState state) {
     this.state = state;
     updateTimestamp();

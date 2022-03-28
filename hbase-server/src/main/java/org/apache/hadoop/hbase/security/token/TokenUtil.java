@@ -17,37 +17,23 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
-import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationService;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos;
 
 /**
  * Utility methods for obtaining authentication tokens.
@@ -57,142 +43,93 @@ public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
 
-  // Set in TestTokenUtil via reflection
-  private static ServiceException injectedException;
-
-  private static void injectFault() throws ServiceException {
-    if (injectedException != null) {
-      throw injectedException;
-    }
-  }
-
-  /**
-   * Obtain and return an authentication token for the current user.
-   * @param conn The async HBase cluster connection
-   * @return the authentication token instance, wrapped by a {@link CompletableFuture}.
-   */
+    /**
+     * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
+     * @deprecated External users should not use this method. Please post on
+     *   the HBase dev mailing list if you need this method. Internal
+     *   HBase code should use {@link ClientTokenUtil} instead.
+     */
+  @Deprecated
   public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
       AsyncConnection conn) {
-    CompletableFuture<Token<AuthenticationTokenIdentifier>> future = new CompletableFuture<>();
-    if (injectedException != null) {
-      future.completeExceptionally(injectedException);
-      return future;
-    }
-    AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
-    table.<AuthenticationService.Interface, GetAuthenticationTokenResponse> coprocessorService(
-      AuthenticationProtos.AuthenticationService::newStub,
-      (s, c, r) -> s.getAuthenticationToken(c,
-        AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance(), r),
-      HConstants.EMPTY_START_ROW).whenComplete((resp, error) -> {
-        if (error != null) {
-          future.completeExceptionally(ProtobufUtil.handleRemoteException(error));
-        } else {
-          future.complete(toToken(resp.getToken()));
-        }
-      });
-    return future;
+    return ClientTokenUtil.obtainToken(conn);
   }
 
   /**
-   * Obtain and return an authentication token for the current user.
-   * @param conn The HBase cluster connection
-   * @throws IOException if a remote error or serialization problem occurs.
-   * @return the authentication token instance
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
    */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
+    }
+  }
+
+  /**
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(Connection conn)
       throws IOException {
-    Table meta = null;
-    try {
-      injectFault();
-
-      meta = conn.getTable(TableName.META_TABLE_NAME);
-      CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
-      AuthenticationProtos.AuthenticationService.BlockingInterface service =
-        AuthenticationService.newBlockingStub(rpcChannel);
-      GetAuthenticationTokenResponse response =
-        service.getAuthenticationToken(null, GetAuthenticationTokenRequest.getDefaultInstance());
-
-      return toToken(response.getToken());
-    } catch (ServiceException se) {
-      throw ProtobufUtil.handleRemoteException(se);
-    } finally {
-      if (meta != null) {
-        meta.close();
-      }
-    }
+    return ClientTokenUtil.obtainToken(conn);
   }
 
 
   /**
-   * Converts a Token instance (with embedded identifier) to the protobuf representation.
-   *
-   * @param token the Token instance to copy
-   * @return the protobuf Token message
+   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
    */
+  @Deprecated
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
-    AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
-    builder.setPassword(ByteString.copyFrom(token.getPassword()));
-    if (token.getService() != null) {
-      builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
-    }
-    return builder.build();
+    return ClientTokenUtil.toToken(token);
   }
 
   /**
-   * Obtain and return an authentication token for the current user.
-   * @param conn The HBase cluster connection
-   * @return the authentication token instance
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection,
+   * org.apache.hadoop.hbase.security.User)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
    */
+  @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(
       final Connection conn, User user) throws IOException, InterruptedException {
-    return user.runAs(new PrivilegedExceptionAction<Token<AuthenticationTokenIdentifier>>() {
-      @Override
-      public Token<AuthenticationTokenIdentifier> run() throws Exception {
-        return obtainToken(conn);
-      }
-    });
+    return ClientTokenUtil.obtainToken(conn, user);
   }
 
+  /**
+   * See {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection,
+   * org.apache.hadoop.hbase.security.User)}.
+   */
+  public static void obtainAndCacheToken(final Connection conn,
+      User user)
+      throws IOException, InterruptedException {
+    ClientTokenUtil.obtainAndCacheToken(conn, user);
+  }
+
+  /**
+   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
+    return ClientTokenUtil.toToken(proto);
+  }
 
   private static Text getClusterId(Token<AuthenticationTokenIdentifier> token)
       throws IOException {
     return token.getService() != null
         ? token.getService() : new Text("default");
-  }
-
-  /**
-   * Obtain an authentication token for the given user and add it to the
-   * user's credentials.
-   * @param conn The HBase cluster connection
-   * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the authentication service fails
-   * @throws InterruptedException If executing as the given user is interrupted
-   */
-  public static void obtainAndCacheToken(final Connection conn,
-      User user)
-      throws IOException, InterruptedException {
-    try {
-      Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
-
-      if (token == null) {
-        throw new IOException("No token returned for user " + user.getName());
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Obtained token " + token.getKind().toString() + " for user " +
-            user.getName());
-      }
-      user.addToken(token);
-    } catch (IOException ioe) {
-      throw ioe;
-    } catch (InterruptedException ie) {
-      throw ie;
-    } catch (RuntimeException re) {
-      throw re;
-    } catch (Exception e) {
-      throw new UndeclaredThrowableException(e,
-          "Unexpected exception obtaining token for user " + user.getName());
-    }
   }
 
   /**
@@ -208,7 +145,7 @@ public class TokenUtil {
       User user, Job job)
       throws IOException, InterruptedException {
     try {
-      Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
+      Token<AuthenticationTokenIdentifier> token = ClientTokenUtil.obtainToken(conn, user);
 
       if (token == null) {
         throw new IOException("No token returned for user " + user.getName());
@@ -243,7 +180,7 @@ public class TokenUtil {
   public static void obtainTokenForJob(final Connection conn, final JobConf job, User user)
       throws IOException, InterruptedException {
     try {
-      Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
+      Token<AuthenticationTokenIdentifier> token = ClientTokenUtil.obtainToken(conn, user);
 
       if (token == null) {
         throw new IOException("No token returned for user " + user.getName());
@@ -279,9 +216,9 @@ public class TokenUtil {
   public static void addTokenForJob(final Connection conn, final JobConf job, User user)
       throws IOException, InterruptedException {
 
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
     }
     job.getCredentials().addToken(token.getService(), token);
   }
@@ -298,9 +235,9 @@ public class TokenUtil {
    */
   public static void addTokenForJob(final Connection conn, User user, Job job)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
     }
     job.getCredentials().addToken(token.getService(), token);
   }
@@ -317,9 +254,9 @@ public class TokenUtil {
    */
   public static boolean addTokenIfMissing(Connection conn, User user)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
       user.getUGI().addToken(token.getService(), token);
       return true;
     }
@@ -330,33 +267,12 @@ public class TokenUtil {
    * Get the authentication token of the user for the cluster specified in the configuration
    * @return null if the user does not have the token, otherwise the auth token for the cluster.
    */
-  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
-      throws IOException, InterruptedException {
-    ZKWatcher zkw = new ZKWatcher(conf, "TokenUtil-getAuthToken", null);
-    try {
-      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
-      if (clusterId == null) {
-        throw new IOException("Failed to get cluster ID");
-      }
-      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } finally {
-      zkw.close();
+  private static Token<AuthenticationTokenIdentifier> getAuthToken(Connection conn, User user)
+      throws IOException {
+    final String clusterId = conn.getClusterId();
+    if (clusterId == null) {
+      throw new IOException("Failed to get cluster ID");
     }
-  }
-
-  /**
-   * Converts a protobuf Token message back into a Token instance.
-   *
-   * @param proto the protobuf Token message
-   * @return the Token instance
-   */
-  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<>(
-        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
-        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
-        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
-        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
+    return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
   }
 }

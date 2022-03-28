@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 import java.io.IOException;
@@ -31,10 +32,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
- * optionally carries a set of result Cell data. We stick the Cells here when we want to avoid
- * having to protobuf them (for performance reasons). This class is used ferrying data across the
- * proxy/protobuf service chasm. Also does call timeout. Used by client and server ipc'ing.
+ * Get instances via {@link RpcControllerFactory} on client-side.
+ * @see RpcControllerFactory
  */
 @InterfaceAudience.Private
 public class HBaseRpcControllerImpl implements HBaseRpcController {
@@ -52,6 +51,12 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   private IOException exception;
 
   /**
+   * Rpc target Region's RegionInfo we are going against. May be null.
+   * @see #hasRegionInfo()
+   */
+  private RegionInfo regionInfo;
+
+  /**
    * Priority to set on this request. Set it here in controller so available composing the request.
    * This is the ordained way of setting priorities going forward. We will be undoing the old
    * annotation-based mechanism.
@@ -67,15 +72,34 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   private CellScanner cellScanner;
 
   public HBaseRpcControllerImpl() {
-    this((CellScanner) null);
+    this(null, (CellScanner) null);
   }
 
+  /**
+   * Used server-side. Clients should go via {@link RpcControllerFactory}
+   */
   public HBaseRpcControllerImpl(final CellScanner cellScanner) {
-    this.cellScanner = cellScanner;
+    this(null, cellScanner);
   }
 
-  public HBaseRpcControllerImpl(final List<CellScannable> cellIterables) {
+  HBaseRpcControllerImpl(RegionInfo regionInfo, final CellScanner cellScanner) {
+    this.cellScanner = cellScanner;
+    this.regionInfo = regionInfo;
+  }
+
+  HBaseRpcControllerImpl(RegionInfo regionInfo, final List<CellScannable> cellIterables) {
     this.cellScanner = cellIterables == null ? null : CellUtil.createCellScanner(cellIterables);
+    this.regionInfo = null;
+  }
+
+  @Override
+  public boolean hasRegionInfo() {
+    return this.regionInfo != null;
+  }
+
+  @Override
+  public RegionInfo getRegionInfo() {
+    return this.regionInfo;
   }
 
   /**
@@ -118,6 +142,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     cellScanner = null;
     exception = null;
     callTimeout = null;
+    regionInfo = null;
     // In the implementations of some callable with replicas, rpc calls are executed in a executor
     // and we could cancel the operation from outside which means there could be a race between
     // reset and startCancel. Although I think the race should be handled by the callable since the
@@ -131,11 +156,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public int getCallTimeout() {
-    if (callTimeout != null) {
-      return callTimeout.intValue();
-    } else {
-      return 0;
-    }
+    return callTimeout != null? callTimeout: 0;
   }
 
   @Override
@@ -241,5 +262,4 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
       action.run(false);
     }
   }
-
 }

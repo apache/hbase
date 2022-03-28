@@ -38,10 +38,4 @@ public class FifoRpcSchedulerFactory implements RpcSchedulerFactory {
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
     return new FifoRpcScheduler(conf, handlerCount);
   }
-
-  @Deprecated
-  @Override
-  public RpcScheduler create(Configuration conf, PriorityFunction priority) {
-    return create(conf, priority, null);
-  }
 }

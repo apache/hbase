@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.util;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Generate a classpath string containing any jars required by mapreduce jobs. Specify
@@ -63,10 +62,7 @@ public class MapreduceDependencyClasspathTool implements Tool {
 
   public static void main(String[] argv) throws Exception {
     // Silence the usual noise. This is probably fragile...
-    Logger logger = Logger.getLogger("org.apache.hadoop.hbase");
-    if (logger != null) {
-      logger.setLevel(Level.WARN);
-    }
+    Log4jUtils.setLogLevel("org.apache.hadoop.hbase", "WARN");
     System.exit(ToolRunner.run(
       HBaseConfiguration.create(), new MapreduceDependencyClasspathTool(), argv));
   }

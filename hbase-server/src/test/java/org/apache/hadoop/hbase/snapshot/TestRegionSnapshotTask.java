@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.regionserver.snapshot.FlushSnapshotSubprocedure;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -69,14 +69,14 @@ public class TestRegionSnapshotTask {
 
   private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private static Configuration conf;
   private static FileSystem fs;
   private static Path rootDir;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
 
     conf = TEST_UTIL.getConfiguration();
 
@@ -88,7 +88,7 @@ public class TestRegionSnapshotTask {
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
 
-    rootDir = FSUtils.getRootDir(conf);
+    rootDir = CommonFSUtils.getRootDir(conf);
     fs = TEST_UTIL.getTestFileSystem();
   }
 

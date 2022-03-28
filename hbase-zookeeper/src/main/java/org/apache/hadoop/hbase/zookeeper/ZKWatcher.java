@@ -24,14 +24,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -44,6 +49,7 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -62,11 +68,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.
-  private String prefix;
+  private final String prefix;
   private String identifier;
 
   // zookeeper quorum
-  private String quorum;
+  private final String quorum;
 
   // zookeeper connection
   private final RecoverableZooKeeper recoverableZooKeeper;
@@ -81,11 +87,22 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
 
-  // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
-  // negotiation to complete
-  private CountDownLatch saslLatch = new CountDownLatch(1);
+  // Single threaded executor pool that processes event notifications from Zookeeper. Events are
+  // processed in the order in which they arrive (pool backed by an unbounded fifo queue). We do
+  // this to decouple the event processing from Zookeeper's ClientCnxn's EventThread context.
+  // EventThread internally runs a single while loop to serially process all the events. When events
+  // are processed by the listeners in the same thread, that blocks the EventThread from processing
+  // subsequent events. Processing events in a separate thread frees up the event thread to continue
+  // and further prevents deadlocks if the process method itself makes other zookeeper calls.
+  // It is ok to do it in a single thread because the Zookeeper ClientCnxn already serializes the
+  // requests using a single while loop and hence there is no performance degradation.
+  private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final Configuration conf;
+
+  private final long zkSyncTimeout;
 
   /* A pattern that matches a Kerberos name, borrowed from Hadoop's KerberosName */
   private static final Pattern NAME_PATTERN = Pattern.compile("([^/@]*)(/([^/@]*))?@([^/@]*)");
@@ -160,7 +177,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     this.abortable = abortable;
     this.znodePaths = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
-    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
+    this.recoverableZooKeeper =
+      RecoverableZooKeeper.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
       try {
@@ -169,11 +187,62 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         try {
           this.recoverableZooKeeper.close();
         } catch (InterruptedException ie) {
-          LOG.debug("Encountered InterruptedException when closing " + this.recoverableZooKeeper);
+          LOG.debug("Encountered InterruptedException when closing {}", this.recoverableZooKeeper);
           Thread.currentThread().interrupt();
         }
         throw zce;
       }
+    }
+    this.zkSyncTimeout = conf.getLong(HConstants.ZK_SYNC_BLOCKING_TIMEOUT_MS,
+        HConstants.ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS);
+  }
+
+  public List<ACL> createACL(String node) {
+    return createACL(node, ZKAuthentication.isSecureZooKeeper(getConfiguration()));
+  }
+
+  public List<ACL> createACL(String node, boolean isSecureZooKeeper) {
+    if (!node.startsWith(getZNodePaths().baseZNode)) {
+      return Ids.OPEN_ACL_UNSAFE;
+    }
+    if (isSecureZooKeeper) {
+      ArrayList<ACL> acls = new ArrayList<>();
+      // add permission to hbase supper user
+      String[] superUsers = getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
+      String hbaseUser = null;
+      try {
+        hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
+      } catch (IOException e) {
+        LOG.debug("Could not acquire current User.", e);
+      }
+      if (superUsers != null) {
+        List<String> groups = new ArrayList<>();
+        for (String user : superUsers) {
+          if (AuthUtil.isGroupPrincipal(user)) {
+            // TODO: Set node ACL for groups when ZK supports this feature
+            groups.add(user);
+          } else {
+            if(!user.equals(hbaseUser)) {
+              acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
+            }
+          }
+        }
+        if (!groups.isEmpty()) {
+          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this " +
+            "feature presently.", groups);
+        }
+      }
+      // Certain znodes are accessed directly by the client,
+      // so they must be readable by non-authenticated clients
+      if (getZNodePaths().isClientReadable(node)) {
+        acls.addAll(Ids.CREATOR_ALL_ACL);
+        acls.addAll(Ids.READ_ACL_UNSAFE);
+      } else {
+        acls.addAll(Ids.CREATOR_ALL_ACL);
+      }
+      return acls;
+    } else {
+      return Ids.OPEN_ACL_UNSAFE;
     }
   }
 
@@ -186,7 +255,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       ZKUtil.createAndFailSilent(this, znodePaths.tableZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.splitLogZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.backupMasterAddressesZNode);
-      ZKUtil.createAndFailSilent(this, znodePaths.tableLockZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.masterMaintZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(
@@ -201,7 +269,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * perms.
    */
   public void checkAndSetZNodeAcls() {
-    if (!ZKUtil.isSecureZooKeeper(getConfiguration())) {
+    if (!ZKAuthentication.isSecureZooKeeper(getConfiguration())) {
       LOG.info("not a secure deployment, proceeding");
       return;
     }
@@ -235,8 +303,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     for (String child : children) {
       setZnodeAclsRecursive(ZNodePaths.joinZNode(znode, child));
     }
-    List<ACL> acls = ZKUtil.createACL(this, znode, true);
-    LOG.info("Setting ACLs for znode:" + znode + " , acl:" + acls);
+    List<ACL> acls = createACL(znode, true);
+    LOG.info("Setting ACLs for znode:{} , acl:{}", znode, acls);
     recoverableZooKeeper.setAcl(znode, acls, -1);
   }
 
@@ -305,13 +373,13 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
           }
         } else {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Unexpected shortname in SASL ACL: " + id);
+            LOG.debug("Unexpected shortname in SASL ACL: {}", id);
           }
           return false;
         }
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("unexpected ACL id '" + id + "'");
+          LOG.debug("unexpected ACL id '{}'", id);
         }
         return false;
       }
@@ -384,13 +452,32 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
+    return filterMetaReplicaNodes(childrenOfBaseNode);
+  }
+
+  /**
+   * Same as {@link #getMetaReplicaNodes()} except that this also registers a watcher on base znode
+   * for subsequent CREATE/DELETE operations on child nodes.
+   */
+  public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
+    List<String> childrenOfBaseNode =
+        ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
+    return filterMetaReplicaNodes(childrenOfBaseNode);
+  }
+
+  /**
+   * @param nodes Input list of znodes
+   * @return Filtered list of znodes from nodes that belong to meta replica(s).
+   */
+  private List<String> filterMetaReplicaNodes(List<String> nodes) {
+    if (nodes == null || nodes.isEmpty()) {
+      return new ArrayList<>();
+    }
     List<String> metaReplicaNodes = new ArrayList<>(2);
-    if (childrenOfBaseNode != null) {
-      String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
-      for (String child : childrenOfBaseNode) {
-        if (child.startsWith(pattern)) {
-          metaReplicaNodes.add(child);
-        }
+    String pattern = conf.get(ZNodePaths.META_ZNODE_PREFIX_CONF_KEY, ZNodePaths.META_ZNODE_PREFIX);
+    for (String child : nodes) {
+      if (child.startsWith(pattern)) {
+        metaReplicaNodes.add(child);
       }
     }
     return metaReplicaNodes;
@@ -467,21 +554,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     return znodePaths;
   }
 
-  /**
-   * Method called from ZooKeeper for events and connection status.
-   * <p>
-   * Valid events are passed along to listeners.  Connection status changes
-   * are dealt with locally.
-   */
-  @Override
-  public void process(WatchedEvent event) {
-    LOG.debug(prefix("Received ZooKeeper Event, " +
-        "type=" + event.getType() + ", " +
-        "state=" + event.getState() + ", " +
-        "path=" + event.getPath()));
-
+  private void processEvent(WatchedEvent event) {
     switch(event.getType()) {
-
       // If event type is NONE, this is a connection status change
       case None: {
         connectionEvent(event);
@@ -489,7 +563,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       }
 
       // Otherwise pass along to the listeners
-
       case NodeCreated: {
         for(ZKListener listener : listeners) {
           listener.nodeCreated(event.getPath());
@@ -518,8 +591,24 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         break;
       }
       default:
-        throw new IllegalStateException("Received event is not valid: " + event.getState());
+        LOG.error("Invalid event of type {} received for path {}. Ignoring.",
+            event.getState(), event.getPath());
     }
+  }
+
+  /**
+   * Method called from ZooKeeper for events and connection status.
+   * <p>
+   * Valid events are passed along to listeners.  Connection status changes
+   * are dealt with locally.
+   */
+  @Override
+  public void process(WatchedEvent event) {
+    LOG.debug(prefix("Received ZooKeeper Event, " +
+        "type=" + event.getType() + ", " +
+        "state=" + event.getState() + ", " +
+        "path=" + event.getPath()));
+    zkEventProcessor.submit(() -> processEvent(event));
   }
 
   // Connection management
@@ -540,12 +629,16 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         this.identifier = this.prefix + "-0x" +
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
-        LOG.debug(this.identifier + " connected");
+        LOG.debug("{} connected", this.identifier);
         break;
 
       // Abort the server if Disconnected or Expired
       case Disconnected:
         LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
+        break;
+
+      case Closed:
+        LOG.debug(prefix("ZooKeeper client closed, ignoring"));
         break;
 
       case Expired:
@@ -569,7 +662,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   }
 
   /**
-   * Forces a synchronization of this ZooKeeper client connection.
+   * Forces a synchronization of this ZooKeeper client connection within a timeout. Enforcing a
+   * timeout lets the callers fail-fast rather than wait forever for the sync to finish.
    * <p>
    * Executing this method before running other methods will ensure that the
    * subsequent operations are up-to-date and consistent as of the time that
@@ -579,9 +673,28 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * data of an existing node and delete or transition that node, utilizing the
    * previously read version and data.  We want to ensure that the version read
    * is up-to-date from when we begin the operation.
+   * <p>
    */
-  public void sync(String path) throws KeeperException {
-    this.recoverableZooKeeper.sync(path, null, null);
+  public void syncOrTimeout(String path) throws KeeperException {
+    final CountDownLatch latch = new CountDownLatch(1);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    this.recoverableZooKeeper.sync(path, (i, s, o) -> latch.countDown(), null);
+    try {
+      if (!latch.await(zkSyncTimeout, TimeUnit.MILLISECONDS)) {
+        LOG.warn("sync() operation to ZK timed out. Configured timeout: {}ms. This usually points "
+            + "to a ZK side issue. Check ZK server logs and metrics.", zkSyncTimeout);
+        throw new KeeperException.RequestTimeoutException();
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted waiting for ZK sync() to finish.", e);
+      Thread.currentThread().interrupt();
+      return;
+    }
+    if (LOG.isDebugEnabled()) {
+      // TODO: Switch to a metric once server side ZK watcher metrics are implemented. This is a
+      // useful metric to have since the latency of sync() impacts the callers.
+      LOG.debug("ZK sync() operation took {}ms", EnvironmentEdgeManager.currentTime() - startTime);
+    }
   }
 
   /**
@@ -635,6 +748,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       recoverableZooKeeper.close();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } finally {
+      zkEventProcessor.shutdownNow();
     }
   }
 

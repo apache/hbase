@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
@@ -53,7 +54,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Clone the snapshot to another table
       TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -76,6 +77,42 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       assertEquals(splitRegionCountOfOriginalTable, splitRegionCountOfClonedTable);
 
       TEST_UTIL.deleteTable(clonedTableName);
+    } finally {
+      admin.catalogJanitorSwitch(true);
+    }
+  }
+
+  @Test
+  public void testCloneSnapshotBeforeSplittingRegionAndDroppingTable()
+    throws IOException, InterruptedException {
+    // Turn off the CatalogJanitor
+    admin.catalogJanitorSwitch(false);
+
+    try {
+      // Take a snapshot
+      admin.snapshot(snapshotName2, tableName);
+
+      // Clone the snapshot to another table
+      TableName clonedTableName =
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+      admin.cloneSnapshot(snapshotName2, clonedTableName);
+      SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
+
+      // Split the first region of the original table
+      List<RegionInfo> regionInfos = admin.getRegions(tableName);
+      RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
+      splitRegion(regionInfos.get(0));
+
+      // Drop the original table
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+
+      // Disable and enable the cloned table. This should be successful
+      admin.disableTable(clonedTableName);
+      admin.enableTable(clonedTableName);
+      SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
+
+      verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
     } finally {
       admin.catalogJanitorSwitch(true);
     }

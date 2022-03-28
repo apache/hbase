@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
@@ -53,8 +53,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -81,14 +80,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * the time limit is reached, the server will return to the Client whatever Results it has
  * accumulated (potentially empty).
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestScannerHeartbeatMessages {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerHeartbeatMessages.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static AsyncConnection CONN;
 
@@ -525,7 +524,7 @@ public class TestScannerHeartbeatMessages {
   private static class HeartbeatReversedRegionScanner extends ReversedRegionScannerImpl {
     HeartbeatReversedRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners,
         HRegion region) throws IOException {
-      super(scan, additionalScanners, region);
+      super(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
 
     @Override
@@ -554,7 +553,7 @@ public class TestScannerHeartbeatMessages {
   private static class HeartbeatRegionScanner extends RegionScannerImpl {
     HeartbeatRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
         throws IOException {
-      region.super(scan, additionalScanners, region);
+      super(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
 
     @Override

@@ -28,21 +28,22 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mapreduce.Import;
@@ -147,13 +148,14 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     private void createTable(Admin admin, TableName tableName, boolean setVersion,
         boolean acl) throws IOException {
       if (!admin.tableExists(tableName)) {
-        HTableDescriptor htd = new HTableDescriptor(tableName);
-        HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
+        ColumnFamilyDescriptorBuilder cfBuilder =
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_NAME);
         if (setVersion) {
-          family.setMaxVersions(DEFAULT_TABLES_COUNT);
+          cfBuilder.setMaxVersions(DEFAULT_TABLES_COUNT);
         }
-        htd.addFamily(family);
-        admin.createTable(htd);
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfBuilder.build()).build();
+        admin.createTable(tableDescriptor);
         if (acl) {
           LOG.info("Granting permissions for user " + USER.getShortName());
           Permission.Action[] actions = { Permission.Action.READ };

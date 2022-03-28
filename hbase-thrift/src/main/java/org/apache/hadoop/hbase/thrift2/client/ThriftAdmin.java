@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,10 +39,16 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ServerType;
+import org.apache.hadoop.hbase.client.LogEntry;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
@@ -50,12 +56,14 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -63,10 +71,14 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -137,6 +149,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public List<TableDescriptor> listTableDescriptors() throws IOException {
     return listTableDescriptors((Pattern) null);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException {
+    return listTableDescriptors(null, includeSysTables);
   }
 
   @Override
@@ -461,9 +478,19 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void flush(TableName tableName, byte[] columnFamily) {
+    throw new NotImplementedException("flush not supported in ThriftAdmin");
+  }
+
+  @Override
   public void flushRegion(byte[] regionName) {
     throw new NotImplementedException("flushRegion not supported in ThriftAdmin");
 
+  }
+
+  @Override
+  public void flushRegion(byte[] regionName, byte[] columnFamily) {
+    throw new NotImplementedException("flushRegion not supported in ThriftAdmin");
   }
 
   @Override
@@ -579,9 +606,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) {
+  public void unassign(byte[] regionName) {
     throw new NotImplementedException("unassign not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -606,6 +632,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
+    throw new NotImplementedException("balance not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean isBalancerEnabled() {
     throw new NotImplementedException("isBalancerEnabled not supported in ThriftAdmin");
   }
@@ -616,7 +647,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public boolean normalize() {
+  public boolean normalize(NormalizeTableFilterParams ntfp) {
     throw new NotImplementedException("normalize not supported in ThriftAdmin");
   }
 
@@ -838,8 +869,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl,
+    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException {
     throw new NotImplementedException("cloneSnapshotAsync not supported in ThriftAdmin");
   }
 
@@ -917,6 +948,11 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public void updateConfiguration() {
+    throw new NotImplementedException("updateConfiguration not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void updateConfiguration(String groupName) {
     throw new NotImplementedException("updateConfiguration not supported in ThriftAdmin");
   }
 
@@ -1143,7 +1179,136 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean snapshotCleanupSwitch(boolean on, boolean synchronous) {
+    throw new NotImplementedException("snapshotCleanupSwitch not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isSnapshotCleanupEnabled() {
+    throw new NotImplementedException("isSnapshotCleanupEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    TLogQueryFilter tLogQueryFilter =
+      ThriftUtilities.getSlowLogQueryFromHBase(logQueryFilter);
+    try {
+      List<TOnlineLogRecord> tOnlineLogRecords =
+        client.getSlowLogResponses(tServerNames, tLogQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromThrift(tOnlineLogRecords);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    try {
+      return client.clearSlowLogResponses(tServerNames);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(String groupName) {
+    throw new NotImplementedException("getRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void moveServersToRSGroup(Set<Address> servers, String targetGroup) {
+    throw new NotImplementedException("moveToRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void addRSGroup(String groupName) {
+    throw new NotImplementedException("addRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void removeRSGroup(String groupName) {
+    throw new NotImplementedException("removeRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) {
+    throw new NotImplementedException("balanceRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<RSGroupInfo> listRSGroups() {
+    throw new NotImplementedException("listRSGroups not supported in ThriftAdmin");
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(Address hostPort) {
+    throw new NotImplementedException("getRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void removeServersFromRSGroup(Set<Address> servers) {
+    throw new NotImplementedException("removeRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(TableName tableName) {
+    throw new NotImplementedException("getRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) {
+    throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
+  }
+
+  @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    throw new NotImplementedException("renameRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    throw new NotImplementedException("updateRSGroupConfig not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    throw new NotImplementedException(
+      "modifyColumnFamilyStoreFileTrackerAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    throw new NotImplementedException(
+      "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
   }
 }

@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
@@ -91,8 +91,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   public static class TestTableSnapshotReducer extends MapReduceBase
       implements Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-      new HBaseTestingUtility.SeenRowTracker(aaa, after_zzz);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+      new HBaseTestingUtil.SeenRowTracker(aaa, after_zzz);
 
     @Override
     public void reduce(ImmutableBytesWritable key, Iterator<NullWritable> values,
@@ -109,7 +109,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
@@ -134,7 +133,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -173,10 +171,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  protected void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
+  protected void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
@@ -205,7 +202,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -216,8 +212,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     Assert.assertEquals(expectedNumSplits, splits.length);
 
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-      new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+      new HBaseTestingUtil.SeenRowTracker(startRow, stopRow);
 
     // SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY is not explicitly specified,
     // so the default value is taken.
@@ -260,15 +256,15 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
-      boolean shutdownCluster) throws Exception {
+  protected void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
+      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
+      int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
       numRegions, numSplitsPerRegion, expectedNumSplits, shutdownCluster);
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
-  public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
+  public static void doTestWithMapReduce(HBaseTestingUtil util, TableName tableName,
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int numSplitsPerRegion,int expectedNumSplits, boolean shutdownCluster) throws Exception {
 

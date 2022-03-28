@@ -24,11 +24,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -187,13 +186,19 @@ public class ClassSize {
       private byte a;
     }
 
+    private static final int ARRAY_OBJECT_INDEX_SCALE =
+      HBasePlatformDependent.arrayIndexScale(Object[].class);
+
+    private static final int ARRAY_BYTE_INDEX_SCALE =
+      HBasePlatformDependent.arrayIndexScale(byte[].class);
+
     public UnsafeLayout() {
     }
 
     @Override
     int headerSize() {
       try {
-        return (int) UnsafeAccess.theUnsafe.objectFieldOffset(
+        return (int) HBasePlatformDependent.objectFieldOffset(
           HeaderSize.class.getDeclaredField("a"));
       } catch (NoSuchFieldException | SecurityException e) {
         LOG.error(e.toString(), e);
@@ -203,21 +208,19 @@ public class ClassSize {
 
     @Override
     int arrayHeaderSize() {
-      return UnsafeAccess.theUnsafe.arrayBaseOffset(byte[].class);
+      return HBasePlatformDependent.arrayBaseOffset(byte[].class);
     }
 
     @Override
-    @SuppressWarnings("static-access")
     int oopSize() {
       // Unsafe.addressSize() returns 8, even with CompressedOops. This is how many bytes each
       // element is allocated in an Object[].
-      return UnsafeAccess.theUnsafe.ARRAY_OBJECT_INDEX_SCALE;
+      return ARRAY_OBJECT_INDEX_SCALE;
     }
 
     @Override
-    @SuppressWarnings("static-access")
     long sizeOfByteArray(int len) {
-      return align(ARRAY + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
+      return align(ARRAY + len * ARRAY_BYTE_INDEX_SCALE);
     }
   }
 
@@ -225,7 +228,8 @@ public class ClassSize {
     // Have a safeguard in case Unsafe estimate is wrong. This is static context, there is
     // no configuration, so we look at System property.
     String enabled = System.getProperty("hbase.memorylayout.use.unsafe");
-    if (UnsafeAvailChecker.isAvailable() && (enabled == null || Boolean.parseBoolean(enabled))) {
+    if (HBasePlatformDependent.isUnsafeAvailable() &&
+      (enabled == null || Boolean.parseBoolean(enabled))) {
       LOG.debug("Using Unsafe to estimate memory layout");
       return new UnsafeLayout();
     }
@@ -236,7 +240,6 @@ public class ClassSize {
   private static final MemoryLayout memoryLayout = getMemoryLayout();
   private static final boolean USE_UNSAFE_LAYOUT = (memoryLayout instanceof UnsafeLayout);
 
-  @VisibleForTesting
   public static boolean useUnsafeLayout() {
     return USE_UNSAFE_LAYOUT;
   }
@@ -259,7 +262,11 @@ public class ClassSize {
     LINKEDLIST_ENTRY = align(OBJECT + (2 * REFERENCE));
 
     //noinspection PointlessArithmeticExpression
-    BYTE_BUFFER = align(OBJECT + REFERENCE +
+    BYTE_BUFFER = JVM.getJVMSpecVersion() < 17 ?
+      align(OBJECT + REFERENCE +
+        (5 * Bytes.SIZEOF_INT) +
+        (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG) + align(ARRAY) :
+      align(OBJECT + 2 * REFERENCE +
         (5 * Bytes.SIZEOF_INT) +
         (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG) + align(ARRAY);
 

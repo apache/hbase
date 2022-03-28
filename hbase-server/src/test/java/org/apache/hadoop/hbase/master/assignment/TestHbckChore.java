@@ -25,10 +25,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
@@ -46,12 +46,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestHbckChore extends TestAssignmentManagerBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestHbckChore.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -68,7 +65,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   @Test
   public void testForMeta() {
     byte[] metaRegionNameAsBytes = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName();
-    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName();
+    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString();
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
     assertEquals(NSERVERS, serverNames.size());
 
@@ -95,7 +92,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   public void testForUserTable() throws Exception {
     TableName tableName = TableName.valueOf("testForUserTable");
     RegionInfo hri = createRegionInfo(tableName, 1);
-    String regionName = hri.getEncodedName();
+    String regionName = hri.getRegionNameAsString();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
     waitOnFuture(future);
@@ -143,7 +140,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     assertTrue(reportedRegionServers.contains(anotherServer));
 
     // Reported right region location, then not in inconsistent regions.
-    am.reportOnlineRegions(anotherServer, Collections.EMPTY_SET);
+    am.reportOnlineRegions(anotherServer, Collections.emptySet());
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
@@ -153,7 +150,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   public void testForDisabledTable() throws Exception {
     TableName tableName = TableName.valueOf("testForDisabledTable");
     RegionInfo hri = createRegionInfo(tableName, 1);
-    String regionName = hri.getEncodedName();
+    String regionName = hri.getRegionNameAsString();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
     waitOnFuture(future);
@@ -181,6 +178,25 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   }
 
   @Test
+  public void testForSplitParent() throws Exception {
+    TableName tableName = TableName.valueOf("testForSplitParent");
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(0))
+        .setEndKey(Bytes.toBytes(1)).setSplit(true).setOffline(true).setRegionId(0).build();
+    String regionName = hri.getEncodedName();
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
+    waitOnFuture(future);
+
+    List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
+    assertEquals(NSERVERS, serverNames.size());
+
+    hbckChore.choreForTesting();
+    Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
+        hbckChore.getInconsistentRegions();
+    assertFalse(inconsistentRegions.containsKey(regionName));
+  }
+
+  @Test
   public void testOrphanRegionsOnFS() throws Exception {
     TableName tableName = TableName.valueOf("testOrphanRegionsOnFS");
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
@@ -189,12 +205,12 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
 
-    HRegion.createRegionDir(conf, regionInfo, FSUtils.getRootDir(conf));
+    HRegion.createRegionDir(conf, regionInfo, CommonFSUtils.getRootDir(conf));
     hbckChore.choreForTesting();
     assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
     assertTrue(hbckChore.getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));
 
-    FSUtils.deleteRegionDir(conf, new HRegionInfo(regionInfo));
+    FSUtils.deleteRegionDir(conf, regionInfo);
     hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
   }

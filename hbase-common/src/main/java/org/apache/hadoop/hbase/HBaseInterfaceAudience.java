@@ -53,4 +53,9 @@ public final class HBaseInterfaceAudience {
    * Denotes classes used by hbck tool for fixing inconsistent state of HBase.
    */
   public static final String HBCK = "HBCK";
+
+  /**
+   * Denotes classes that can be used to build custom authentication solutions.
+   */
+  public static final String AUTHENTICATION = "Authentication";
 }

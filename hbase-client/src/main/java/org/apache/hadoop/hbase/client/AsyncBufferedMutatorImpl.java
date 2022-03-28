@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -60,7 +59,6 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private boolean closed;
 
-  @VisibleForTesting
   Timeout periodicFlushTask;
 
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
@@ -83,7 +81,6 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   }
 
   // will be overridden in test
-  @VisibleForTesting
   protected void internalFlush() {
     if (periodicFlushTask != null) {
       periodicFlushTask.cancel();

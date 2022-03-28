@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
@@ -50,10 +48,11 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -65,14 +64,14 @@ import org.junit.rules.TestName;
 /**
  * Test that verifies WAL written by SecureProtobufLogWriter is not readable by ProtobufLogReader
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestWALReaderOnSecureWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALReaderOnSecureWAL.class);
 
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   final byte[] value = Bytes.toBytes("Test value");
 
   private static final String WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
@@ -85,12 +84,13 @@ public class TestWALReaderOnSecureWAL {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setBoolean("hbase.hlog.split.skip.errors", true);
+    conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, true);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
-  private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap) throws IOException {
+  private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
+      throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, SecureWALCellCodec.class,
@@ -118,8 +118,8 @@ public class TestWALReaderOnSecureWAL {
         } else {
           kvs.add(kv);
         }
-        wal.append(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc, scopes), kvs, true);
+        wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       wal.sync();
       final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
@@ -168,21 +168,14 @@ public class TestWALReaderOnSecureWAL {
       wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
       assertFalse(true);
     } catch (IOException ioe) {
-      // expected IOE
+      System.out.println("Expected ioe " + ioe.getMessage());
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
-    try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null);
-      s.splitLogFile(listStatus[0], null);
-      Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
-        "corrupt");
-      assertTrue(fs.exists(file));
-      // assertFalse("log splitting should have failed", true);
-    } catch (IOException ioe) {
-      assertTrue("WAL should have been sidelined", false);
-    }
+    Path rootdir = CommonFSUtils.getRootDir(conf);
+    WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
+    WALSplitter.SplitWALResult swr = s.splitWAL(listStatus[0], null);
+    assertTrue(swr.isCorrupt());
     wals.close();
   }
 
@@ -196,7 +189,8 @@ public class TestWALReaderOnSecureWAL {
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final WALFactory wals = new WALFactory(conf, ServerName
-        .valueOf(currentTest.getMethodName(), 16010, System.currentTimeMillis()).toString());
+      .valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
+        .toString());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
 
     // Ensure edits are plaintext
@@ -216,10 +210,10 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null);
-      s.splitLogFile(listStatus[0], null);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
+      s.splitWAL(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
       assertTrue(!fs.exists(file));

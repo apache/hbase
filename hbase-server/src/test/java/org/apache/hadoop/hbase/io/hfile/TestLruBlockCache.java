@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,6 +66,8 @@ public class TestLruBlockCache {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLruBlockCache.class);
 
+  private static final Configuration CONF = HBaseConfiguration.create();
+
   @Test
   public void testCacheEvictionThreadSafe() throws Exception {
     long maxSize = 100000;
@@ -73,13 +76,10 @@ public class TestLruBlockCache {
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
-    final Configuration conf = HBaseConfiguration.create();
     final LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
-    while (!evictionThread.isEnteringRun()) {
-      Thread.sleep(1);
-    }
+    Waiter.waitFor(CONF, 10000, 100, () -> evictionThread.isEnteringRun());
     final String hfileName = "hfile";
     int threads = 10;
     final int blocksPerThread = 5 * numBlocks;
@@ -102,7 +102,7 @@ public class TestLruBlockCache {
       service.shutdown();
       // The test may fail here if the evict thread frees the blocks too fast
       service.awaitTermination(10, TimeUnit.MINUTES);
-      Waiter.waitFor(conf, 10000, 100, new ExplainingPredicate<Exception>() {
+      Waiter.waitFor(CONF, 10000, 100, new ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           return cache.getBlockCount() == 0;
@@ -131,9 +131,7 @@ public class TestLruBlockCache {
     CachedItem[] blocks = generateFixedBlocks(numBlocks + 1, blockSize, "block");
 
     // Make sure eviction thread has entered run method
-    while (!evictionThread.isEnteringRun()) {
-      Thread.sleep(1);
-    }
+    Waiter.waitFor(CONF, 10000, 10, () -> evictionThread.isEnteringRun());
 
     // Add all the blocks
     for (CachedItem block : blocks) {
@@ -141,11 +139,18 @@ public class TestLruBlockCache {
     }
 
     // wait until at least one eviction has run
-    int n = 0;
-    while(cache.getStats().getEvictionCount() == 0) {
-      Thread.sleep(200);
-      assertTrue("Eviction never happened.", n++ < 20);
-    }
+    Waiter.waitFor(CONF, 30000, 200, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return cache.getStats().getEvictionCount() > 0;
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "Eviction never happened.";
+      }
+    });
 
     // let cache stabilize
     // On some systems, the cache will run multiple evictions before it attains
@@ -154,22 +159,20 @@ public class TestLruBlockCache {
     // evicts another. I think this is due to the delta between minSize and
     // acceptableSize, combined with variance between object overhead on
     // different environments.
-    n = 0;
-    for (long prevCnt = 0 /* < number of blocks added */,
-              curCnt = cache.getBlockCount();
-        prevCnt != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
+    int n = 0;
+    for (long prevCnt = 0 /* < number of blocks added */, curCnt =
+      cache.getBlockCount(); prevCnt != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
       Thread.sleep(200);
-      assertTrue("Cache never stabilized.", n++ < 20);
+      assertTrue("Cache never stabilized.", n++ < 100);
     }
 
     long evictionCount = cache.getStats().getEvictionCount();
     assertTrue(evictionCount >= 1);
-    System.out.println("Background Evictions run: " + evictionCount);
+    LOG.info("Background Evictions run: {}", evictionCount);
   }
 
   @Test
   public void testCacheSimple() throws Exception {
-
     long maxSize = 1000000;
     long blockSize = calculateBlockSizeDefault(maxSize, 101);
 
@@ -228,7 +231,6 @@ public class TestLruBlockCache {
 
   @Test
   public void testCacheEvictionSimple() throws Exception {
-
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
@@ -268,14 +270,13 @@ public class TestLruBlockCache {
 
   @Test
   public void testCacheEvictionTwoPriorities() throws Exception {
-
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
     LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(5, 10000, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(5, 10000, "multi");
+    CachedItem[] singleBlocks = generateFixedBlocks(5, 10000, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(5, 10000, "multi");
 
     long expectedCacheSize = cache.heapSize();
 
@@ -327,7 +328,6 @@ public class TestLruBlockCache {
 
   @Test
   public void testCacheEvictionThreePriorities() throws Exception {
-
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
@@ -344,9 +344,9 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
-    CachedItem [] memoryBlocks = generateFixedBlocks(5, blockSize, "memory");
+    CachedItem[] singleBlocks = generateFixedBlocks(5, blockSize, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
+    CachedItem[] memoryBlocks = generateFixedBlocks(5, blockSize, "memory");
 
     long expectedCacheSize = cache.heapSize();
 
@@ -573,8 +573,8 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
+    CachedItem[] singleBlocks = generateFixedBlocks(20, blockSize, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
 
     // Add 5 multi blocks
     for (CachedItem block : multiBlocks) {
@@ -583,7 +583,7 @@ public class TestLruBlockCache {
     }
 
     // Add 5 single blocks
-    for(int i=0;i<5;i++) {
+    for (int i = 0; i < 5; i++) {
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
     }
 
@@ -606,7 +606,7 @@ public class TestLruBlockCache {
     // blocks evicted.  Inserting 13 blocks should yield 3 more evictions and
     // 12 more evicted.
 
-    for(int i=5;i<18;i++) {
+    for (int i = 5; i < 18; i++) {
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
     }
 
@@ -636,8 +636,8 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         1024);
-    CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
-    CachedItem [] small = generateFixedBlocks(15, 600, "small");
+    CachedItem[] tooLong = generateFixedBlocks(10, 1024+5, "long");
+    CachedItem[] small = generateFixedBlocks(15, 600, "small");
 
 
     for (CachedItem i:tooLong) {
@@ -660,7 +660,6 @@ public class TestLruBlockCache {
   // test setMaxSize
   @Test
   public void testResizeBlockCache() throws Exception {
-
     long maxSize = 300000;
     long blockSize = calculateBlockSize(maxSize, 31);
 
@@ -677,13 +676,12 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
-    CachedItem [] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
+    CachedItem[] singleBlocks = generateFixedBlocks(10, blockSize, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
+    CachedItem[] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
 
     // Add all blocks from all priorities
-    for(int i=0;i<10;i++) {
-
+    for (int i = 0; i < 10; i++) {
       // Just add single blocks
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
 
@@ -725,7 +723,7 @@ public class TestLruBlockCache {
   // test metricsPastNPeriods
   @Test
   public void testPastNPeriodsMetrics() throws Exception {
-   double delta = 0.01;
+    double delta = 0.01;
 
     // 3 total periods
     CacheStats stats = new CacheStats("test", 3);
@@ -873,15 +871,15 @@ public class TestLruBlockCache {
     return blocks;
   }
 
-  private CachedItem [] generateFixedBlocks(int numBlocks, long size, String pfx) {
+  private CachedItem[] generateFixedBlocks(int numBlocks, long size, String pfx) {
     return generateFixedBlocks(numBlocks, (int)size, pfx);
   }
 
-  private CachedItem [] generateRandomBlocks(int numBlocks, long maxSize) {
+  private CachedItem[] generateRandomBlocks(int numBlocks, long maxSize) {
     CachedItem [] blocks = new CachedItem[numBlocks];
-    Random r = new Random();
+    Random rand = ThreadLocalRandom.current();
     for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new CachedItem("block" + i, r.nextInt((int)maxSize)+1);
+      blocks[i] = new CachedItem("block" + i, rand.nextInt((int)maxSize)+1);
     }
     return blocks;
   }

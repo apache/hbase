@@ -21,24 +21,26 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 
 /**
  * @since 2.0.0
@@ -56,6 +58,7 @@ public class AccessControlUtil {
    * @param qualifier optional qualifier
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
+   * @throws NullPointerException if {@code tableName} is {@code null}
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(
       String username, TableName tableName, byte[] family, byte[] qualifier,
@@ -67,16 +70,16 @@ public class AccessControlUtil {
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    if (tableName == null) {
-      throw new NullPointerException("TableName cannot be null");
-    }
+
+    Objects.requireNonNull(tableName, "TableName cannot be null");
+
     permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
     if (family != null) {
-      permissionBuilder.setFamily(ByteStringer.wrap(family));
+      permissionBuilder.setFamily(UnsafeByteOperations.unsafeWrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
+      permissionBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
        .setTablePermission(permissionBuilder);
@@ -334,10 +337,10 @@ public class AccessControlUtil {
         AccessControlProtos.TablePermission.newBuilder();
       builder.setTableName(ProtobufUtil.toProtoTableName(table.getTableName()));
       if (table.hasFamily()) {
-        builder.setFamily(ByteStringer.wrap(table.getFamily()));
+        builder.setFamily(UnsafeByteOperations.unsafeWrap(table.getFamily()));
       }
       if (table.hasQualifier()) {
-        builder.setQualifier(ByteStringer.wrap(table.getQualifier()));
+        builder.setQualifier(UnsafeByteOperations.unsafeWrap(table.getQualifier()));
       }
       Permission.Action[] actions = perm.getActions();
       if (actions != null) {
@@ -784,7 +787,7 @@ public class AccessControlUtil {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
         AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (namespace != null) {
-      builder.setNamespaceName(ByteStringer.wrap(namespace));
+      builder.setNamespaceName(UnsafeByteOperations.unsafeWrap(namespace));
     }
     if (!StringUtils.isEmpty(userName)) {
       builder.setUserName(ByteString.copyFromUtf8(userName));
@@ -825,12 +828,12 @@ public class AccessControlUtil {
     AccessControlProtos.TablePermission.Builder tablePermissionBuilder =
         AccessControlProtos.TablePermission.newBuilder();
     tablePermissionBuilder
-        .setTableName(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toProtoTableName(tableName));
+        .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (Bytes.len(columnFamily) > 0) {
-      tablePermissionBuilder.setFamily(ByteStringer.wrap(columnFamily));
+      tablePermissionBuilder.setFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
     }
     if (Bytes.len(columnQualifier) > 0) {
-      tablePermissionBuilder.setQualifier(ByteString.copyFrom(columnQualifier));
+      tablePermissionBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(columnQualifier));
     }
     for (Permission.Action a : actions) {
       tablePermissionBuilder.addAction(toPermissionAction(a));
@@ -906,10 +909,10 @@ public class AccessControlUtil {
       permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (family != null) {
-      permissionBuilder.setFamily(ByteStringer.wrap(family));
+      permissionBuilder.setFamily(UnsafeByteOperations.unsafeWrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
+      permissionBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
     .setTablePermission(permissionBuilder);

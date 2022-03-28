@@ -30,10 +30,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -41,6 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
@@ -50,6 +49,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -81,7 +82,7 @@ public class TestTags {
 
   static boolean useFilter = false;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public final TestName TEST_NAME = new TestName();
@@ -119,13 +120,13 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      HColumnDescriptor colDesc = new HColumnDescriptor(fam);
-      colDesc.setBlockCacheEnabled(true);
-      colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      desc.addFamily(colDesc);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder
+          .newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam)
+            .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.NONE).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
-      admin.createTable(desc);
+      admin.createTable(tableDescriptor);
       byte[] value = Bytes.toBytes("value");
       table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
@@ -184,14 +185,13 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      HColumnDescriptor colDesc = new HColumnDescriptor(fam);
-      colDesc.setBlockCacheEnabled(true);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
-      desc.addFamily(colDesc);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(
+            ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
-      admin.createTable(desc);
+      admin.createTable(tableDescriptor);
 
       table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
@@ -220,7 +220,7 @@ public class TestTags {
       admin.flush(tableName);
       Thread.sleep(1000);
 
-      Scan s = new Scan(row);
+      Scan s = new Scan().withStartRow(row);
       ResultScanner scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -238,7 +238,7 @@ public class TestTags {
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
       }
-      s = new Scan(row);
+      s = new Scan().withStartRow(row);
       scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -275,13 +275,12 @@ public class TestTags {
     byte[] rowe = Bytes.toBytes("rowe");
     Table table = null;
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      HColumnDescriptor colDesc = new HColumnDescriptor(fam);
-      colDesc.setBlockCacheEnabled(true);
-      colDesc.setDataBlockEncoding(encoding);
-      desc.addFamily(colDesc);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true)
+          .setDataBlockEncoding(encoding).build())
+        .build();
       Admin admin = TEST_UTIL.getAdmin();
-      admin.createTable(desc);
+      admin.createTable(tableDescriptor);
       try {
         table = TEST_UTIL.getConnection().getTable(tableName);
         Put put = new Put(row);
@@ -322,7 +321,7 @@ public class TestTags {
         Thread.sleep(1000);
 
         TestCoprocessorForTags.checkTagPresence = true;
-        Scan s = new Scan(row);
+        Scan s = new Scan().withStartRow(row);
         s.setCaching(1);
         ResultScanner scanner = table.getScanner(s);
         try {
@@ -389,10 +388,9 @@ public class TestTags {
     byte[] row1 = Bytes.toBytes("r1");
     byte[] row2 = Bytes.toBytes("r2");
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor colDesc = new HColumnDescriptor(f);
-    desc.addFamily(colDesc);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f)).build();
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
 
     Table table = null;
     try {
@@ -446,7 +444,7 @@ public class TestTags {
       increment.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.increment(increment);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row2));
+      scanner = table.getScanner(new Scan().withStartRow(row2));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -466,7 +464,7 @@ public class TestTags {
       append.addColumn(f, q, Bytes.toBytes("b"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -480,7 +478,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -504,7 +502,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row4));
+      scanner = table.getScanner(new Scan().withStartRow(row4));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -521,7 +519,7 @@ public class TestTags {
 
   private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
       byte[] value2, byte[] row1, byte[] value1) throws IOException {
-    Scan s = new Scan(row);
+    Scan s = new Scan().withStartRow(row);
     // If filters are used this attribute can be specifically check for in
     // filterKV method and
     // kvs can be filtered out if the tags of interest is not found in that kv

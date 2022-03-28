@@ -21,7 +21,7 @@ module Shell
     # from one RegionServer group to another.
     class MoveNamespacesRsgroup < Command
       def help
-        <<-CMD
+        <<~CMD
 
   Example:
   hbase> move_namespaces_rsgroup 'dest',['ns1','ns2']
@@ -31,6 +31,10 @@ CMD
 
       def command(dest, namespaces)
         rsgroup_admin.move_namespaces(dest, namespaces)
+        namespaces.each do |ns|
+          arg = {'METHOD' => 'set', 'hbase.rsgroup.name' => dest}
+          admin.alter_namespace(ns, arg)
+        end
       end
     end
   end

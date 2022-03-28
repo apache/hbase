@@ -17,18 +17,16 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.nio.ByteBuffer;
-
-import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
+import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.io.encoding.AbstractDataBlockEncoder.AbstractEncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -50,10 +48,11 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   private int rowNumber;
   private ByteBuff rowOffsets = null;
+  private final CellComparator cellComparator;
 
-  public RowIndexSeekerV1(CellComparator comparator,
-      HFileBlockDecodingContext decodingCtx) {
-    super(comparator, decodingCtx);
+  public RowIndexSeekerV1(HFileBlockDecodingContext decodingCtx) {
+    super(decodingCtx);
+    this.cellComparator = decodingCtx.getHFileContext().getCellComparator();
   }
 
   @Override
@@ -131,8 +130,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     int comp = 0;
     while (low <= high) {
       mid = low + ((high - low) >> 1);
-      ByteBuffer row = getRow(mid);
-      comp = compareRows(row, seekCell);
+      comp = this.cellComparator.compareRows(getRow(mid), seekCell);
       if (comp < 0) {
         low = mid + 1;
       } else if (comp > 0) {
@@ -151,19 +149,6 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       return mid - 1;
     } else {
       return mid;
-    }
-  }
-
-  private int compareRows(ByteBuffer row, Cell seekCell) {
-    if (seekCell instanceof ByteBufferExtendedCell) {
-      return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
-          ((ByteBufferExtendedCell) seekCell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) seekCell).getRowPosition(),
-          seekCell.getRowLength());
-    } else {
-      return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
-          seekCell.getRowArray(), seekCell.getRowOffset(),
-          seekCell.getRowLength());
     }
   }
 
@@ -191,8 +176,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       }
     }
     do {
-      int comp;
-      comp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, seekCell, current.currentKey);
+      int comp =
+        PrivateCellUtil.compareKeyIgnoresMvcc(this.cellComparator, seekCell, current.currentKey);
       if (comp == 0) { // exact match
         if (seekBefore) {
           if (!previous.isValid()) {
@@ -374,31 +359,34 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         // TODO : reduce the varieties of KV here. Check if based on a boolean
         // we can handle the 'no tags' case.
         if (tagsLength > 0) {
+          // TODO : getRow len here.
           ret = new SizeCachedKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId);
+              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         } else {
           ret = new SizeCachedNoTagsKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId);
+              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         }
       } else {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
         ByteBuffer buf = tmpPair.getFirst();
         if (buf.isDirect()) {
-          ret =
-              tagsLength > 0 ? new ByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId)
-                  : new NoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId);
+          // TODO : getRow len here.
+          ret = tagsLength > 0
+              ? new SizeCachedByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+                  keyLength)
+              : new SizeCachedNoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+                  keyLength);
         } else {
           if (tagsLength > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId);
+                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
           } else {
             ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId);
+                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
           }
         }
       }
       return ret;
     }
   }
-
 }

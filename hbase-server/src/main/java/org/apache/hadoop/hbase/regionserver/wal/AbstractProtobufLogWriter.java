@@ -23,32 +23,31 @@ import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRA
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
+import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
-import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
-import org.apache.hadoop.hbase.util.EncryptionTest;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Base class for Protobuf log writer.
@@ -109,11 +108,8 @@ public abstract class AbstractProtobufLogWriter {
         throw new RuntimeException("Cipher '" + cipherName + "' is not available");
       }
 
-      // Generate an encryption key for this WAL
-      SecureRandom rng = new SecureRandom();
-      byte[] keyBytes = new byte[cipher.getKeyLength()];
-      rng.nextBytes(keyBytes);
-      Key key = new SecretKeySpec(keyBytes, cipher.getName());
+      // Generate a random encryption key for this WAL
+      Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
               conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
@@ -144,9 +140,22 @@ public abstract class AbstractProtobufLogWriter {
     boolean doCompress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
     if (doCompress) {
       try {
-        this.compressionContext = new CompressionContext(LRUDictionary.class,
-            FSUtils.isRecoveredEdits(path),
-            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
+        final boolean useTagCompression =
+          conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+        final boolean useValueCompression =
+          conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+        final Compression.Algorithm valueCompressionType =
+          useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf) :
+            Compression.Algorithm.NONE;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Initializing compression context for {}: isRecoveredEdits={}" +
+            ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
+            CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
+            valueCompressionType);
+        }
+        this.compressionContext =
+          new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
+            useTagCompression, useValueCompression, valueCompressionType);
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
@@ -155,27 +164,45 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-      long blocksize) throws IOException, StreamLacksCapabilityException {
-    this.conf = conf;
-    boolean doCompress = initializeCompressionContext(conf, path);
-    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
-    int bufferSize = FSUtils.getDefaultBufferSize(fs);
-    short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
-      FSUtils.getDefaultReplication(fs, path));
+      long blocksize, StreamSlowMonitor monitor) throws IOException,
+      StreamLacksCapabilityException {
+    try {
+      this.conf = conf;
+      boolean doCompress = initializeCompressionContext(conf, path);
+      this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
+      int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
+      short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
+        CommonFSUtils.getDefaultReplication(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
+      initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
 
-    boolean doTagCompress = doCompress
-        && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC, buildWALHeader(conf,
-      WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))));
+      boolean doTagCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+      boolean doValueCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+      WALHeader.Builder headerBuilder =
+        WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress)
+          .setHasValueCompression(doValueCompress);
+      if (doValueCompress) {
+        headerBuilder.setValueCompressionAlgorithm(
+          CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
+      }
+      length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
+        buildWALHeader(conf, headerBuilder)));
 
-    initAfterHeader(doCompress);
+      initAfterHeader(doCompress);
 
-    // instantiate trailer to default value.
-    trailer = WALTrailer.newBuilder().build();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Initialized protobuf WAL=" + path + ", compression=" + doCompress);
+      // instantiate trailer to default value.
+      trailer = WALTrailer.newBuilder().build();
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}"
+          + ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+      }
+    } catch (Exception e) {
+      LOG.warn("Init output failed, path={}", path, e);
+      closeOutput();
+      throw e;
     }
   }
 
@@ -240,7 +267,13 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException;
+      short replication, long blockSize, StreamSlowMonitor monitor)
+      throws IOException, StreamLacksCapabilityException;
+
+  /**
+   * simply close the output, do not need to write trailer like the Writer.close
+   */
+  protected abstract void closeOutput();
 
   /**
    * return the file length after written.

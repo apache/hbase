@@ -119,6 +119,9 @@ EOF
       @name = @table.getName.getNameAsString
       @shell = shell
       @converters = {}
+      @timestamp_format_epoch = table.getConfiguration.getBoolean(
+          HConstants::SHELL_TIMESTAMP_FORMAT_EPOCH_KEY,
+          HConstants::DEFAULT_SHELL_TIMESTAMP_FORMAT_EPOCH)
     end
 
     def close
@@ -211,7 +214,7 @@ EOF
 
       # create scan to get table names using prefix
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.setRowPrefixFilter(prefix.to_java_bytes)
+      scan.setStartStopRowForPrefixScan(prefix.to_java_bytes)
       # Run the scanner to get all rowkeys
       scanner = @table.getScanner(scan)
       # Create a list to store all deletes
@@ -247,7 +250,11 @@ EOF
       # delete operation doesn't need read permission. Retaining the read check for
       # meta table as a part of HBASE-5837.
       if is_meta_table?
-        raise ArgumentError, 'Row Not Found' if _get_internal(row).nil?
+        if row.is_a?(Hash) and row.key?('ROWPREFIXFILTER')
+          raise ArgumentError, 'deleteall with ROWPREFIXFILTER in hbase:meta is not allowed.'
+        else
+          raise ArgumentError, 'Row Not Found' if _get_internal(row).nil?
+        end
       end
       if row.is_a?(Hash)
         _deleterows_internal(row, column, timestamp, args, all_version)
@@ -309,18 +316,18 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Count rows in a table
-    def _count_internal(interval = 1000, scan = nil)
+    def _count_internal(interval = 1000, scan = nil, cacheBlocks=false)
       raise(ArgumentError, 'Scan argument should be org.apache.hadoop.hbase.client.Scan') \
         unless scan.nil? || scan.is_a?(org.apache.hadoop.hbase.client.Scan)
       # We can safely set scanner caching with the first key only filter
 
       if scan.nil?
         scan = org.apache.hadoop.hbase.client.Scan.new
-        scan.setCacheBlocks(false)
+        scan.setCacheBlocks(cacheBlocks)
         scan.setCaching(10)
         scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
       else
-        scan.setCacheBlocks(false)
+        scan.setCacheBlocks(cacheBlocks)
         filter = scan.getFilter
         firstKeyOnlyFilter = org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new
         if filter.nil?
@@ -455,18 +462,23 @@ EOF
       # Print out results.  Result can be Cell or RowResult.
       res = {}
       result.listCells.each do |c|
-        family = convert_bytes_with_position(c.getFamilyArray,
-                                             c.getFamilyOffset, c.getFamilyLength, converter_class, converter)
-        qualifier = convert_bytes_with_position(c.getQualifierArray,
-                                                c.getQualifierOffset, c.getQualifierLength, converter_class, converter)
+        # Get the family and qualifier of the cell without escaping non-printable characters. It is crucial that
+        # column is constructed in this consistent way to that it can be used as a key.
+        family_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getFamilyArray, c.getFamilyOffset, c.getFamilyLength)
+        qualifier_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength)
+        column = "#{family_bytes}:#{qualifier_bytes}"
 
-        column = "#{family}:#{qualifier}"
         value = to_string(column, c, maxlength, converter_class, converter)
 
+        # Use the FORMATTER to determine how column is printed
+        family = convert_bytes(family_bytes, converter_class, converter)
+        qualifier = convert_bytes(qualifier_bytes, converter_class, converter)
+        formatted_column = "#{family}:#{qualifier}"
+
         if block_given?
-          yield(column, value)
+          yield(formatted_column, value)
         else
-          res[column] = value
+          res[formatted_column] = value
         end
       end
 
@@ -528,13 +540,13 @@ EOF
         end
 
         scan = if stoprow
-                 org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
+                 org.apache.hadoop.hbase.client.Scan.new.with_start_row(startrow.to_java_bytes).with_stop_row(stoprow.to_java_bytes)
                else
-                 org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
+                 org.apache.hadoop.hbase.client.Scan.new.with_start_row(startrow.to_java_bytes)
                end
 
         # This will overwrite any startrow/stoprow settings
-        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
+        scan.setStartStopRowForPrefixScan(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         # Clear converters from last scan.
         @converters.clear
@@ -557,7 +569,7 @@ EOF
         end
 
         scan.setScanMetricsEnabled(enablemetrics) if enablemetrics
-        scan.setTimeStamp(timestamp) if timestamp
+        scan.setTimestamp(timestamp) if timestamp
         scan.setCacheBlocks(cache_blocks)
         scan.setReversed(reversed)
         scan.setCaching(cache) if cache > 0
@@ -610,19 +622,24 @@ EOF
         is_stale |= row.isStale
 
         row.listCells.each do |c|
-          family = convert_bytes_with_position(c.getFamilyArray,
-                                               c.getFamilyOffset, c.getFamilyLength, converter_class, converter)
-          qualifier = convert_bytes_with_position(c.getQualifierArray,
-                                                  c.getQualifierOffset, c.getQualifierLength, converter_class, converter)
+          # Get the family and qualifier of the cell without escaping non-printable characters. It is crucial that
+          # column is constructed in this consistent way to that it can be used as a key.
+          family_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getFamilyArray, c.getFamilyOffset, c.getFamilyLength)
+          qualifier_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength)
+          column = "#{family_bytes}:#{qualifier_bytes}"
 
-          column = "#{family}:#{qualifier}"
           cell = to_string(column, c, maxlength, converter_class, converter)
 
+          # Use the FORMATTER to determine how column is printed
+          family = convert_bytes(family_bytes, converter_class, converter)
+          qualifier = convert_bytes(qualifier_bytes, converter_class, converter)
+          formatted_column = "#{family}:#{qualifier}"
+
           if block_given?
-            yield(key, "column=#{column}, #{cell}")
+            yield(key, "column=#{formatted_column}, #{cell}")
           else
             res[key] ||= {}
-            res[key][column] = cell
+            res[key][formatted_column] = cell
           end
         end
         # One more row processed
@@ -735,21 +752,36 @@ EOF
       org.apache.hadoop.hbase.TableName::META_TABLE_NAME.equals(@table.getName)
     end
 
-    # Returns family and (when has it) qualifier for a column name
+    # Given a column specification in the format FAMILY[:QUALIFIER[:CONVERTER]]
+    # 1. Save the converter for the given column
+    # 2. Return a 2-element Array with [family, qualifier or nil], discarding the converter if provided
+    #
+    # @param [String] column specification
     def parse_column_name(column)
-      split = org.apache.hadoop.hbase.CellUtil.parseColumn(column.to_java_bytes)
-      set_converter(split) if split.length > 1
-      [split[0], split.length > 1 ? split[1] : nil]
+      spec = parse_column_format_spec(column)
+      set_column_converter(spec.family, spec.qualifier, spec.converter) unless spec.converter.nil?
+      [spec.family, spec.qualifier]
+    end
+
+    def toLocalDateTime(millis)
+      if @timestamp_format_epoch
+        return millis
+      else
+        instant = java.time.Instant.ofEpochMilli(millis)
+        return java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault()).toString
+      end
     end
 
     # Make a String of the passed kv
     # Intercept cells whose format we know such as the info:regioninfo in hbase:meta
     def to_string(column, kv, maxlength = -1, converter_class = nil, converter = nil)
       if is_meta_table?
-        if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB'
-          hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
-                                                                    kv.getValueOffset, kv.getValueLength)
-          return format('timestamp=%d, value=%s', kv.getTimestamp, hri.nil? ? '' : hri.toString)
+        if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB' || \
+            column.start_with?('info:merge')
+          hri = org.apache.hadoop.hbase.client.RegionInfo.parseFromOrNull(kv.getValueArray,
+            kv.getValueOffset, kv.getValueLength)
+          return format('timestamp=%s, value=%s', toLocalDateTime(kv.getTimestamp),
+            hri.nil? ? '' : hri.toString)
         end
         if column == 'info:serverstartcode'
           if kv.getValueLength > 0
@@ -759,14 +791,14 @@ EOF
             str_val = org.apache.hadoop.hbase.util.Bytes.toStringBinary(kv.getValueArray,
                                                                         kv.getValueOffset, kv.getValueLength)
           end
-          return format('timestamp=%d, value=%s', kv.getTimestamp, str_val)
+          return format('timestamp=%s, value=%s', toLocalDateTime(kv.getTimestamp), str_val)
         end
       end
 
       if org.apache.hadoop.hbase.CellUtil.isDelete(kv)
-        val = "timestamp=#{kv.getTimestamp}, type=#{org.apache.hadoop.hbase.KeyValue::Type.codeToType(kv.getTypeByte)}"
+        val = "timestamp=#{toLocalDateTime(kv.getTimestamp)}, type=#{org.apache.hadoop.hbase.KeyValue::Type.codeToType(kv.getTypeByte)}"
       else
-        val = "timestamp=#{kv.getTimestamp}, value=#{convert(column, kv, converter_class, converter)}"
+        val = "timestamp=#{toLocalDateTime(kv.getTimestamp)}, value=#{convert(column, kv, converter_class, converter)}"
       end
       maxlength != -1 ? val[0, maxlength] : val
     end
@@ -806,9 +838,46 @@ EOF
       eval(converter_class).method(converter_method).call(bytes, offset, len)
     end
 
+    # store the information designating what part of a column should be printed, and how
+    ColumnFormatSpec = Struct.new(:family, :qualifier, :converter)
+
+    ##
+    # Parse the column specification for formatting used by shell commands like :scan
+    #
+    # Strings should be structured as follows:
+    #   FAMILY:QUALIFIER[:CONVERTER]
+    # Where:
+    #   - FAMILY is the column family
+    #   - QUALIFIER is the column qualifier. Non-printable characters should be left AS-IS and should NOT BE escaped.
+    #   - CONVERTER is optional and is the name of a converter (like toLong) to apply
+    #
+    # @param [String] column
+    # @return [ColumnFormatSpec] family, qualifier, and converter as Java bytes
+    private def parse_column_format_spec(column)
+      split = org.apache.hadoop.hbase.CellUtil.parseColumn(column.to_java_bytes)
+      family = split[0]
+      qualifier = nil
+      converter = nil
+      if split.length > 1
+        parts = org.apache.hadoop.hbase.CellUtil.parseColumn(split[1])
+        qualifier = parts[0]
+        if parts.length > 1
+          converter = parts[1]
+        end
+      end
+
+      ColumnFormatSpec.new(family, qualifier, converter)
+    end
+
+    private def set_column_converter(family, qualifier, converter)
+      @converters["#{String.from_java_bytes(family)}:#{String.from_java_bytes(qualifier)}"] = String.from_java_bytes(converter)
+    end
+
     # if the column spec contains CONVERTER information, to get rid of :CONVERTER info from column pair.
     # 1. return back normal column pair as usual, i.e., "cf:qualifier[:CONVERTER]" to "cf" and "qualifier" only
     # 2. register the CONVERTER information based on column spec - "cf:qualifier"
+    #
+    # Deprecated for removal in 4.0.0
     def set_converter(column)
       family = String.from_java_bytes(column[0])
       parts = org.apache.hadoop.hbase.CellUtil.parseColumn(column[1])
@@ -817,6 +886,8 @@ EOF
         column[1] = parts[0]
       end
     end
+    extend Gem::Deprecate
+    deprecate :set_converter, "4.0.0", nil, nil
 
     #----------------------------------------------------------------------------------------------
     # Get the split points for the table

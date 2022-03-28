@@ -69,7 +69,7 @@ public class TestByteBufferKeyValue {
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell3) < 0);
     Cell cell4 = getOffheapCell(row1, Bytes.toBytes("f"), qual2);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell4) > 0);
-    BBKVComparator comparator = new BBKVComparator(null);
+    CellComparator comparator = CellComparator.getInstance();
     assertTrue(comparator.compare(cell1, cell2) < 0);
     assertTrue(comparator.compare(cell1, cell3) < 0);
     assertTrue(comparator.compare(cell1, cell4) > 0);

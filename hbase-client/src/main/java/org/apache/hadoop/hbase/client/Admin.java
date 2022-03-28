@@ -23,12 +23,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
@@ -53,6 +56,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -61,7 +65,10 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
@@ -123,6 +130,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   List<TableDescriptor> listTableDescriptors() throws IOException;
+
+  /**
+   * List all userspace tables and whether or not include system tables.
+   *
+   * @return a list of TableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException;
 
   /**
    * List all the userspace tables that match the given pattern.
@@ -485,6 +500,31 @@ public interface Admin extends Abortable, Closeable {
       throws IOException;
 
   /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family, String dstSFT)
+    throws IOException {
+    get(modifyColumnFamilyStoreFileTrackerAsync(tableName, family, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException;
+
+  /**
    * Get all the online regions on a region server.
    *
    * @return List of {@link RegionInfo}
@@ -501,12 +541,31 @@ public interface Admin extends Abortable, Closeable {
   void flush(TableName tableName) throws IOException;
 
   /**
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
+   *
+   * @param tableName table to flush
+   * @param columnFamily column family within a table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flush(TableName tableName, byte[] columnFamily) throws IOException;
+
+  /**
    * Flush an individual region. Synchronous operation.
    *
    * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs
    */
   void flushRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Flush a column family within a region. Synchronous operation.
+   *
+   * @param regionName region to flush
+   * @param columnFamily column family within a region
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flushRegion(byte[] regionName, byte[] columnFamily) throws IOException;
 
   /**
    * Flush all regions on the region server. Synchronous operation.
@@ -744,6 +803,13 @@ public interface Admin extends Abortable, Closeable {
   void assign(byte[] regionName) throws IOException;
 
   /**
+   * Unassign a Region.
+   * @param regionName Region name to assign.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void unassign(byte[] regionName) throws IOException;
+
+  /**
    * Unassign a region from current hosting regionserver.  Region will then be assigned to a
    * regionserver chosen at random.  Region could be reassigned back to the same server.  Use {@link
    * #move(byte[], ServerName)} if you want to control the region movement.
@@ -752,9 +818,14 @@ public interface Admin extends Abortable, Closeable {
    * @param force If <code>true</code>, force unassign (Will remove region from regions-in-transition too if
    * present. If results in double assignment use hbck -fix to resolve. To be used by experts).
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  void unassign(byte[] regionName, boolean force)
-      throws IOException;
+  @Deprecated
+  default void unassign(byte[] regionName, boolean force) throws IOException {
+    unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
@@ -785,7 +856,20 @@ public interface Admin extends Abortable, Closeable {
    * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean balance() throws IOException;
+  default boolean balance() throws IOException {
+    return balance(BalanceRequest.defaultInstance())
+      .isBalancerRan();
+  }
+
+  /**
+   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
+   * balancer will run. See {@link BalanceRequest} for more details.
+   *
+   * @param request defines how the balancer should run
+   * @return {@link BalanceResponse} with details about the results of the invocation.
+   * @throws IOException if a remote or network exception occurs
+   */
+  BalanceResponse balance(BalanceRequest request) throws IOException;
 
   /**
    * Invoke the balancer.  Will run the balancer and if regions to move, it will
@@ -795,8 +879,17 @@ public interface Admin extends Abortable, Closeable {
    * @param force whether we should force balance even if there is region in transition
    * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
+   * Use {@link #balance(BalanceRequest)} instead.
    */
-  boolean balance(boolean force) throws IOException;
+  @Deprecated
+  default boolean balance(boolean force) throws IOException {
+    return balance(
+      BalanceRequest.newBuilder()
+      .setIgnoreRegionsInTransition(force)
+      .build()
+    ).isBalancerRan();
+  }
 
   /**
    * Query the current state of the balancer.
@@ -820,11 +913,28 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
    *
-   * @return <code>true</code> if region normalizer ran, <code>false</code> otherwise.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean normalize() throws IOException;
+  default boolean normalize() throws IOException {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
+   *
+   * @param ntfp limit to tables matching the specified filter.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean normalize(NormalizeTableFilterParams ntfp) throws IOException;
 
   /**
    * Query the current state of the region normalizer.
@@ -854,7 +964,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Ask for a scan of the catalog table.
    *
-   * @return the number of entries cleaned
+   * @return the number of entries cleaned. Returns -1 if previous run is in progress.
    * @throws IOException if a remote or network exception occurs
    */
   int runCatalogJanitor() throws IOException;
@@ -898,7 +1008,10 @@ public interface Admin extends Abortable, Closeable {
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge two
    *          adjacent regions
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Multi-region merge feature is now
+   *             supported. Use {@link #mergeRegionsAsync(byte[][], boolean)} instead.
    */
+  @Deprecated
   default Future<Void> mergeRegionsAsync(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) throws IOException {
     byte[][] nameofRegionsToMerge = new byte[2][];
@@ -908,11 +1021,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Merge regions. Asynchronous operation.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2). Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
@@ -972,6 +1081,28 @@ public interface Admin extends Abortable, Closeable {
    *         operation to complete
    */
   Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyTableStoreFileTracker(TableName tableName, String dstSFT) throws IOException {
+    get(modifyTableStoreFileTrackerAsync(tableName, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException;
 
   /**
    * Shuts down the HBase cluster.
@@ -1054,7 +1185,28 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
+    return getRegionServers(false);
+  }
+
+  /**
+   * Retrieve all current live region servers including decommissioned
+   * if excludeDecommissionedRS is false, else non-decommissioned ones only
+   *
+   * @param excludeDecommissionedRS should we exclude decommissioned RS nodes
+   * @return all current live region servers including/excluding decommissioned hosts
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getRegionServers(boolean excludeDecommissionedRS)
+      throws IOException {
+    List<ServerName> allServers =
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    if (!excludeDecommissionedRS) {
+      return allServers;
+    }
+    List<ServerName> decommissionedRegionServers = listDecommissionedRegionServers();
+    return allServers.stream()
+      .filter(s -> !decommissionedRegionServers.contains(s))
+      .collect(ImmutableList.toImmutableList());
   }
 
   /**
@@ -1515,7 +1667,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
   void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-      throws IOException, RestoreSnapshotException;
+    throws IOException, RestoreSnapshotException;
 
   /**
    * Create a new table by cloning the snapshot content.
@@ -1528,7 +1680,25 @@ public interface Admin extends Abortable, Closeable {
    */
   default void cloneSnapshot(String snapshotName, TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(snapshotName, tableName, false);
+    cloneSnapshot(snapshotName, tableName, false, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to clone acl into newly created table
+   * @param customSFT specify the StoreFileTracker used for the table
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be cloned
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl,
+    String customSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
+    get(cloneSnapshotAsync(snapshotName, tableName, restoreAcl, customSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -1575,8 +1745,25 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
-  Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException;
+  default Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+    boolean restoreAcl)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    return cloneSnapshotAsync(snapshotName, tableName, restoreAcl, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to clone acl into newly created table
+   * @param customSFT specify the StroreFileTracker used for the table
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be cloned
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl,
+    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException;
 
   /**
    * Execute a distributed procedure on a cluster.
@@ -1690,19 +1877,26 @@ public interface Admin extends Abortable, Closeable {
   List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException;
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the active
-   * master. <p> The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access
-   * a published coprocessor {@link com.google.protobuf.Service} using standard protobuf service
-   * invocations: </p> <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the active master.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px">
+   * <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService();
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @return A MasterCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
    *             more. Use the coprocessorService methods in {@link AsyncAdmin} instead.
@@ -1712,24 +1906,25 @@ public interface Admin extends Abortable, Closeable {
 
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
-   * connected to the passed region server.
-   *
-   * <p>
-   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
-   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
-   * </p>
-   *
-   * <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the passed region server.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService(serverName);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @param serverName the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -1753,6 +1948,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void updateConfiguration() throws IOException;
+
+  /**
+   * Update the configuration and trigger an online config change
+   * on all the regionservers in the RSGroup.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateConfiguration(String groupName) throws IOException;
 
   /**
    * Get the info port of the current master if one is available.
@@ -2232,4 +2435,214 @@ public interface Admin extends Abortable, Closeable {
   default List<Boolean> hasUserPermissions(List<Permission> permissions) throws IOException {
     return hasUserPermissions(null, permissions);
   }
+
+  /**
+   * Turn on or off the auto snapshot cleanup based on TTL.
+   *
+   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param synchronous If <code>true</code>, it waits until current snapshot cleanup is completed,
+   *   if outstanding.
+   * @return Previous auto snapshot cleanup value
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean snapshotCleanupSwitch(final boolean on, final boolean synchronous)
+      throws IOException;
+
+  /**
+   * Query the current state of the auto snapshot cleanup based on TTL.
+   *
+   * @return <code>true</code> if the auto snapshot cleanup is enabled,
+   *   <code>false</code> otherwise.
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isSnapshotCleanupEnabled() throws IOException;
+
+  /**
+   * Retrieves online slow/large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get slowlog responses from
+   * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
+   * @return online slowlog response list
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
+   */
+  @Deprecated
+  default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    String logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = "LARGE_LOG";
+    } else {
+      logType = "SLOW_LOG";
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    List<LogEntry> logEntries =
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
+    return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+      .collect(Collectors.toList());
+  }
+
+  /**
+   * Clears online slow/large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Set of Server names to clean slowlog responses from
+   * @return List of booleans representing if online slowlog response buffer is cleaned
+   *   from each RegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException;
+
+  /**
+   * Creates a new RegionServer group with the given name
+   * @param groupName the name of the group
+   * @throws IOException if a remote or network exception occurs
+   */
+  void addRSGroup(String groupName) throws IOException;
+
+  /**
+   * Get group info for the given group name
+   * @param groupName the group name
+   * @return group info
+   * @throws IOException if a remote or network exception occurs
+   */
+  RSGroupInfo getRSGroup(String groupName) throws IOException;
+
+  /**
+   * Get group info for the given hostPort
+   * @param hostPort HostPort to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  RSGroupInfo getRSGroup(Address hostPort) throws IOException;
+
+  /**
+   * Get group info for the given table
+   * @param tableName table name to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  RSGroupInfo getRSGroup(TableName tableName) throws IOException;
+
+  /**
+   * Lists current set of RegionServer groups
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<RSGroupInfo> listRSGroups() throws IOException;
+
+  /**
+   * Get all tables in this RegionServer group.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #getConfiguredNamespacesAndTablesInRSGroup(String)
+   */
+  List<TableName> listTablesInRSGroup(String groupName) throws IOException;
+
+  /**
+   * Get the namespaces and tables which have this RegionServer group in descriptor.
+   * <p/>
+   * The difference between this method and {@link #listTablesInRSGroup(String)} is that, this
+   * method will not include the table which is actually in this RegionServr group but without the
+   * RegionServer group configuration in its {@link TableDescriptor}. For example, we have a group
+   * 'A', and we make namespace 'nsA' in this group, then all the tables under this namespace will
+   * in the group 'A', but this method will not return these tables but only the namespace 'nsA',
+   * while the {@link #listTablesInRSGroup(String)} will return all these tables.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTablesInRSGroup(String)
+   */
+  Pair<List<String>, List<TableName>> getConfiguredNamespacesAndTablesInRSGroup(String groupName)
+    throws IOException;
+
+  /**
+   * Remove RegionServer group associated with the given name
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void removeRSGroup(String groupName) throws IOException;
+
+  /**
+   * Remove decommissioned servers from group
+   *  1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   *     the server for repairing. Or we need to move some servers to join other clusters.
+   *     So we need to remove these servers from the group.
+   *  2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   * @throws IOException if a remote or network exception occurs
+   */
+  void removeServersFromRSGroup(Set<Address> servers) throws IOException;
+
+  /**
+   * Move given set of servers to the specified target RegionServer group
+   * @param servers set of servers to move
+   * @param targetGroup the group to move servers to
+   * @throws IOException if a remote or network exception occurs
+   */
+  void moveServersToRSGroup(Set<Address> servers, String targetGroup) throws IOException;
+
+  /**
+   * Set the RegionServer group for tables
+   * @param tables tables to set group for
+   * @param groupName group name for tables
+   * @throws IOException if a remote or network exception occurs
+   */
+  void setRSGroup(Set<TableName> tables, String groupName) throws IOException;
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @return BalanceResponse details about the balancer run
+   * @throws IOException if a remote or network exception occurs
+   */
+  default BalanceResponse balanceRSGroup(String groupName) throws IOException {
+    return balanceRSGroup(groupName, BalanceRequest.defaultInstance());
+  }
+
+  /**
+   * Balance regions in the given RegionServer group, running based on
+   * the given {@link BalanceRequest}.
+   *
+   * @return BalanceResponse details about the balancer run
+   */
+  BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException;
+
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
+
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *   only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException;
 }

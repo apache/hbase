@@ -30,11 +30,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.hadoop.hbase.util.HbckErrorReporter;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,10 +40,16 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSUtils.FamilyDirFilter;
 import org.apache.hadoop.hbase.util.FSUtils.HFileFilter;
 import org.apache.hadoop.hbase.util.FSUtils.RegionDirFilter;
+import org.apache.hadoop.hbase.util.HbckErrorReporter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * This class marches through all of the region's hfiles and verifies that
@@ -142,7 +143,7 @@ public class HFileCorruptionChecker {
     Path tableDir = regionDir.getParent();
 
     // build up the corrupted dirs structure
-    Path corruptBaseDir = new Path(FSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    Path corruptBaseDir = new Path(CommonFSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     if (conf.get("hbase.hfile.quarantine.dir") != null) {
       LOG.warn("hbase.hfile.quarantine.dir is deprecated. Default to " + corruptBaseDir);
     }
@@ -180,6 +181,9 @@ public class HFileCorruptionChecker {
       missing.add(cfDir);
       return;
     }
+
+    LOG.info("Checking Column Family Directory {}. Number of entries = {}", cfDir, hfs.size());
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkHFile(hf);
@@ -213,6 +217,9 @@ public class HFileCorruptionChecker {
       missedMobFiles.add(cfDir);
       return;
     }
+
+    LOG.info("Checking MOB Column Family Directory {}. Number of entries = {}", cfDir, hfs.size());
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkMobFile(hf);
@@ -284,6 +291,9 @@ public class HFileCorruptionChecker {
       missedMobFiles.add(regionDir);
       return;
     }
+
+    LOG.info("Checking MOB Region Directory {}. Number of entries = {}", regionDir, hfs.length);
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkMobColFamDir(hf);
@@ -318,6 +328,8 @@ public class HFileCorruptionChecker {
       return;
     }
 
+    LOG.info("Checking Region Directory {}. Number of entries = {}", regionDir, cfs.size());
+
     for (FileStatus cfFs : cfs) {
       Path cfDir = cfFs.getPath();
       checkColFamDir(cfDir);
@@ -341,6 +353,8 @@ public class HFileCorruptionChecker {
       }
       return;
     }
+
+    LOG.info("Checking Table Directory {}. Number of entries (including mob) = {}", tableDir, rds.size() + 1);
 
     // Parallelize check at the region dir level
     List<RegionDirChecker> rdcs = new ArrayList<>(rds.size() + 1);
@@ -433,7 +447,7 @@ public class HFileCorruptionChecker {
    * @return An instance of MobRegionDirChecker.
    */
   private MobRegionDirChecker createMobRegionDirChecker(Path tableDir) {
-    TableName tableName = FSUtils.getTableName(tableDir);
+    TableName tableName = CommonFSUtils.getTableName(tableDir);
     Path mobDir = MobUtils.getMobRegionPath(conf, tableName);
     return new MobRegionDirChecker(mobDir);
   }
@@ -546,6 +560,8 @@ public class HFileCorruptionChecker {
         : "CORRUPTED";
 
     // print mob-related report
+    out.print("Checked " + mobFilesChecked.get() + " Mob files for corruption");
+    out.print("  Mob files corrupted:                  " + corruptedMobFiles.size());
     if (inQuarantineMode) {
       out.print("    Mob files successfully quarantined: " + quarantinedMobFiles.size());
       for (Path sq : quarantinedMobFiles) {

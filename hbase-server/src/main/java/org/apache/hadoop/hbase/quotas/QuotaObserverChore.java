@@ -25,13 +25,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -40,10 +40,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
@@ -471,7 +472,7 @@ public class QuotaObserverChore extends ScheduledChore {
   void pruneOldRegionReports() {
     final long now = EnvironmentEdgeManager.currentTime();
     final long pruneTime = now - regionReportLifetimeMillis;
-    final int numRemoved = quotaManager.pruneEntriesOlderThan(pruneTime);
+    final int numRemoved = quotaManager.pruneEntriesOlderThan(pruneTime,this);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Removed " + numRemoved + " old region size reports that were older than "
           + pruneTime + ".");
@@ -520,12 +521,10 @@ public class QuotaObserverChore extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   QuotaSnapshotStore<TableName> getTableSnapshotStore() {
     return tableSnapshotStore;
   }
 
-  @VisibleForTesting
   QuotaSnapshotStore<String> getNamespaceSnapshotStore() {
     return namespaceSnapshotStore;
   }
@@ -765,6 +764,8 @@ public class QuotaObserverChore extends ScheduledChore {
       if (regions == null) {
         return 0;
       }
+      // Filter the region replicas if any and return the original number of regions for a table.
+      RegionReplicaUtil.removeNonDefaultRegions(regions);
       return regions.size();
     }
 

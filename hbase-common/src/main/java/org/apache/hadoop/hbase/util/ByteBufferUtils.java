@@ -27,31 +27,26 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import sun.nio.ch.DirectBuffer;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
  */
-@SuppressWarnings("restriction")
 @InterfaceAudience.Private
 public final class ByteBufferUtils {
   // "Compressed integer" serialization helper constants.
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  @VisibleForTesting
-  final static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  public final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  final static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  public final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -82,11 +77,10 @@ public final class ByteBufferUtils {
 
     static Comparer getBestComparer() {
       try {
-        Class<?> theClass = Class.forName(UNSAFE_COMPARER_NAME);
+        Class<? extends Comparer> theClass =
+          Class.forName(UNSAFE_COMPARER_NAME).asSubclass(Comparer.class);
 
-        @SuppressWarnings("unchecked")
-        Comparer comparer = (Comparer) theClass.getConstructor().newInstance();
-        return comparer;
+        return theClass.getConstructor().newInstance();
       } catch (Throwable t) { // ensure we really catch *everything*
         return PureJavaComparer.INSTANCE;
       }
@@ -141,7 +135,7 @@ public final class ByteBufferUtils {
         long offset2Adj;
         Object refObj2 = null;
         if (buf2.isDirect()) {
-          offset2Adj = o2 + ((DirectBuffer)buf2).address();
+          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
         } else {
           offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj2 = buf2.array();
@@ -155,13 +149,13 @@ public final class ByteBufferUtils {
         long offset1Adj, offset2Adj;
         Object refObj1 = null, refObj2 = null;
         if (buf1.isDirect()) {
-          offset1Adj = o1 + ((DirectBuffer) buf1).address();
+          offset1Adj = o1 + UnsafeAccess.directBufferAddress(buf1);
         } else {
           offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj1 = buf1.array();
         }
         if (buf2.isDirect()) {
-          offset2Adj = o2 + ((DirectBuffer) buf2).address();
+          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
         } else {
           offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj2 = buf2.array();
@@ -179,12 +173,11 @@ public final class ByteBufferUtils {
 
     static Converter getBestConverter() {
       try {
-        Class<?> theClass = Class.forName(UNSAFE_CONVERTER_NAME);
+        Class<? extends Converter> theClass =
+          Class.forName(UNSAFE_CONVERTER_NAME).asSubclass(Converter.class);
 
         // yes, UnsafeComparer does implement Comparer<byte[]>
-        @SuppressWarnings("unchecked")
-        Converter converter = (Converter) theClass.getConstructor().newInstance();
-        return converter;
+        return theClass.getConstructor().newInstance();
       } catch (Throwable t) { // ensure we really catch *everything*
         return PureJavaConverter.INSTANCE;
       }
@@ -392,8 +385,7 @@ public final class ByteBufferUtils {
    * @return Number of bytes written.
    * @throws IOException on stream error
    */
-   public static int putCompressedInt(OutputStream out, final int value)
-      throws IOException {
+  public static int putCompressedInt(OutputStream out, final int value) throws IOException {
     int i = 0;
     int tmpvalue = value;
     do {
@@ -408,23 +400,23 @@ public final class ByteBufferUtils {
     return i;
   }
 
-   /**
-    * Put in output stream 32 bit integer (Big Endian byte order).
-    * @param out Where to put integer.
-    * @param value Value of integer.
-    * @throws IOException On stream error.
-    */
-   public static void putInt(OutputStream out, final int value)
-       throws IOException {
-     // We have writeInt in ByteBufferOutputStream so that it can directly write
-     // int to underlying
-     // ByteBuffer in one step.
-     if (out instanceof ByteBufferWriter) {
-       ((ByteBufferWriter) out).writeInt(value);
-     } else {
-       StreamUtils.writeInt(out, value);
-     }
-   }
+  /**
+   * Put in output stream 32 bit integer (Big Endian byte order).
+   *
+   * @param out   Where to put integer.
+   * @param value Value of integer.
+   * @throws IOException On stream error.
+   */
+  public static void putInt(OutputStream out, final int value) throws IOException {
+    // We have writeInt in ByteBufferOutputStream so that it can directly write
+    // int to underlying
+    // ByteBuffer in one step.
+    if (out instanceof ByteBufferWriter) {
+      ((ByteBufferWriter) out).writeInt(value);
+    } else {
+      StreamUtils.writeInt(out, value);
+    }
+  }
 
   public static byte toByte(ByteBuffer buffer, int offset) {
     if (UNSAFE_AVAIL) {
@@ -570,7 +562,7 @@ public final class ByteBufferUtils {
   /**
    * Read integer from stream coded in 7 bits and increment position.
    * @return the integer that has been read
-   * @throws IOException
+   * @throws IOException on stream error
    */
   public static int readCompressedInt(InputStream input)
       throws IOException {
@@ -605,7 +597,7 @@ public final class ByteBufferUtils {
    * Read long which was written to fitInBytes bytes and increment position.
    * @param fitInBytes In how many bytes given long is stored.
    * @return The value of parsed long.
-   * @throws IOException
+   * @throws IOException on stream error
    */
   public static long readLong(InputStream in, final int fitInBytes)
       throws IOException {
@@ -686,11 +678,11 @@ public final class ByteBufferUtils {
   /**
    * Copy from one buffer to another from given offset. This will be absolute positional copying and
    * won't affect the position of any of the buffers.
-   * @param in
-   * @param out
-   * @param sourceOffset
-   * @param destinationOffset
-   * @param length
+   * @param in input bytebuffer
+   * @param out destination bytebuffer
+   * @param sourceOffset offset of source buffer
+   * @param destinationOffset offset of destination buffer
+   * @param length the number of bytes to copy
    */
   public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
       int destinationOffset, int length) {
@@ -841,9 +833,9 @@ public final class ByteBufferUtils {
 
   /**
    * Copy the given number of bytes from specified offset into a new byte[]
-   * @param buffer
-   * @param offset
-   * @param length
+   * @param buffer input bytebuffer to read
+   * @param offset input offset where Bytes are
+   * @param length the number of bytes to read
    * @return a new byte[] containing the bytes in the specified range
    */
   public static byte[] toBytes(ByteBuffer buffer, int offset, int length) {
@@ -862,7 +854,9 @@ public final class ByteBufferUtils {
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first
-    if (toByte(buf1, o1 + l1 - 1) != toByte(buf2, o2 + l2 - 1)) return false;
+    if (toByte(buf1, o1 + l1 - 1) != toByte(buf2, o2 + l2 - 1)) {
+      return false;
+    }
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
@@ -894,7 +888,9 @@ public final class ByteBufferUtils {
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first
-    if (toByte(buf1, o1 + l1 - 1) != buf2[o2 + l2 - 1]) return false;
+    if (toByte(buf1, o1 + l1 - 1) != buf2[o2 + l2 - 1]) {
+      return false;
+    }
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
@@ -923,8 +919,8 @@ public final class ByteBufferUtils {
      * 64-bit.
      */
     for (i = 0; i < strideLimit; i += stride) {
-      long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + (long) i);
-      long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + (long) i);
+      long lw = HBasePlatformDependent.getLong(obj1, o1 + (long) i);
+      long rw = HBasePlatformDependent.getLong(obj2, o2 + (long) i);
       if (lw != rw) {
         if (!UnsafeAccess.LITTLE_ENDIAN) {
           return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
@@ -945,8 +941,8 @@ public final class ByteBufferUtils {
 
     // The epilogue to cover the last (minLength % stride) elements.
     for (; i < minLength; i++) {
-      int il = (UnsafeAccess.theUnsafe.getByte(obj1, o1 + i) & 0xFF);
-      int ir = (UnsafeAccess.theUnsafe.getByte(obj2, o2 + i) & 0xFF);
+      int il = (HBasePlatformDependent.getByte(obj1, o1 + i) & 0xFF);
+      int ir = (HBasePlatformDependent.getByte(obj2, o2 + i) & 0xFF);
       if (il != ir) {
         return il - ir;
       }
@@ -956,8 +952,8 @@ public final class ByteBufferUtils {
 
   /**
    * Reads a short value at the given buffer's offset.
-   * @param buffer
-   * @param offset
+   * @param buffer input byte buffer to read
+   * @param offset input offset where short is
    * @return short value at offset
    */
   public static short toShort(ByteBuffer buffer, int offset) {
@@ -973,8 +969,8 @@ public final class ByteBufferUtils {
 
   /**
    * Reads an int value at the given buffer's offset.
-   * @param buffer
-   * @param offset
+   * @param buffer input byte buffer to read
+   * @param offset input offset where int is
    * @return int value at offset
    */
   public static int toInt(ByteBuffer buffer, int offset) {
@@ -1006,8 +1002,8 @@ public final class ByteBufferUtils {
 
   /**
    * Reads a long value at the given buffer's offset.
-   * @param buffer
-   * @param offset
+   * @param buffer input byte buffer to read
+   * @param offset input offset where Long is
    * @return long value at offset
    */
   public static long toLong(ByteBuffer buffer, int offset) {
@@ -1030,7 +1026,7 @@ public final class ByteBufferUtils {
 
   /**
    * Reads a double value at the given buffer's offset.
-   * @param buffer
+   * @param buffer input byte buffer to read
    * @param offset offset where double is
    * @return double value at offset
    */
@@ -1040,8 +1036,8 @@ public final class ByteBufferUtils {
 
   /**
    * Reads a BigDecimal value at the given buffer's offset.
-   * @param buffer
-   * @param offset
+   * @param buffer input bytebuffer to read
+   * @param offset input offset
    * @return BigDecimal value at offset
    */
   public static BigDecimal toBigDecimal(ByteBuffer buffer, int offset, int length) {
@@ -1094,10 +1090,10 @@ public final class ByteBufferUtils {
   /**
    * Copies the bytes from given array's offset to length part into the given buffer. Puts the bytes
    * to buffer's current position. This also advances the position in the 'out' buffer by 'length'
-   * @param out
-   * @param in
-   * @param inOffset
-   * @param length
+   * @param out output bytebuffer to copy to
+   * @param in input array to copy from
+   * @param inOffset input offset to copy from
+   * @param length the number of bytes to copy
    */
   public static void copyFromArrayToBuffer(ByteBuffer out, byte[] in, int inOffset, int length) {
     if (out.hasArray()) {
@@ -1115,11 +1111,12 @@ public final class ByteBufferUtils {
 
   /**
    * Copies bytes from given array's offset to length part into the given buffer. Puts the bytes
-   * to buffer's given position. This doesn't affact the position of buffer.
-   * @param out
-   * @param in
-   * @param inOffset
-   * @param length
+   * to buffer's given position. This doesn't affect the position of buffer.
+   * @param out output bytebuffer to copy to
+   * @param outOffset output buffer offset
+   * @param in input array to copy from
+   * @param inOffset input offset to copy from
+   * @param length the number of bytes to copy
    */
   public static void copyFromArrayToBuffer(ByteBuffer out, int outOffset, byte[] in, int inOffset,
       int length) {
@@ -1136,12 +1133,12 @@ public final class ByteBufferUtils {
 
   /**
    * Copies specified number of bytes from given offset of 'in' ByteBuffer to
-   * the array. This doesn't affact the position of buffer.
-   * @param out
-   * @param in
-   * @param sourceOffset
-   * @param destinationOffset
-   * @param length
+   * the array. This doesn't affect the position of buffer.
+   * @param out output array to copy input bytebuffer to
+   * @param in input bytebuffer to copy from
+   * @param sourceOffset offset of source bytebuffer
+   * @param destinationOffset offset of destination array
+   * @param length the number of bytes to copy
    */
   public static void copyFromBufferToArray(byte[] out, ByteBuffer in, int sourceOffset,
       int destinationOffset, int length) {
@@ -1165,7 +1162,9 @@ public final class ByteBufferUtils {
    */
   public static byte[] copyOfRange(ByteBuffer original, int from, int to) {
     int newLength = to - from;
-    if (newLength < 0) throw new IllegalArgumentException(from + " > " + to);
+    if (newLength < 0) {
+      throw new IllegalArgumentException(from + " > " + to);
+    }
     byte[] copy = new byte[newLength];
     ByteBufferUtils.copyFromBufferToArray(copy, original, from, 0, newLength);
     return copy;
@@ -1175,10 +1174,12 @@ public final class ByteBufferUtils {
   public static String toStringBinary(final ByteBuffer b, int off, int len) {
     StringBuilder result = new StringBuilder();
     // Just in case we are passed a 'len' that is > buffer length...
-    if (off >= b.capacity())
+    if (off >= b.capacity()) {
       return result.toString();
-    if (off + len > b.capacity())
+    }
+    if (off + len > b.capacity()) {
       len = b.capacity() - off;
+    }
     for (int i = off; i < off + len; ++i) {
       int ch = b.get(i) & 0xFF;
       if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,10 +44,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion.BulkLoadListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
+import org.apache.hadoop.hbase.security.token.ClientTokenUtil;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
@@ -56,8 +57,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -125,7 +124,7 @@ public class SecureBulkLoadManager {
     userProvider = UserProvider.instantiate(conf);
     ugiReferenceCounter = new ConcurrentHashMap<>();
     fs = FileSystem.get(conf);
-    baseStagingDir = new Path(FSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+    baseStagingDir = new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
 
     if (conf.get("hbase.bulkload.staging.dir") != null) {
       LOG.warn("hbase.bulkload.staging.dir " + " is deprecated. Bulkload staging directory is "
@@ -153,35 +152,22 @@ public class SecureBulkLoadManager {
 
   public void cleanupBulkLoad(final HRegion region, final CleanupBulkLoadRequest request)
       throws IOException {
-    try {
-      region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
+    region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
 
-      Path path = new Path(request.getBulkToken());
-      if (!fs.delete(path, true)) {
-        if (fs.exists(path)) {
-          throw new IOException("Failed to clean up " + path);
-        }
-      }
-      LOG.info("Cleaned up " + path + " successfully.");
-    } finally {
-      UserGroupInformation ugi = getActiveUser().getUGI();
-      try {
-        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
-          FileSystem.closeAllForUGI(ugi);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed to close FileSystem for: " + ugi, e);
+    Path path = new Path(request.getBulkToken());
+    if (!fs.delete(path, true)) {
+      if (fs.exists(path)) {
+        throw new IOException("Failed to clean up " + path);
       }
     }
+    LOG.trace("Cleaned up {} successfully.", path);
   }
 
   private Consumer<HRegion> fsCreatedListener;
 
-  @VisibleForTesting
   void setFsCreatedListener(Consumer<HRegion> fsCreatedListener) {
     this.fsCreatedListener = fsCreatedListener;
   }
-
 
   private void incrementUgiReference(UserGroupInformation ugi) {
     // if we haven't seen this ugi before, make a new counter
@@ -214,7 +200,12 @@ public class SecureBulkLoadManager {
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
-      final BulkLoadHFileRequest request) throws IOException {
+    final BulkLoadHFileRequest request) throws IOException {
+    return secureBulkLoadHFiles(region, request, null);
+  }
+
+  public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
+      final BulkLoadHFileRequest request, List<String> clusterIds) throws IOException {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair<>(el.getFamily().toByteArray(), el.getPath()));
@@ -231,7 +222,7 @@ public class SecureBulkLoadManager {
     final UserGroupInformation ugi = user.getUGI();
     if (userProvider.isHadoopSecurityEnabled()) {
       try {
-        Token<AuthenticationTokenIdentifier> tok = TokenUtil.obtainToken(conn).get();
+        Token<AuthenticationTokenIdentifier> tok = ClientTokenUtil.obtainToken(conn).get();
         if (tok != null) {
           boolean b = ugi.addToken(tok);
           LOG.debug("token added " + tok + " for user " + ugi + " return=" + b);
@@ -276,6 +267,13 @@ public class SecureBulkLoadManager {
         public Map<byte[], List<Path>> run() {
           FileSystem fs = null;
           try {
+            /*
+             * This is creating and caching a new FileSystem instance. Other code called
+             * "beneath" this method will rely on this FileSystem instance being in the
+             * cache. This is important as those methods make _no_ attempt to close this
+             * FileSystem instance. It is critical that here, in SecureBulkLoadManager,
+             * we are tracking the lifecycle and closing the FS when safe to do so.
+             */
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
@@ -290,7 +288,8 @@ public class SecureBulkLoadManager {
             //We call bulkLoadHFiles as requesting user
             //To enable access prior to staging
             return region.bulkLoadHFiles(familyPaths, true,
-                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile());
+                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
+              clusterIds, request.getReplicate());
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }
@@ -299,6 +298,13 @@ public class SecureBulkLoadManager {
       });
     } finally {
       decrementUgiReference(ugi);
+      try {
+        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
+          FileSystem.closeAllForUGI(ugi);
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to close FileSystem for: {}", ugi, e);
+      }
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
       }
@@ -336,7 +342,8 @@ public class SecureBulkLoadManager {
     return user;
   }
 
-  private static class SecureBulkLoadListener implements BulkLoadListener {
+  //package-private for test purpose only
+  static class SecureBulkLoadListener implements BulkLoadListener {
     // Target filesystem
     private final FileSystem fs;
     private final String stagingDir;
@@ -344,19 +351,28 @@ public class SecureBulkLoadManager {
     // Source filesystem
     private FileSystem srcFs = null;
     private Map<String, FsPermission> origPermissions = null;
+    private Map<String, String> origSources = null;
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
       this.origPermissions = new HashMap<>();
+      this.origSources = new HashMap<>();
     }
 
     @Override
-    public String prepareBulkLoad(final byte[] family, final String srcPath, boolean copyFile)
-        throws IOException {
+    public String prepareBulkLoad(final byte[] family, final String srcPath, boolean copyFile,
+      String customStaging ) throws IOException {
       Path p = new Path(srcPath);
-      Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
+
+      //store customStaging for failedBulkLoad
+      String currentStaging = stagingDir;
+      if(StringUtils.isNotEmpty(customStaging)){
+        currentStaging = customStaging;
+      }
+
+      Path stageP = new Path(currentStaging, new Path(Bytes.toString(family), p.getName()));
 
       // In case of Replication for bulk load files, hfiles are already copied in staging directory
       if (p.equals(stageP)) {
@@ -374,7 +390,7 @@ public class SecureBulkLoadManager {
       }
 
       // Check to see if the source and target filesystems are the same
-      if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
+      if (!FSUtils.isSameHdfs(conf, srcFs, fs)) {
         LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than " +
             "the destination filesystem. Copying file over to destination staging dir.");
         FileUtil.copy(srcFs, p, fs, stageP, false, conf);
@@ -385,11 +401,16 @@ public class SecureBulkLoadManager {
         LOG.debug("Moving " + p + " to " + stageP);
         FileStatus origFileStatus = fs.getFileStatus(p);
         origPermissions.put(srcPath, origFileStatus.getPermission());
+        origSources.put(stageP.toString(), srcPath);
         if(!fs.rename(p, stageP)) {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
       }
-      fs.setPermission(stageP, PERM_ALL_ACCESS);
+
+      if(StringUtils.isNotEmpty(customStaging)) {
+        fs.setPermission(stageP, PERM_ALL_ACCESS);
+      }
+
       return stageP.toString();
     }
 
@@ -407,35 +428,37 @@ public class SecureBulkLoadManager {
     }
 
     @Override
-    public void failedBulkLoad(final byte[] family, final String srcPath) throws IOException {
+    public void failedBulkLoad(final byte[] family, final String stagedPath) throws IOException {
       try {
-        Path p = new Path(srcPath);
-        if (srcFs == null) {
-          srcFs = FileSystem.newInstance(p.toUri(), conf);
-        }
-        if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
-          // files are copied so no need to move them back
-          return;
-        }
-        Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
-
-        // In case of Replication for bulk load files, hfiles are not renamed by end point during
-        // prepare stage, so no need of rename here again
-        if (p.equals(stageP)) {
-          LOG.debug(p.getName() + " is already available in source directory. Skipping rename.");
+        String src = origSources.get(stagedPath);
+        if(StringUtils.isEmpty(src)){
+          LOG.debug(stagedPath + " was not moved to staging. No need to move back");
           return;
         }
 
-        LOG.debug("Moving " + stageP + " back to " + p);
-        if (!fs.rename(stageP, p)) {
-          throw new IOException("Failed to move HFile: " + stageP + " to " + p);
+        Path stageP = new Path(stagedPath);
+        if (!fs.exists(stageP)) {
+          throw new IOException(
+            "Missing HFile: " + stageP + ", can't be moved back to it's original place");
+        }
+
+        //we should not move back files if the original exists
+        Path srcPath = new Path(src);
+        if(srcFs.exists(srcPath)) {
+          LOG.debug(src + " is already at it's original place. No need to move.");
+          return;
+        }
+
+        LOG.debug("Moving " + stageP + " back to " + srcPath);
+        if (!fs.rename(stageP, srcPath)) {
+          throw new IOException("Failed to move HFile: " + stageP + " to " + srcPath);
         }
 
         // restore original permission
-        if (origPermissions.containsKey(srcPath)) {
-          fs.setPermission(p, origPermissions.get(srcPath));
+        if (origPermissions.containsKey(stagedPath)) {
+          fs.setPermission(srcPath, origPermissions.get(src));
         } else {
-          LOG.warn("Can't find previous permission for path=" + srcPath);
+          LOG.warn("Can't find previous permission for path=" + stagedPath);
         }
       } finally {
         closeSrcFs();

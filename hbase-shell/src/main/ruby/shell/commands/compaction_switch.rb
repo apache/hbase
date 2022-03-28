@@ -22,7 +22,7 @@ module Shell
     # Switch compaction for a region server
     class CompactionSwitch < Command
       def help
-        <<-EOF
+        <<~EOF
           Turn the compaction on or off on regionservers. Disabling compactions will also interrupt
           any currently ongoing compactions. This state is ephemeral. The setting will be lost on
           restart of the server. Compaction can also be enabled/disabled by modifying configuration
@@ -33,9 +33,9 @@ module Shell
             To disable compactions on all region servers
             hbase> compaction_switch false
             To enable compactions on specific region servers
-            hbase> compaction_switch true 'server2','server1'
+            hbase> compaction_switch true, 'server2','server1'
             To disable compactions on specific region servers
-            hbase> compaction_switch false 'server2','server1'
+            hbase> compaction_switch false, 'server2','server1'
           NOTE: A server name is its host, port plus startcode. For example:
           host187.example.com,60020,1289493121758
         EOF

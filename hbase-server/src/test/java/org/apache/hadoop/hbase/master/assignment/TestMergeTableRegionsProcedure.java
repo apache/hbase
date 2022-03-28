@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -59,7 +59,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, LargeTests.class})
 public class TestMergeTableRegionsProcedure {
 
   @ClassRule
@@ -70,7 +70,7 @@ public class TestMergeTableRegionsProcedure {
   @Rule
   public final TestName name = new TestName();
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final int initialRegionCount = 4;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
@@ -206,10 +206,12 @@ public class TestMergeTableRegionsProcedure {
     // the merged regions cleanup.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
-    byte [] mergedRegion = proc.getMergedRegion().getRegionName();
+    RegionInfo mergedRegion = proc.getMergedRegion();
+    RegionStateStore regionStateStore =
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
-      ris = MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
-      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion), ris);
+      ris = regionStateStore.getMergeRegions(mergedRegion);
+      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion.getRegionName()), ris);
       Threads.sleep(1000);
     }
     assertEquals(countOfRowsLoaded, UTIL.countRows(tableName));

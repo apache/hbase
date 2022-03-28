@@ -34,7 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -77,7 +77,7 @@ public class TestServerRemoteProcedure {
   public TestName name = new TestName();
   @Rule
   public final ExpectedException exception = ExpectedException.none();
-  protected HBaseTestingUtility util;
+  protected HBaseTestingUtil util;
   protected MockRSProcedureDispatcher rsDispatcher;
   protected MockMasterServices master;
   protected AssignmentManager am;
@@ -88,7 +88,7 @@ public class TestServerRemoteProcedure {
 
   @Before
   public void setUp() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
         .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);

@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -28,10 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -57,7 +56,7 @@ public class TestZKReplicationQueueStorage {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
 
-  private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static final HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static ZKReplicationQueueStorage STORAGE;
 
@@ -207,18 +206,29 @@ public class TestZKReplicationQueueStorage {
     }
   }
 
-  // For HBASE-12865
+  // For HBASE-12865, HBASE-26482
   @Test
   public void testClaimQueueChangeCversion() throws ReplicationException, KeeperException {
     ServerName serverName1 = ServerName.valueOf("127.0.0.1", 8000, 10000);
     STORAGE.addWAL(serverName1, "1", "file");
+    STORAGE.addWAL(serverName1, "2", "file");
+
+    ServerName serverName2 = ServerName.valueOf("127.0.0.1", 8001, 10001);
+    // Avoid claimQueue update cversion for prepare server2 rsNode.
+    STORAGE.addWAL(serverName2, "1", "file");
+    STORAGE.addWAL(serverName2, "2", "file");
 
     int v0 = STORAGE.getQueuesZNodeCversion();
-    ServerName serverName2 = ServerName.valueOf("127.0.0.1", 8001, 10001);
+
     STORAGE.claimQueue(serverName1, "1", serverName2);
     int v1 = STORAGE.getQueuesZNodeCversion();
-    // cversion should increase by 1 since a child node is deleted
-    assertEquals(1, v1 - v0);
+    // cversion should be increased by claimQueue method.
+    assertTrue(v1 > v0);
+
+    STORAGE.claimQueue(serverName1, "2", serverName2);
+    int v2 = STORAGE.getQueuesZNodeCversion();
+    // cversion should be increased by claimQueue method.
+    assertTrue(v2 > v1);
   }
 
   private ZKReplicationQueueStorage createWithUnstableVersion() throws IOException {

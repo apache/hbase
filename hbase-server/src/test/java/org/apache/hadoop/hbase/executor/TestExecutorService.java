@@ -28,7 +28,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -38,9 +40,11 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -67,8 +71,8 @@ public class TestExecutorService {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, maxThreads);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SERVER_OPERATIONS).setCorePoolSize(maxThreads));
 
     Executor executor =
       executorService.getExecutor(ExecutorType.MASTER_SERVER_OPERATIONS);
@@ -135,7 +139,7 @@ public class TestExecutorService {
     }
 
     // Make sure threads are still around even after their timetolive expires.
-    Thread.sleep(ExecutorService.Executor.keepAliveTimeInMillis * 2);
+    Thread.sleep(ExecutorConfig.KEEP_ALIVE_TIME_MILLIS_DEFAULT * 2);
     assertEquals(maxThreads, pool.getPoolSize());
 
     executorService.shutdown();
@@ -161,8 +165,8 @@ public class TestExecutorService {
     private final AtomicBoolean lock;
     private AtomicInteger counter;
 
-    public TestEventHandler(Server server, EventType eventType,
-                            AtomicBoolean lock, AtomicInteger counter) {
+    public TestEventHandler(Server server, EventType eventType, AtomicBoolean lock,
+      AtomicInteger counter) {
       super(server, eventType);
       this.lock = lock;
       this.counter = counter;
@@ -193,8 +197,8 @@ public class TestExecutorService {
     when(server.getConfiguration()).thenReturn(conf);
 
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SERVER_OPERATIONS).setCorePoolSize(1));
 
 
     executorService.submit(new EventHandler(server, EventType.M_SERVER_SHUTDOWN) {
@@ -219,5 +223,41 @@ public class TestExecutorService {
     executorService.shutdown();
   }
 
+  @Test
+  public void testSnapshotHandlers() throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    final Server server = mock(Server.class);
+    when(server.getConfiguration()).thenReturn(conf);
+
+    ExecutorService executorService = new ExecutorService("testSnapshotHandlers");
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SNAPSHOT_OPERATIONS).setCorePoolSize(1));
+
+    CountDownLatch latch = new CountDownLatch(1);
+    CountDownLatch waitForEventToStart = new CountDownLatch(1);
+    executorService.submit(new EventHandler(server, EventType.C_M_SNAPSHOT_TABLE) {
+      @Override
+      public void process() throws IOException {
+        waitForEventToStart.countDown();
+        try {
+          latch.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    });
+
+    //Wait EventHandler to start
+    waitForEventToStart.await(10, TimeUnit.SECONDS);
+    int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
+        .getThreadPoolExecutor().getActiveCount();
+    Assert.assertEquals(1, activeCount);
+    latch.countDown();
+    Waiter.waitFor(conf, 3000, () -> {
+      int count = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
+          .getThreadPoolExecutor().getActiveCount();
+      return count == 0;
+    });
+  }
 }
 

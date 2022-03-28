@@ -36,7 +36,6 @@ public class ReplicationLoad {
 
   // Empty load instance.
   public static final ReplicationLoad EMPTY_REPLICATIONLOAD = new ReplicationLoad();
-  private MetricsSink sinkMetrics;
 
   private List<ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceEntries;
   private ClusterStatusProtos.ReplicationLoadSink replicationLoadSink;
@@ -49,19 +48,22 @@ public class ReplicationLoad {
   /**
    * buildReplicationLoad
    * @param sources List of ReplicationSource instances for which metrics should be reported
-   * @param skMetrics
+   * @param sinkMetrics metrics of the replication sink
    */
 
   public void buildReplicationLoad(final List<ReplicationSourceInterface> sources,
-      final MetricsSink skMetrics) {
-    this.sinkMetrics = skMetrics;
+      final MetricsSink sinkMetrics) {
 
-    // build the SinkLoad
-    ClusterStatusProtos.ReplicationLoadSink.Builder rLoadSinkBuild =
+    if (sinkMetrics != null) {
+      // build the SinkLoad
+      ClusterStatusProtos.ReplicationLoadSink.Builder rLoadSinkBuild =
         ClusterStatusProtos.ReplicationLoadSink.newBuilder();
-    rLoadSinkBuild.setAgeOfLastAppliedOp(sinkMetrics.getAgeOfLastAppliedOp());
-    rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimestampOfLastAppliedOp());
-    this.replicationLoadSink = rLoadSinkBuild.build();
+      rLoadSinkBuild.setAgeOfLastAppliedOp(sinkMetrics.getAgeOfLastAppliedOp());
+      rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimestampOfLastAppliedOp());
+      rLoadSinkBuild.setTimestampStarted(sinkMetrics.getStartTimestamp());
+      rLoadSinkBuild.setTotalOpsProcessed(sinkMetrics.getAppliedOps());
+      this.replicationLoadSink = rLoadSinkBuild.build();
+    }
 
     this.replicationLoadSourceEntries = new ArrayList<>();
     for (ReplicationSourceInterface source : sources) {
@@ -155,5 +157,4 @@ public class ReplicationLoad {
   public String toString() {
     return this.sourceToString() + System.getProperty("line.separator") + this.sinkToString();
   }
-
 }

@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceRegionLocation;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -31,22 +30,20 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The asynchronous locator for meta region.
  */
 @InterfaceAudience.Private
 class AsyncMetaRegionLocator {
 
-  private final AsyncRegistry registry;
+  private final ConnectionRegistry registry;
 
   private final AtomicReference<RegionLocations> metaRegionLocations = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<RegionLocations>> metaRelocateFuture =
     new AtomicReference<>();
 
-  AsyncMetaRegionLocator(AsyncRegistry registry) {
+  AsyncMetaRegionLocator(ConnectionRegistry registry) {
     this.registry = registry;
   }
 
@@ -61,7 +58,7 @@ class AsyncMetaRegionLocator {
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocation, locs -> isGood(locs, replicaId), "meta region location");
+      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {
@@ -110,7 +107,7 @@ class AsyncMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
-      this::addLocationToCache, this::removeLocationFromCache, Optional.empty());
+      this::addLocationToCache, this::removeLocationFromCache, null);
   }
 
   void clearCache() {
@@ -137,13 +134,11 @@ class AsyncMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a region.
-  @VisibleForTesting
   RegionLocations getRegionLocationInCache() {
     return metaRegionLocations.get();
   }
 
   // only used for testing whether we have cached the location for a table.
-  @VisibleForTesting
   int getNumberOfCachedRegionLocations() {
     RegionLocations locs = metaRegionLocations.get();
     return locs != null ? locs.numNonNullElements() : 0;

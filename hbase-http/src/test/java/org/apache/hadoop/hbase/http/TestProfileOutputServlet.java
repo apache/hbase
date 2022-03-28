@@ -37,7 +37,8 @@ public class TestProfileOutputServlet {
 
   @Test
   public void testSanitization() {
-    List<String> good = Arrays.asList("abcd", "key=value", "key1=value&key2=value2", "");
+    List<String> good = Arrays.asList("abcd", "key=value", "key1=value&key2=value2", "",
+        "host=host-1.example.com");
     for (String input : good) {
       assertEquals(input, ProfileOutputServlet.sanitize(input));
     }

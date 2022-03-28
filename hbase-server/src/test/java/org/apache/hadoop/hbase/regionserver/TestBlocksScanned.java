@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestCase.addContent;
+import static org.apache.hadoop.hbase.HTestConst.addContent;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -63,46 +62,39 @@ public class TestBlocksScanned {
   private static byte [] END_KEY = Bytes.toBytes("zzz");
   private static int BLOCK_SIZE = 70;
 
-  private static HBaseTestingUtility TEST_UTIL = null;
+  private static HBaseTestingUtil TEST_UTIL = null;
   private Configuration conf;
   private Path testDir;
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     conf = TEST_UTIL.getConfiguration();
     testDir = TEST_UTIL.getDataTestDir("TestBlocksScanned");
   }
 
   @Test
   public void testBlocksScanned() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScanned");
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
-
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
-    _testBlocksScanned(table);
+    byte[] tableName = Bytes.toBytes("TestBlocksScanned");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setBlocksize(BLOCK_SIZE)
+          .setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
+    _testBlocksScanned(tableDescriptor);
   }
 
   @Test
   public void testBlocksScannedWithEncoding() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
-
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
-    _testBlocksScanned(table);
+    byte[] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
+          .setBlocksize(BLOCK_SIZE).setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
+    _testBlocksScanned(tableDescriptor);
   }
 
   private void _testBlocksScanned(TableDescriptor td) throws Exception {
@@ -110,7 +102,7 @@ public class TestBlocksScanned {
     RegionInfo regionInfo =
         RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY).setEndKey(END_KEY)
             .build();
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
     addContent(r, FAMILY, COL);
     r.flush(true);
 
@@ -120,7 +112,7 @@ public class TestBlocksScanned {
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
         .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();

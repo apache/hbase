@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -57,13 +58,6 @@ public interface AsyncClusterConnection extends AsyncConnection {
   CompletableFuture<FlushRegionResponse> flush(byte[] regionName, boolean writeFlushWALMarker);
 
   /**
-   * Replicate wal edits for replica regions. The return value is the edits we skipped, as the
-   * original return value is useless.
-   */
-  CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs);
-
-  /**
    * Return all the replicas for a region. Used for region replica replication.
    */
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
@@ -75,14 +69,44 @@ public interface AsyncClusterConnection extends AsyncConnection {
   CompletableFuture<String> prepareBulkLoad(TableName tableName);
 
   /**
-   * Securely bulk load a list of HFiles.
-   * @param row used to locate the region
+   * Securely bulk load a list of HFiles, passing additional list of clusters ids tracking clusters
+   * where the given bulk load has already been processed (important for bulk loading replication).
+   * <p/>
+   * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
+   * not expect additional clusterIds param.
+   * @param tableName the target table
+   * @param familyPaths hdfs path for the the table family dirs containg files to be loaded.
+   * @param row row key.
+   * @param assignSeqNum seq num for the event on WAL.
+   * @param userToken user token.
+   * @param bulkToken bulk load token.
+   * @param copyFiles flag for copying the loaded hfiles.
+   * @param clusterIds list of cluster ids where the given bulk load has already been processed.
+   * @param replicate flags if the bulkload is targeted for replication.
    */
   CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
-      byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles);
+    byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
+    List<String> clusterIds, boolean replicate);
 
   /**
    * Clean up after finishing bulk load, no matter success or not.
    */
   CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken);
+
+  /**
+   * Get live region servers from masters.
+   */
+  CompletableFuture<List<ServerName>> getLiveRegionServers(MasterAddressTracker masterAddrTracker,
+    int count);
+
+  /**
+   * Get the bootstrap node list of another region server.
+   */
+  CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer);
+
+  /**
+   * Replicate wal edits to a secondary replica.
+   */
+  CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int numRetries,
+    long rpcTimeoutNs, long operationTimeoutNs);
 }

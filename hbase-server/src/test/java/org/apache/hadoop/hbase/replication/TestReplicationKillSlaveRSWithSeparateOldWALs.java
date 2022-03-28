@@ -24,24 +24,18 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillSlaveRSWithSeparateOldWALs extends TestReplicationKillRS {
+public class TestReplicationKillSlaveRSWithSeparateOldWALs extends TestReplicationKillSlaveRS {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationKillSlaveRSWithSeparateOldWALs.class);
+    HBaseClassTestRule.forClass(TestReplicationKillSlaveRSWithSeparateOldWALs.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     CONF1.setBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, true);
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @Test
-  public void killOneSlaveRS() throws Exception {
-    loadTableAndKillRS(UTIL2);
+    TestReplicationKillSlaveRS.setUpBeforeClass();
   }
 }

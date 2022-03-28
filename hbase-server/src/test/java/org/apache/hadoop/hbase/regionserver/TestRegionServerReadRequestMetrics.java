@@ -32,9 +32,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -80,7 +79,7 @@ public class TestRegionServerReadRequestMetrics {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF1 = Bytes.toBytes("c1");
   private static final byte[] CF2 = Bytes.toBytes("c2");
@@ -109,9 +108,6 @@ public class TestRegionServerReadRequestMetrics {
 
   @BeforeClass
   public static void setUpOnce() throws Exception {
-    // Default starts one regionserver only.
-    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
-    // TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
     serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
@@ -146,16 +142,6 @@ public class TestRegionServerReadRequestMetrics {
 
     assertEquals(expectedReadRequests,
       requestsMap.get(Metric.REGION_READ) - requestsMapPrev.get(Metric.REGION_READ));
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    if (tablesOnMaster) {
-      // If NO tables on master, then the single regionserver in this test carries user-space
-      // tables and the meta table. The first time through, the read will be inflated by meta
-      // lookups. We don't know which test will be first through since junit randomizes. This
-      // method is used by a bunch of tests. Just do this check if master is hosting (system)
-      // regions only.
-      assertEquals(expectedReadRequests,
-      requestsMap.get(Metric.SERVER_READ) - requestsMapPrev.get(Metric.SERVER_READ));
-    }
     assertEquals(expectedFilteredReadRequests,
       requestsMap.get(Metric.FILTERED_REGION_READ)
         - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
@@ -170,22 +156,23 @@ public class TestRegionServerReadRequestMetrics {
       requestsMapPrev.put(metric, requestsMap.get(metric));
     }
 
-    ServerLoad serverLoad = null;
-    RegionLoad regionLoadOuter = null;
+    ServerMetrics serverMetrics = null;
+    RegionMetrics regionMetricsOuter = null;
     boolean metricsUpdated = false;
     for (int i = 0; i < MAX_TRY; i++) {
       for (ServerName serverName : serverNames) {
-        serverLoad = new ServerLoad(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-          .getLiveServerMetrics().get(serverName));
+        serverMetrics = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().get(serverName);
 
-        Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
-        RegionLoad regionLoad = regionsLoad.get(regionInfo.getRegionName());
-        if (regionLoad != null) {
-          regionLoadOuter = regionLoad;
+        Map<byte[], RegionMetrics> regionMetrics = serverMetrics.getRegionMetrics();
+        RegionMetrics regionMetric = regionMetrics.get(regionInfo.getRegionName());
+        if (regionMetric != null) {
+          regionMetricsOuter = regionMetric;
           for (Metric metric : Metric.values()) {
-            if (getReadRequest(serverLoad, regionLoad, metric) > requestsMapPrev.get(metric)) {
+            if (getReadRequest(serverMetrics, regionMetric, metric) > requestsMapPrev.get(metric)) {
               for (Metric metricInner : Metric.values()) {
-                requestsMap.put(metricInner, getReadRequest(serverLoad, regionLoad, metricInner));
+                requestsMap.put(metricInner, getReadRequest(serverMetrics, regionMetric,
+                    metricInner));
               }
               metricsUpdated = true;
               break;
@@ -200,21 +187,24 @@ public class TestRegionServerReadRequestMetrics {
     }
     if (!metricsUpdated) {
       for (Metric metric : Metric.values()) {
-        requestsMap.put(metric, getReadRequest(serverLoad, regionLoadOuter, metric));
+        requestsMap.put(metric, getReadRequest(serverMetrics, regionMetricsOuter, metric));
       }
     }
   }
 
-  private static long getReadRequest(ServerLoad serverLoad, RegionLoad regionLoad, Metric metric) {
+  private static long getReadRequest(ServerMetrics serverMetrics, RegionMetrics regionMetrics,
+      Metric metric) {
     switch (metric) {
       case REGION_READ:
-        return regionLoad.getReadRequestsCount();
+        return regionMetrics.getReadRequestCount();
       case SERVER_READ:
-        return serverLoad.getReadRequestsCount();
+        return serverMetrics.getRegionMetrics().get(regionMetrics.getRegionName())
+            .getReadRequestCount();
       case FILTERED_REGION_READ:
-        return regionLoad.getFilteredReadRequestsCount();
+        return regionMetrics.getFilteredReadRequestCount();
       case FILTERED_SERVER_READ:
-        return serverLoad.getFilteredReadRequestsCount();
+        return serverMetrics.getRegionMetrics().get(regionMetrics.getRegionName())
+            .getFilteredReadRequestCount();
       default:
         throw new IllegalStateException();
     }
@@ -284,7 +274,7 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // test for scan
-    scan = new Scan(ROW2, ROW3);
+    scan = new Scan().withStartRow(ROW2).withStopRow(ROW3);
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
       for (Result ignore : scanner) {
@@ -361,7 +351,7 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // test for scan
-    scan = new Scan(ROW2, ROW3);
+    scan = new Scan().withStartRow(ROW2).withStopRow(ROW3);
     scan.setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW1)));
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
@@ -455,15 +445,16 @@ public class TestRegionServerReadRequestMetrics {
 
   private void testReadRequests(byte[] regionName, int expectedReadRequests) throws Exception {
     for (ServerName serverName : serverNames) {
-      ServerLoad serverLoad = new ServerLoad(admin.getClusterMetrics(
-        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName));
-      Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
-      RegionLoad regionLoad = regionsLoad.get(regionName);
-      if (regionLoad != null) {
-        LOG.debug("server read request is " + serverLoad.getReadRequestsCount()
-            + ", region read request is " + regionLoad.getReadRequestsCount());
-        assertEquals(3, serverLoad.getReadRequestsCount());
-        assertEquals(3, regionLoad.getReadRequestsCount());
+      ServerMetrics serverMetrics = admin.getClusterMetrics(
+        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName);
+      Map<byte[], RegionMetrics> regionMetrics = serverMetrics.getRegionMetrics();
+      RegionMetrics regionMetric = regionMetrics.get(regionName);
+      if (regionMetric != null) {
+        LOG.debug("server read request is "
+            + serverMetrics.getRegionMetrics().get(regionName).getReadRequestCount()
+            + ", region read request is " + regionMetric.getReadRequestCount());
+        assertEquals(3, serverMetrics.getRegionMetrics().get(regionName).getReadRequestCount());
+        assertEquals(3, regionMetric.getReadRequestCount());
       }
     }
   }

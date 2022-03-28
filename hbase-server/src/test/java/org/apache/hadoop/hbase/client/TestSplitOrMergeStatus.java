@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
@@ -59,7 +60,7 @@ public class TestSplitOrMergeStatus {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
@@ -86,18 +87,16 @@ public class TestSplitOrMergeStatus {
 
     Admin admin = TEST_UTIL.getAdmin();
     initSwitchStatus(admin);
-    boolean result = admin.splitSwitch(false, false);
-    assertTrue(result);
+    assertTrue(admin.splitSwitch(false, false));
     try {
       admin.split(t.getName());
-      fail();
-    } catch (IOException e) {
-      // expected
+      fail("Shouldn't get here");
+    } catch (DoNotRetryIOException dnioe) {
+      // Expected
     }
     int count = admin.getRegions(tableName).size();
     assertTrue(originalCount == count);
-    result = admin.splitSwitch(true, false);
-    assertFalse(result);
+    assertFalse(admin.splitSwitch(true, false));
     admin.split(t.getName());
     while ((count = admin.getRegions(tableName).size()) == originalCount) {
       Threads.sleep(1);

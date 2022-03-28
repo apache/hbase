@@ -38,6 +38,7 @@
 :experimental:
 :source-language: java
 :leveloffset: 0
+:stem:
 
 // Logo for HTML -- doesn't render in PDF
 ifdef::backend-html5[]
@@ -64,6 +65,7 @@ include::_chapters/mapreduce.adoc[]
 include::_chapters/security.adoc[]
 include::_chapters/architecture.adoc[]
 include::_chapters/hbase_mob.adoc[]
+include::_chapters/snapshot_scanner.adoc[]
 include::_chapters/inmemory_compaction.adoc[]
 include::_chapters/offheap_read_write.adoc[]
 include::_chapters/backup_restore.adoc[]
@@ -85,6 +87,9 @@ include::_chapters/pv2.adoc[]
 include::_chapters/amv2.adoc[]
 include::_chapters/zookeeper.adoc[]
 include::_chapters/community.adoc[]
+include::_chapters/hbtop.adoc[]
+include::_chapters/tracing.adoc[]
+include::_chapters/store_file_tracking.adoc[]
 
 = Appendix
 
@@ -99,6 +104,5 @@ include::_chapters/other_info.adoc[]
 include::_chapters/hbase_history.adoc[]
 include::_chapters/asf.adoc[]
 include::_chapters/orca.adoc[]
-include::_chapters/tracing.adoc[]
 include::_chapters/rpc.adoc[]
 include::_chapters/appendix_hbase_incompatibilities.adoc[]

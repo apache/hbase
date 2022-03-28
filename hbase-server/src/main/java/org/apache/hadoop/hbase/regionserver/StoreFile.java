@@ -66,6 +66,11 @@ public interface StoreFile {
   Path getPath();
 
   /**
+   * @return Encoded Path if this StoreFile was made with a Stream.
+   */
+  Path getEncodedPath();
+
+  /**
    * @return Returns the qualified path of this StoreFile
    */
   Path getQualifiedPath();

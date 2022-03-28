@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Keep track of the runnable procedures
  */
@@ -125,7 +123,6 @@ public interface ProcedureScheduler {
    * Returns the number of elements in this queue.
    * @return the number of elements in this queue.
    */
-  @VisibleForTesting
   int size();
 
   /**
@@ -133,6 +130,5 @@ public interface ProcedureScheduler {
    * Used for testing failure and recovery. To emulate server crash/restart,
    * {@link ProcedureExecutor} resets its own state and calls clear() on scheduler.
    */
-  @VisibleForTesting
   void clear();
 }

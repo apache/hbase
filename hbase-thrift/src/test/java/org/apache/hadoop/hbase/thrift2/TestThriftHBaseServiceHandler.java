@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static java.nio.ByteBuffer.wrap;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.thrift.HBaseServiceHandler.CLEANUP_INTERVAL;
 import static org.apache.hadoop.hbase.thrift.HBaseServiceHandler.MAX_IDLETIME;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
@@ -34,47 +36,60 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift.ErrorThrowingGetObserver;
+import org.apache.hadoop.hbase.thrift.HBaseThriftTestingUtility;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
+import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
@@ -86,24 +101,36 @@ import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TFilterByOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
+import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -129,7 +156,7 @@ public class TestThriftHBaseServiceHandler {
       HBaseClassTestRule.forClass(TestThriftHBaseServiceHandler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftHBaseServiceHandler.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Static names for tables, columns, rows, and values
   private static byte[] tableAname = Bytes.toBytes("tableA");
@@ -139,10 +166,9 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static HColumnDescriptor[] families = new HColumnDescriptor[] {
-      new HColumnDescriptor(familyAname).setMaxVersions(3),
-      new HColumnDescriptor(familyBname).setMaxVersions(2)
-  };
+  private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
+    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
 
   private static final MetricsAssertHelper metricsHelper =
@@ -181,14 +207,27 @@ public class TestThriftHBaseServiceHandler {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.security.authorization", true);
+    UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.regionserver.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+
+    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
+    // sufficient permission to do operations.
+    UTIL.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
+
     UTIL.startMiniCluster();
-    Admin admin = UTIL.getAdmin();
-    HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
-    for (HColumnDescriptor family : families) {
-      tableDescriptor.addFamily(family);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
+    try (Admin admin = UTIL.getAdmin()) {
+      admin.createTable(tableDescriptor);
     }
-    admin.createTable(tableDescriptor);
-    admin.close();
   }
 
   @AfterClass
@@ -385,14 +424,14 @@ public class TestThriftHBaseServiceHandler {
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
       wrap(valueAname));
-    columnValueA.setTimestamp(System.currentTimeMillis() - 10);
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime() - 10);
     columnValues.add(columnValueA);
     TPut put = new TPut(wrap(rowName), columnValues);
 
     put.setColumnValues(columnValues);
 
     handler.put(table, put);
-    columnValueA.setTimestamp(System.currentTimeMillis());
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime());
     handler.put(table, put);
 
     TGet get = new TGet(wrap(rowName));
@@ -422,8 +461,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteSingleTimestamp");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
@@ -467,8 +506,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamily");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -509,8 +548,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamilyVersion");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -745,7 +784,13 @@ public class TestThriftHBaseServiceHandler {
    * Tests keeping a HBase scanner alive for long periods of time. Each call to getScannerRow()
    * should reset the ConnectionCache timeout for the scanner's connection.
    */
-  @Test
+  @org.junit.Ignore @Test // Flakey. Diasabled by HBASE-24079. Renable with Fails with HBASE-24083.
+  //  Caused by: java.util.concurrent.RejectedExecutionException:
+  //  Task org.apache.hadoop.hbase.client.ResultBoundedCompletionService$QueueingFuture@e385431
+  //  rejected from java.util.concurrent.ThreadPoolExecutor@   52b027d[Terminated, pool size = 0,
+  //  active threads = 0, queued tasks = 0, completed tasks = 1]
+  //  at org.apache.hadoop.hbase.thrift2.TestThriftHBaseServiceHandler.
+  //  testLongLivedScan(TestThriftHBaseServiceHandler.java:804)
   public void testLongLivedScan() throws Exception {
     int numTrials = 6;
     int trialPause = 1000;
@@ -902,7 +947,7 @@ public class TestThriftHBaseServiceHandler {
         wrap(valueAname));
     TColumnValue familyBColumnValue = new TColumnValue(wrap(familyBname), wrap(qualifierBname),
         wrap(valueBname));
-    long minTimestamp = System.currentTimeMillis();
+    long minTimestamp = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < 10; i++) {
       familyAColumnValue.setTimestamp(minTimestamp + i);
       familyBColumnValue.setTimestamp(minTimestamp + i);
@@ -998,6 +1043,31 @@ public class TestThriftHBaseServiceHandler {
   }
 
   @Test
+  public void testExpiredScanner() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 1000);
+    ThriftHBaseServiceHandler handler =
+      new ThriftHBaseServiceHandler(conf, UserProvider.instantiate(conf));
+
+    TScan scan = new TScan();
+    ByteBuffer table = wrap(tableAname);
+
+    int scannerId = handler.openScanner(table, scan);
+    handler.getScannerRows(scannerId, 1);
+    Thread.sleep(1000);
+
+    try {
+      handler.getScannerRows(scannerId, 1);
+      fail("The scanner should be expired and have an TIllegalArgument exception here.");
+    } catch (TIllegalArgument e) {
+      assertEquals("Invalid scanner Id", e.getMessage());
+    } finally {
+      conf.setLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+        DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    }
+  }
+
+  @Test
   public void testPutTTL() throws Exception {
     ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = Bytes.toBytes("testPutTTL");
@@ -1056,11 +1126,9 @@ public class TestThriftHBaseServiceHandler {
    */
   private String pad(int n, byte pad) {
     String res = Integer.toString(n);
-
     while (res.length() < pad) {
       res = "0" + res;
     }
-
     return res;
   }
 
@@ -1242,9 +1310,9 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(ErrorThrowingGetObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = UTIL.createTable(tableDesc, null);
     table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
@@ -1313,13 +1381,13 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf("testMetricsPrecision");
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(DelayingRegionObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(DelayingRegionObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = null;
     try {
-      table = UTIL.createTable(tableDesc, null);
+      table = UTIL.createTable(tableDescriptor, null);
 
       table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
 
@@ -1691,6 +1759,132 @@ public class TestThriftHBaseServiceHandler {
     assertTrue(table.getColumnFamily(familyBname).getMaxVersions() == 2);
   }
 
+  @Test
+  public void testGetThriftServerType() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    assertEquals(TThriftServerType.TWO, handler.getThriftServerType());
+  }
+
+  /**
+   * Verify that thrift2 client calling thrift server can get the thrift server type correctly.
+   */
+  @Test
+  public void testGetThriftServerOneType() throws Exception {
+
+    // start a thrift server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+
+    LOG.info("Starting HBase Thrift server One");
+    THRIFT_TEST_UTIL.startThriftServer(UTIL.getConfiguration(), ThriftServerType.ONE);
+    try (TTransport transport = new TSocket(InetAddress.getLocalHost().getHostName(),
+        THRIFT_TEST_UTIL.getServerPort())){
+      TProtocol protocol = new TBinaryProtocol(transport);
+      // This is our thrift2 client.
+      THBaseService.Iface client = new THBaseService.Client(protocol);
+      // open the transport
+      transport.open();
+      assertEquals(TThriftServerType.ONE.name(), client.getThriftServerType().name());
+    } finally {
+      THRIFT_TEST_UTIL.stopThriftServer();
+    }
+  }
+
+  @Test
+  public void testSlowLogResponses() throws Exception {
+
+    // start a thrift server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+    Configuration configuration = UTIL.getConfiguration();
+    configuration.setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    THRIFT_TEST_UTIL.startThriftServer(configuration, ThriftServerType.ONE);
+    ThriftHBaseServiceHandler thriftHBaseServiceHandler =
+      new ThriftHBaseServiceHandler(configuration,
+        UserProvider.instantiate(configuration));
+    Collection<ServerName> serverNames = UTIL.getAdmin().getRegionServers();
+    Set<TServerName> tServerNames =
+      ThriftUtilities.getServerNamesFromHBase(new HashSet<>(serverNames));
+    List<Boolean> clearedResponses =
+      thriftHBaseServiceHandler.clearSlowLogResponses(tServerNames);
+    clearedResponses.forEach(Assert::assertTrue);
+    TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
+    tLogQueryFilter.setLimit(15);
+    Assert.assertEquals(tLogQueryFilter.getFilterByOperator(), TFilterByOperator.OR);
+    LogQueryFilter logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.OR);
+    tLogQueryFilter.setFilterByOperator(TFilterByOperator.AND);
+    logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.AND);
+    List<TOnlineLogRecord> tLogRecords =
+      thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
+    assertEquals(tLogRecords.size(), 0);
+  }
+
+  @Test
+  public void testPerformTablePermissions() throws Throwable {
+    // initialize fake objects.
+    String fakeUser = "user";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setTableName(Bytes.toString(tableAname));
+    tce.setScope(TPermissionScope.TABLE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+        Bytes.toString(tableAname), fakeUser);
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // than revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      Bytes.toString(tableAname), fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
+  }
+
+
+  @Test
+  public void testPerformNamespacePermissions() throws Throwable {
+    // initialize fake objects. We test the permission grant and revoke on default NS.
+    String fakeUser = "user";
+    String defaultNameSpace = "default";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setNsName(defaultNameSpace);
+    tce.setScope(TPermissionScope.NAMESPACE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
+  }
+
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
     private static final Logger LOG = LoggerFactory.getLogger(DelayingRegionObserver.class);
     // sleep time in msec
@@ -1711,10 +1905,10 @@ public class TestThriftHBaseServiceHandler {
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                          List<Cell> results) throws IOException {
       try {
-        long start = System.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTime();
         TimeUnit.MILLISECONDS.sleep(delayMillis);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Slept for " + (System.currentTimeMillis() - start) + " msec");
+          LOG.trace("Slept for " + (EnvironmentEdgeManager.currentTime() - start) + " msec");
         }
       } catch (InterruptedException ie) {
         throw new InterruptedIOException("Interrupted while sleeping");

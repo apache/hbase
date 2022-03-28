@@ -55,7 +55,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSequenceIdMonotonicallyIncreasing.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final TableName NAME = TableName.valueOf("test");
 
@@ -137,7 +137,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
       table.put(new Put(Bytes.toBytes(2)).addColumn(CF, CQ, Bytes.toBytes(0)));
     }
     UTIL.flush(NAME);
-    MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();
     List<HRegion> regions = cluster.getRegions(NAME);
     HRegion regionA = regions.get(0);
     HRegion regionB = regions.get(1);

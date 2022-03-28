@@ -43,7 +43,7 @@ public final class BlockCacheFactory {
    */
 
   /**
-   * Configuration key to cache block policy (Lru, TinyLfu).
+   * Configuration key to cache block policy (Lru, TinyLfu, AdaptiveLRU, IndexOnlyLRU).
    */
   public static final String BLOCKCACHE_POLICY_KEY = "hfile.block.cache.policy";
   public static final String BLOCKCACHE_POLICY_DEFAULT = "LRU";
@@ -92,24 +92,10 @@ public final class BlockCacheFactory {
   @Deprecated
   static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
-  /**
-   * The config point hbase.offheapcache.minblocksize is completely wrong, which is replaced by
-   * {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY}. Keep the old config key here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY, BLOCKCACHE_BLOCKSIZE_KEY);
-  }
-
   private BlockCacheFactory() {
   }
 
   public static BlockCache createBlockCache(Configuration conf) {
-    if (conf.get(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY) != null) {
-      LOG.warn("The config key {} is deprecated now, instead please use {}. In future release "
-          + "we will remove the deprecated config.", DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY,
-        BLOCKCACHE_BLOCKSIZE_KEY);
-    }
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;
@@ -143,8 +129,12 @@ public final class BlockCacheFactory {
         StringUtils.byteDesc(cacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
     if (policy.equalsIgnoreCase("LRU")) {
       return new LruBlockCache(cacheSize, blockSize, true, c);
+    } else if (policy.equalsIgnoreCase("IndexOnlyLRU")) {
+      return new IndexOnlyLruBlockCache(cacheSize, blockSize, true, c);
     } else if (policy.equalsIgnoreCase("TinyLFU")) {
       return new TinyLfuBlockCache(cacheSize, blockSize, ForkJoinPool.commonPool(), c);
+    } else if (policy.equalsIgnoreCase("AdaptiveLRU")) {
+      return new LruAdaptiveBlockCache(cacheSize, blockSize, true, c);
     } else {
       throw new IllegalArgumentException("Unknown policy: " + policy);
     }

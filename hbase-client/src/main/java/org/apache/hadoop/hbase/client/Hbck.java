@@ -21,17 +21,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 /**
  * Hbck fixup tool APIs. Obtain an instance from {@link Connection#getHbck()} and call
@@ -53,6 +47,15 @@ public interface Hbck extends Abortable, Closeable {
    * @return previous state of the table in Meta
    */
   TableState setTableStateInMeta(TableState state) throws IOException;
+
+  /**
+   * Update region state in Meta only. No procedures are submitted to manipulate the given region or
+   * any other region from same table.
+   * @param nameOrEncodedName2State list of all region states to be updated in meta
+   * @return previous state of the region in Meta
+   */
+  Map<String, RegionState.State>
+    setRegionStateInMeta(Map<String, RegionState.State> nameOrEncodedName2State) throws IOException;
 
   /**
    * Like {@link Admin#assign(byte[])} but 'raw' in that it can do more than one Region at a time
@@ -109,18 +112,9 @@ public interface Hbck extends Abortable, Closeable {
   List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
       throws IOException;
 
-  /**
-   * Use {@link #scheduleServerCrashProcedures(List)} instead.
-   * @deprecated since 2.2.1. Will removed in 3.0.0.
-   */
-  @Deprecated
-  default List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
-      throws IOException {
-    return scheduleServerCrashProcedures(
-        serverNames.stream().map(ProtobufUtil::toServerName).collect(Collectors.toList()));
-  }
-
   List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames) throws IOException;
+
+  List<Long> scheduleSCPsForUnknownServers() throws IOException;
 
   /**
    * Request HBCK chore to run at master side.

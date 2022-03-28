@@ -34,7 +34,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -53,7 +52,10 @@ import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.io.hadoopbackport.ThrottledInputStream;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -75,8 +77,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -109,6 +113,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_OUTPUT_ROOT = "snapshot.export.output.root";
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
+  private static final String CONF_REPORT_SIZE = "snapshot.export.report.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
   private static final String CONF_MR_JOB_NAME = "mapreduce.job.name";
@@ -138,6 +143,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         "Do not verify checksum, use name+length only.");
     static final Option NO_TARGET_VERIFY = new Option(null, "no-target-verify", false,
         "Do not verify the integrity of the exported snapshot.");
+    static final Option NO_SOURCE_VERIFY = new Option(null, "no-source-verify", false,
+      "Do not verify the source of the snapshot.");
     static final Option OVERWRITE = new Option(null, "overwrite", false,
         "Rewrite the snapshot manifest if already exists.");
     static final Option CHUSER = new Option(null, "chuser", true,
@@ -169,6 +176,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     private String filesUser;
     private short filesMode;
     private int bufferSize;
+    private int reportSize;
 
     private FileSystem outputFs;
     private Path outputArchive;
@@ -216,6 +224,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       int defaultBlockSize = Math.max((int) outputFs.getDefaultBlockSize(outputRoot), BUFFER_SIZE);
       bufferSize = conf.getInt(CONF_BUFFER_SIZE, defaultBlockSize);
       LOG.info("Using bufferSize=" + StringUtils.humanReadableInt(bufferSize));
+      reportSize = conf.getInt(CONF_REPORT_SIZE, REPORT_SIZE);
 
       for (Counter c : Counter.values()) {
         context.getCounter(c).increment(0);
@@ -255,7 +264,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           TableName table =HFileLink.getReferencedTableName(inputPath.getName());
           String region = HFileLink.getReferencedRegionName(inputPath.getName());
           String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
-          path = new Path(FSUtils.getTableDir(new Path("./"), table),
+          path = new Path(CommonFSUtils.getTableDir(new Path("./"), table),
               new Path(region, new Path(family, hfile)));
           break;
         case WAL:
@@ -414,13 +423,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         int reportBytes = 0;
         int bytesRead;
 
-        long stime = System.currentTimeMillis();
+        long stime = EnvironmentEdgeManager.currentTime();
         while ((bytesRead = in.read(buffer)) > 0) {
           out.write(buffer, 0, bytesRead);
           totalBytesWritten += bytesRead;
           reportBytes += bytesRead;
 
-          if (reportBytes >= REPORT_SIZE) {
+          if (reportBytes >= reportSize) {
             context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
             context.setStatus(String.format(statusMessage,
                               StringUtils.humanReadableInt(totalBytesWritten),
@@ -429,7 +438,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             reportBytes = 0;
           }
         }
-        long etime = System.currentTimeMillis();
+        long etime = EnvironmentEdgeManager.currentTime();
 
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
         context.setStatus(String.format(statusMessage,
@@ -578,29 +587,37 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         @Override
         public void storeFile(final RegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          // for storeFile.hasReference() case, copied as part of the manifest
+          Pair<SnapshotFileInfo, Long> snapshotFileAndSize = null;
           if (!storeFile.hasReference()) {
             String region = regionInfo.getEncodedName();
             String hfile = storeFile.getName();
-            Path path = HFileLink.createPath(table, region, family, hfile);
-
-            SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
-              .setType(SnapshotFileInfo.Type.HFILE)
-              .setHfile(path.toString())
-              .build();
-
-            long size;
-            if (storeFile.hasFileSize()) {
-              size = storeFile.getFileSize();
-            } else {
-              size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
-            }
-            files.add(new Pair<>(fileInfo, size));
+            snapshotFileAndSize = getSnapshotFileAndSize(fs, conf, table, region, family, hfile,
+              storeFile.hasFileSize() ? storeFile.getFileSize() : -1);
+          } else {
+            Pair<String, String> referredToRegionAndFile =
+                StoreFileInfo.getReferredToRegionAndFile(storeFile.getName());
+            String referencedRegion = referredToRegionAndFile.getFirst();
+            String referencedHFile = referredToRegionAndFile.getSecond();
+            snapshotFileAndSize = getSnapshotFileAndSize(fs, conf, table, referencedRegion, family,
+              referencedHFile, storeFile.hasFileSize() ? storeFile.getFileSize() : -1);
           }
+          files.add(snapshotFileAndSize);
         }
-    });
+      });
 
     return files;
+  }
+
+  private static Pair<SnapshotFileInfo, Long> getSnapshotFileAndSize(FileSystem fs,
+      Configuration conf, TableName table, String region, String family, String hfile, long size)
+      throws IOException {
+    Path path = HFileLink.createPath(table, region, family, hfile);
+    SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder().setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile(path.toString()).build();
+    if (size == -1) {
+      size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
+    }
+    return new Pair<>(fileInfo, size);
   }
 
   /**
@@ -845,8 +862,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
-    FSUtils.setRootDir(conf, rootDir);
-    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+    CommonFSUtils.setRootDir(conf, rootDir);
+    CommonFSUtils.setFsDefault(conf, CommonFSUtils.getRootDir(conf));
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
@@ -900,6 +917,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   }
 
   private boolean verifyTarget = true;
+  private boolean verifySource = true;
   private boolean verifyChecksum = true;
   private String snapshotName = null;
   private String targetName = null;
@@ -925,12 +943,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     mappers = getOptionAsInt(cmd, Options.MAPPERS.getLongOpt(), mappers);
     filesUser = cmd.getOptionValue(Options.CHUSER.getLongOpt(), filesUser);
     filesGroup = cmd.getOptionValue(Options.CHGROUP.getLongOpt(), filesGroup);
-    filesMode = getOptionAsInt(cmd, Options.CHMOD.getLongOpt(), filesMode);
+    filesMode = getOptionAsInt(cmd, Options.CHMOD.getLongOpt(), filesMode, 8);
     bandwidthMB = getOptionAsInt(cmd, Options.BANDWIDTH.getLongOpt(), bandwidthMB);
     overwrite = cmd.hasOption(Options.OVERWRITE.getLongOpt());
     // And verifyChecksum and verifyTarget with values read from old args in processOldArgs(...).
     verifyChecksum = !cmd.hasOption(Options.NO_CHECKSUM_VERIFY.getLongOpt());
     verifyTarget = !cmd.hasOption(Options.NO_TARGET_VERIFY.getLongOpt());
+    verifySource = !cmd.hasOption(Options.NO_SOURCE_VERIFY.getLongOpt());
   }
 
   /**
@@ -959,28 +978,34 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       targetName = snapshotName;
     }
     if (inputRoot == null) {
-      inputRoot = FSUtils.getRootDir(conf);
+      inputRoot = CommonFSUtils.getRootDir(conf);
     } else {
-      FSUtils.setRootDir(conf, inputRoot);
+      CommonFSUtils.setRootDir(conf, inputRoot);
     }
 
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
     srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
-    LOG.debug("inputFs=" + inputFs.getUri().toString() + " inputRoot=" + inputRoot);
     Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
     destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), destConf);
-    LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
-
     boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false) ||
         conf.get(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR) != null;
-
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(targetName, outputRoot,
         destConf);
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
+    LOG.debug("inputFs={}, inputRoot={}", inputFs.getUri().toString(), inputRoot);
+    LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}",
+      outputFs, outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
+
+    // Verify snapshot source before copying files
+    if (verifySource) {
+      LOG.info("Verify snapshot source, inputFs={}, inputRoot={}, snapshotDir={}.",
+        inputFs.getUri(), inputRoot, snapshotDir);
+      verifySnapshot(srcConf, inputFs, inputRoot, snapshotDir);
+    }
 
     // Find the necessary directory which need to change owner and group
     Path needSetOwnerDir = SnapshotDescriptionUtils.getSnapshotRootDir(outputRoot);
@@ -1132,6 +1157,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     addOption(Options.TARGET_NAME);
     addOption(Options.NO_CHECKSUM_VERIFY);
     addOption(Options.NO_TARGET_VERIFY);
+    addOption(Options.NO_SOURCE_VERIFY);
     addOption(Options.OVERWRITE);
     addOption(Options.CHUSER);
     addOption(Options.CHGROUP);

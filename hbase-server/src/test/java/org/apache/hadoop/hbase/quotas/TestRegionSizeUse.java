@@ -24,19 +24,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,9 +65,9 @@ public class TestRegionSizeUse {
   private static final int SIZE_PER_VALUE = 256;
   private static final int NUM_SPLITS = 10;
   private static final String F1 = "f1";
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @Rule
   public TestName testName = new TestName();
@@ -138,9 +139,14 @@ public class TestRegionSizeUse {
     }
 
     // Create the table
-    HTableDescriptor tableDesc = new HTableDescriptor(tn);
-    tableDesc.addFamily(new HColumnDescriptor(F1));
-    admin.createTable(tableDesc, Bytes.toBytes("1"), Bytes.toBytes("9"), NUM_SPLITS);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tn);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(F1)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+
+    admin.createTable(tableDescriptorBuilder.build(), Bytes.toBytes("1"),
+      Bytes.toBytes("9"), NUM_SPLITS);
 
     final Table table = conn.getTable(tn);
     try {
@@ -148,14 +154,13 @@ public class TestRegionSizeUse {
       long bytesToWrite = sizeInBytes;
       long rowKeyId = 0L;
       final StringBuilder sb = new StringBuilder();
-      final Random r = new Random();
       while (bytesToWrite > 0L) {
         sb.setLength(0);
         sb.append(Long.toString(rowKeyId));
         // Use the reverse counter as the rowKey to get even spread across all regions
         Put p = new Put(Bytes.toBytes(sb.reverse().toString()));
         byte[] value = new byte[SIZE_PER_VALUE];
-        r.nextBytes(value);
+        Bytes.random(value);
         p.addColumn(Bytes.toBytes(F1), Bytes.toBytes("q1"), value);
         updates.add(p);
 

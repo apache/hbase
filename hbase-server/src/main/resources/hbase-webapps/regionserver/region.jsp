@@ -32,8 +32,13 @@
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
 
   Region region = rs.getRegion(regionName);
-  String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
-    rs.getConfiguration());
+  String displayName;
+  if (region != null) {
+    displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
+            rs.getConfiguration());
+  } else {
+    displayName = "region {" + regionName + "} is not currently online on this region server";
+  }
   pageContext.setAttribute("pageTitle", "HBase RegionServer: " + rs.getServerName());
 %>
 <jsp:include page="header.jsp">
@@ -67,7 +72,7 @@
          </tr>
        <%   for(StoreFile sf : storeFiles) { %>
          <tr>
-           <td><a href="storeFile.jsp?name=<%= sf.getPath() %>"><%= sf.getPath() %></a></td>
+           <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
            <td><%= (int) (rs.getFileSystem().getLength(sf.getPath()) / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
          </tr>

@@ -47,12 +47,30 @@ For example:
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+    Unthrottle number of requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_NUMBER, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle number of read requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_NUMBER, USER => 'u1', LIMIT => NONE
+    Unthrottle number of write requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_NUMBER, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+    Unthrottle data size:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_SIZE, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => READ_SIZE, LIMIT => 'NONE'
+    Unthrottle write data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => WRITE_SIZE, LIMIT => 'NONE'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10CU/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10CU/sec'
+    Unthrottle capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle write capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
@@ -61,7 +79,6 @@ For example:
     hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
-    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '30000req/sec'
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'
@@ -106,31 +123,36 @@ EOF
       end
 
       def command(args = {})
-        if args.key?(TYPE)
-          qtype = args.delete(TYPE)
+        if args.key?(::HBaseConstants::TYPE)
+          qtype = args.delete(::HBaseConstants::TYPE)
           case qtype
-          when THROTTLE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::THROTTLE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               quotas_admin.unthrottle(args)
             else
               quotas_admin.throttle(args)
             end
-          when SPACE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::SPACE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               # Table/Namespace argument is verified in remove_space_limit
               quotas_admin.remove_space_limit(args)
             else
-              raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(LIMIT)
-              raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(POLICY)
+              unless args.key?(::HBaseConstants::LIMIT)
+                raise(ArgumentError, 'Expected a LIMIT to be provided')
+              end
+              unless args.key?(::HBaseConstants::POLICY)
+                raise(ArgumentError, 'Expected a POLICY to be provided')
+              end
+
               quotas_admin.limit_space(args)
             end
           else
             raise 'Invalid TYPE argument. got ' + qtype
           end
-        elsif args.key?(GLOBAL_BYPASS)
-          quotas_admin.set_global_bypass(args.delete(GLOBAL_BYPASS), args)
+        elsif args.key?(::HBaseQuotasConstants::GLOBAL_BYPASS)
+          quotas_admin.set_global_bypass(args.delete(::HBaseQuotasConstants::GLOBAL_BYPASS), args)
         else
           raise 'Expected TYPE argument'
         end

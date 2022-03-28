@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -48,10 +48,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
@@ -72,7 +72,7 @@ import org.slf4j.LoggerFactory;
  * index blocks, and Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestCacheOnWriteInSchema {
 
   @ClassRule
@@ -82,7 +82,7 @@ public class TestCacheOnWriteInSchema {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
   private static byte [] table;
   private static byte [] family = Bytes.toBytes("family");
@@ -174,13 +174,14 @@ public class TestCacheOnWriteInSchema {
 
     // Create a store based on the schema
     String id = TestCacheOnWriteInSchema.class.getName();
-    Path logdir = new Path(FSUtils.getRootDir(conf), AbstractFSWALProvider.getWALDirectoryName(id));
+    Path logdir =
+      new Path(CommonFSUtils.getRootDir(conf), AbstractFSWALProvider.getWALDirectoryName(id));
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     walFactory = new WALFactory(conf, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
+    region = TEST_UTIL.createLocalHRegion(info, conf, htd, walFactory.getWAL(info));
     region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
     store = new HStore(region, hcd, conf, false);
   }
@@ -214,8 +215,10 @@ public class TestCacheOnWriteInSchema {
   @Test
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
-    StoreFileWriter writer = store.createWriterInTmp(Integer.MAX_VALUE,
-        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false, false);
+    StoreFileWriter writer = store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(Integer.MAX_VALUE)
+        .compression(HFile.DEFAULT_COMPRESSION_ALGORITHM).isCompaction(false)
+        .includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false));
     writeStoreFile(writer);
     writer.close();
     // Verify the block types of interest were cached on write
@@ -230,7 +233,7 @@ public class TestCacheOnWriteInSchema {
     HFile.Reader reader = sf.getReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled
-      HFileScanner scanner = reader.getScanner(false, false);
+      HFileScanner scanner = reader.getScanner(conf, false, false);
       assertTrue(testDescription, scanner.seekTo());
       // Cribbed from io.hfile.TestCacheOnWrite
       long offset = 0;
@@ -243,7 +246,10 @@ public class TestCacheOnWriteInSchema {
           offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
-        if (shouldBeCached != isCached) {
+        final BlockType blockType = block.getBlockType();
+
+        if (shouldBeCached != isCached &&
+            (cowType.blockType1.equals(blockType) || cowType.blockType2.equals(blockType))) {
           throw new AssertionError(
             "shouldBeCached: " + shouldBeCached+ "\n" +
             "isCached: " + isCached + "\n" +
@@ -265,8 +271,7 @@ public class TestCacheOnWriteInSchema {
     } else {
       KeyValue.Type keyType =
           KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
-      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum)
-      {
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
         throw new RuntimeException("Generated an invalid key type: " + keyType
             + ". " + "Probably the layout of KeyValue.Type has changed.");
       }

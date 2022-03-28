@@ -26,8 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
 public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractProcedureScheduler.class);
@@ -246,7 +244,6 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
    * Access should remain package-private. Use ProcedureEvent class to wake/suspend events.
    * @param events the list of events to wake
    */
-  @VisibleForTesting
   public void wakeEvents(ProcedureEvent[] events) {
     schedLock();
     try {

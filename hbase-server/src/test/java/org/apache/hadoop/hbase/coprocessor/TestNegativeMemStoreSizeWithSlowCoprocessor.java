@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * slow/expensive and a flush is triggered at the same time the coprocessow is doing its work. To
  * simulate this we call flush from the coprocessor itself
  */
-@Category(LargeTests.class)
+@Category(MediumTests.class)
 public class TestNegativeMemStoreSizeWithSlowCoprocessor {
 
   @ClassRule
@@ -54,7 +54,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
   static final Logger LOG =
       LoggerFactory.getLogger(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] tableName = Bytes.toBytes("test_table");
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");

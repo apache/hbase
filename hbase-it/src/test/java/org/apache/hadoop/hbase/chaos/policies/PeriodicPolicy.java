@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 
 /** A policy which does stuff every time interval. */
@@ -32,16 +33,16 @@ public abstract class PeriodicPolicy extends Policy {
   @Override
   public void run() {
     // Add some jitter.
-    int jitter = RandomUtils.nextInt(0, (int) periodMs);
+    int jitter = ThreadLocalRandom.current().nextInt((int)periodMs);
     LOG.info("Sleeping for {} ms to add jitter", jitter);
     Threads.sleep(jitter);
 
     while (!isStopped()) {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       runOneIteration();
 
       if (isStopped()) return;
-      long sleepTime = periodMs - (System.currentTimeMillis() - start);
+      long sleepTime = periodMs - (EnvironmentEdgeManager.currentTime() - start);
       if (sleepTime > 0) {
         LOG.info("Sleeping for {} ms", sleepTime);
         Threads.sleep(sleepTime);

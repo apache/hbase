@@ -17,8 +17,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -100,7 +99,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
     hbaseCluster.startHBase();
 
     // create tables if needed
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
+    HBaseTestingUtil.createPreSplitLoadTestTable(conf, TABLE_NAME,
         HFileTestUtil.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
         DataBlockEncoding.NONE);
 
@@ -113,7 +112,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     Connection connection = ConnectionFactory.createConnection(conf);
 
-    int metaRSPort = HBaseTestingUtility.getMetaRSPort(connection);
+    int metaRSPort = HBaseTestingUtil.getMetaRSPort(connection);
 
     LOG.debug("Killing hbase:meta region server running on port " + metaRSPort);
     hbaseCluster.killRegionServer(metaRSPort);

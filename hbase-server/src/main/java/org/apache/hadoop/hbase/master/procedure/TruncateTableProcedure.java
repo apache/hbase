@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -37,7 +36,7 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -130,7 +129,7 @@ public class TruncateTableProcedure
         case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           regions = CreateTableProcedure.createFsLayout(env, tableDescriptor, regions);
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(TruncateTableState.TRUNCATE_TABLE_ADD_TO_META);
           break;
         case TRUNCATE_TABLE_ADD_TO_META:
@@ -318,7 +317,6 @@ public class TruncateTableProcedure
     }
   }
 
-  @VisibleForTesting
   RegionInfo getFirstRegionInfo() {
     if (regions == null || regions.isEmpty()) {
       return null;

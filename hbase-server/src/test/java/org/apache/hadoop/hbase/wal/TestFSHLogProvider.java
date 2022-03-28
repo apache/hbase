@@ -33,7 +33,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -46,7 +47,8 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -69,7 +71,7 @@ public class TestFSHLogProvider {
 
   private static Configuration conf;
   private static FileSystem fs;
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private MultiVersionConcurrencyControl mvcc;
 
   @Rule
@@ -120,13 +122,13 @@ public class TestFSHLogProvider {
   @Test
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
-    String hl = FSUtils.getRootDir(conf) + "/" +
+    String hl = CommonFSUtils.getRootDir(conf) + "/" +
         AbstractFSWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, null));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-        FSUtils.getRootDir(conf).toUri().toString()));
+      CommonFSUtils.getRootDir(conf).toUri().toString()));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, ""));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl));
@@ -135,7 +137,7 @@ public class TestFSHLogProvider {
 
     final String wals = "/WALs/";
     ServerName parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "/localhost%2C32984%2C1343316388997.1343316390417");
     assertEquals("standard",  sn, parsed);
 
@@ -143,7 +145,7 @@ public class TestFSHLogProvider {
     assertEquals("subdir", sn, parsed);
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
   }
@@ -153,11 +155,11 @@ public class TestFSHLogProvider {
       NavigableMap<byte[], Integer> scopes) throws IOException {
     final byte[] row = Bytes.toBytes("row");
     for (int i = 0; i < times; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
-      log.append(hri, getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp, scopes),
-        cols, true);
+      log.appendData(hri,
+        getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp, scopes), cols);
     }
     log.sync();
   }
@@ -178,7 +180,7 @@ public class TestFSHLogProvider {
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
-    wal.completeCacheFlush(regionEncodedName);
+    wal.completeCacheFlush(regionEncodedName, HConstants.NO_SEQNUM);
   }
 
   @Test
@@ -230,7 +232,7 @@ public class TestFSHLogProvider {
       // archived. We need to append something or writer won't be rolled.
       addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.rollWriter();
       int count = AbstractFSWALProvider.getNumRolledLogFiles(log);
       assertEquals(2, count);
@@ -240,7 +242,7 @@ public class TestFSHLogProvider {
       // flush information
       addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri2.getEncodedNameAsBytes(), htd2.getColumnFamilyNames());
-      log.completeCacheFlush(hri2.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri2.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.rollWriter();
       assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(log));
     } finally {

@@ -23,19 +23,19 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +58,7 @@ public class TestWalAndCompactingMemStoreFlush {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWalAndCompactingMemStoreFlush.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
   public static final TableName TABLENAME = TableName.valueOf("TestWalAndCompactingMemStoreFlush",
       "t1");
@@ -74,23 +74,24 @@ public class TestWalAndCompactingMemStoreFlush {
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     int i = 0;
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLENAME);
     for (byte[] family : FAMILIES) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
       // even column families are going to have compacted memstore
       if (i % 2 == 0) {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy
-            .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
+        cfBuilder.setInMemoryCompaction(MemoryCompactionPolicy
+          .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
       } else {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
+        cfBuilder.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
       }
-      htd.addFamily(hcd);
+      builder.setColumnFamily(cfBuilder.build());
       i++;
     }
 
-    HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd, false);
+    HRegion region =
+      HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build(), false);
     region.regionServicesForStores = Mockito.spy(region.regionServicesForStores);
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(region.regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
@@ -363,7 +364,7 @@ public class TestWalAndCompactingMemStoreFlush {
     // Also compacted memstores are flushed to disk.
     assertEquals(0, region.getMemStoreDataSize());
     System.out.println(s);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /*------------------------------------------------------------------------------*/
@@ -621,7 +622,7 @@ public class TestWalAndCompactingMemStoreFlush {
     assertTrue(cf3ActiveSizePhaseVII.getDataSize() < cf3ActiveSizePhaseVI.getDataSize());
     assertTrue(cf5ActiveSizePhaseVII.getDataSize() < cf5ActiveSizePhaseVI.getDataSize());
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -753,7 +754,7 @@ public class TestWalAndCompactingMemStoreFlush {
     assertTrue(smallestSeqCF1PhaseIV > smallestSeqCF1PhaseIII);
     assertTrue(smallestSeqCF3PhaseIV > smallestSeqCF3PhaseIII);
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -895,7 +896,7 @@ public class TestWalAndCompactingMemStoreFlush {
             .getHeapSize() + "\n",
         0, cf2MemstoreSizePhaseIV.getDataSize());
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   // should end in 300 seconds (5 minutes)

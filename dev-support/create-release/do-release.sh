@@ -17,65 +17,143 @@
 # limitations under the License.
 #
 
-# Called by do-release-docker.sh. Can be run standalone but needs some love
-# for it to work smooth.
-set -x
-SELF=$(cd $(dirname $0) && pwd)
+# Make a tmp dir into which we put files cleaned-up on exit.
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+set -e
+# Use the adjacent do-release-docker.sh instead, if you can.
+# Otherwise, this runs core of the release creation.
+# Will ask you questions on what to build and for logins
+# and passwords to use building.
+export PROJECT="${PROJECT:-hbase}"
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
-while getopts "bn" opt; do
+while getopts "b:fs:" opt; do
   case $opt in
-    b) GIT_BRANCH=$OPTARG ;;
-    n) DRY_RUN=1 ;;
+    b) export GIT_BRANCH=$OPTARG ;;
+    f) export DRY_RUN=0 ;;  # "force", ie actually publish this release (otherwise defaults to dry run)
+    s) RELEASE_STEP="$OPTARG" ;;
     ?) error "Invalid option: $OPTARG" ;;
   esac
 done
+shift $((OPTIND-1))
+if (( $# > 0 )); then
+  error "Arguments can only be provided with option flags, invalid args: $*"
+fi
 
+function gpg_agent_help {
+  cat <<EOF
+Trying to sign a test file using your GPG setup failed.
+
+Please make sure you have a local gpg-agent running with access to your secret keys prior to
+starting a release build. If you are creating release artifacts on a remote machine please check
+that you have set up ssh forwarding to the gpg-agent extra socket.
+
+For help on how to do this please see the README file in the create-release directory.
+EOF
+  exit 1
+}
+
+# If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
-  # Run gpg agent.
-  eval $(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase --default-cache-ttl=86400 --max-cache-ttl=86400)
-  echo "GPG Version: `gpg --version`"
+  # when Docker Desktop for mac is running under load there is a delay before the mounted volume
+  # becomes available. if we do not pause then we may try to use the gpg-agent socket before docker
+  # has got it ready and we will not think there is a gpg-agent.
+  if [ "${HOST_OS}" == "DARWIN" ]; then
+    sleep 5
+  fi
+  # in docker our working dir is set to where all of our scripts are held
+  # and we want default output to go into the "output" directory that should be in there.
+  if [ -d "output" ]; then
+    cd output
+  fi
+  echo "GPG Version: $("${GPG}" "${GPG_ARGS[@]}" --version)"
   # Inside docker, need to import the GPG key stored in the current directory.
-  echo $GPG_PASSPHRASE | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
+  if ! $GPG "${GPG_ARGS[@]}" --import "$SELF/gpg.key.public" ; then
+    gpg_agent_help
+  fi
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
   if [ -n "$JAVA_HOME" ]; then
+    echo "Using JAVA_HOME from host."
     export PATH="$JAVA_HOME/bin:$PATH"
   else
     # JAVA_HOME for the openjdk package.
-    export JAVA_HOME=/usr
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
   fi
 else
   # Outside docker, need to ask for information about the release.
   get_release_info
 fi
-export GPG_TTY=$(tty)
+
+# Check GPG
+gpg_test_file="${TMPDIR}/gpg_test.$$.txt"
+echo "Testing gpg signing ${GPG} ${GPG_ARGS[@]} --detach --armor --sign ${gpg_test_file}"
+echo "foo" > "${gpg_test_file}"
+if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign "${gpg_test_file}" ; then
+  gpg_agent_help
+fi
+# In --batch mode we have to be explicit about what we are verifying
+if ! "${GPG}" "${GPG_ARGS[@]}" --verify "${gpg_test_file}.asc" "${gpg_test_file}" ; then
+  gpg_agent_help
+fi
+GPG_TTY="$(tty)"
+export GPG_TTY
+
+if [[ -z "$RELEASE_STEP" ]]; then
+  # If doing all stages, leave out 'publish-snapshot'
+  RELEASE_STEP="tag_publish-dist_publish-release"
+  # and use shared maven local repo for efficiency
+  export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+fi
 
 function should_build {
   local WHAT=$1
-  [ -z "$RELEASE_STEP" ] || [ "$WHAT" = "$RELEASE_STEP" ]
+  if [[ -z "$RELEASE_STEP" ]]; then
+    return 0
+  elif [[ "$RELEASE_STEP" == *"$WHAT"* ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
-if should_build "tag" && [ $SKIP_TAG = 0 ]; then
+if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
+  if [ -z "${YETUS_HOME}" ] && [ "${RUNNING_IN_DOCKER}" != "1" ]; then
+    declare local_yetus="/opt/apache-yetus/0.12.0/"
+    if [ "$(get_host_os)" = "DARWIN" ]; then
+      local_yetus="/usr/local/Cellar/yetus/0.12.0/"
+    fi
+    YETUS_HOME="$(read_config "YETUS_HOME not defined. Absolute path to local install of Apache Yetus" "${local_yetus}")"
+    export YETUS_HOME
+  fi
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
-    "$SELF/release-tag.sh"
-  echo "It may take some time for the tag to be synchronized to github."
-  echo "Press enter when you've verified that the new tag ($RELEASE_TAG) is available."
-  read
+    "$SELF/release-build.sh" tag
+  if is_dry_run; then
+    export TAG_SAME_DRY_RUN="true";
+  fi
 else
   echo "Skipping tag creation for $RELEASE_TAG."
 fi
 
-if should_build "build"; then
-  run_silent "Building HBase..." "build.log" \
-    "$SELF/release-build.sh" build
+if should_build "publish-dist"; then
+  run_silent "Publishing distribution packages (tarballs)" "publish-dist.log" \
+    "$SELF/release-build.sh" publish-dist
 else
-  echo "Skipping build step."
+  echo "Skipping publish-dist step."
 fi
 
-if should_build "publish"; then
-  run_silent "Publishing release" "publish.log" \
+if should_build "publish-snapshot"; then
+  run_silent "Publishing snapshot" "publish-snapshot.log" \
+    "$SELF/release-build.sh" publish-snapshot
+
+elif should_build "publish-release"; then
+  run_silent "Publishing release" "publish-release.log" \
     "$SELF/release-build.sh" publish-release
 else
-  echo "Skipping publish step."
+  echo "Skipping publish-release step."
 fi

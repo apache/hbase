@@ -75,6 +75,10 @@ public class ColumnFamilyDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
   private static final Bytes COMPRESSION_COMPACT_BYTES = new Bytes(Bytes.toBytes(COMPRESSION_COMPACT));
+  public static final String COMPRESSION_COMPACT_MAJOR = "COMPRESSION_COMPACT_MAJOR";
+  private static final Bytes COMPRESSION_COMPACT_MAJOR_BYTES = new Bytes(Bytes.toBytes(COMPRESSION_COMPACT_MAJOR));
+  public static final String COMPRESSION_COMPACT_MINOR = "COMPRESSION_COMPACT_MINOR";
+  private static final Bytes COMPRESSION_COMPACT_MINOR_BYTES = new Bytes(Bytes.toBytes(COMPRESSION_COMPACT_MINOR));
   @InterfaceAudience.Private
   public static final String DATA_BLOCK_ENCODING = "DATA_BLOCK_ENCODING";
   private static final Bytes DATA_BLOCK_ENCODING_BYTES = new Bytes(Bytes.toBytes(DATA_BLOCK_ENCODING));
@@ -294,12 +298,11 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
-    DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
-    DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
-    DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
-    DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
+    // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
+    // it is not possible to make an hbase1 HCD the same as an hbase2 HCD and so the replication
+    // compare of schemas will fail. It is OK not adding the below to the initial map because of
+    // fetch of this value, we will check for null and if null will return the default.
+    // DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
@@ -313,6 +316,8 @@ public class ColumnFamilyDescriptorBuilder {
     switch (key) {
       case TTL:
         return Unit.TIME_INTERVAL;
+      case BLOCKSIZE:
+        return Unit.BYTE;
       default:
         return Unit.NONE;
     }
@@ -418,6 +423,11 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setBlocksize(String value) throws HBaseException {
+    desc.setBlocksize(value);
+    return this;
+  }
+
   public ColumnFamilyDescriptorBuilder setBloomFilterType(final BloomType value) {
     desc.setBloomFilterType(value);
     return this;
@@ -440,6 +450,16 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setCompactionCompressionType(Compression.Algorithm value) {
     desc.setCompactionCompressionType(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setMajorCompactionCompressionType(Compression.Algorithm value) {
+    desc.setMajorCompactionCompressionType(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setMinorCompactionCompressionType(Compression.Algorithm value) {
+    desc.setMinorCompactionCompressionType(value);
     return this;
   }
 
@@ -572,15 +592,19 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
+    desc.setVersionsWithTimeToLive(retentionInterval, versionAfterInterval);
+    return this;
+  }
+
   /**
    * An ModifyableFamilyDescriptor contains information about a column family such as the
    * number of versions, compression settings, etc.
    *
    * It is used as input when creating a table or adding a column.
-   * TODO: make this package-private after removing the HColumnDescriptor
    */
-  @InterfaceAudience.Private
-  public static class ModifyableColumnFamilyDescriptor
+  private static final class ModifyableColumnFamilyDescriptor
       implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name
@@ -648,6 +672,12 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     @Override
+    public String getValue(String key) {
+      Bytes rval = values.get(new Bytes(Bytes.toBytes(key)));
+      return rval == null ? null : Bytes.toString(rval.get(), rval.getOffset(), rval.getLength());
+    }
+
+    @Override
     public Map<Bytes, Bytes> getValues() {
       return Collections.unmodifiableMap(values);
     }
@@ -674,21 +704,12 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     private ModifyableColumnFamilyDescriptor setValue(Bytes key, Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
       }
       return this;
-    }
-
-    /**
-     *
-     * @param key Key whose key and value we're to remove from HCD parameters.
-     * @return this (for chained invocation)
-     */
-    public ModifyableColumnFamilyDescriptor removeValue(final Bytes key) {
-      return setValue(key, (Bytes) null);
     }
 
     private static <T> Bytes toBytesOrNull(T t, Function<T, byte[]> f) {
@@ -775,6 +796,11 @@ public class ColumnFamilyDescriptorBuilder {
       return setValue(BLOCKSIZE_BYTES, Integer.toString(s));
     }
 
+    public ModifyableColumnFamilyDescriptor setBlocksize(String blocksize) throws HBaseException {
+      return setBlocksize(Integer.parseInt(PrettyPrinter.
+        valueOf(blocksize, PrettyPrinter.Unit.BYTE)));
+    }
+
     @Override
     public Compression.Algorithm getCompressionType() {
       return getStringOrDefault(COMPRESSION_BYTES,
@@ -784,8 +810,7 @@ public class ColumnFamilyDescriptorBuilder {
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the
      * hbase distribution. See
-     * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO
-     * Compression</a>
+     * See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a>
      * for how to enable it.
      *
      * @param type Compression type setting.
@@ -834,11 +859,22 @@ public class ColumnFamilyDescriptorBuilder {
         n -> Compression.Algorithm.valueOf(n.toUpperCase()), getCompressionType());
     }
 
+    @Override
+    public Compression.Algorithm getMajorCompactionCompressionType() {
+      return getStringOrDefault(COMPRESSION_COMPACT_MAJOR_BYTES,
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), getCompactionCompressionType());
+    }
+
+    @Override
+    public Compression.Algorithm getMinorCompactionCompressionType() {
+      return getStringOrDefault(COMPRESSION_COMPACT_MINOR_BYTES,
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), getCompactionCompressionType());
+    }
+
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the
      * hbase distribution. See
-     * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO
-     * Compression</a>
+     * See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a>
      * for how to enable it.
      *
      * @param type Compression type setting.
@@ -847,6 +883,16 @@ public class ColumnFamilyDescriptorBuilder {
     public ModifyableColumnFamilyDescriptor setCompactionCompressionType(
             Compression.Algorithm type) {
       return setValue(COMPRESSION_COMPACT_BYTES, type.name());
+    }
+
+    public ModifyableColumnFamilyDescriptor setMajorCompactionCompressionType(
+        Compression.Algorithm type) {
+      return setValue(COMPRESSION_COMPACT_MAJOR_BYTES, type.name());
+    }
+
+    public ModifyableColumnFamilyDescriptor setMinorCompactionCompressionType(
+        Compression.Algorithm type) {
+      return setValue(COMPRESSION_COMPACT_MINOR_BYTES, type.name());
     }
 
     @Override
@@ -942,6 +988,23 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setMinVersions(int minVersions) {
       return setValue(MIN_VERSIONS_BYTES, Integer.toString(minVersions));
+    }
+
+    /**
+     * Retain all versions for a given TTL(retentionInterval), and then only a specific number
+     * of versions(versionAfterInterval) after that interval elapses.
+     *
+     * @param retentionInterval Retain all versions for this interval
+     * @param versionAfterInterval Retain no of versions to retain after retentionInterval
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(
+        final int retentionInterval, final int versionAfterInterval) {
+      ModifyableColumnFamilyDescriptor modifyableColumnFamilyDescriptor =
+        setVersions(versionAfterInterval, Integer.MAX_VALUE);
+      modifyableColumnFamilyDescriptor.setTimeToLive(retentionInterval);
+      modifyableColumnFamilyDescriptor.setKeepDeletedCells(KeepDeletedCells.TTL);
+      return modifyableColumnFamilyDescriptor;
     }
 
     @Override
@@ -1219,7 +1282,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setConfiguration(String key, String value) {
-      if (value == null) {
+      if (value == null || value.length() == 0) {
         configuration.remove(key);
       } else {
         configuration.put(key, value);

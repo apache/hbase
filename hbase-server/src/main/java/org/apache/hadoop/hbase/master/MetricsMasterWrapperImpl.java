@@ -55,12 +55,18 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getSplitPlanCount() {
-    return master.getSplitPlanCount();
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
+    return master.getRegionNormalizerManager().getSplitPlanCount();
   }
 
   @Override
   public long getMergePlanCount() {
-    return master.getMergePlanCount();
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
+    return master.getRegionNormalizerManager().getMergePlanCount();
   }
 
   @Override
@@ -134,6 +140,28 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return serverManager.getDeadServers().size();
   }
 
+  @Override public boolean isRunning() {
+    return !(master.isStopped() || master.isStopping());
+  }
+
+  @Override
+  public String getDrainingRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+        return "";
+    }
+    return StringUtils.join(serverManager.getDrainingServersList()  , ";");
+  }
+
+  @Override
+  public int getNumDrainingRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+        return 0;
+    }
+    return serverManager.getDrainingServersList().size();
+  }
+
   @Override
   public String getServerName() {
     ServerName serverName = master.getServerName();
@@ -155,6 +183,9 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public Map<String,Entry<Long,Long>> getTableSpaceUtilization() {
+    if (master == null) {
+      return Collections.emptyMap();
+    }
     QuotaObserverChore quotaChore = master.getQuotaObserverChore();
     if (quotaChore == null) {
       return Collections.emptyMap();

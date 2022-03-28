@@ -206,7 +206,7 @@ public class MapReduceExtendedCell extends ByteBufferExtendedCell {
     if (cell instanceof ByteBufferExtendedCell) {
       return ((ByteBufferExtendedCell) this.cell).getTagsByteBuffer();
     } else {
-      return ByteBuffer.wrap(CellUtil.cloneTags(this.cell));
+      return ByteBuffer.wrap(PrivateCellUtil.cloneTags(this.cell));
     }
   }
 

@@ -27,7 +27,6 @@ import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.NavigableMap;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -36,10 +35,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
@@ -61,7 +61,8 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
@@ -102,7 +103,7 @@ public abstract class TestAssignmentManagerBase {
   protected static final int NREGIONS = 1 * 1000;
   protected static final int NSERVERS = Math.max(1, NREGIONS / 100);
 
-  protected HBaseTestingUtility util;
+  protected HBaseTestingUtil util;
   protected MockRSProcedureDispatcher rsDispatcher;
   protected MockMasterServices master;
   protected AssignmentManager am;
@@ -139,7 +140,7 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected void setupConfiguration(Configuration conf) throws Exception {
-    FSUtils.setRootDir(conf, util.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, util.getDataTestDir());
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
     conf.setInt(WALProcedureStore.SYNC_WAIT_MSEC_CONF_KEY, 10);
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, PROC_NTHREADS);
@@ -152,7 +153,7 @@ public abstract class TestAssignmentManagerBase {
 
   @Before
   public void setUp() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
@@ -304,12 +305,13 @@ public abstract class TestAssignmentManagerBase {
 
   protected void doCrash(final ServerName serverName) {
     this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
-    this.am.submitServerCrash(serverName, false/* No WALs here */);
+    this.am.submitServerCrash(serverName, false/* No WALs here */, false);
     // add a new server to avoid killing all the region servers which may hang the UTs
     ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
     newRsAdded++;
     try {
-      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder
+        .newBuilder(newSn).setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
     } catch (YouAreDeadException e) {
       // should not happen
       throw new UncheckedIOException(e);
@@ -580,12 +582,10 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected class RandRsExecutor extends NoopRsExecutor {
-    private final Random rand = new Random();
-
     @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
-      switch (rand.nextInt(5)) {
+      switch (ThreadLocalRandom.current().nextInt(5)) {
         case 0:
           throw new ServerNotRunningYetException("wait on server startup");
         case 1:
@@ -604,7 +604,7 @@ public abstract class TestAssignmentManagerBase {
       RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       long previousOpenSeqNum =
         am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
-      switch (rand.nextInt(3)) {
+      switch (ThreadLocalRandom.current().nextInt(3)) {
         case 0:
           LOG.info("Return OPENED response");
           sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
@@ -635,7 +635,7 @@ public abstract class TestAssignmentManagerBase {
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
       CloseRegionResponse.Builder resp = CloseRegionResponse.newBuilder();
-      boolean closed = rand.nextBoolean();
+      boolean closed = ThreadLocalRandom.current().nextBoolean();
       if (closed) {
         RegionInfo hri = am.getRegionInfo(regionName);
         sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);

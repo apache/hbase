@@ -32,10 +32,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -104,7 +106,7 @@ public abstract class TestMultiColumnScanner {
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameter(0)
   public Compression.Algorithm comprAlgo;
@@ -152,8 +154,7 @@ public abstract class TestMultiColumnScanner {
     // that column.
     Map<String, Long> lastDelTimeMap = new HashMap<>();
 
-    Random rand = new Random(29372937L);
-
+    Random rand = ThreadLocalRandom.current();
     for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
       for (String qual : qualifiers) {
         // This is where we decide to include or not include this column into
@@ -258,7 +259,7 @@ public abstract class TestMultiColumnScanner {
         "pairs", lastDelTimeMap.size() > 0);
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private static String getRowQualStr(Cell kv) {

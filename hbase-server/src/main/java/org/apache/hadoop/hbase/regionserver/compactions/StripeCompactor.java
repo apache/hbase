@@ -93,10 +93,10 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
 
         @Override
         public StripeMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
+            boolean shouldDropBehind, boolean major) throws IOException {
           StripeMultiFileWriter writer = new StripeMultiFileWriter.BoundaryMultiWriter(
               store.getComparator(), targetBoundaries, majorRangeFromRow, majorRangeToRow);
-          initMultiWriter(writer, scanner, fd, shouldDropBehind);
+          initMultiWriter(writer, scanner, fd, shouldDropBehind, major);
           return writer;
         }
       }, throughputController, user);
@@ -115,17 +115,17 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
 
         @Override
         public StripeMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
+            boolean shouldDropBehind, boolean major) throws IOException {
           StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(
               store.getComparator(), targetCount, targetSize, left, right);
-          initMultiWriter(writer, scanner, fd, shouldDropBehind);
+          initMultiWriter(writer, scanner, fd, shouldDropBehind, major);
           return writer;
         }
       }, throughputController, user);
   }
 
   @Override
-  protected List<Path> commitWriter(StripeMultiFileWriter writer, FileDetails fd,
+  protected List<Path> commitWriter(FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor(), request.getFiles());
     assert !newFiles.isEmpty() : "Should have produced an empty file to preserve metadata.";

@@ -21,7 +21,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -41,7 +41,7 @@ import org.junit.rules.ExpectedException;
 @Category({ MasterTests.class, SmallTests.class })
 public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
 
-  private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

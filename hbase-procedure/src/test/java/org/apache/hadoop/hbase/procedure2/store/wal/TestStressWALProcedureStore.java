@@ -19,21 +19,21 @@ package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -43,7 +43,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestStressWALProcedureStore {
 
   @ClassRule
@@ -56,7 +56,7 @@ public class TestStressWALProcedureStore {
 
   private WALProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
@@ -69,7 +69,7 @@ public class TestStressWALProcedureStore {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     setupConfiguration(htu.getConfiguration());
 
     testDir = htu.getDataTestDir();
@@ -98,12 +98,12 @@ public class TestStressWALProcedureStore {
   public void testInsertUpdateDelete() throws Exception {
     final long LAST_PROC_ID = 19999;
     final Thread[] thread = new Thread[PROCEDURE_STORE_SLOTS];
-    final AtomicLong procCounter = new AtomicLong((long)Math.round(Math.random() * 100));
+    final Random rand = ThreadLocalRandom.current();
+    final AtomicLong procCounter = new AtomicLong(rand.nextInt(100));
     for (int i = 0; i < thread.length; ++i) {
       thread[i] = new Thread() {
         @Override
         public void run() {
-          Random rand = new Random();
           TestProcedure proc;
           do {
             // After HBASE-15579 there may be gap in the procId sequence, trying to simulate that.

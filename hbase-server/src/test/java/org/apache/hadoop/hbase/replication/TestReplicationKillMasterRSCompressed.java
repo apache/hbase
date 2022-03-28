@@ -36,12 +36,9 @@ public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMa
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressed.class);
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestReplicationBase.setUpBeforeClass();
+    TestReplicationKillMasterRS.setUpBeforeClass();
   }
 }

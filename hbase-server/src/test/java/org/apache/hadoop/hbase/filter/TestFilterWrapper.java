@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,14 +31,13 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,6 +45,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,7 +71,7 @@ public class TestFilterWrapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterWrapper.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = null;
   private static Admin admin = null;
   private static TableName name = TableName.valueOf("test");
@@ -149,18 +153,15 @@ public class TestFilterWrapper {
   private static void createTable() {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
     if (admin != null) {
-
-      HTableDescriptor desc = new HTableDescriptor(name);
-      HColumnDescriptor coldef = new HColumnDescriptor(Bytes.toBytes("f1"));
-      desc.addFamily(coldef);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(name)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("f1"))).build();
 
       try {
-        admin.createTable(desc);
+        admin.createTable(tableDescriptor);
         assertTrue("Fail to create the table", admin.tableExists(name));
       } catch (IOException e) {
         assertNull("Exception found while creating table", e);
       }
-
     }
   }
 

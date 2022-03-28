@@ -21,15 +21,12 @@ package org.apache.hadoop.hbase.master;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -37,8 +34,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKAuthentication;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +60,9 @@ public class HMasterCommandLine extends ServerCommandLine {
     "   --localRegionServers=<servers> " +
       "RegionServers to start in master process when in standalone mode.\n" +
     "   --masters=<servers>            Masters to start in this process.\n" +
-    "   --backup                       Master should start in backup mode";
+    "   --backup                       Master should start in backup mode\n" +
+    "   --shutDownCluster                    " +
+      "Start Cluster shutdown; Master signals RegionServer shutdown";
 
   private final Class<? extends HMaster> masterClass;
 
@@ -77,12 +77,14 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   @Override
   public int run(String args[]) throws Exception {
+    boolean shutDownCluster = false;
     Options opt = new Options();
     opt.addOption("localRegionServers", true,
       "RegionServers to start in master process when running standalone");
     opt.addOption("masters", true, "Masters to start in this process");
     opt.addOption("minRegionServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
+    opt.addOption("shutDownCluster", false, "`hbase master stop --shutDownCluster` shuts down cluster");
 
     CommandLine cmd;
     try {
@@ -127,6 +129,11 @@ public class HMasterCommandLine extends ServerCommandLine {
       LOG.debug("masters set to " + val);
     }
 
+    // Checking whether to shut down cluster or not
+    if (cmd.hasOption("shutDownCluster")) {
+      shutDownCluster = true;
+    }
+
     @SuppressWarnings("unchecked")
     List<String> remainingArgs = cmd.getArgList();
     if (remainingArgs.size() != 1) {
@@ -139,7 +146,15 @@ public class HMasterCommandLine extends ServerCommandLine {
     if ("start".equals(command)) {
       return startMaster();
     } else if ("stop".equals(command)) {
-      return stopMaster();
+      if (shutDownCluster) {
+        return stopMaster();
+      }
+      System.err.println(
+        "To shutdown the master run " +
+        "hbase-daemon.sh stop master or send a kill signal to " +
+        "the HMaster pid, " +
+        "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master stop --shutDownCluster\"");
+      return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);
     } else {
@@ -150,8 +165,6 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   private int startMaster() {
     Configuration conf = getConf();
-    TraceUtil.initTracer(conf);
-
     try {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master
       // and regionserver both in the one JVM.
@@ -201,7 +214,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         }
 
         // login the zookeeper server principal (if using security)
-        ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+        ZKAuthentication.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
           HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, null);
         int localZKClusterSessionTimeout =
           conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);

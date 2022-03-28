@@ -25,9 +25,9 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link FSUtils}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestFSVisitor {
 
   @ClassRule
@@ -48,7 +48,7 @@ public class TestFSVisitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSVisitor.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private final String TABLE_NAME = "testtb";
 
@@ -69,7 +69,7 @@ public class TestFSVisitor {
     tableRegions = new HashSet<>();
     tableHFiles = new HashSet<>();
     tableDir = createTableFiles(rootDir, TABLE_NAME, tableRegions, tableFamilies, tableHFiles);
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
   }
 
   @After

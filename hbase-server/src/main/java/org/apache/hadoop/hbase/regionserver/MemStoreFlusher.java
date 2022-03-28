@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
@@ -37,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,15 +47,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Thread that flushes cache on request
@@ -66,14 +67,14 @@ import org.slf4j.LoggerFactory;
  * @see FlushRequester
  */
 @InterfaceAudience.Private
-class MemStoreFlusher implements FlushRequester {
+public class MemStoreFlusher implements FlushRequester {
   private static final Logger LOG = LoggerFactory.getLogger(MemStoreFlusher.class);
 
   private Configuration conf;
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue = new DelayQueue<>();
-  private final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
+  protected final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
   private AtomicBoolean wakeupPending = new AtomicBoolean();
 
   private final long threadWakeFrequency;
@@ -86,8 +87,6 @@ class MemStoreFlusher implements FlushRequester {
 
   private final FlushHandler[] flushHandlers;
   private List<FlushRequestListener> flushRequestListeners = new ArrayList<>(1);
-
-  private FlushType flushType;
 
   /**
    * Singleton instance inserted into flush queue used for signaling.
@@ -129,23 +128,26 @@ class MemStoreFlusher implements FlushRequester {
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
+    if (server != null) {
+      if (handlerCount < 1) {
+        LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, "
+            + "corrected to 1", handlerCount);
+        handlerCount = 1;
+      }
+      LOG.info("globalMemStoreLimit="
+          + TraditionalBinaryPrefix
+              .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
+          + ", globalMemStoreLimitLowMark="
+          + TraditionalBinaryPrefix.long2String(
+            this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
+          + ", Offheap="
+          + (this.server.getRegionServerAccounting().isOffheap()));
+    }
     this.flushHandlers = new FlushHandler[handlerCount];
-    LOG.info("globalMemStoreLimit="
-        + TraditionalBinaryPrefix
-            .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
-        + ", globalMemStoreLimitLowMark="
-        + TraditionalBinaryPrefix.long2String(
-          this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
-        + ", Offheap="
-        + (this.server.getRegionServerAccounting().isOffheap()));
   }
 
   public LongAdder getUpdatesBlockedMsHighWater() {
     return this.updatesBlockedMsHighWater;
-  }
-
-  public void setFlushType(FlushType flushType) {
-    this.flushType = flushType;
   }
 
   /**
@@ -154,7 +156,7 @@ class MemStoreFlusher implements FlushRequester {
    * flush thread)
    * @return true if successful
    */
-  private boolean flushOneForGlobalPressure() {
+  private boolean flushOneForGlobalPressure(FlushType flushType) {
     SortedMap<Long, Collection<HRegion>> regionsBySize = null;
     switch(flushType) {
       case ABOVE_OFFHEAP_HIGHER_MARK:
@@ -280,15 +282,15 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. " +
             "Flush type=" + flushType.toString() +
-            "Total Memstore Heap size=" +
+            ", Total Memstore Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreHeapSize(), "", 1) +
-            "Total Memstore Off-Heap size=" +
+            ", Total Memstore Off-Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(), "", 1) +
             ", Region memstore size=" +
             TraditionalBinaryPrefix.long2String(regionToFlushSize, "", 1));
-        flushedOne = flushRegion(regionToFlush, true, false, FlushLifeCycleTracker.DUMMY);
+        flushedOne = flushRegion(regionToFlush, true, null, FlushLifeCycleTracker.DUMMY);
 
         if (!flushedOne) {
           LOG.info("Excluding unflushable region " + regionToFlush +
@@ -321,7 +323,7 @@ class MemStoreFlusher implements FlushRequester {
     return r == null? 0: r.getMemStoreDataSize();
   }
 
-  private class FlushHandler extends HasThread {
+  private class FlushHandler extends Thread {
 
     private FlushHandler(String name) {
       super(name);
@@ -344,7 +346,7 @@ class MemStoreFlusher implements FlushRequester {
               // we still select the regions based on the region's memstore data size.
               // TODO : If we want to decide based on heap over head it can be done without tracking
               // it per region.
-              if (!flushOneForGlobalPressure()) {
+              if (!flushOneForGlobalPressure(type)) {
                 // Wasn't able to flush any region, but we're above low water mark
                 // This is unlikely to happen, but might happen when closing the
                 // entire server - another thread is flushing regions. We'll just
@@ -460,31 +462,46 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public boolean requestFlush(HRegion r, boolean forceFlushAllStores,
-                              FlushLifeCycleTracker tracker) {
+  public boolean requestFlush(HRegion r, FlushLifeCycleTracker tracker) {
+    return this.requestFlush(r, null, tracker);
+  }
+
+  @Override
+  public boolean requestFlush(HRegion r, List<byte[]> families,
+      FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
-      if (!regionsInQueue.containsKey(r)) {
-        // This entry has no delay so it will be added at the top of the flush
-        // queue. It'll come out near immediately.
-        FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores, tracker);
-        this.regionsInQueue.put(r, fqe);
-        this.flushQueue.add(fqe);
-        r.incrementFlushesQueuedCount();
-        return true;
-      } else {
-        tracker.notExecuted("Flush already requested on " + r);
-        return false;
+      FlushRegionEntry existFqe = regionsInQueue.get(r);
+      if (existFqe != null) {
+        // if a delayed one exists and not reach the time to execute, just remove it
+        if (existFqe.isDelay() && existFqe.whenToExpire > EnvironmentEdgeManager.currentTime()) {
+          LOG.info("Remove the existing delayed flush entry for {}, "
+            + "because we need to flush it immediately", r);
+          this.regionsInQueue.remove(r);
+          this.flushQueue.remove(existFqe);
+          r.decrementFlushesQueuedCount();
+        } else {
+          tracker.notExecuted("Flush already requested on " + r);
+          return false;
+        }
       }
+
+      // This entry has no delay so it will be added at the top of the flush
+      // queue. It'll come out near immediately.
+      FlushRegionEntry fqe = new FlushRegionEntry(r, families, tracker);
+      this.regionsInQueue.put(r, fqe);
+      this.flushQueue.add(fqe);
+      r.incrementFlushesQueuedCount();
+      return true;
     }
   }
 
   @Override
-  public boolean requestDelayedFlush(HRegion r, long delay, boolean forceFlushAllStores) {
+  public boolean requestDelayedFlush(HRegion r, long delay) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
         FlushRegionEntry fqe =
-            new FlushRegionEntry(r, forceFlushAllStores, FlushLifeCycleTracker.DUMMY);
+            new FlushRegionEntry(r, null, FlushLifeCycleTracker.DUMMY);
         fqe.requeue(delay);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
@@ -514,8 +531,9 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   synchronized void start(UncaughtExceptionHandler eh) {
-    ThreadFactory flusherThreadFactory = Threads.newDaemonThreadFactory(
-        server.getServerName().toShortString() + "-MemStoreFlusher", eh);
+    ThreadFactory flusherThreadFactory = new ThreadFactoryBuilder()
+      .setNameFormat(server.getServerName().toShortString() + "-MemStoreFlusher-pool-%d")
+      .setDaemon(true).setUncaughtExceptionHandler(eh).build();
     for (int i = 0; i < flushHandlers.length; i++) {
       flushHandlers[i] = new FlushHandler("MemStoreFlusher." + i);
       flusherThreadFactory.newThread(flushHandlers[i]);
@@ -535,7 +553,7 @@ class MemStoreFlusher implements FlushRequester {
   void join() {
     for (FlushHandler flushHander : flushHandlers) {
       if (flushHander != null) {
-        Threads.shutdown(flushHander.getThread());
+        Threads.shutdown(flushHander);
       }
     }
   }
@@ -563,9 +581,10 @@ class MemStoreFlusher implements FlushRequester {
           LOG.warn("{} has too many store files({}); delaying flush up to {} ms",
               region.getRegionInfo().getEncodedName(), getStoreFileCount(region),
               this.blockingWaitTime);
-          if (!this.server.compactSplitThread.requestSplit(region)) {
+          final CompactSplit compactSplitThread = server.getCompactSplitThread();
+          if (!compactSplitThread.requestSplit(region)) {
             try {
-              this.server.compactSplitThread.requestSystemCompaction(region,
+              compactSplitThread.requestSystemCompaction(region,
                 Thread.currentThread().getName());
             } catch (IOException e) {
               e = e instanceof RemoteException ?
@@ -583,7 +602,7 @@ class MemStoreFlusher implements FlushRequester {
         return true;
       }
     }
-    return flushRegion(region, false, fqe.isForceFlushAllStores(), fqe.getTracker());
+    return flushRegion(region, false, fqe.families, fqe.getTracker());
   }
 
   /**
@@ -593,13 +612,13 @@ class MemStoreFlusher implements FlushRequester {
    * needs to be removed from the flush queue. If false, when we were called
    * from the main flusher run loop and we got the entry to flush by calling
    * poll on the flush queue (which removed it).
-   * @param forceFlushAllStores whether we want to flush all store.
+   * @param families stores of region to flush.
    * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the region was
    * not flushed.
    */
-  private boolean flushRegion(HRegion region, boolean emergencyFlush, boolean forceFlushAllStores,
-      FlushLifeCycleTracker tracker) {
+  private boolean flushRegion(HRegion region, boolean emergencyFlush,
+      List<byte[]> families, FlushLifeCycleTracker tracker) {
     synchronized (this.regionsInQueue) {
       FlushRegionEntry fqe = this.regionsInQueue.remove(region);
       // Use the start time of the FlushRegionEntry if available
@@ -612,16 +631,17 @@ class MemStoreFlusher implements FlushRequester {
 
     tracker.beforeExecution();
     lock.readLock().lock();
+    final CompactSplit compactSplitThread = server.getCompactSplitThread();
     try {
       notifyFlushRequest(region, emergencyFlush);
-      FlushResult flushResult = region.flushcache(forceFlushAllStores, false, tracker);
+      FlushResult flushResult = region.flushcache(families, false, tracker);
       boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
-      boolean shouldSplit = region.checkSplit() != null;
+      boolean shouldSplit = region.checkSplit().isPresent();
       if (shouldSplit) {
-        this.server.compactSplitThread.requestSplit(region);
+        compactSplitThread.requestSplit(region);
       } else if (shouldCompact) {
-        server.compactSplitThread.requestSystemCompaction(region, Thread.currentThread().getName());
+        compactSplitThread.requestSystemCompaction(region, Thread.currentThread().getName());
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
@@ -653,9 +673,9 @@ class MemStoreFlusher implements FlushRequester {
     FlushType type = null;
     if (emergencyFlush) {
       type = isAboveHighWaterMark();
-      if (type == null) {
-        type = isAboveLowWaterMark();
-      }
+    }
+    if (type == null) {
+      type = isAboveLowWaterMark();
     }
     for (FlushRequestListener listener : flushRequestListeners) {
       listener.flushRequested(type, region);
@@ -698,10 +718,12 @@ class MemStoreFlusher implements FlushRequester {
    * amount of memstore consumption.
    */
   public void reclaimMemStoreMemory() {
-    try (TraceScope scope = TraceUtil.createTrace("MemStoreFluser.reclaimMemStoreMemory")) {
+    Span span =
+      TraceUtil.getGlobalTracer().spanBuilder("MemStoreFluser.reclaimMemStoreMemory").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       FlushType flushType = isAboveHighWaterMark();
       if (flushType != FlushType.NORMAL) {
-        TraceUtil.addTimelineAnnotation("Force Flush. We're above high water mark.");
+        span.addEvent("Force Flush. We're above high water mark.");
         long start = EnvironmentEdgeManager.currentTime();
         long nextLogTimeMs = start;
         synchronized (this.blockSignal) {
@@ -711,7 +733,6 @@ class MemStoreFlusher implements FlushRequester {
           try {
             flushType = isAboveHighWaterMark();
             while (flushType != FlushType.NORMAL && !server.isStopped()) {
-              server.cacheFlusher.setFlushType(flushType);
               if (!blocked) {
                 startTime = EnvironmentEdgeManager.currentTime();
                 if (!server.getRegionServerAccounting().isOffheap()) {
@@ -769,9 +790,9 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         flushType = isAboveLowWaterMark();
         if (flushType != FlushType.NORMAL) {
-          server.cacheFlusher.setFlushType(flushType);
           wakeupFlushThread();
         }
+        span.end();
       }
     }
   }
@@ -849,15 +870,16 @@ class MemStoreFlusher implements FlushRequester {
     private long whenToExpire;
     private int requeueCount = 0;
 
-    private final boolean forceFlushAllStores;
+    private final List<byte[]> families;
 
     private final FlushLifeCycleTracker tracker;
 
-    FlushRegionEntry(final HRegion r, boolean forceFlushAllStores, FlushLifeCycleTracker tracker) {
+    FlushRegionEntry(final HRegion r, List<byte[]> families,
+        FlushLifeCycleTracker tracker) {
       this.region = r;
       this.createTime = EnvironmentEdgeManager.currentTime();
       this.whenToExpire = this.createTime;
-      this.forceFlushAllStores = forceFlushAllStores;
+      this.families = families;
       this.tracker = tracker;
     }
 
@@ -870,18 +892,18 @@ class MemStoreFlusher implements FlushRequester {
     }
 
     /**
+     * @return True if the entry is a delay flush task
+     */
+    protected boolean isDelay() {
+      return this.whenToExpire > this.createTime;
+    }
+
+    /**
      * @return Count of times {@link #requeue(long)} was called; i.e this is
      * number of times we've been requeued.
      */
     public int getRequeueCount() {
       return this.requeueCount;
-    }
-
-    /**
-     * @return whether we need to flush all stores.
-     */
-    public boolean isForceFlushAllStores() {
-      return forceFlushAllStores;
     }
 
     public FlushLifeCycleTracker getTracker() {

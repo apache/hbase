@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,7 +36,7 @@ import org.junit.Test;
 
 public abstract class AbstractTestRegionLocator {
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static TableName TABLE_NAME = TableName.valueOf("Locator");
 
@@ -47,8 +47,8 @@ public abstract class AbstractTestRegionLocator {
   protected static byte[][] SPLIT_KEYS;
 
   protected static void startClusterAndCreateTable() throws Exception {
-    UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, REGION_REPLICATION);
     UTIL.startMiniCluster(3);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, REGION_REPLICATION);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
@@ -58,9 +58,9 @@ public abstract class AbstractTestRegionLocator {
     }
     UTIL.getAdmin().createTable(td, SPLIT_KEYS);
     UTIL.waitTableAvailable(TABLE_NAME);
-    try (AsyncRegistry registry = AsyncRegistryFactory.getRegistry(UTIL.getConfiguration())) {
-      RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(UTIL.getConfiguration(),
-        registry, REGION_REPLICATION);
+    try (ConnectionRegistry registry =
+      ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
+      RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
     }
     UTIL.getAdmin().balancerSwitch(false, true);
   }

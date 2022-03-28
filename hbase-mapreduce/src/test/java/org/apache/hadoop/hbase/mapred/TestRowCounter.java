@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapred.RowCounter.RowCounterMapper;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -45,7 +45,7 @@ import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({MapReduceTests.class, MediumTests.class})
 public class TestRowCounter {
 
   @ClassRule

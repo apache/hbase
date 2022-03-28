@@ -28,15 +28,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -69,25 +73,28 @@ public class TestFSUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSUtils.class);
 
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private FileSystem fs;
   private Configuration conf;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     fs = htu.getTestFileSystem();
     conf = htu.getConfiguration();
   }
 
-  @Test public void testIsHDFS() throws Exception {
-    assertFalse(FSUtils.isHDFS(conf));
+  @Test
+  public void testIsHDFS() throws Exception {
+    assertFalse(CommonFSUtils.isHDFS(conf));
     MiniDFSCluster cluster = null;
     try {
       cluster = htu.startMiniDFSCluster(1);
-      assertTrue(FSUtils.isHDFS(conf));
+      assertTrue(CommonFSUtils.isHDFS(conf));
     } finally {
-      if (cluster != null) cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
@@ -99,7 +106,31 @@ public class TestFSUtils {
     out.close();
   }
 
-  @Test public void testcomputeHDFSBlocksDistribution() throws Exception {
+  @Test
+  public void testComputeHDFSBlocksDistributionByInputStream() throws Exception {
+    testComputeHDFSBlocksDistribution((fs, testFile) -> {
+      try (FSDataInputStream open = fs.open(testFile)) {
+        assertTrue(open instanceof HdfsDataInputStream);
+        return FSUtils.computeHDFSBlocksDistribution((HdfsDataInputStream) open);
+      }
+    });
+  }
+
+  @Test
+  public void testComputeHDFSBlockDistribution() throws Exception {
+    testComputeHDFSBlocksDistribution((fs, testFile) -> {
+      FileStatus status = fs.getFileStatus(testFile);
+      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+    });
+  }
+
+  @FunctionalInterface
+  interface HDFSBlockDistributionFunction {
+    HDFSBlocksDistribution getForPath(FileSystem fs, Path path) throws IOException;
+  }
+
+  private void testComputeHDFSBlocksDistribution(
+    HDFSBlockDistributionFunction fileToBlockDistribution) throws Exception {
     final int DEFAULT_BLOCK_SIZE = 1024;
     conf.setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
@@ -119,20 +150,21 @@ public class TestFSUtils {
       // given the default replication factor is 3, the same as the number of
       // datanodes; the locality index for each host should be 100%,
       // or getWeight for each host should be the same as getUniqueBlocksWeights
-      final long maxTime = System.currentTimeMillis() + 2000;
+      final long maxTime = EnvironmentEdgeManager.currentTime() + 2000;
       boolean ok;
       do {
         ok = true;
-        FileStatus status = fs.getFileStatus(testFile);
+
         HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+          fileToBlockDistribution.getForPath(fs, testFile);
+
         long uniqueBlocksTotalWeight =
           blocksDistribution.getUniqueBlocksTotalWeight();
         for (String host : hosts) {
           long weight = blocksDistribution.getWeight(host);
           ok = (ok && uniqueBlocksTotalWeight == weight);
         }
-      } while (!ok && System.currentTimeMillis() < maxTime);
+      } while (!ok && EnvironmentEdgeManager.currentTime() < maxTime);
       assertTrue(ok);
       } finally {
       htu.shutdownMiniDFSCluster();
@@ -153,20 +185,20 @@ public class TestFSUtils {
       // given the default replication factor is 3, we will have total of 9
       // replica of blocks; thus the host with the highest weight should have
       // weight == 3 * DEFAULT_BLOCK_SIZE
-      final long maxTime = System.currentTimeMillis() + 2000;
+      final long maxTime = EnvironmentEdgeManager.currentTime() + 2000;
       long weight;
       long uniqueBlocksTotalWeight;
       do {
-        FileStatus status = fs.getFileStatus(testFile);
         HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+          fileToBlockDistribution.getForPath(fs, testFile);
         uniqueBlocksTotalWeight = blocksDistribution.getUniqueBlocksTotalWeight();
 
         String tophost = blocksDistribution.getTopHosts().get(0);
         weight = blocksDistribution.getWeight(tophost);
 
         // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
-      } while (uniqueBlocksTotalWeight != weight && System.currentTimeMillis() < maxTime);
+      } while (uniqueBlocksTotalWeight != weight &&
+          EnvironmentEdgeManager.currentTime() < maxTime);
       assertTrue(uniqueBlocksTotalWeight == weight);
 
     } finally {
@@ -187,14 +219,14 @@ public class TestFSUtils {
 
       // given the default replication factor is 3, we will have total of 3
       // replica of blocks; thus there is one host without weight
-      final long maxTime = System.currentTimeMillis() + 2000;
+      final long maxTime = EnvironmentEdgeManager.currentTime() + 2000;
       HDFSBlocksDistribution blocksDistribution;
       do {
-        FileStatus status = fs.getFileStatus(testFile);
-        blocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+        blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
         // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
       }
-      while (blocksDistribution.getTopHosts().size() != 3 && System.currentTimeMillis() < maxTime);
+      while (blocksDistribution.getTopHosts().size() != 3 &&
+          EnvironmentEdgeManager.currentTime() < maxTime);
       assertEquals("Wrong number of hosts distributing blocks.", 3,
         blocksDistribution.getTopHosts().size());
     } finally {
@@ -203,8 +235,8 @@ public class TestFSUtils {
   }
 
   private void writeVersionFile(Path versionFile, String version) throws IOException {
-    if (FSUtils.isExists(fs, versionFile)) {
-      assertTrue(FSUtils.delete(fs, versionFile, true));
+    if (CommonFSUtils.isExists(fs, versionFile)) {
+      assertTrue(CommonFSUtils.delete(fs, versionFile, true));
     }
     try (FSDataOutputStream s = fs.create(versionFile)) {
       s.writeUTF(version);
@@ -222,13 +254,13 @@ public class TestFSUtils {
     FSUtils.checkVersion(fs, rootdir, true);
     // Now remove the version file and create a metadir so checkVersion fails.
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    assertTrue(FSUtils.isExists(fs, versionFile));
-    assertTrue(FSUtils.delete(fs, versionFile, true));
+    assertTrue(CommonFSUtils.isExists(fs, versionFile));
+    assertTrue(CommonFSUtils.delete(fs, versionFile, true));
     Path metaRegionDir =
         FSUtils.getRegionDirFromRootDir(rootdir, RegionInfoBuilder.FIRST_META_REGIONINFO);
-    FsPermission defaultPerms = FSUtils.getFilePermissions(fs, this.conf,
+    FsPermission defaultPerms = CommonFSUtils.getFilePermissions(fs, this.conf,
         HConstants.DATA_FILE_UMASK_KEY);
-    FSUtils.create(fs, metaRegionDir, defaultPerms, false);
+    CommonFSUtils.create(fs, metaRegionDir, defaultPerms, false);
     boolean thrown = false;
     try {
       FSUtils.checkVersion(fs, rootdir, true);
@@ -267,29 +299,29 @@ public class TestFSUtils {
     final Path rootdir = htu.getDataTestDir();
     final FileSystem fs = rootdir.getFileSystem(conf);
     // default fs permission
-    FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission defaultFsPerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     // 'hbase.data.umask.enable' is false. We will get default fs permission.
     assertEquals(FsPermission.getFileDefault(), defaultFsPerm);
 
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     // first check that we don't crash if we don't have perms set
-    FsPermission defaultStartPerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission defaultStartPerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     // default 'hbase.data.umask'is 000, and this umask will be used when
     // 'hbase.data.umask.enable' is true.
     // Therefore we will not get the real fs default in this case.
     // Instead we will get the starting point FULL_RWX_PERMISSIONS
-    assertEquals(new FsPermission(FSUtils.FULL_RWX_PERMISSIONS), defaultStartPerm);
+    assertEquals(new FsPermission(CommonFSUtils.FULL_RWX_PERMISSIONS), defaultStartPerm);
 
     conf.setStrings(HConstants.DATA_FILE_UMASK_KEY, "077");
     // now check that we get the right perms
-    FsPermission filePerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission filePerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     assertEquals(new FsPermission("700"), filePerm);
 
     // then that the correct file is created
-    Path p = new Path("target" + File.separator + htu.getRandomUUID().toString());
+    Path p = new Path("target" + File.separator + HBaseTestingUtil.getRandomUUID().toString());
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, filePerm, null);
       out.close();
@@ -306,27 +338,27 @@ public class TestFSUtils {
     final Path rootdir = htu.getDataTestDir();
     final FileSystem fs = rootdir.getFileSystem(conf);
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtil.getRandomUUID().toString();
     Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
     Path p1 = new Path(htu.getDataTestDir(), "temppath" + File.separator + file);
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, perms, null);
       out.close();
-      assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+      assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
       // delete the file with recursion as false. Only the file will be deleted.
-      FSUtils.delete(fs, p, false);
+      CommonFSUtils.delete(fs, p, false);
       // Create another file
       FSDataOutputStream out1 = FSUtils.create(conf, fs, p1, perms, null);
       out1.close();
       // delete the file with recursion as false. Still the file only will be deleted
-      FSUtils.delete(fs, p1, true);
-      assertFalse("The created file should be present", FSUtils.isExists(fs, p1));
+      CommonFSUtils.delete(fs, p1, true);
+      assertFalse("The created file should be present", CommonFSUtils.isExists(fs, p1));
       // and then cleanup
     } finally {
-      FSUtils.delete(fs, p, true);
-      FSUtils.delete(fs, p1, true);
+      CommonFSUtils.delete(fs, p, true);
+      CommonFSUtils.delete(fs, p1, true);
     }
   }
 
@@ -344,31 +376,31 @@ public class TestFSUtils {
   @Test
   public void testRenameAndSetModifyTime() throws Exception {
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
-    assertTrue(FSUtils.isHDFS(conf));
+    assertTrue(CommonFSUtils.isHDFS(conf));
 
     FileSystem fs = FileSystem.get(conf);
     Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
 
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtil.getRandomUUID().toString();
     Path p = new Path(testDir, file);
 
     FSDataOutputStream out = fs.create(p);
     out.close();
-    assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+    assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
 
-    long expect = System.currentTimeMillis() + 1000;
+    long expect = EnvironmentEdgeManager.currentTime() + 1000;
     assertNotEquals(expect, fs.getFileStatus(p).getModificationTime());
 
     ManualEnvironmentEdge mockEnv = new ManualEnvironmentEdge();
     mockEnv.setValue(expect);
     EnvironmentEdgeManager.injectEdge(mockEnv);
     try {
-      String dstFile = htu.getRandomUUID().toString();
+      String dstFile = HBaseTestingUtil.getRandomUUID().toString();
       Path dst = new Path(testDir , dstFile);
 
-      assertTrue(FSUtils.renameAndSetModifyTime(fs, p, dst));
-      assertFalse("The moved file should not be present", FSUtils.isExists(fs, p));
-      assertTrue("The dst file should be present", FSUtils.isExists(fs, dst));
+      assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
+      assertFalse("The moved file should not be present", CommonFSUtils.isExists(fs, p));
+      assertTrue("The dst file should be present", CommonFSUtils.isExists(fs, dst));
 
       assertEquals(expect, fs.getFileStatus(dst).getModificationTime());
       cluster.shutdown();
@@ -392,15 +424,15 @@ public class TestFSUtils {
     // There should be no exception thrown when setting to default storage policy, which indicates
     // the HDFS API hasn't been called
     try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), HConstants.DEFAULT_WAL_STORAGE_POLICY,
-        true);
+      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"),
+        HConstants.DEFAULT_WAL_STORAGE_POLICY, true);
     } catch (IOException e) {
       Assert.fail("Should have bypassed the FS API when setting default storage policy");
     }
     // There should be exception thrown when given non-default storage policy, which indicates the
     // HDFS API has been called
     try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
+      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
       Assert.fail("Should have invoked the FS API but haven't");
     } catch (IOException e) {
       // expected given an invalid path
@@ -435,7 +467,7 @@ public class TestFSUtils {
 
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     try {
-      assertTrue(FSUtils.isHDFS(conf));
+      assertTrue(CommonFSUtils.isHDFS(conf));
 
       FileSystem fs = FileSystem.get(conf);
       Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
@@ -443,9 +475,9 @@ public class TestFSUtils {
 
       String storagePolicy =
           conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
-      FSUtils.setStoragePolicy(fs, testDir, storagePolicy);
+      CommonFSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
-      String file =htu.getRandomUUID().toString();
+      String file = HBaseTestingUtil.getRandomUUID().toString();
       Path p = new Path(testDir, file);
       WriteDataToHDFS(fs, p, 4096);
       HFileSystem hfs = new HFileSystem(fs);
@@ -460,7 +492,7 @@ public class TestFSUtils {
       } else {
         Assert.assertEquals(policy, policySet);
       }
-      // will assert existance before deleting.
+      // will assert existence before deleting.
       cleanupFile(fs, testDir);
     } finally {
       cluster.shutdown();
@@ -530,11 +562,12 @@ public class TestFSUtils {
   // Below is taken from TestPread over in HDFS.
   static final int blockSize = 4096;
   static final long seed = 0xDEADBEEFL;
+  private Random rand = new Random(); // This test depends on Random#setSeed
 
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[12 * blockSize];
-    Random rand = new Random(seed);
+    rand.setSeed(seed);
     rand.nextBytes(expected);
     // do a sanity check. Read first 4K bytes
     byte[] actual = new byte[4096];
@@ -641,17 +674,12 @@ public class TestFSUtils {
   }
 
 
-  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
   static {
-    boolean tmp = false;
     try {
       Class.forName("org.apache.hadoop.fs.StreamCapabilities");
-      tmp = true;
       LOG.debug("Test thought StreamCapabilities class was present.");
     } catch (ClassNotFoundException exception) {
       LOG.debug("Test didn't think StreamCapabilities class was present.");
-    } finally {
-      STREAM_CAPABILITIES_IS_PRESENT = tmp;
     }
   }
 
@@ -661,15 +689,63 @@ public class TestFSUtils {
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     try (FileSystem filesystem = cluster.getFileSystem()) {
       FSDataOutputStream stream = filesystem.create(new Path("/tmp/foobar"));
-      assertTrue(FSUtils.hasCapability(stream, "hsync"));
-      assertTrue(FSUtils.hasCapability(stream, "hflush"));
-      assertNotEquals("We expect HdfsDataOutputStream to say it has a dummy capability iff the " +
-          "StreamCapabilities class is not defined.",
-          STREAM_CAPABILITIES_IS_PRESENT,
-          FSUtils.hasCapability(stream, "a capability that hopefully HDFS doesn't add."));
+      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
+      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
+      assertFalse(stream.hasCapability("a capability that hopefully HDFS doesn't add."));
     } finally {
       cluster.shutdown();
     }
   }
 
+  private void testIsSameHdfs(int nnport) throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    Path srcPath = new Path("hdfs://localhost:" + nnport + "/");
+    Path desPath = new Path("hdfs://127.0.0.1/");
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    FileSystem desFs = desPath.getFileSystem(conf);
+
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.0.1:8070/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.1.1:" + nnport + "/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("fs.defaultFS", "hdfs://haosong-hadoop");
+    conf.set("dfs.nameservices", "haosong-hadoop");
+    conf.set("dfs.ha.namenodes.haosong-hadoop", "nn1,nn2");
+    conf.set("dfs.client.failover.proxy.provider.haosong-hadoop",
+      "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider");
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.0.0.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.10.2.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.10.2.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.0.0.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+  }
+
+  @Test
+  public void testIsSameHdfs() throws IOException {
+    String hadoopVersion = org.apache.hadoop.util.VersionInfo.getVersion();
+    LOG.info("hadoop version is: " + hadoopVersion);
+    boolean isHadoop3_0_0 = hadoopVersion.startsWith("3.0.0");
+    if (isHadoop3_0_0) {
+      // Hadoop 3.0.0 alpha1+ ~ 3.0.0 GA changed default nn port to 9820.
+      // See HDFS-9427
+      testIsSameHdfs(9820);
+    } else {
+      // pre hadoop 3.0.0 defaults to port 8020
+      // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
+      testIsSameHdfs(8020);
+    }
+  }
 }

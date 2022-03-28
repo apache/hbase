@@ -58,6 +58,16 @@ public interface ServerMetrics {
   long getRequestCount();
 
   /**
+   * @return total Number of read requests from the start of the region server.
+   */
+  long getReadRequestsCount();
+
+  /**
+   * @return total Number of write requests from the start of the region server.
+   */
+  long getWriteRequestsCount();
+
+  /**
    * @return the amount of used heap
    */
   Size getUsedHeapSize();
@@ -94,6 +104,11 @@ public interface ServerMetrics {
   Map<byte[], RegionMetrics> getRegionMetrics();
 
   /**
+   * @return metrics per user
+   */
+  Map<byte[], UserMetrics> getUserMetrics();
+
+  /**
    * Return the RegionServer-level and Region-level coprocessors
    * @return string set of loaded RegionServer-level and Region-level coprocessors
    */
@@ -108,5 +123,12 @@ public interface ServerMetrics {
    * @return the last timestamp (server side) of generating this metrics
    */
   long getLastReportTimestamp();
+
+  /**
+   * Called directly from clients such as the hbase shell
+   * @return the active monitored tasks
+   */
+  @Nullable
+  List<ServerTask> getTasks();
 
 }

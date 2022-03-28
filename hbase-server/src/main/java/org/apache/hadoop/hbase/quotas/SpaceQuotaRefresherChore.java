@@ -21,18 +21,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link ScheduledChore} which periodically updates the {@link RegionServerSpaceQuotaManager}
@@ -60,6 +60,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   private final RegionServerSpaceQuotaManager manager;
   private final Connection conn;
+  private boolean quotaTablePresent = false;
 
   public SpaceQuotaRefresherChore(RegionServerSpaceQuotaManager manager, Connection conn) {
     super(SpaceQuotaRefresherChore.class.getSimpleName(),
@@ -74,6 +75,13 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
+      // check whether quotaTable is present or not.
+      if (!quotaTablePresent && !checkQuotaTableExists()) {
+        LOG.info("Quota table not found, skipping quota manager cache refresh.");
+        return;
+      }
+      // since quotaTable is present so setting the flag as true.
+      quotaTablePresent = true;
       if (LOG.isTraceEnabled()) {
         LOG.trace("Reading current quota snapshots from hbase:quota.");
       }
@@ -141,6 +149,18 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
     } catch (IOException e) {
       LOG.warn(
           "Caught exception while refreshing enforced quota violation policies, will retry.", e);
+    }
+  }
+
+  /**
+   * Checks if hbase:quota exists in hbase:meta
+   *
+   * @return true if hbase:quota table is in meta, else returns false.
+   * @throws IOException throws IOException
+   */
+  boolean checkQuotaTableExists() throws IOException {
+    try (Admin admin = getConnection().getAdmin()) {
+      return admin.tableExists(QuotaUtil.QUOTA_TABLE_NAME);
     }
   }
 

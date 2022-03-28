@@ -34,11 +34,12 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -116,7 +117,6 @@ public class TestSeekOptimizations {
   private HRegion region;
   private Put put;
   private Delete del;
-  private Random rand;
   private Set<Long> putTimestamps = new HashSet<>();
   private Set<Long> delTimestamps = new HashSet<>();
   private List<Cell> expectedKVs = new ArrayList<>();
@@ -126,11 +126,12 @@ public class TestSeekOptimizations {
 
   private long totalSeekDiligent, totalSeekLazy;
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
+    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS;
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo,
@@ -141,7 +142,7 @@ public class TestSeekOptimizations {
 
   @Before
   public void setUp() {
-    rand = new Random(91238123L);
+    RNG.setSeed(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
   }
@@ -150,13 +151,14 @@ public class TestSeekOptimizations {
   public void testMultipleTimestampRanges() throws IOException {
     // enable seek counting
     StoreFileScanner.instrument();
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY))
+        .setCompressionType(comprAlgo)
+        .setBloomFilterType(bloomType)
+        .setMaxVersions(3)
+        .build();
 
-    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges",
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(comprAlgo)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(3)
-    );
+    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges", columnFamilyDescriptor);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -212,14 +214,14 @@ public class TestSeekOptimizations {
       scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualStr));
       qualSet.add(qualStr);
     }
-    scan.setMaxVersions(maxVersions);
-    scan.setStartRow(rowBytes(startRow));
+    scan.readVersions(maxVersions);
+    scan.withStartRow(rowBytes(startRow));
 
     // Adjust for the fact that for multi-row queries the end row is exclusive.
-    {
-      final byte[] scannerStopRow =
-          rowBytes(endRow + (startRow != endRow ? 1 : 0));
-      scan.setStopRow(scannerStopRow);
+    if (startRow != endRow) {
+      scan.withStopRow(rowBytes(endRow + 1));
+    } else {
+      scan.withStopRow(rowBytes(endRow), true);
     }
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
@@ -348,7 +350,7 @@ public class TestSeekOptimizations {
   }
 
   private long randLong(long n) {
-    long l = rand.nextLong();
+    long l = RNG.nextLong();
     if (l == Long.MIN_VALUE)
       l = Long.MAX_VALUE;
     return Math.abs(l) % n;
@@ -411,7 +413,7 @@ public class TestSeekOptimizations {
         int tsRemaining = putTimestampList.length;
         del = new Delete(rowBytes);
         for (long ts : putTimestampList) {
-          if (rand.nextInt(tsRemaining) < numToDel) {
+          if (RNG.nextInt(tsRemaining) < numToDel) {
             delAtTimestamp(qual, ts);
             putTimestamps.remove(ts);
             --numToDel;
@@ -447,7 +449,7 @@ public class TestSeekOptimizations {
   @After
   public void tearDown() throws IOException {
     if (region != null) {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
     // We have to re-set the lazy seek flag back to the default so that other
@@ -480,8 +482,8 @@ public class TestSeekOptimizations {
     if (eLen != aLen || i != minLen) {
       throw new AssertionError(
           "Expected and actual KV arrays differ at position " + i + ": " +
-          HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
-          HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+          HBaseTestingUtil.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
+          HBaseTestingUtil.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
     }
   }
 }

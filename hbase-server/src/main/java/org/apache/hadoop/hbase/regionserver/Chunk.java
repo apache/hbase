@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -51,6 +51,8 @@ public abstract class Chunk {
   // The unique id associated with the chunk.
   private final int id;
 
+  private final ChunkType chunkType;
+
   // indicates if the chunk is formed by ChunkCreator#MemstorePool
   private final boolean fromPool;
 
@@ -60,8 +62,8 @@ public abstract class Chunk {
    * @param size in bytes
    * @param id the chunk id
    */
-  public Chunk(int size, int id) {
-    this(size, id, false);
+  public Chunk(int size, int id, ChunkType chunkType) {
+    this(size, id, chunkType, false);
   }
 
   /**
@@ -71,9 +73,10 @@ public abstract class Chunk {
    * @param id the chunk id
    * @param fromPool if the chunk is formed by pool
    */
-  public Chunk(int size, int id, boolean fromPool) {
+  public Chunk(int size, int id, ChunkType chunkType, boolean fromPool) {
     this.size = size;
     this.id = id;
+    this.chunkType = chunkType;
     this.fromPool = fromPool;
   }
 
@@ -81,16 +84,24 @@ public abstract class Chunk {
     return this.id;
   }
 
+  ChunkType getChunkType() {
+    return this.chunkType;
+  }
+
   boolean isFromPool() {
     return this.fromPool;
   }
 
   boolean isJumbo() {
-    return size > ChunkCreator.getInstance().getChunkSize();
+    return chunkType == ChunkCreator.ChunkType.JUMBO_CHUNK;
   }
 
   boolean isIndexChunk() {
-    return size == ChunkCreator.getInstance().getChunkSize(ChunkCreator.ChunkType.INDEX_CHUNK);
+    return chunkType == ChunkCreator.ChunkType.INDEX_CHUNK;
+  }
+
+  boolean isDataChunk() {
+    return chunkType == ChunkCreator.ChunkType.DATA_CHUNK;
   }
 
   /**
@@ -176,7 +187,6 @@ public abstract class Chunk {
         + (data.capacity() - nextFreeOffset.get());
   }
 
-  @VisibleForTesting
   int getNextFreeOffset() {
     return this.nextFreeOffset.get();
   }

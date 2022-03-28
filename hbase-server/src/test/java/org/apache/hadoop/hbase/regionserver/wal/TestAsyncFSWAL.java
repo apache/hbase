@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -50,12 +49,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -83,7 +84,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncFSWAL"));
+    GROUP =
+      new NioEventLoopGroup(1, new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestFSWAL.setUpBeforeClass();
   }
@@ -124,9 +127,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @Test
   public void testBrokenWriter() throws Exception {
-    Server server = mock(Server.class);
-    when(server.getConfiguration()).thenReturn(CONF);
     RegionServerServices services = mock(RegionServerServices.class);
+    when(services.getConfiguration()).thenReturn(CONF);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
@@ -135,10 +137,10 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     for (byte[] fam : td.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     String testName = currentTest.getMethodName();
     AtomicInteger failedCount = new AtomicInteger(0);
-    try (LogRoller roller = new LogRoller(server, services);
+    try (LogRoller roller = new LogRoller(services);
         AsyncFSWAL wal = new AsyncFSWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
             testName, CONF, null, true, null, null, GROUP, CHANNEL_CLASS) {
 
@@ -158,8 +160,13 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
               }
 
               @Override
-              public CompletableFuture<Long> sync() {
-                CompletableFuture<Long> result = writer.sync();
+              public long getSyncedLength() {
+                return writer.getSyncedLength();
+              }
+
+              @Override
+              public CompletableFuture<Long> sync(boolean forceSync) {
+                CompletableFuture<Long> result = writer.sync(forceSync);
                 if (failedCount.incrementAndGet() < 1000) {
                   CompletableFuture<Long> future = new CompletableFuture<>();
                   FutureUtils.addListener(result,

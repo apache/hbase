@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,14 +35,18 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
 
@@ -98,11 +103,32 @@ public class HBaseHbck implements Hbck {
   public TableState setTableStateInMeta(TableState state) throws IOException {
     try {
       GetTableStateResponse response = hbck.setTableStateInMeta(
-          rpcControllerFactory.newController(),
-          RequestConverter.buildSetTableStateInMetaRequest(state));
+        rpcControllerFactory.newController(),
+        RequestConverter.buildSetTableStateInMetaRequest(state));
       return TableState.convert(state.getTableName(), response.getTableState());
     } catch (ServiceException se) {
       LOG.debug("table={}, state={}", state.getTableName(), state.getState(), se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public Map<String, RegionState.State> setRegionStateInMeta(
+    Map<String, RegionState.State> nameOrEncodedName2State) throws IOException {
+    try {
+      if (LOG.isDebugEnabled()) {
+        nameOrEncodedName2State.forEach((k, v) -> LOG.debug("region={}, state={}", k, v));
+      }
+      MasterProtos.SetRegionStateInMetaResponse response =
+        hbck.setRegionStateInMeta(rpcControllerFactory.newController(),
+          RequestConverter.buildSetRegionStateInMetaRequest(nameOrEncodedName2State));
+      Map<String, RegionState.State> result = new HashMap<>();
+      for (RegionSpecifierAndState nameAndState : response.getStatesList()) {
+        result.put(nameAndState.getRegionSpecifier().getValue().toStringUtf8(),
+          RegionState.State.convert(nameAndState.getState()));
+      }
+      return result;
+    } catch (ServiceException se) {
       throw new IOException(se);
     }
   }
@@ -172,6 +198,20 @@ public class HBaseHbck implements Hbck {
         serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
             .collect(Collectors.toList())),
         se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public List<Long> scheduleSCPsForUnknownServers() throws IOException {
+    try {
+      ScheduleSCPsForUnknownServersResponse response =
+        this.hbck.scheduleSCPsForUnknownServers(
+          rpcControllerFactory.newController(),
+          ScheduleSCPsForUnknownServersRequest.newBuilder().build());
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug("Failed to run ServerCrashProcedures for unknown servers", se);
       throw new IOException(se);
     }
   }

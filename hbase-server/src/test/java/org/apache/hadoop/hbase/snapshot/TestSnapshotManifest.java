@@ -25,12 +25,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +48,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotManifest {
 
   @ClassRule
@@ -61,7 +62,7 @@ public class TestSnapshotManifest {
   private static final int TEST_NUM_REGIONS = 16000;
   private static final int TEST_NUM_REGIONFILES = 1000000;
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private Configuration conf;
   private FileSystem fs;
   private Path rootDir;
@@ -71,7 +72,7 @@ public class TestSnapshotManifest {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtil();
 
     rootDir = TEST_UTIL.getDataTestDir(TABLE_NAME_STR);
     fs = TEST_UTIL.getTestFileSystem();
@@ -133,7 +134,7 @@ public class TestSnapshotManifest {
     byte[] stopKey = null;
     for (int i = 1; i <= TEST_NUM_REGIONS; i++) {
       stopKey = Bytes.toBytes(String.format("%016d", i));
-      HRegionInfo regionInfo = new HRegionInfo(TABLE_NAME, startKey, stopKey, false);
+      RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
       SnapshotRegionManifest.Builder dataRegionManifestBuilder =
           SnapshotRegionManifest.newBuilder();
 
@@ -151,7 +152,7 @@ public class TestSnapshotManifest {
         dataRegionManifestBuilder.addFamilyFiles(family.build());
       }
 
-      dataRegionManifestBuilder.setRegionInfo(HRegionInfo.convert(regionInfo));
+      dataRegionManifestBuilder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
       dataManifestBuilder.addRegionManifests(dataRegionManifestBuilder.build());
 
       startKey = stopKey;
@@ -167,9 +168,9 @@ public class TestSnapshotManifest {
   private Path createRegionManifest() throws IOException {
     byte[] startKey = Bytes.toBytes("AAAAAA");
     byte[] stopKey = Bytes.toBytes("BBBBBB");
-    HRegionInfo regionInfo = new HRegionInfo(TABLE_NAME, startKey, stopKey, false);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
     SnapshotRegionManifest.Builder dataRegionManifestBuilder = SnapshotRegionManifest.newBuilder();
-    dataRegionManifestBuilder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    dataRegionManifestBuilder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
 
     for (ColumnFamilyDescriptor hcd: builder.getTableDescriptor().getColumnFamilies()) {
       SnapshotRegionManifest.FamilyFiles.Builder family =

@@ -19,8 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
@@ -38,11 +41,13 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
   @Override
   protected void initTable() throws IOException {
     // Do the same as the LoadTestTool does, but with different table configuration.
-    HTableDescriptor htd = new HTableDescriptor(getTablename());
-    htd.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY, StripeStoreEngine.class.getName());
-    htd.setConfiguration(HStore.BLOCKING_STOREFILES_KEY, "100");
-    HColumnDescriptor hcd = new HColumnDescriptor(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
-    HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(), htd, hcd);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(getTablename())
+      .setValue(StoreEngine.STORE_ENGINE_CLASS_KEY, StripeStoreEngine.class.getName())
+      .setValue(HStore.BLOCKING_STOREFILES_KEY, "100").build();
+    ColumnFamilyDescriptor familyDescriptor =
+      ColumnFamilyDescriptorBuilder.of(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
+    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(),
+      tableDescriptor, familyDescriptor);
   }
 
   public static void main(String[] args) throws Exception {

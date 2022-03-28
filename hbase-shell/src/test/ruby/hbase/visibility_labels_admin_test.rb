@@ -17,17 +17,16 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
-
-include HBaseConstants
 
 module Hbase
   # Simple secure administration methods tests
   class VisibilityLabelsAdminMethodsTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam3;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -38,21 +38,21 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -63,17 +63,15 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorInterface {
 
   @ClassRule
@@ -81,8 +79,7 @@ public class TestCoprocessorInterface {
       HBaseClassTestRule.forClass(TestCoprocessorInterface.class);
 
   @Rule public TestName name = new TestName();
-  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorInterface.class);
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
@@ -295,7 +292,7 @@ public class TestCoprocessorInterface {
     HRegion region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
-      HBaseTestCase.addContent(region, fam3);
+      HTestConst.addContent(region, fam3);
       region.flush(true);
     }
 
@@ -345,7 +342,7 @@ public class TestCoprocessorInterface {
     // hence the old entry was indeed removed by the GC and new one has been created
     Object o3 = ((CoprocessorII)c2).getSharedData().get("test2");
     assertFalse(o3 == o2);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -357,7 +354,7 @@ public class TestCoprocessorInterface {
     HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
-      HBaseTestCase.addContent(region, fam3);
+      HTestConst.addContent(region, fam3);
       region.flush(true);
     }
 
@@ -370,7 +367,7 @@ public class TestCoprocessorInterface {
     // this would throw an exception before HBASE-4197
     scanner.next(new ArrayList<>());
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().findCoprocessor(CoprocessorImpl.class);
 
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
@@ -396,7 +393,7 @@ public class TestCoprocessorInterface {
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
     }
     // we need to manually call pre- and postOpen here since the
     // above load() is not the real case for CP loading. A CP is
@@ -409,21 +406,21 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  HRegion initHRegion (TableName tableName, String callingMethod,
-      Configuration conf, Class<?> [] implClasses, byte [][] families)
-      throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+  HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
+    Class<?>[] implClasses, byte[][] families) throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    for (byte[] family : families) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName)
         .setStartKey(null)
         .setEndKey(null)
         .setSplit(false)
         .build();
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
 
     // this following piece is a hack.
     RegionCoprocessorHost host =
@@ -431,7 +428,7 @@ public class TestCoprocessorInterface {
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
       Coprocessor c = host.findCoprocessor(implClass.getName());
       assertNotNull(c);
     }
@@ -452,8 +449,6 @@ public class TestCoprocessorInterface {
     // below.  After adding all data, the first region is 1.3M
     TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
         1024 * 128);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster",
-        true);
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
 
     return TEST_UTIL.getConfiguration();

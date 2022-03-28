@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +34,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -416,11 +412,13 @@ public class RegionSplitter {
       if (!conf.getBoolean("split.verify", true)) {
         // NOTE: createTable is synchronous on the table, but not on the regions
         int onlineRegions = 0;
-        while (onlineRegions < splitCount) {
-          onlineRegions = MetaTableAccessor.getRegionCount(connection, tableName);
-          LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
-          if (onlineRegions < splitCount) {
-            Thread.sleep(10 * 1000); // sleep
+        try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+          while (onlineRegions < splitCount) {
+            onlineRegions = locator.getAllRegionLocations().size();
+            LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
+            if (onlineRegions < splitCount) {
+              Thread.sleep(10 * 1000); // sleep
+            }
           }
         }
       }
@@ -436,8 +434,7 @@ public class RegionSplitter {
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
-      ClusterMetrics status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
-      Collection<ServerName> servers = status.getLiveServerMetrics().keySet();
+      Collection<ServerName> servers = admin.getRegionServers();
       return servers == null || servers.isEmpty()? 0: servers.size();
     }
   }
@@ -460,8 +457,8 @@ public class RegionSplitter {
       // Max outstanding splits. default == 50% of servers
       final int MAX_OUTSTANDING = Math.max(getRegionServerCount(connection) / 2, minOS);
 
-      Path hbDir = FSUtils.getRootDir(conf);
-      Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+      Path hbDir = CommonFSUtils.getRootDir(conf);
+      Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
       Path splitFile = new Path(tableDir, "_balancedSplit");
       FileSystem fs = FileSystem.get(conf);
 
@@ -491,7 +488,7 @@ public class RegionSplitter {
           daughterRegions.get(rsLocation).add(dr);
         }
         LOG.debug("Done with bucketing.  Split time!");
-        long startTime = System.currentTimeMillis();
+        long startTime = EnvironmentEdgeManager.currentTime();
 
         // Open the split file and modify it as splits finish
         byte[] rawData = readFile(fs, splitFile);
@@ -607,7 +604,7 @@ public class RegionSplitter {
                       + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
                   splitCount++;
                   if (splitCount % 10 == 0) {
-                    long tDiff = (System.currentTimeMillis() - startTime)
+                    long tDiff = (EnvironmentEdgeManager.currentTime() - startTime)
                         / splitCount;
                     LOG.debug("STATUS UPDATE: " + splitCount + " / " + origCount
                         + ". Avg Time / Split = "
@@ -636,7 +633,7 @@ public class RegionSplitter {
             }
             LOG.debug("All regions have been successfully split!");
           } finally {
-            long tDiff = System.currentTimeMillis() - startTime;
+            long tDiff = EnvironmentEdgeManager.currentTime() - startTime;
             LOG.debug("TOTAL TIME = "
                 + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
             LOG.debug("Splits = " + splitCount);
@@ -785,10 +782,9 @@ public class RegionSplitter {
    * @throws IOException if a remote or network exception occurs
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
-      final TableName tableName)
-  throws IOException {
-    Path hbDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+    final TableName tableName) throws IOException {
+    Path hbDir = CommonFSUtils.getRootDir(conf);
+    Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
     Path splitFile = new Path(tableDir, "_balancedSplit");
     return new Pair<>(tableDir, splitFile);
   }
@@ -848,8 +844,7 @@ public class RegionSplitter {
       fs.rename(tmpFile, splitFile);
     } else {
       LOG.debug("_balancedSplit file found. Replay log to restore state...");
-      FSUtils.getInstance(fs, connection.getConfiguration())
-        .recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
+      RecoverLeaseFSUtils.recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
 
       // parse split file and process remaining splits
       FSDataInputStream tmpIn = fs.open(splitFile);

@@ -37,11 +37,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -79,7 +82,7 @@ public class TestHFileBlockIndex {
 
   @Parameters
   public static Collection<Object[]> compressionAlgorithms() {
-    return HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+    return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
 
   public TestHFileBlockIndex(Compression.Algorithm compr) {
@@ -87,17 +90,16 @@ public class TestHFileBlockIndex {
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
-
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static final int NUM_DATA_BLOCKS = 1000;
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   private static final int SMALL_BLOCK_SIZE = 4096;
   private static final int NUM_KV = 10000;
 
   private static FileSystem fs;
   private Path path;
-  private Random rand;
   private long rootIndexOffset;
   private int numRootEntries;
   private int numLevels;
@@ -121,9 +123,9 @@ public class TestHFileBlockIndex {
   @Before
   public void setUp() throws IOException {
     keys.clear();
-    rand = new Random(2389757);
     firstKeyInFile = null;
     conf = TEST_UTIL.getConfiguration();
+    RNG.setSeed(2389757);
 
     // This test requires at least HFile format version 2.
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
@@ -140,9 +142,9 @@ public class TestHFileBlockIndex {
 
   private void clear() throws IOException {
     keys.clear();
-    rand = new Random(2389757);
     firstKeyInFile = null;
     conf = TEST_UTIL.getConfiguration();
+    RNG.setSeed(2389757);
 
     // This test requires at least HFile format version 2.
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
@@ -208,13 +210,14 @@ public class TestHFileBlockIndex {
                         .withIncludesTags(useTags)
                         .withCompression(compr)
                         .build();
-    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(istream,
-        fs.getFileStatus(path).getLen(), meta, ByteBuffAllocator.HEAP);
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, path).build();
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(context, meta,
+        ByteBuffAllocator.HEAP, conf);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.CellBasedKeyBlockIndexReader(
-            CellComparatorImpl.COMPARATOR, numLevels, brw);
+            CellComparatorImpl.COMPARATOR, numLevels);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -230,7 +233,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue keyOnlyKey = new KeyValue.KeyOnlyKeyValue(key, 0, key.length);
       HFileBlock b =
           indexReader.seekToDataBlock(keyOnlyKey, null, true,
-            true, false, null);
+            true, false, null, brw);
       if (PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile, 0,
         firstKeyInFile.length) < 0) {
         assertTrue(b == null);
@@ -266,14 +269,13 @@ public class TestHFileBlockIndex {
                         .withCompression(compr)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null,
         meta);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
-
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
-      hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(rand.nextInt(1000))));
+      hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(RNG.nextInt(1000))));
       long blockOffset = outputStream.getPos();
       hbw.writeHeaderAndData(outputStream);
 
@@ -282,7 +284,7 @@ public class TestHFileBlockIndex {
       byte[] qualifier = Bytes.toBytes("q");
       for (int j = 0; j < 16; ++j) {
         byte[] k =
-            new KeyValue(RandomKeyValueUtil.randomOrderedKey(rand, i * 16 + j), family, qualifier,
+            new KeyValue(RandomKeyValueUtil.randomOrderedKey(RNG, i * 16 + j), family, qualifier,
                 EnvironmentEdgeManager.currentTime(), KeyValue.Type.Put).getKey();
         keys.add(k);
         if (j == 8) {
@@ -350,7 +352,7 @@ public class TestHFileBlockIndex {
     int secondaryIndexEntries[] = new int[numTotalKeys];
 
     for (int i = 0; i < numTotalKeys; ++i) {
-      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i * 2);
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i * 2);
       KeyValue cell = new KeyValue(k, Bytes.toBytes("f"), Bytes.toBytes("q"),
           Bytes.toBytes("val"));
       //KeyValue cell = new KeyValue.KeyOnlyKeyValue(k, 0, k.length);
@@ -475,8 +477,8 @@ public class TestHFileBlockIndex {
       c.writeRoot(dos);
       assertEquals(c.getRootSize(), dos.size());
 
-      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
-      numSubEntries += rand.nextInt(5) + 1;
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+      numSubEntries += RNG.nextInt(5) + 1;
       keys.add(k);
       c.add(k, getDummyFileOffset(i), getDummyOnDiskSize(i), numSubEntries);
     }
@@ -646,7 +648,7 @@ public class TestHFileBlockIndex {
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
-        HFileScanner scanner = reader.getScanner(true, pread);
+        HFileScanner scanner = reader.getScanner(conf, true, pread);
         for (int i = 0; i < NUM_KV; ++i) {
           checkSeekTo(keys, scanner, i);
           checkKeyValue("i=" + i, keys[i], values[i],
@@ -763,15 +765,27 @@ public class TestHFileBlockIndex {
       byte[] b = Bytes.toBytes(i);
       System.arraycopy(b, 0, rowkey, rowkey.length - b.length, b.length);
       keys.add(rowkey);
-      hfw.append(CellUtil.createCell(rowkey));
+      hfw.append(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(rowkey).setFamily(HConstants.EMPTY_BYTE_ARRAY)
+        .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+        .setTimestamp(HConstants.LATEST_TIMESTAMP)
+        .setType(KeyValue.Type.Maximum.getCode())
+        .setValue(HConstants.EMPTY_BYTE_ARRAY)
+        .build());
     }
     hfw.close();
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(CellUtil.createCell(keys.get(i)));
+      scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(keys.get(i)).setFamily(HConstants.EMPTY_BYTE_ARRAY)
+        .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+        .setTimestamp(HConstants.LATEST_TIMESTAMP)
+        .setType(KeyValue.Type.Maximum.getCode())
+        .setValue(HConstants.EMPTY_BYTE_ARRAY)
+        .build());
     }
     reader.close();
   }

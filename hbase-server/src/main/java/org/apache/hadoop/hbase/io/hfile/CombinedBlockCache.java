@@ -22,11 +22,7 @@ import java.util.Iterator;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 
 /**
  * CombinedBlockCache is an abstraction layer that combines
@@ -61,7 +57,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-    boolean metaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
+    boolean metaBlock = isMetaBlock(buf.getBlockType());
     if (metaBlock) {
       l1Cache.cacheBlock(cacheKey, buf, inMemory);
     } else {
@@ -77,13 +73,30 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
       boolean repeat, boolean updateCacheMetrics) {
-    // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
-    // we end up calling l2Cache.getBlock.
     // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
     // passed always.
-    return l1Cache.containsBlock(cacheKey)?
+    boolean existInL1 = l1Cache.containsBlock(cacheKey);
+    if (!existInL1 && updateCacheMetrics && !repeat) {
+      // If the block does not exist in L1, the containsBlock should be counted as one miss.
+      l1Cache.getStats().miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
+    return existInL1 ?
         l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+  }
+
+  @Override
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+      boolean updateCacheMetrics, BlockType blockType) {
+    if (blockType == null) {
+      return getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    }
+    boolean metaBlock = isMetaBlock(blockType);
+    if (metaBlock) {
+      return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    } else {
+      return l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    }
   }
 
   @Override
@@ -379,7 +392,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     this.l1Cache.setMaxSize(size);
   }
 
-  @VisibleForTesting
   public int getRpcRefCount(BlockCacheKey cacheKey) {
     return (this.l2Cache instanceof BucketCache)
         ? ((BucketCache) this.l2Cache).getRpcRefCount(cacheKey)

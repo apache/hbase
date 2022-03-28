@@ -29,7 +29,9 @@ EOF
       end
 
       def command
-        formatter.row([admin.cleaner_chore_enabled ? 'true' : 'false'])
+        current_state = !!admin.cleaner_chore_enabled
+        formatter.row([current_state.to_s])
+        current_state
       end
     end
   end

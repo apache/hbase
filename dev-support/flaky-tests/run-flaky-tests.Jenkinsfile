@@ -17,25 +17,28 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
-    cron('H */4 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('H H/4 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
-    buildDiscarder(logRotator(numToKeepStr: '30'))
+    buildDiscarder(logRotator(numToKeepStr: '50'))
     timeout (time: 2, unit: 'HOURS')
     timestamps()
+  }
+  environment {
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   tools {
     // this should match what the yetus nightly job for the branch will use
-    maven 'Maven (latest)'
-    jdk "JDK 1.8 (latest)"
+    maven 'maven_latest'
+    jdk "jdk_1.8_latest"
   }
   stages {
     stage ('run flaky tests') {
@@ -43,13 +46,14 @@ pipeline {
         sh '''#!/usr/bin/env bash
           set -e
           declare -a curl_args=(--fail)
-          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository")
+          tmpdir=$(realpath target)
+          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository" -Djava.io.tmpdir=${tmpdir})
           if [ "${DEBUG}" = "true" ]; then
             curl_args=("${curl_args[@]}" -v)
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
-          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/includes"
+          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
             mvn clean "${mvn_args[@]}"
@@ -61,7 +65,7 @@ pipeline {
             else
               echo "Skipped gathering machine environment because we couldn't read the script to do so."
             fi
-            mvn package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=3 -Dsurefire.secondPartForkCount=3
+            mvn -T0.25C package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=0.25C -Dsurefire.secondPartForkCount=0.25C
           else
             echo "set of flaky tests is currently empty."
           fi
@@ -72,8 +76,19 @@ pipeline {
   post {
     always {
       junit testResults: "**/surefire-reports/*.xml", allowEmptyResults: true
-      // TODO compress these logs
-      archive 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
+      sshPublisher(publishers: [
+        sshPublisherDesc(configName: 'Nightlies',
+          transfers: [
+            sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+              sourceFiles: "**/surefire-reports/*,**/test-data/*"
+            )
+          ]
+        )
+      ])
+      sh '''#!/bin/bash -e
+        ./dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}" > test_logs.html
+      '''
+      archiveArtifacts artifacts: 'includes.txt,test_logs.html,target/machine/*'
     }
   }
 }

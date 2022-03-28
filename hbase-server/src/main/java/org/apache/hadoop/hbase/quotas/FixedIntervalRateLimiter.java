@@ -13,7 +13,6 @@ package org.apache.hadoop.hbase.quotas;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * With this limiter resources will be refilled only after a fixed interval of time.
@@ -44,13 +43,11 @@ public class FixedIntervalRateLimiter extends RateLimiter {
   }
 
   // This method is for strictly testing purpose only
-  @VisibleForTesting
   @Override
   public void setNextRefillTime(long nextRefillTime) {
     this.nextRefillTime = nextRefillTime;
   }
 
-  @VisibleForTesting
   @Override
   public long getNextRefillTime() {
     return this.nextRefillTime;

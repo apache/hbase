@@ -23,22 +23,22 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-
-import java.util.concurrent.CopyOnWriteArrayList;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  * instead of 16000.
  *
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class LocalHBaseCluster {
   private static final Logger LOG = LoggerFactory.getLogger(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
@@ -91,7 +91,7 @@ public class LocalHBaseCluster {
    */
   public LocalHBaseCluster(final Configuration conf, final int noRegionServers)
   throws IOException {
-    this(conf, 1, noRegionServers, getMasterImplementation(conf),
+    this(conf, 1, 0, noRegionServers, getMasterImplementation(conf),
         getRegionServerImplementation(conf));
   }
 
@@ -106,7 +106,7 @@ public class LocalHBaseCluster {
   public LocalHBaseCluster(final Configuration conf, final int noMasters,
       final int noRegionServers)
   throws IOException {
-    this(conf, noMasters, noRegionServers, getMasterImplementation(conf),
+    this(conf, noMasters, 0, noRegionServers, getMasterImplementation(conf),
         getRegionServerImplementation(conf));
   }
 
@@ -122,6 +122,12 @@ public class LocalHBaseCluster {
        HMaster.class);
   }
 
+  public LocalHBaseCluster(final Configuration conf, final int noMasters, final int noRegionServers,
+      final Class<? extends HMaster> masterClass,
+      final Class<? extends HRegionServer> regionServerClass) throws IOException {
+    this(conf, noMasters, 0, noRegionServers, masterClass, regionServerClass);
+  }
+
   /**
    * Constructor.
    * @param conf Configuration to use.  Post construction has the master's
@@ -134,9 +140,9 @@ public class LocalHBaseCluster {
    */
   @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf, final int noMasters,
-    final int noRegionServers, final Class<? extends HMaster> masterClass,
-    final Class<? extends HRegionServer> regionServerClass)
-  throws IOException {
+      final int noAlwaysStandByMasters, final int noRegionServers,
+      final Class<? extends HMaster> masterClass,
+      final Class<? extends HRegionServer> regionServerClass) throws IOException {
     this.conf = conf;
 
     // When active, if a port selection is default then we switch to random
@@ -170,16 +176,22 @@ public class LocalHBaseCluster {
     this.masterClass = (Class<? extends HMaster>)
       conf.getClass(HConstants.MASTER_IMPL, masterClass);
     // Start the HMasters.
-    for (int i = 0; i < noMasters; i++) {
+    int i;
+    for (i = 0; i < noMasters; i++) {
       addMaster(new Configuration(conf), i);
+    }
+    for (int j = 0; j < noAlwaysStandByMasters; j++) {
+      Configuration c = new Configuration(conf);
+      c.set(HConstants.MASTER_IMPL, "org.apache.hadoop.hbase.master.AlwaysStandByHMaster");
+      addMaster(c, i + j);
     }
     // Start the HRegionServers.
     this.regionServerClass =
       (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
        regionServerClass);
 
-    for (int i = 0; i < noRegionServers; i++) {
-      addRegionServer(new Configuration(conf), i);
+    for (int j = 0; j < noRegionServers; j++) {
+      addRegionServer(new Configuration(conf), j);
     }
   }
 
@@ -220,13 +232,18 @@ public class LocalHBaseCluster {
   }
 
   public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
-  throws IOException {
+      throws IOException {
     // Create each master with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager.
     JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c,
-        (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
+        (Class<? extends HMaster>) c.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
     this.masterThreads.add(mt);
+    // Refresh the master address config.
+    List<String> masterHostPorts = new ArrayList<>();
+    getMasters().forEach(masterThread ->
+        masterHostPorts.add(masterThread.getMaster().getServerName().getAddress().toString()));
+    conf.set(HConstants.MASTER_ADDRS_KEY, String.join(",", masterHostPorts));
     return mt;
   }
 
@@ -434,23 +451,18 @@ public class LocalHBaseCluster {
 
   /**
    * Test things basically work.
-   * @param args
-   * @throws IOException
    */
   public static void main(String[] args) throws IOException {
     Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
-    Connection connection = ConnectionFactory.createConnection(conf);
-    Admin admin = connection.getAdmin();
-    try {
-      HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Admin admin = connection.getAdmin()) {
+      TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(cluster.getClass().getName())).build();
       admin.createTable(htd);
     } finally {
-      admin.close();
+      cluster.shutdown();
     }
-    connection.close();
-    cluster.shutdown();
   }
 }

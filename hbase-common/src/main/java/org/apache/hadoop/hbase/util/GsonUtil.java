@@ -58,4 +58,8 @@ public final class GsonUtil {
         }
       });
   }
+
+  public static GsonBuilder createGsonWithDisableHtmlEscaping() {
+    return createGson().disableHtmlEscaping();
+  }
 }

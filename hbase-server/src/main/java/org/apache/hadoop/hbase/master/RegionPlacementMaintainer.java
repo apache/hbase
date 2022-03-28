@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,10 +29,11 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -204,9 +204,7 @@ public class RegionPlacementMaintainer implements Closeable {
 
     // Get the all the region servers
     List<ServerName> servers = new ArrayList<>();
-    servers.addAll(
-      FutureUtils.get(getConnection().getAdmin().getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)))
-        .getLiveServerMetrics().keySet());
+    servers.addAll(FutureUtils.get(getConnection().getAdmin().getRegionServers()));
 
     LOG.info("Start to generate assignment plan for " + numRegions +
         " regions from table " + tableName + " with " +
@@ -523,7 +521,7 @@ public class RegionPlacementMaintainer implements Closeable {
     public RandomizedMatrix(int rows, int cols) {
       this.rows = rows;
       this.cols = cols;
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       rowTransform = new int[rows];
       rowInverse = new int[rows];
       for (int i = 0; i < rows; i++) {
@@ -701,7 +699,7 @@ public class RegionPlacementMaintainer implements Closeable {
             FutureUtils.get(rsAdmin.getServerInfo(RequestConverter.buildGetServerInfoRequest()))
               .getServerInfo() +
             " has updated " + updateFavoredNodesResponse.getResponse() + " / " +
-            singleServerPlan.getAssignmentMap().size() + " regions with the assignment plan");
+            singleServerPlan.size() + " regions with the assignment plan");
           succeededNum++;
         }
       } catch (Exception e) {

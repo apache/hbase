@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.Threads;
@@ -143,7 +144,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     LOG.info("Cluster size:"+
       util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
     long runtime = util.getConfiguration().getLong(runtimeKey, defaultRunTime);
     long startKey = 0;
@@ -197,7 +198,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
     // set the intended run time for the reader. The reader will do read requests
     // to random keys for this amount of time.
-    long remainingTime = runtime - (System.currentTimeMillis() - start);
+    long remainingTime = runtime - (EnvironmentEdgeManager.currentTime() - start);
     if (remainingTime <= 0) {
       LOG.error("The amount of time left for the test to perform random reads is "
           + "non-positive. Increase the test execution time via "
@@ -330,7 +331,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       @Override
       protected long getNextKeyToRead() {
         // always read a random key, assuming that the writer has finished writing all keys
-        long key = startKey + Math.abs(RandomUtils.nextLong())
+        long key = startKey + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE)
             % (endKey - startKey);
         return key;
       }

@@ -21,41 +21,47 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.util.Map;
 import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.TextOutputCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.RealmCallback;
-import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.security.AbstractHBaseSaslRpcClient.SaslClientCallbackHandler;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.security.provider.DigestSaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.security.provider.DigestSaslClientAuthenticationProvider.DigestSaslClientCallbackHandler;
+import org.apache.hadoop.hbase.security.provider.GssSaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.security.provider.SimpleSaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.BeforeClass;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
@@ -74,24 +80,21 @@ public class TestHBaseSaslRpcClient {
   static final String DEFAULT_USER_NAME = "principal";
   static final String DEFAULT_USER_PASSWORD = "password";
 
-  private static final Logger LOG = Logger.getLogger(TestHBaseSaslRpcClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseSaslRpcClient.class);
 
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @BeforeClass
-  public static void before() {
-    Logger.getRootLogger().setLevel(Level.DEBUG);
-  }
-
   @Test
   public void testSaslClientUsesGivenRpcProtection() throws Exception {
     Token<? extends TokenIdentifier> token = createTokenMockWithCredentials(DEFAULT_USER_NAME,
         DEFAULT_USER_PASSWORD);
+    DigestSaslClientAuthenticationProvider provider = new DigestSaslClientAuthenticationProvider();
     for (SaslUtil.QualityOfProtection qop : SaslUtil.QualityOfProtection.values()) {
-      String negotiatedQop = new HBaseSaslRpcClient(AuthMethod.DIGEST, token,
-          "principal/host@DOMAIN.COM", false, qop.name(), false) {
+      String negotiatedQop = new HBaseSaslRpcClient(HBaseConfiguration.create(), provider, token,
+          Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false, qop.name(),
+          false) {
         public String getQop() {
           return saslProps.get(Sasl.QOP);
         }
@@ -101,7 +104,7 @@ public class TestHBaseSaslRpcClient {
   }
 
   @Test
-  public void testSaslClientCallbackHandler() throws UnsupportedCallbackException {
+  public void testDigestSaslClientCallbackHandler() throws UnsupportedCallbackException {
     final Token<? extends TokenIdentifier> token = createTokenMock();
     when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
     when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
@@ -109,28 +112,29 @@ public class TestHBaseSaslRpcClient {
     final NameCallback nameCallback = mock(NameCallback.class);
     final PasswordCallback passwordCallback = mock(PasswordCallback.class);
     final RealmCallback realmCallback = mock(RealmCallback.class);
-    final RealmChoiceCallback realmChoiceCallback = mock(RealmChoiceCallback.class);
 
-    Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback, realmChoiceCallback};
-    final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
+    // We can provide a realmCallback, but HBase presently does nothing with it.
+    Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback};
+    final DigestSaslClientCallbackHandler saslClCallbackHandler =
+        new DigestSaslClientCallbackHandler(token);
     saslClCallbackHandler.handle(callbackArray);
     verify(nameCallback).setName(anyString());
-    verify(realmCallback).setText(any());
     verify(passwordCallback).setPassword(any());
   }
 
   @Test
-  public void testSaslClientCallbackHandlerWithException() {
+  public void testDigestSaslClientCallbackHandlerWithException() {
     final Token<? extends TokenIdentifier> token = createTokenMock();
     when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
     when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
-    final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
+    final DigestSaslClientCallbackHandler saslClCallbackHandler =
+        new DigestSaslClientCallbackHandler(token);
     try {
       saslClCallbackHandler.handle(new Callback[] { mock(TextOutputCallback.class) });
     } catch (UnsupportedCallbackException expEx) {
       //expected
     } catch (Exception ex) {
-      fail("testSaslClientCallbackHandlerWithException error : " + ex.getMessage());
+      fail("testDigestSaslClientCallbackHandlerWithException error : " + ex.getMessage());
     }
   }
 
@@ -196,21 +200,17 @@ public class TestHBaseSaslRpcClient {
     boolean inState = false;
     boolean outState = false;
 
-    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
-        createTokenMockWithCredentials(principal, password), principal, false) {
+    DigestSaslClientAuthenticationProvider provider = new DigestSaslClientAuthenticationProvider() {
       @Override
-      public SaslClient createDigestSaslClient(String[] mechanismNames,
-          String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
-              throws IOException {
-        return Mockito.mock(SaslClient.class);
-      }
-
-      @Override
-      public SaslClient createKerberosSaslClient(String[] mechanismNames,
-          String userFirstPart, String userSecondPart) throws IOException {
+      public SaslClient createClient(Configuration conf, InetAddress serverAddress,
+          SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
+          boolean fallbackAllowed, Map<String, String> saslProps) {
         return Mockito.mock(SaslClient.class);
       }
     };
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(), provider,
+        createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
+        Mockito.mock(SecurityInfo.class), false);
 
     try {
       rpcClient.getInputStream();
@@ -231,21 +231,19 @@ public class TestHBaseSaslRpcClient {
 
   private boolean assertIOExceptionThenSaslClientIsNull(String principal, String password) {
     try {
-      new HBaseSaslRpcClient(AuthMethod.DIGEST,
-          createTokenMockWithCredentials(principal, password), principal, false) {
+      DigestSaslClientAuthenticationProvider provider =
+          new DigestSaslClientAuthenticationProvider() {
         @Override
-        public SaslClient createDigestSaslClient(String[] mechanismNames,
-            String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
-                throws IOException {
-          return null;
-        }
-
-        @Override
-        public SaslClient createKerberosSaslClient(String[] mechanismNames,
-            String userFirstPart, String userSecondPart) throws IOException {
+        public SaslClient createClient(Configuration conf, InetAddress serverAddress,
+            SecurityInfo securityInfo,
+            Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+            Map<String, String> saslProps) {
           return null;
         }
       };
+      new HBaseSaslRpcClient(HBaseConfiguration.create(), provider,
+          createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
+          Mockito.mock(SecurityInfo.class), false);
       return false;
     } catch (IOException ex) {
       return true;
@@ -265,8 +263,10 @@ public class TestHBaseSaslRpcClient {
   private boolean assertSuccessCreationDigestPrincipal(String principal, String password) {
     HBaseSaslRpcClient rpcClient = null;
     try {
-      rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
-          createTokenMockWithCredentials(principal, password), principal, false);
+      rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(),
+          new DigestSaslClientAuthenticationProvider(),
+          createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
+          Mockito.mock(SecurityInfo.class), false);
     } catch(Exception ex) {
       LOG.error(ex.getMessage(), ex);
     }
@@ -285,7 +285,9 @@ public class TestHBaseSaslRpcClient {
 
   private HBaseSaslRpcClient createSaslRpcClientForKerberos(String principal)
       throws IOException {
-    return new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), principal, false);
+    return new HBaseSaslRpcClient(HBaseConfiguration.create(),
+        new GssSaslClientAuthenticationProvider(), createTokenMock(),
+        Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
   }
 
   private Token<? extends TokenIdentifier> createTokenMockWithCredentials(
@@ -301,11 +303,42 @@ public class TestHBaseSaslRpcClient {
 
   private HBaseSaslRpcClient createSaslRpcClientSimple(String principal, String password)
       throws IOException {
-    return new HBaseSaslRpcClient(AuthMethod.SIMPLE, createTokenMock(), principal, false);
+    return new HBaseSaslRpcClient(HBaseConfiguration.create(),
+        new SimpleSaslClientAuthenticationProvider(), createTokenMock(),
+        Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
   }
 
   @SuppressWarnings("unchecked")
   private Token<? extends TokenIdentifier> createTokenMock() {
     return mock(Token.class);
+  }
+
+  @Test(expected = IOException.class)
+   public void testFailedEvaluateResponse() throws IOException {
+    //prep mockin the SaslClient
+    SimpleSaslClientAuthenticationProvider mockProvider =
+      Mockito.mock(SimpleSaslClientAuthenticationProvider.class);
+    SaslClient mockClient = Mockito.mock(SaslClient.class);
+    Assert.assertNotNull(mockProvider);
+    Assert.assertNotNull(mockClient);
+    Mockito.when(mockProvider.createClient(Mockito.any(), Mockito.any(), Mockito.any(),
+      Mockito.any(), Mockito.anyBoolean(), Mockito.any())).thenReturn(mockClient);
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(),
+      mockProvider, createTokenMock(),
+      Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
+
+    //simulate getting an error from a failed saslServer.evaluateResponse
+    DataOutputBuffer errorBuffer = new DataOutputBuffer();
+    errorBuffer.writeInt(SaslStatus.ERROR.state);
+    WritableUtils.writeString(errorBuffer, IOException.class.getName());
+    WritableUtils.writeString(errorBuffer, "Invalid Token");
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(errorBuffer.getData(), 0, errorBuffer.getLength());
+    DataOutputBuffer out = new DataOutputBuffer();
+
+    //simulate that authentication exchange has completed quickly after sending the token
+    Mockito.when(mockClient.isComplete()).thenReturn(true);
+    rpcClient.saslConnect(in, out);
   }
 }

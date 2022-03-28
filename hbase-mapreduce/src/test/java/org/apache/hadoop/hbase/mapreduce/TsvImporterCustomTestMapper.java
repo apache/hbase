@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.KeyValue;
-
-import java.io.IOException;
 
 /**
  * Dummy mapper used for unit tests to verify that the mapper can be injected.
@@ -34,7 +34,6 @@ import java.io.IOException;
  * reading the input data before writing it to HFiles.
  */
 public class TsvImporterCustomTestMapper extends TsvImporterMapper {
-
   @Override
   protected void setup(Context context) {
     doSetup(context);

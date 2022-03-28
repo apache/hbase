@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test if Filter is incompatible with scan-limits
  */
-@Category({FilterTests.class, MediumTests.class})
+@Category({FilterTests.class, LargeTests.class})
 public class TestFilterWithScanLimits extends FilterTestingCluster {
 
   @ClassRule

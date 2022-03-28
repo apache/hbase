@@ -22,23 +22,25 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -47,7 +49,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * @see BaseLogCleanerDelegate
  */
 @InterfaceAudience.Private
-public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
+public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
+  implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(LogCleaner.class);
 
   public static final String OLD_WALS_CLEANER_THREAD_SIZE = "hbase.oldwals.cleaner.thread.size";
@@ -55,7 +58,6 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
   public static final String OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC =
       "hbase.oldwals.cleaner.thread.timeout.msec";
-  @VisibleForTesting
   static final long DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   private final LinkedBlockingQueue<CleanerContext> pendingDelete;
@@ -68,27 +70,28 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
    * @param conf configuration to use
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
+   * @param pool the thread pool used to scan directories
    */
   public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
-      Path oldLogDir) {
-    super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
+    Path oldLogDir, DirScanPool pool, Map<String, Object> params) {
+    super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS,
+      pool, params);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);
     this.cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
-        DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+      DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
   }
 
   @Override
   protected boolean validate(Path file) {
-    return AbstractFSWALProvider.validateWALFilename(file.getName())
-        || MasterProcedureUtil.validateProcedureWALFilename(file.getName());
+    return AbstractFSWALProvider.validateWALFilename(file.getName()) ||
+      MasterProcedureUtil.validateProcedureWALFilename(file.getName()) ||
+      file.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
   }
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    super.onConfigurationChange(conf);
-
     int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     if (newSize == oldWALsCleaner.size()) {
       LOG.debug("Size from configuration is the same as previous which "
@@ -110,8 +113,13 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
         results.add(new CleanerContext(file));
       }
     }
+    if (results.isEmpty()) {
+      return 0;
+    }
 
-    LOG.debug("Old WAL files pending deletion: {}", results);
+    LOG.debug("Old WALs for delete: {}",
+      results.stream().map(cc -> cc.target.getPath().getName()).
+        collect(Collectors.joining(", ")));
     pendingDelete.addAll(results);
 
     int deletedFiles = 0;
@@ -128,18 +136,16 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
     interruptOldWALsCleaner();
   }
 
-  @VisibleForTesting
   int getSizeOfCleaners() {
     return oldWALsCleaner.size();
   }
 
-  @VisibleForTesting
   long getCleanerThreadTimeoutMsec() {
     return cleanerThreadTimeoutMsec;
   }
 
   private List<Thread> createOldWalsCleaner(int size) {
-    LOG.info("Creating {} OldWALs cleaner threads", size);
+    LOG.info("Creating {} old WALs cleaner threads", size);
 
     List<Thread> oldWALsCleaner = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {
@@ -167,12 +173,12 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
         Preconditions.checkNotNull(context);
         FileStatus oldWalFile = context.getTargetToClean();
         try {
-          LOG.debug("Attempting to delete old WAL file: {}", oldWalFile);
+          LOG.debug("Deleting {}", oldWalFile);
           boolean succeed = this.fs.delete(oldWalFile.getPath(), false);
           context.setResult(succeed);
         } catch (IOException e) {
           // fs.delete() fails.
-          LOG.warn("Failed to clean old WAL file", e);
+          LOG.warn("Failed to delete old WAL file", e);
           context.setResult(false);
         }
       } catch (InterruptedException ite) {
@@ -183,7 +189,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
         Thread.currentThread().interrupt();
         return;
       }
-      LOG.debug("Exiting");
+      LOG.trace("Exiting");
     }
   }
 
@@ -216,7 +222,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
         boolean completed = this.remainingResults.await(waitIfNotFinished,
             TimeUnit.MILLISECONDS);
         if (!completed) {
-          LOG.warn("Spend too much time [{}ms] to delete old WAL file: {}",
+          LOG.warn("Spent too much time [{}ms] deleting old WAL file: {}",
               waitIfNotFinished, target);
           return false;
         }

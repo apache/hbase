@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,22 +32,22 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -78,9 +79,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -91,7 +92,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestNamespaceAuditor {
 
   @ClassRule
@@ -99,7 +100,7 @@ public class TestNamespaceAuditor {
       HBaseClassTestRule.forClass(TestNamespaceAuditor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceAuditor.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Admin ADMIN;
   private String prefix = "TestNamespaceAuditor";
 
@@ -114,7 +115,8 @@ public class TestNamespaceAuditor {
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
-    UTIL.startMiniCluster();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2).build();
+    UTIL.startMiniCluster(option);
     waitForQuotaInitialize(UTIL);
     ADMIN = UTIL.getAdmin();
   }
@@ -148,41 +150,42 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     assertEquals(3, ADMIN.listNamespaceDescriptors().length);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
 
-    HTableDescriptor tableDescOne =
-        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
-    HTableDescriptor tableDescTwo =
-        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
-    HTableDescriptor tableDescThree =
-        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table3"));
-    tableDescThree.addFamily(fam1);
-    ADMIN.createTable(tableDescOne);
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescTwo = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
+    tableDescTwo.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescThree = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table3"));
+    tableDescThree.setColumnFamily(columnFamilyDescriptor);
+    ADMIN.createTable(tableDescOne.build());
     boolean constraintViolated = false;
     try {
-      ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
+      ADMIN.createTable(tableDescTwo.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
     } catch (Exception exp) {
       assertTrue(exp instanceof IOException);
       constraintViolated = true;
     } finally {
-      assertTrue("Constraint not violated for table " + tableDescTwo.getTableName(),
+      assertTrue("Constraint not violated for table " + tableDescTwo.build().getTableName(),
         constraintViolated);
     }
-    ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    ADMIN.createTable(tableDescTwo.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
     NamespaceTableAndRegionInfo nspState = getQuotaManager().getState(nsp);
     assertNotNull(nspState);
     assertTrue(nspState.getTables().size() == 2);
     assertTrue(nspState.getRegionCount() == 5);
     constraintViolated = false;
     try {
-      ADMIN.createTable(tableDescThree);
+      ADMIN.createTable(tableDescThree.build());
     } catch (Exception exp) {
       assertTrue(exp instanceof IOException);
       constraintViolated = true;
     } finally {
-      assertTrue("Constraint not violated for table " + tableDescThree.getTableName(),
+      assertTrue("Constraint not violated for table " + tableDescThree.build().getTableName(),
         constraintViolated);
     }
   }
@@ -203,7 +206,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq2")
@@ -216,7 +219,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq3")
@@ -229,7 +232,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq4")
@@ -242,7 +245,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
   }
 
@@ -257,28 +260,29 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(namespace));
     NamespaceTableAndRegionInfo stateInfo = getNamespaceState(nspDesc.getName());
     assertNotNull("Namespace state found null for " + namespace, stateInfo);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HTableDescriptor tableDescOne =
-        new HTableDescriptor(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
-    HTableDescriptor tableDescTwo =
-        new HTableDescriptor(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
-    ADMIN.createTable(tableDescOne);
-    ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table1"));
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescTwo = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table2"));
+    tableDescTwo.setColumnFamily(columnFamilyDescriptor);
+    ADMIN.createTable(tableDescOne.build());
+    ADMIN.createTable(tableDescTwo.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
     stateInfo = getNamespaceState(nspDesc.getName());
     assertNotNull("Namespace state found to be null.", stateInfo);
     assertEquals(2, stateInfo.getTables().size());
-    assertEquals(5, stateInfo.getRegionCountOfTable(tableDescTwo.getTableName()));
+    assertEquals(5, stateInfo.getRegionCountOfTable(tableDescTwo.build().getTableName()));
     assertEquals(6, stateInfo.getRegionCount());
-    ADMIN.disableTable(tableDescOne.getTableName());
-    deleteTable(tableDescOne.getTableName());
+    ADMIN.disableTable(tableDescOne.build().getTableName());
+    deleteTable(tableDescOne.build().getTableName());
     stateInfo = getNamespaceState(nspDesc.getName());
     assertNotNull("Namespace state found to be null.", stateInfo);
     assertEquals(5, stateInfo.getRegionCount());
     assertEquals(1, stateInfo.getTables().size());
-    ADMIN.disableTable(tableDescTwo.getTableName());
-    deleteTable(tableDescTwo.getTableName());
+    ADMIN.disableTable(tableDescTwo.build().getTableName());
+    deleteTable(tableDescTwo.build().getTableName());
     ADMIN.deleteNamespace(namespace);
     stateInfo = getNamespaceState(namespace);
     assertNull("Namespace state not found to be null.", stateInfo);
@@ -340,9 +344,9 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     byte[] columnFamily = Bytes.toBytes("info");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableTwo);
-    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableTwo)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(columnFamily)).build();
+    ADMIN.createTable(tableDescriptor, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     try (Table table = connection.getTable(tableTwo)) {
       UTIL.loadNumericRows(table, Bytes.toBytes("info"), 1000, 1999);
@@ -391,7 +395,7 @@ public class TestNamespaceAuditor {
     Collections.sort(hris, RegionInfo.COMPARATOR);
 
     // Fail region merge through Coprocessor hook
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     MasterCoprocessorHost cpHost = cluster.getMaster().getMasterCoprocessorHost();
     Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class);
     CPMasterObserver masterObserver = (CPMasterObserver) coprocessor;
@@ -436,12 +440,12 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
     byte[] columnFamily = Bytes.toBytes("info");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
-    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableOne)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(columnFamily)).build();
     MasterSyncObserver.throwExceptionInPreCreateTableAction = true;
     try {
       try {
-        ADMIN.createTable(tableDescOne);
+        ADMIN.createTable(tableDescriptor);
         fail("Table " + tableOne.toString() + "creation should fail.");
       } catch (Exception exp) {
         LOG.error(exp.toString(), exp);
@@ -454,7 +458,7 @@ public class TestNamespaceAuditor {
 
       MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       try {
-        ADMIN.createTable(tableDescOne);
+        ADMIN.createTable(tableDescriptor);
       } catch (Exception e) {
         fail("Table " + tableOne.toString() + "creation should succeed.");
         LOG.error(e.toString(), e);
@@ -476,17 +480,6 @@ public class TestNamespaceAuditor {
   private NamespaceTableAndRegionInfo getNamespaceState(String namespace) throws KeeperException,
       IOException {
     return getQuotaManager().getState(namespace);
-  }
-
-  byte[] getSplitKey(byte[] startKey, byte[] endKey) {
-    String skey = Bytes.toString(startKey);
-    int key;
-    if (StringUtils.isBlank(skey)) {
-      key = Integer.parseInt(Bytes.toString(endKey))/2 ;
-    } else {
-      key = (int) (Integer.parseInt(skey) * 1.5);
-    }
-    return Bytes.toBytes("" + key);
   }
 
   public static class CustomObserver implements RegionCoprocessor, RegionObserver {
@@ -520,33 +513,38 @@ public class TestNamespaceAuditor {
     TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
     TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     TableName tableThree = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table3");
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
-    tableDescOne.addFamily(fam1);
-    HTableDescriptor tableDescTwo = new HTableDescriptor(tableTwo);
-    tableDescTwo.addFamily(fam1);
-    HTableDescriptor tableDescThree = new HTableDescriptor(tableThree);
-    tableDescThree.addFamily(fam1);
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
-    ADMIN.createTable(tableDescTwo, Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
-    ADMIN.createTable(tableDescThree, Bytes.toBytes("1"), Bytes.toBytes("1000"), 4);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(tableOne);
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescTwo = TableDescriptorBuilder
+      .newBuilder(tableTwo);
+    tableDescTwo.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescThree = TableDescriptorBuilder
+      .newBuilder(tableThree);
+    tableDescThree.setColumnFamily(columnFamilyDescriptor);
+
+    ADMIN.createTable(tableDescOne.build(), Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
+    ADMIN.createTable(tableDescTwo.build(), Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
+    ADMIN.createTable(tableDescThree.build(), Bytes.toBytes("1"), Bytes.toBytes("1000"), 4);
     ADMIN.disableTable(tableThree);
     deleteTable(tableThree);
     // wait for chore to complete
     UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-       return (getNamespaceState(nsp1).getTables().size() == 2);
+        return (getNamespaceState(nsp1).getTables().size() == 2);
       }
     });
     NamespaceTableAndRegionInfo before = getNamespaceState(nsp1);
-    restartMaster();
+    killActiveMaster();
     NamespaceTableAndRegionInfo after = getNamespaceState(nsp1);
     assertEquals("Expected: " + before.getTables() + " Found: " + after.getTables(), before
         .getTables().size(), after.getTables().size());
   }
 
-  public static void waitForQuotaInitialize(final HBaseTestingUtility util) throws Exception {
+  public static void waitForQuotaInitialize(final HBaseTestingUtil util) throws Exception {
     util.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -560,10 +558,9 @@ public class TestNamespaceAuditor {
     });
   }
 
-  private void restartMaster() throws Exception {
+  private void killActiveMaster() throws Exception {
     UTIL.getHBaseCluster().getMaster(0).stop("Stopping to start again");
     UTIL.getHBaseCluster().waitOnMaster(0);
-    UTIL.getHBaseCluster().startMaster();
     waitForQuotaInitialize(UTIL);
   }
 
@@ -621,15 +618,16 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     assertEquals(3, ADMIN.listNamespaceDescriptors().length);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HTableDescriptor tableDescOne =
-        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
-    HTableDescriptor tableDescTwo =
-        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
-    ADMIN.createTable(tableDescOne);
-    ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptorBuilder tableDescTwo = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
+    tableDescTwo.setColumnFamily(columnFamilyDescriptor);
+    ADMIN.createTable(tableDescOne.build());
+    ADMIN.createTable(tableDescTwo.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
 
   @Test(expected = QuotaExceededException.class)
@@ -642,10 +640,12 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
-    tableDescOne.addFamily(fam1);
-    ADMIN.createTable(tableDescOne);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(tableName);
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    ADMIN.createTable(tableDescOne.build());
     String snapshot = "snapshot_testTableQuotaExceedWithCloneSnapshot";
     ADMIN.snapshot(snapshot, tableName);
     ADMIN.cloneSnapshot(snapshot, cloneTableName);
@@ -663,11 +663,13 @@ public class TestNamespaceAuditor {
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
 
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
-    tableDescOne.addFamily(fam1);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(tableName);
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
 
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    ADMIN.createTable(tableDescOne.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
     String snapshot = "snapshot_testCloneSnapshot";
     ADMIN.snapshot(snapshot, tableName);
     ADMIN.cloneSnapshot(snapshot, cloneTableName);
@@ -699,10 +701,12 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDescOne.addFamily(fam1);
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(tableName1);
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
+    ADMIN.createTable(tableDescOne.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
     assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
@@ -736,11 +740,13 @@ public class TestNamespaceAuditor {
     NamespaceDescriptor ndesc = ADMIN.getNamespaceDescriptor(nsp);
     assertNotNull("Namespace descriptor found null.", ndesc);
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDescOne.addFamily(fam1);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("fam1")).build();
+    TableDescriptorBuilder tableDescOne = TableDescriptorBuilder
+      .newBuilder(tableName1);
+    tableDescOne.setColumnFamily(columnFamilyDescriptor);
 
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    ADMIN.createTable(tableDescOne.build(), Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
     assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
@@ -751,7 +757,7 @@ public class TestNamespaceAuditor {
     // recreate table with 1 region and set max regions to 3 for namespace
     ADMIN.disableTable(tableName1);
     ADMIN.deleteTable(tableName1);
-    ADMIN.createTable(tableDescOne);
+    ADMIN.createTable(tableDescOne.build());
     ndesc.setConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "3");
     ADMIN.modifyNamespace(ndesc);
 

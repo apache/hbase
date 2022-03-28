@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -25,16 +28,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsZooKeeperSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsZooKeeperSource.class);
+    HBaseClassTestRule.forClass(TestMetricsZooKeeperSource.class);
 
-  @Test(expected=RuntimeException.class)
+  @Test
   public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
+    assertThat(CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class),
+      instanceOf(MetricsZooKeeperSourceImpl.class));
   }
 }

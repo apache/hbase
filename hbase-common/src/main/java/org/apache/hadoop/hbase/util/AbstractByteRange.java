@@ -59,7 +59,6 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class AbstractByteRange implements ByteRange {
-
   public static final int UNSET_HASH_VALUE = -1;
 
   // Note to maintainers: Do not make these final, as the intention is to
@@ -96,17 +95,16 @@ public abstract class AbstractByteRange implements ByteRange {
   }
 
   @Override
-  public abstract ByteRange unset();
-
-  @Override
   public ByteRange set(int capacity) {
     return set(new byte[capacity]);
   }
 
   @Override
   public ByteRange set(byte[] bytes) {
-    if (null == bytes)
+    if (null == bytes) {
       return unset();
+    }
+
     clearHashCache();
     this.bytes = bytes;
     this.offset = 0;
@@ -116,8 +114,10 @@ public abstract class AbstractByteRange implements ByteRange {
 
   @Override
   public ByteRange set(byte[] bytes, int offset, int length) {
-    if (null == bytes)
+    if (null == bytes) {
       return unset();
+    }
+
     clearHashCache();
     this.bytes = bytes;
     this.offset = offset;
@@ -172,15 +172,19 @@ public abstract class AbstractByteRange implements ByteRange {
 
   @Override
   public ByteRange get(int index, byte[] dst) {
-    if (0 == dst.length)
+    if (0 == dst.length) {
       return this;
+    }
+
     return get(index, dst, 0, dst.length);
   }
 
   @Override
   public ByteRange get(int index, byte[] dst, int offset, int length) {
-    if (0 == length)
+    if (0 == length) {
       return this;
+    }
+
     System.arraycopy(this.bytes, this.offset + index, dst, offset, length);
     return this;
   }
@@ -242,27 +246,6 @@ public abstract class AbstractByteRange implements ByteRange {
     }
     return rPos + 1;
   }
-
-  @Override
-  public abstract ByteRange put(int index, byte val);
-
-  @Override
-  public abstract ByteRange put(int index, byte[] val);
-
-  @Override
-  public abstract ByteRange put(int index, byte[] val, int offset, int length);
-
-  @Override
-  public abstract ByteRange putInt(int index, int val);
-
-  @Override
-  public abstract ByteRange putLong(int index, long val);
-
-  @Override
-  public abstract ByteRange putShort(int index, short val);
-
-  @Override
-  public abstract int putVLong(int index, long val);
 
   //
   // methods for duplicating the current instance

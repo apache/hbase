@@ -35,9 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -48,7 +47,8 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,6 +62,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -90,7 +91,7 @@ public class TestSnapshotTemporaryDirectory {
       Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR + UUID.randomUUID().toString();
 
   protected static Admin admin;
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
@@ -127,8 +128,8 @@ public class TestSnapshotTemporaryDirectory {
 
   @Before
   public void setup() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    htd.setRegionReplication(getNumReplicas());
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas()).build();
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
   }
 
@@ -156,7 +157,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreDisabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
     String snapshotName0 = "snaptb0-" + tid;
@@ -223,7 +224,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreEnabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
     String snapshotName0 = "snaptb0-" + tid;
@@ -299,17 +300,15 @@ public class TestSnapshotTemporaryDirectory {
     UTIL.loadTable(table, TEST_FAM, false);
 
     LOG.debug("FS state before disable:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // XXX if this is flakey, might want to consider using the async version and looping as
     // disableTable can succeed and still timeout.
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
@@ -325,9 +324,8 @@ public class TestSnapshotTemporaryDirectory {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     SnapshotTestingUtils
         .confirmSnapshotValid(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)),
@@ -388,15 +386,13 @@ public class TestSnapshotTemporaryDirectory {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     LOG.debug("FS state before disable:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     String snapshot = "testOfflineTableSnapshotWithEmptyRegion";
@@ -405,15 +401,14 @@ public class TestSnapshotTemporaryDirectory {
 
     // make sure we have the snapshot
     List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+      SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils
-        .logFileSystemState(UTIL.getTestFileSystem(), FSUtils.getRootDir(UTIL.getConfiguration()),
-            LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();
@@ -431,7 +426,7 @@ public class TestSnapshotTemporaryDirectory {
     Admin admin = UTIL.getAdmin();
     TableName tableName2 = TableName.valueOf("testListTableSnapshots");
     try {
-      HTableDescriptor htd = new HTableDescriptor(tableName2);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName2).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";

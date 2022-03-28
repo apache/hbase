@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListDeadservers < Command
       def help
-        <<-EOF
+        <<~EOF
            List all dead region servers in hbase
            Examples:
            hbase> list_deadservers
@@ -37,7 +37,7 @@ module Shell
           formatter.row([server.toString])
         end
 
-        formatter.footer(now, servers.size)
+        formatter.footer(servers.size)
       end
     end
   end

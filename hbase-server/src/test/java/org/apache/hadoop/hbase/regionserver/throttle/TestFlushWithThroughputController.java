@@ -22,12 +22,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -43,7 +41,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -57,7 +55,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestFlushWithThroughputController {
 
   @ClassRule
@@ -68,7 +66,7 @@ public class TestFlushWithThroughputController {
       LoggerFactory.getLogger(TestFlushWithThroughputController.class);
   private static final double EPSILON = 1.3E-6;
 
-  private HBaseTestingUtility hbtu;
+  private HBaseTestingUtil hbtu;
   @Rule public TestName testName = new TestName();
   private TableName tableName;
   private final byte[] family = Bytes.toBytes("f");
@@ -76,7 +74,7 @@ public class TestFlushWithThroughputController {
 
   @Before
   public void setUp() {
-    hbtu = new HBaseTestingUtility();
+    hbtu = new HBaseTestingUtil();
     tableName = TableName.valueOf("Table-" + testName.getMethodName());
     hbtu.getConfiguration().set(
         FlushThroughputControllerFactory.HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY,
@@ -89,7 +87,7 @@ public class TestFlushWithThroughputController {
   }
 
   private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = hbtu.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = hbtu.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
@@ -116,13 +114,12 @@ public class TestFlushWithThroughputController {
     // Internally, throughput is controlled after every cell write, so keep value size less for
     // better control.
     final int NUM_FLUSHES = 3, NUM_PUTS = 50, VALUE_SIZE = 200 * 1024;
-    Random rand = new Random();
     long duration = 0;
     for (int i = 0; i < NUM_FLUSHES; i++) {
       // Write about 10M (10 times of throughput rate) per iteration.
       for (int j = 0; j < NUM_PUTS; j++) {
         byte[] value = new byte[VALUE_SIZE];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       long startTime = System.nanoTime();
@@ -190,18 +187,11 @@ public class TestFlushWithThroughputController {
     // assertion here.
     assertTrue(regionServer.getFlushPressure() < pressure);
     Thread.sleep(5000);
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(hbtu.getConfiguration());
-    if (tablesOnMaster) {
-      // If no tables on the master, this math is off and I'm not sure what it is supposed to be
-      // when meta is on the regionserver and not on the master.
-      assertEquals(10L * 1024 * 1024, throughputController.getMaxThroughput(), EPSILON);
-    }
     Table table = conn.getTable(tableName);
-    Random rand = new Random();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[256 * 1024];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
     }

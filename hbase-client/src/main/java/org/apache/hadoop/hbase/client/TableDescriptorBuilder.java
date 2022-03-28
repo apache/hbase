@@ -32,15 +32,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +53,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
+ * Convenience class for composing an instance of {@link TableDescriptor}.
  * @since 2.0.0
  */
 @InterfaceAudience.Public
@@ -66,12 +71,6 @@ public class TableDescriptorBuilder {
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   private static final Bytes MAX_FILESIZE_KEY
           = new Bytes(Bytes.toBytes(MAX_FILESIZE));
-
-  @InterfaceAudience.Private
-  public static final String OWNER = "OWNER";
-  @InterfaceAudience.Private
-  public static final Bytes OWNER_KEY
-          = new Bytes(Bytes.toBytes(OWNER));
 
   /**
    * Used by rest interface to access this metadata attribute
@@ -173,7 +172,14 @@ public class TableDescriptorBuilder {
       new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_COUNT));
 
   @InterfaceAudience.Private
+  public static final String NORMALIZER_TARGET_REGION_SIZE_MB = "NORMALIZER_TARGET_REGION_SIZE_MB";
+  private static final Bytes NORMALIZER_TARGET_REGION_SIZE_MB_KEY =
+      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
+  // TODO: Keeping backward compatability with HBASE-25651 change. Can be removed in later version
+  @InterfaceAudience.Private
+  @Deprecated
   public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
+  @Deprecated
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
       new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
 
@@ -187,6 +193,9 @@ public class TableDescriptorBuilder {
   public static final String PRIORITY = "PRIORITY";
   private static final Bytes PRIORITY_KEY
           = new Bytes(Bytes.toBytes(PRIORITY));
+
+  private static final Bytes RSGROUP_KEY =
+      new Bytes(Bytes.toBytes(RSGroupInfo.TABLE_DESC_PROP_GROUP));
 
   /**
    * Relative priority of the table used for rpc scheduling
@@ -214,11 +223,6 @@ public class TableDescriptorBuilder {
   public static final boolean DEFAULT_MERGE_ENABLED = true;
 
   /**
-   * Constant that denotes whether the table is normalized by default.
-   */
-  public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
-
-  /**
    * Constant that denotes the maximum default size of the memstore in bytes after which
    * the contents are flushed to the store files.
    */
@@ -239,11 +243,20 @@ public class TableDescriptorBuilder {
             String.valueOf(DEFAULT_MEMSTORE_FLUSH_SIZE));
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
-    DEFAULT_VALUES.put(NORMALIZATION_ENABLED, String.valueOf(DEFAULT_NORMALIZATION_ENABLED));
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     DEFAULT_VALUES.keySet().stream()
             .map(s -> new Bytes(Bytes.toBytes(s))).forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
+  }
+
+  public static PrettyPrinter.Unit getUnit(String key) {
+    switch (key) {
+      case MAX_FILESIZE:
+      case MEMSTORE_FLUSHSIZE:
+        return PrettyPrinter.Unit.BYTE;
+      default:
+        return PrettyPrinter.Unit.NONE;
+    }
   }
 
   /**
@@ -373,6 +386,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public boolean hasCoprocessor(String classNameToMatch) {
+    return desc.hasCoprocessor(classNameToMatch);
+  }
+
   public TableDescriptorBuilder setColumnFamily(final ColumnFamilyDescriptor family) {
     desc.setColumnFamily(Objects.requireNonNull(family));
     return this;
@@ -389,6 +406,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder removeValue(final String key) {
+    desc.removeValue(key);
+    return this;
+  }
+
   public TableDescriptorBuilder removeValue(Bytes key) {
     desc.removeValue(key);
     return this;
@@ -396,6 +418,16 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder removeValue(byte[] key) {
     desc.removeValue(key);
+    return this;
+  }
+
+  public TableDescriptorBuilder removeValue(BiPredicate<Bytes, Bytes> predicate) {
+    List<Bytes> toRemove =
+      desc.getValues().entrySet().stream().filter(e -> predicate.test(e.getKey(), e.getValue()))
+        .map(Map.Entry::getKey).collect(Collectors.toList());
+    for (Bytes key : toRemove) {
+      removeValue(key);
+    }
     return this;
   }
 
@@ -439,8 +471,19 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setMaxFileSize(String maxFileSize) throws HBaseException {
+    desc.setMaxFileSize(maxFileSize);
+    return this;
+  }
+
   public TableDescriptorBuilder setMemStoreFlushSize(long memstoreFlushSize) {
     desc.setMemStoreFlushSize(memstoreFlushSize);
+    return this;
+  }
+
+  public TableDescriptorBuilder setMemStoreFlushSize(String memStoreFlushSize)
+    throws HBaseException {
+    desc.setMemStoreFlushSize(memStoreFlushSize);
     return this;
   }
 
@@ -456,26 +499,6 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setNormalizationEnabled(final boolean isEnable) {
     desc.setNormalizationEnabled(isEnable);
-    return this;
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-   */
-  @Deprecated
-  public TableDescriptorBuilder setOwner(User owner) {
-    desc.setOwner(owner);
-    return this;
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-   */
-  @Deprecated
-  public TableDescriptorBuilder setOwnerString(String ownerString) {
-    desc.setOwnerString(ownerString);
     return this;
   }
 
@@ -519,6 +542,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public String getValue(String key) {
+    return desc.getValue(key);
+  }
+
   /**
    * Sets replication scope all & only the columns already in the builder. Columns added later won't
    * be backfilled with replication scope.
@@ -537,16 +564,17 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setRegionServerGroup(String group) {
+    desc.setValue(RSGROUP_KEY, group);
+    return this;
+  }
+
   public TableDescriptor build() {
     return new ModifyableTableDescriptor(desc);
   }
 
-  /**
-   * TODO: make this private after removing the HTableDescriptor
-   */
-  @InterfaceAudience.Private
-  public static class ModifyableTableDescriptor
-          implements TableDescriptor, Comparable<ModifyableTableDescriptor> {
+  private static final class ModifyableTableDescriptor
+    implements TableDescriptor, Comparable<ModifyableTableDescriptor> {
 
     private final TableName name;
 
@@ -567,11 +595,9 @@ public class TableDescriptorBuilder {
      * Construct a table descriptor specifying a TableName object
      *
      * @param name Table name.
-     * TODO: make this private after removing the HTableDescriptor
      */
-    @InterfaceAudience.Private
-    public ModifyableTableDescriptor(final TableName name) {
-      this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP);
+    private ModifyableTableDescriptor(final TableName name) {
+      this(name, Collections.emptyList(), Collections.emptyMap());
     }
 
     private ModifyableTableDescriptor(final TableDescriptor desc) {
@@ -585,11 +611,8 @@ public class TableDescriptorBuilder {
      * Makes a deep copy of the supplied descriptor.
      * @param name The new name
      * @param desc The descriptor.
-     * TODO: make this private after removing the HTableDescriptor
      */
-    @InterfaceAudience.Private
-    @Deprecated // only used by HTableDescriptor. remove this method if HTD is removed
-    public ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
+    private ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
       this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues());
     }
 
@@ -679,7 +702,7 @@ public class TableDescriptorBuilder {
               toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
@@ -688,14 +711,14 @@ public class TableDescriptorBuilder {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * Setter for storing metadata as a (key, value) pair in {@link #values} map
      *
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
     public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
@@ -709,6 +732,17 @@ public class TableDescriptorBuilder {
       } else {
         return new Bytes(f.apply(t));
       }
+    }
+
+    /**
+     * Remove metadata represented by the key from the {@link #values} map
+     *
+     * @param key Key whose key and value we're to remove from TableDescriptor
+     * parameters.
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor removeValue(final String key) {
+      return setValue(key, (String) null);
     }
 
     /**
@@ -825,12 +859,11 @@ public class TableDescriptorBuilder {
     /**
      * Check if normalization enable flag of the table is true. If flag is false
      * then no region normalizer won't attempt to normalize this table.
-     *
      * @return true if region normalization is enabled for this table
-     */
+     **/
     @Override
     public boolean isNormalizationEnabled() {
-      return getOrDefault(NORMALIZATION_ENABLED_KEY, Boolean::valueOf, DEFAULT_NORMALIZATION_ENABLED);
+      return getOrDefault(NORMALIZATION_ENABLED_KEY, Boolean::valueOf, false);
     }
 
     /**
@@ -851,7 +884,10 @@ public class TableDescriptorBuilder {
      */
     @Override
     public long getNormalizerTargetRegionSize() {
-      return getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1));
+      long target_region_size =
+        getOrDefault(NORMALIZER_TARGET_REGION_SIZE_MB_KEY, Long::valueOf, Long.valueOf(-1));
+      return target_region_size == Long.valueOf(-1) ? getOrDefault(
+        NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1)) : target_region_size;
     }
 
     /**
@@ -879,7 +915,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
-      return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
+      return setValue(NORMALIZER_TARGET_REGION_SIZE_MB_KEY, Long.toString(regionSize));
     }
 
     /**
@@ -972,6 +1008,11 @@ public class TableDescriptorBuilder {
       return setValue(MAX_FILESIZE_KEY, Long.toString(maxFileSize));
     }
 
+    public ModifyableTableDescriptor setMaxFileSize(String maxFileSize) throws HBaseException {
+      return setMaxFileSize(Long.parseLong(PrettyPrinter.
+        valueOf(maxFileSize, PrettyPrinter.Unit.BYTE)));
+    }
+
     /**
      * Returns the size of the memstore after which a flush to filesystem is
      * triggered.
@@ -995,6 +1036,12 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
       return setValue(MEMSTORE_FLUSHSIZE_KEY, Long.toString(memstoreFlushSize));
+    }
+
+    public ModifyableTableDescriptor setMemStoreFlushSize(String memStoreFlushSize)
+      throws HBaseException {
+      return setMemStoreFlushSize(Long.parseLong(PrettyPrinter.valueOf(memStoreFlushSize,
+        PrettyPrinter.Unit.BYTE)));
     }
 
     /**
@@ -1033,6 +1080,10 @@ public class TableDescriptorBuilder {
     public ModifyableTableDescriptor setColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
+      }
+      int flength = family.getName() == null ? 0 : family.getName().length;
+      if (flength > Byte.MAX_VALUE) {
+        throw new IllegalArgumentException("The length of family name is bigger than " + Byte.MAX_VALUE);
       }
       if (hasColumnFamily(family.getName())) {
         throw new IllegalArgumentException("Family '"
@@ -1159,7 +1210,7 @@ public class TableDescriptorBuilder {
           printCommaForAttr = true;
           s.append(key);
           s.append(" => ");
-          s.append('\'').append(value).append('\'');
+          s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
         }
 
         if (!userKeys.isEmpty()) {
@@ -1179,10 +1230,12 @@ public class TableDescriptorBuilder {
             printCommaForCfg = true;
             s.append('\'').append(key).append('\'');
             s.append(" => ");
-            s.append('\'').append(value).append('\'');
+            s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
           }
           s.append("}");
         }
+
+        s.append("}");
       }
 
       s.append("}"); // end METHOD
@@ -1508,39 +1561,11 @@ public class TableDescriptorBuilder {
       // if we found a match, remove it
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
+      } else {
+        throw new IllegalArgumentException(String
+          .format("coprocessor with class name %s was not found in the table attribute",
+            className));
       }
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    @Deprecated
-    public ModifyableTableDescriptor setOwner(User owner) {
-      return setOwnerString(owner != null ? owner.getShortName() : null);
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    // used by admin.rb:alter(table_name,*args) to update owner.
-    @Deprecated
-    public ModifyableTableDescriptor setOwnerString(String ownerString) {
-      return setValue(OWNER_KEY, ownerString);
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    @Override
-    @Deprecated
-    public String getOwnerString() {
-      // Note that every table should have an owner (i.e. should have OWNER_KEY set).
-      // hbase:meta should return system user as owner, not null (see
-      // MasterFileSystem.java:bootstrap()).
-      return getOrDefault(OWNER_KEY, Function.identity(), null);
     }
 
     /**
@@ -1577,8 +1602,22 @@ public class TableDescriptorBuilder {
     public int getColumnFamilyCount() {
       return families.size();
     }
+
+    @Override
+    public Optional<String> getRegionServerGroup() {
+      Bytes value = values.get(RSGROUP_KEY);
+      if (value != null) {
+        return Optional.of(Bytes.toString(value.get(), value.getOffset(), value.getLength()));
+      } else {
+        return Optional.empty();
+      }
+    }
   }
 
+  /**
+   * This method is mostly intended for internal use. However, it it also relied on by hbase-shell
+   * for backwards compatibility.
+   */
   private static Optional<CoprocessorDescriptor> toCoprocessorDescriptor(String spec) {
     Matcher matcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
     if (matcher.matches()) {

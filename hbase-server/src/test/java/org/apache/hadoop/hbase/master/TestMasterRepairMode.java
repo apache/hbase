@@ -18,29 +18,29 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -48,16 +48,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterRepairMode {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterRepairMode.class);
+    HBaseClassTestRule.forClass(TestMasterRepairMode.class);
 
   @Rule
   public TestName name = new TestName();
@@ -66,11 +65,11 @@ public class TestMasterRepairMode {
 
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
   }
 
   @After
@@ -88,16 +87,14 @@ public class TestMasterRepairMode {
   public void testNewCluster() throws Exception {
     enableMaintenanceMode();
 
-    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder()
-        .numRegionServers(0)
-        .numDataNodes(3)
-        .build());
+    TEST_UTIL.startMiniCluster(
+      StartTestingClusterOption.builder().numRegionServers(0).numDataNodes(3).build());
 
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
-        ResultScanner scanner = table.getScanner(new Scan())) {
+      ResultScanner scanner = table.getScanner(new Scan())) {
       assertNotNull("Could not read meta.", scanner.next());
     }
   }
@@ -117,25 +114,26 @@ public class TestMasterRepairMode {
     LOG.info("Starting master-only");
 
     enableMaintenanceMode();
-    TEST_UTIL.startMiniHBaseCluster(StartMiniClusterOption.builder()
-        .numRegionServers(0).createRootDir(false).build());
+    TEST_UTIL.startMiniHBaseCluster(
+      StartTestingClusterOption.builder().numRegionServers(0).createRootDir(false).build());
 
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
-        ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
-        Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
+      ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
+      Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
       assertTrue("Did not find user table records while reading hbase:meta",
-          results.anyMatch(r -> Arrays.equals(r.getRow(), testRepairMode.getName())));
+        results.anyMatch(r -> Arrays.equals(r.getRow(), testRepairMode.getName())));
     }
-
-    try (Table table = conn.getTable(testRepairMode);
-        ResultScanner scanner = table.getScanner(new Scan())) {
-      scanner.next();
-      fail("Should not be able to access user-space tables in repair mode.");
-    } catch (Exception e) {
-      // Expected
-    }
+    // use async table so we can set the timeout and retry value to let the operation fail fast
+    AsyncTable<?> table = conn.toAsyncConnection().getTableBuilder(testRepairMode)
+      .setScanTimeout(5, TimeUnit.SECONDS).setMaxRetries(2).build();
+    assertThrows("Should not be able to access user-space tables in repair mode.", Exception.class,
+      () -> {
+        try (ResultScanner scanner = table.getScanner(new Scan())) {
+          scanner.next();
+        }
+      });
   }
 }

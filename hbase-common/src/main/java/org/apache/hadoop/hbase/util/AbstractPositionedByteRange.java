@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Extends the basic {@link SimpleByteRange} implementation with position
@@ -47,9 +44,6 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   protected int position = 0;
 
   protected int limit = 0;
-
-  @Override
-  public abstract PositionedByteRange unset();
 
   @Override
   public PositionedByteRange set(int capacity) {
@@ -134,74 +128,21 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
 
   @Override
   public PositionedByteRange get(byte[] dst) {
-    if (0 == dst.length)
+    if (0 == dst.length) {
       return this;
-    return this.get(dst, 0, dst.length); // be clear we're calling self, not
-                                         // super
+    }
+
+    return this.get(dst, 0, dst.length); // be clear we're calling self, not super
   }
 
   @Override
   public PositionedByteRange get(byte[] dst, int offset, int length) {
-    if (0 == length)
+    if (0 == length) {
       return this;
+    }
+
     super.get(this.position, dst, offset, length);
     this.position += length;
-    return this;
-  }
-
-  @Override
-  public abstract PositionedByteRange put(byte val);
-
-  @Override
-  public abstract PositionedByteRange put(byte[] val);
-
-  @Override
-  public abstract PositionedByteRange put(byte[] val, int offset, int length);
-
-  @Override
-  public abstract PositionedByteRange putInt(int index, int val);
-
-  @Override
-  public abstract PositionedByteRange putLong(int index, long val);
-
-  @Override
-  public abstract PositionedByteRange putShort(int index, short val);
-
-  @Override
-  public abstract PositionedByteRange putInt(int val);
-
-  @Override
-  public abstract PositionedByteRange putLong(long val);
-
-  @Override
-  public abstract PositionedByteRange putShort(short val);
-
-  @Override
-  public abstract int putVLong(int index, long val);
-
-  @Override
-  public abstract int putVLong(long val);
-  /**
-   * Similar to {@link java.nio.ByteBuffer#flip()}. Sets length to position, position to
-   * offset.
-   */
-  @VisibleForTesting
-  PositionedByteRange flip() {
-    clearHashCache();
-    length = position;
-    position = offset;
-    return this;
-  }
-
-  /**
-   * Similar to {@link java.nio.ByteBuffer#clear()}. Sets position to 0, length to
-   * capacity.
-   */
-  @VisibleForTesting
-  PositionedByteRange clear() {
-    clearHashCache();
-    position = 0;
-    length = bytes.length - offset;
     return this;
   }
 
@@ -246,24 +187,6 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
     position += getVLongSize(p);
     return p;
   }
-
-  @Override
-  public abstract PositionedByteRange put(int index, byte val);
-
-  @Override
-  public abstract PositionedByteRange put(int index, byte[] val);
-
-  @Override
-  public abstract PositionedByteRange put(int index, byte[] val, int offset, int length);
-
-  @Override
-  public abstract PositionedByteRange deepCopy();
-
-  @Override
-  public abstract PositionedByteRange shallowCopy();
-
-  @Override
-  public abstract PositionedByteRange shallowCopySubRange(int innerOffset, int copyLength);
 
   @Override
   public PositionedByteRange setLimit(int limit) {

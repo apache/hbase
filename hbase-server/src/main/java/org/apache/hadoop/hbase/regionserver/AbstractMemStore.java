@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
@@ -28,12 +27,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
 
 /**
  * An abstract class, which implements the behaviour shared by all concrete memstore instances.
@@ -71,7 +70,9 @@ public abstract class AbstractMemStore implements MemStore {
 
   protected static void addToScanners(Segment segment, long readPt,
       List<KeyValueScanner> scanners) {
-    scanners.add(segment.getScanner(readPt));
+    if (!segment.isEmpty()) {
+      scanners.add(segment.getScanner(readPt));
+    }
   }
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c,
@@ -80,6 +81,7 @@ public abstract class AbstractMemStore implements MemStore {
     this.comparator = c;
     this.regionServices = regionServices;
     resetActive();
+    resetTimeOfOldestEdit();
     this.snapshot = SegmentFactory.instance().createImmutableSegment(c);
     this.snapshotId = NO_SNAPSHOT_ID;
   }
@@ -95,7 +97,10 @@ public abstract class AbstractMemStore implements MemStore {
         memstoreAccounting.getHeapSize(), memstoreAccounting.getOffHeapSize(),
         memstoreAccounting.getCellsCount());
     }
-    timeOfOldestEdit = Long.MAX_VALUE;
+  }
+
+  protected void resetTimeOfOldestEdit() {
+    this.timeOfOldestEdit = Long.MAX_VALUE;
   }
 
   /**
@@ -153,7 +158,7 @@ public abstract class AbstractMemStore implements MemStore {
     }
   }
 
-  private void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
+  protected void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
     Cell toAdd = maybeCloneWithAllocator(currentActive, cell, false);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See
@@ -227,6 +232,8 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
+   * This method is protected under {@link HStore#lock} write lock,<br/>
+   * and this method is used by {@link HStore#updateStorefiles} after flushing is completed.<br/>
    * The passed snapshot was successfully persisted; it can be let go.
    * @param id Id of the snapshot to clean out.
    * @see MemStore#snapshot()
@@ -240,6 +247,10 @@ public abstract class AbstractMemStore implements MemStore {
     }
     // OK. Passed in snapshot is same as current snapshot. If not-empty,
     // create a new snapshot and let the old one go.
+    doClearSnapShot();
+  }
+
+  protected void doClearSnapShot() {
     Segment oldSnapshot = this.snapshot;
     if (!this.snapshot.isEmpty()) {
       this.snapshot = SegmentFactory.instance().createImmutableSegment(this.comparator);
@@ -373,12 +384,10 @@ public abstract class AbstractMemStore implements MemStore {
     return comparator;
   }
 
-  @VisibleForTesting
   MutableSegment getActive() {
     return active;
   }
 
-  @VisibleForTesting
   ImmutableSegment getSnapshot() {
     return snapshot;
   }

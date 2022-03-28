@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,13 +41,15 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -272,7 +273,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
         Path parentDir = filePath.getParent();
         Path backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
         try {
-          if (FSUtils.listStatus(fs, backRefDir) == null) {
+          if (CommonFSUtils.listStatus(fs, backRefDir) == null) {
             return false;
           }
         } catch (IOException e) {
@@ -367,8 +368,8 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   public int doWork() throws IOException, InterruptedException {
     if (remoteDir != null) {
       URI defaultFs = remoteDir.getFileSystem(conf).getUri();
-      FSUtils.setFsDefault(conf, new Path(defaultFs));
-      FSUtils.setRootDir(conf, remoteDir);
+      CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
+      CommonFSUtils.setRootDir(conf, remoteDir);
     }
 
     // List Available Snapshots
@@ -384,7 +385,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       return 0;
     }
 
-    rootDir = FSUtils.getRootDir(conf);
+    rootDir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(rootDir.toUri(), conf);
     LOG.debug("fs=" + fs.getUri().toString() + " root=" + rootDir);
 
@@ -568,7 +569,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotProtos.SnapshotDescription snapshotDesc,
       final Map<Path, Integer> filesMap) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
@@ -592,7 +593,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
    */
   public static List<SnapshotDescription> getSnapshotList(final Configuration conf)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
@@ -623,7 +624,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       final AtomicLong uniqueHFilesMobSize) throws IOException {
     SnapshotProtos.SnapshotDescription snapshotDesc =
         ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     final FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);

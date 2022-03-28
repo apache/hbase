@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -101,7 +103,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
 
-    //start a http server with CountingFilter
+    //start an http server with CountingFilter
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
         SimpleFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
@@ -114,12 +116,12 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     final String hadooplogoURL = "/static/hadoop-logo.jpg";
 
     final String[] urls = {fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL};
-    final Random ran = new Random();
+    final Random rand = ThreadLocalRandom.current();
     final int[] sequence = new int[50];
 
     //generate a random sequence and update counts
     for(int i = 0; i < sequence.length; i++) {
-      sequence[i] = ran.nextInt(urls.length);
+      sequence[i] = rand.nextInt(urls.length);
     }
 
     //access the urls as the sequence
@@ -163,7 +165,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   @Test
   public void testServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
-    // start a http server with ErrorFilter
+    // start an http server with ErrorFilter
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
         ErrorFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);

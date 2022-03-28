@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Category({ IOTests.class, SmallTests.class })
 public class TestRAMCache {
   private static final Logger LOG = LoggerFactory.getLogger(TestRAMCache.class);
 
@@ -91,7 +91,7 @@ public class TestRAMCache {
     MockHFileBlock blk = new MockHFileBlock(BlockType.DATA, size, size, -1,
         ByteBuffer.wrap(byteArr, 0, size), HFileBlock.FILL_HEADER, -1, 52, -1,
         new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);
-    RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false, ByteBuffAllocator.NONE);
+    RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false);
 
     Assert.assertNull(cache.putIfAbsent(key, re));
     Assert.assertEquals(cache.putIfAbsent(key, re), re);

@@ -24,9 +24,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class SinusoidalFileListGenerator extends StoreFileListGenerator {
-  SinusoidalFileListGenerator() {
-    super(SinusoidalFileListGenerator.class);
-  }
 
   @Override
   public Iterator<List<HStoreFile>> iterator() {
@@ -53,4 +50,5 @@ class SinusoidalFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

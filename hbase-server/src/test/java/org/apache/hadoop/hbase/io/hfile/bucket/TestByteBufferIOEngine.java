@@ -48,8 +48,10 @@ public class TestByteBufferIOEngine {
   private static class MockBucketEntry extends BucketEntry {
     private long off;
 
-    MockBucketEntry(long offset, int length) {
-      super(offset & 0xFF00, length, 0, false);
+    MockBucketEntry(long offset, int length, ByteBuffAllocator allocator) {
+      super(offset & 0xFF00, length, 0, false, (entry) -> {
+        return ByteBuffAllocator.NONE;
+      }, allocator);
       this.off = offset;
     }
 
@@ -66,7 +68,11 @@ public class TestByteBufferIOEngine {
   }
 
   static BucketEntry createBucketEntry(long offset, int len) {
-    BucketEntry be = new MockBucketEntry(offset, len);
+    return createBucketEntry(offset, len, ByteBuffAllocator.HEAP);
+  }
+
+  static BucketEntry createBucketEntry(long offset, int len, ByteBuffAllocator allocator) {
+    BucketEntry be = new MockBucketEntry(offset, len, allocator);
     be.setDeserializerReference(DESERIALIZER);
     return be;
   }

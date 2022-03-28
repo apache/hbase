@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -66,7 +68,7 @@ public class Append extends Mutation {
    * @return this
    */
   public Append setTimeRange(long minStamp, long maxStamp) {
-    tr = new TimeRange(minStamp, maxStamp);
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 
@@ -160,10 +162,9 @@ public class Append extends Mutation {
 
   /**
    * Add column and value to this Append operation.
-   * @param cell
    * @return This instance
    */
-  @SuppressWarnings("unchecked")
+  @Override
   public Append add(final Cell cell) {
     try {
       super.add(cell);
@@ -223,5 +224,10 @@ public class Append extends Mutation {
   @Override
   public Append setTTL(long ttl) {
     return (Append) super.setTTL(ttl);
+  }
+
+  @Override
+  public CellBuilder getCellBuilder(CellBuilderType type) {
+    return getCellBuilder(type, Cell.Type.Put);
   }
 }

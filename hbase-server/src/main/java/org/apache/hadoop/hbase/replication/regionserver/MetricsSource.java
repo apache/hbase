@@ -19,17 +19,17 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
@@ -48,8 +48,8 @@ public class MetricsSource implements BaseSource {
   private long timeStampNextToReplicate;
 
   private final MetricsReplicationSourceSource singleSourceSource;
-  private final MetricsReplicationSourceSource globalSourceSource;
-  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
+  private final MetricsReplicationGlobalSourceSource globalSourceSource;
+  private Map<String, MetricsReplicationTableSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -61,7 +61,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
-    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    globalSourceSource = CompatibilitySingletonFactory
+      .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
   }
 
@@ -72,8 +73,8 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationSourceSource globalSourceSource,
-                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
+                       MetricsReplicationGlobalSourceSource globalSourceSource,
+                       Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
@@ -94,6 +95,29 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
+   * Update the table level replication metrics per table
+   *
+   * @param walEntries List of pairs of WAL entry and it's size
+   */
+  public void updateTableLevelMetrics(List<Pair<Entry, Long>> walEntries) {
+    for (Pair<Entry, Long> walEntryWithSize : walEntries) {
+      Entry entry = walEntryWithSize.getFirst();
+      long entrySize = walEntryWithSize.getSecond();
+      String tableName = entry.getKey().getTableName().getNameAsString();
+      long writeTime = entry.getKey().getWriteTime();
+      long age = EnvironmentEdgeManager.currentTime() - writeTime;
+
+      // get the replication metrics source for table at the run time
+      MetricsReplicationTableSource tableSource = this.getSingleSourceSourceByTable()
+        .computeIfAbsent(tableName,
+          t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+            .getTableSource(t));
+      tableSource.setLastShippedAge(age);
+      tableSource.incrShippedBytes(entrySize);
+    }
+  }
+
+  /**
    * Set the age of the last edit that was shipped group by table
    * @param timestamp write time of the edit
    * @param tableName String as group and tableName
@@ -102,7 +126,7 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     this.getSingleSourceSourceByTable().computeIfAbsent(
         tableName, t -> CompatibilitySingletonFactory
-            .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
+            .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t))
             .setLastShippedAge(age);
   }
 
@@ -111,7 +135,7 @@ public class MetricsSource implements BaseSource {
    * @param walGroup which group we are getting
    * @return age
    */
-  public long getAgeofLastShippedOp(String walGroup) {
+  public long getAgeOfLastShippedOp(String walGroup) {
     return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
   }
 
@@ -142,6 +166,22 @@ public class MetricsSource implements BaseSource {
   public void decrSizeOfLogQueue() {
     singleSourceSource.decrSizeOfLogQueue(1);
     globalSourceSource.decrSizeOfLogQueue(1);
+  }
+
+  /**
+   * Increment the count for initializing sources
+   */
+  public void incrSourceInitializing() {
+    singleSourceSource.incrSourceInitializing();
+    globalSourceSource.incrSourceInitializing();
+  }
+
+  /**
+   * Decrement the count for initializing sources
+   */
+  public void decrSourceInitializing() {
+    singleSourceSource.decrSourceInitializing();
+    globalSourceSource.decrSourceInitializing();
   }
 
   /**
@@ -260,15 +300,13 @@ public class MetricsSource implements BaseSource {
     return singleSourceSource.getSizeOfLogQueue();
   }
 
+
   /**
-   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
-   * @return lastTimestampForAge
-   * @deprecated Since 2.0.0. Removed in 3.0.0.
-   * @see #getTimestampOfLastShippedOp()
+   * Get the value of uncleanlyClosedWAL counter
+   * @return uncleanlyClosedWAL
    */
-  @Deprecated
-  public long getTimeStampOfLastShippedOp() {
-    return getTimestampOfLastShippedOp();
+  public long getUncleanlyClosedWALs() {
+    return singleSourceSource.getUncleanlyClosedWALs();
   }
 
   /**
@@ -309,6 +347,14 @@ public class MetricsSource implements BaseSource {
     }else{
       return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
     }
+  }
+
+  /**
+   * Get the source initializing counts
+   * @return number of replication sources getting initialized
+   */
+  public int getSourceInitializing() {
+    return singleSourceSource.getSourceInitializing();
   }
 
   /**
@@ -373,6 +419,17 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrFailedRecoveryQueue();
   }
 
+  /*
+   Sets the age of oldest log file just for source.
+  */
+  public void setOldestWalAge(long age) {
+    singleSourceSource.setOldestWalAge(age);
+  }
+
+  public long getOldestWalAge() {
+    return singleSourceSource.getOldestWalAge();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();
@@ -435,8 +492,23 @@ public class MetricsSource implements BaseSource {
     return globalSourceSource.getMetricsName();
   }
 
-  @VisibleForTesting
-  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
+  @InterfaceAudience.Private
+  public Map<String, MetricsReplicationTableSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
+  }
+
+  /**
+   * Sets the amount of memory in bytes used in this RegionServer by edits pending replication.
+   */
+  public void setWALReaderEditsBufferUsage(long usageInBytes) {
+    globalSourceSource.setWALReaderEditsBufferBytes(usageInBytes);
+  }
+
+  /**
+   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
+   * @return
+   */
+  public long getWALReaderEditsBufferUsage() {
+    return globalSourceSource.getWALReaderEditsBufferBytes();
   }
 }

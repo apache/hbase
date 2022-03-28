@@ -53,6 +53,15 @@ public interface ReplicationPeerConfigBuilder {
   ReplicationPeerConfigBuilder putConfiguration(String key, String value);
 
   /**
+   * Removes a "raw" configuration property for this replication peer. For experts only.
+   * @param key Configuration property key to ve removed
+   * @return {@code this}
+   */
+  @InterfaceAudience.Private
+  ReplicationPeerConfigBuilder removeConfiguration(String key);
+
+
+  /**
    * Adds all of the provided "raw" configuration entries to {@code this}.
    * @param configuration A collection of raw configuration entries
    * @return {@code this}

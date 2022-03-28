@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift.TestThriftHttpServer;
+import org.apache.hadoop.hbase.thrift.ThriftServer;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
@@ -43,11 +45,8 @@ public class TestThrift2HttpServer extends TestThriftHttpServer {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestThrift2HttpServer.class);
 
-
-
-  @Override
-  protected ThriftServer createThriftServer() {
-    return new ThriftServer(TEST_UTIL.getConfiguration());
+  @Override protected Supplier<ThriftServer> getThriftServerSupplier() {
+    return () -> new org.apache.hadoop.hbase.thrift2.ThriftServer(TEST_UTIL.getConfiguration());
   }
 
   @Override

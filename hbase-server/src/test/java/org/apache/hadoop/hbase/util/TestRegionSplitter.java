@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -59,29 +59,29 @@ public class TestRegionSplitter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSplitter.class);
+    HBaseClassTestRule.forClass(TestRegionSplitter.class);
 
-    private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
-    private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-    private final static String CF_NAME = "SPLIT_TEST_CF";
-    private final static byte xFF = (byte) 0xff;
+  private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private final static String CF_NAME = "SPLIT_TEST_CF";
+  private final static byte xFF = (byte) 0xff;
 
-    @Rule
-    public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
-    @BeforeClass
-    public static void setup() throws Exception {
-        UTIL.startMiniCluster();
-    }
+  @BeforeClass
+  public static void setup() throws Exception {
+    UTIL.startMiniCluster();
+  }
 
-    @AfterClass
-    public static void teardown() throws Exception {
-        UTIL.shutdownMiniCluster();
-    }
+  @AfterClass
+  public static void teardown() throws Exception {
+    UTIL.shutdownMiniCluster();
+  }
 
-    /**
-     * Test creating a pre-split table using the HexStringSplit algorithm.
-     */
+  /**
+   * Test creating a pre-split table using the HexStringSplit algorithm.
+   */
   @Test
   public void testCreatePresplitTableHex() throws Exception {
     final List<byte[]> expectedBounds = new ArrayList<>(17);

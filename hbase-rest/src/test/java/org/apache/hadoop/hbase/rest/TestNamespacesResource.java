@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -25,7 +26,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -44,7 +45,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestNamespacesResource {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestNamespacesResource.class);
@@ -52,7 +52,7 @@ public class TestNamespacesResource {
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;
@@ -83,8 +83,8 @@ public class TestNamespacesResource {
 
   private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException {
     NamespaceDescriptor[] nd = admin.listNamespaceDescriptors();
-    for(int i = 0; i < nd.length; i++) {
-      if(nd[i].getName().equals(namespaceName)) {
+    for (NamespaceDescriptor namespaceDescriptor : nd) {
+      if (namespaceDescriptor.getName().equals(namespaceName)) {
         return true;
       }
     }
@@ -156,7 +156,7 @@ public class TestNamespacesResource {
   }
 
   @Test
-  public void testNamespaceListPBandDefault() throws IOException, JAXBException {
+  public void testNamespaceListPBandDefault() throws IOException {
     String schemaPath = "/namespaces/";
     NamespacesModel model;
     Response response;

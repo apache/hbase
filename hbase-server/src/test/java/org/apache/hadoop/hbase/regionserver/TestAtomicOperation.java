@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,16 +39,15 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -58,15 +56,17 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -84,7 +84,7 @@ import org.slf4j.LoggerFactory;
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
  */
-@Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
+@Category({VerySlowRegionServerTests.class, LargeTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
 
   @ClassRule
@@ -95,7 +95,7 @@ public class TestAtomicOperation {
   @Rule public TestName name = new TestName();
 
   HRegion region = null;
-  private HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   // Test names
   static  byte[] tableName;
@@ -295,18 +295,20 @@ public class TestAtomicOperation {
     initHRegion(tableName, callingMethod, null, families);
   }
 
-  private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
-    byte[] ... families)
-  throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    int i=0;
-    for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
-      htd.addFamily(hcd);
+  private void initHRegion(byte[] tableName, String callingMethod, int[] maxVersions,
+    byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
+
+    int i = 0;
+    for (byte[] family : families) {
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setMaxVersions(maxVersions != null ? maxVersions[i++] : 1).build();
+      builder.setColumnFamily(familyDescriptor);
     }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    region = TEST_UTIL.createLocalHRegion(info, htd);
+    TableDescriptor tableDescriptor = builder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
   }
 
   /**
@@ -568,7 +570,7 @@ public class TestAtomicOperation {
               region.mutateRowsWithLocks(mrm, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
               op ^= true;
               // check: should always see exactly one column
-              Scan s = new Scan(row);
+              Scan s = new Scan().withStartRow(row);
               RegionScanner rs = region.getScanner(s);
               List<Cell> r = new ArrayList<>();
               while (rs.next(r))
@@ -609,7 +611,6 @@ public class TestAtomicOperation {
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
-    protected final Random r = new Random();
 
     public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {
@@ -642,15 +643,18 @@ public class TestAtomicOperation {
   public void testPutAndCheckAndPutInParallel() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-        .addFamily(new HColumnDescriptor(family));
-    this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    this.region = TEST_UTIL.createLocalHRegion(tableDescriptorBuilder.build(), null, null);
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));
     put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
 
-    region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));
@@ -719,7 +723,7 @@ public class TestAtomicOperation {
     }
 
     @Override
-    public RowLock getRowLockInternal(final byte[] row, boolean readLock,
+    protected RowLock getRowLockInternal(final byte[] row, boolean readLock,
         final RowLock prevRowlock) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();

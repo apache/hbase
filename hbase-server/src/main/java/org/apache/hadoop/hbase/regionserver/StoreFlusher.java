@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -69,24 +70,31 @@ abstract class StoreFlusher {
     writer.close();
   }
 
+  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag)
+    throws IOException {
+    return store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(snapshot.getCellsCount())
+        .compression(store.getColumnFamilyDescriptor().getCompressionType()).isCompaction(false)
+        .includeMVCCReadpoint(true).includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
+        .shouldDropBehind(false));
+  }
 
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
-   * @param snapshotScanners
-   * @param smallestReadPoint
    * @return The scanner; null if coprocessor is canceling the flush.
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
-      long smallestReadPoint, FlushLifeCycleTracker tracker) throws IOException {
+    FlushLifeCycleTracker tracker) throws IOException {
     ScanInfo scanInfo;
     if (store.getCoprocessorHost() != null) {
       scanInfo = store.getCoprocessorHost().preFlushScannerOpen(store, tracker);
     } else {
       scanInfo = store.getScanInfo();
     }
+    final long smallestReadPoint = store.getSmallestReadPoint();
     InternalScanner scanner = new StoreScanner(store, scanInfo, snapshotScanners,
-        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
-    assert scanner != null;
+        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, PrivateConstants.OLDEST_TIMESTAMP);
+
     if (store.getCoprocessorHost() != null) {
       try {
         return store.getCoprocessorHost().preFlush(store, scanner, tracker);
@@ -102,11 +110,10 @@ abstract class StoreFlusher {
    * Performs memstore flush, writing data from scanner into sink.
    * @param scanner Scanner to get data from.
    * @param sink Sink to write data to. Could be StoreFile.Writer.
-   * @param smallestReadPoint Smallest read point used for the flush.
    * @param throughputController A controller to avoid flush too fast
    */
   protected void performFlush(InternalScanner scanner, CellSink sink,
-      long smallestReadPoint, ThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
     int compactionKVMax =
         conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
 
@@ -127,9 +134,6 @@ abstract class StoreFlusher {
         hasMore = scanner.next(kvs, scannerContext);
         if (!kvs.isEmpty()) {
           for (Cell c : kvs) {
-            // If we know that this KV is going to be included always, then let us
-            // set its memstoreTS to 0. This will help us save space when writing to
-            // disk.
             sink.append(c);
             if (control) {
               throughputController.control(flushName, c.getSerializedSize());

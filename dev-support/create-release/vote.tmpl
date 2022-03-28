@@ -1,28 +1,35 @@
-Please vote on this Apache HBase release candidate (RC), ${RELEASE_VERSION}.
+Please vote on this Apache ${PROJECT_TEXT} release candidate,
+${PROJECT}-${RELEASE_TAG}
 
 The VOTE will remain open for at least 72 hours.
 
-[ ] +1 Release this package as Apache HBase ${RELEASE_VERSION}
+[ ] +1 Release this package as Apache ${PROJECT_TEXT} ${RELEASE_VERSION}
 [ ] -1 Do not release this package because ...
 
 The tag to be voted on is ${RELEASE_TAG}:
 
- https://github.com/apache/hbase/tree/${RELEASE_TAG}
+  https://github.com/apache/${PROJECT}/tree/${RELEASE_TAG}
+
+This tag currently points to git reference
+
+  ${GIT_LONG_HASH}
 
 The release files, including signatures, digests, as well as CHANGES.md
 and RELEASENOTES.md included in this RC can be found at:
 
- https://dist.apache.org/repos/dist/dev/hbase/${RELEASE_TAG}/
+  https://dist.apache.org/repos/dist/dev/hbase/${DEST_DIR_NAME}/
 
 Maven artifacts are available in a staging repository at:
 
- https://repository.apache.org/content/repositories/${staged_repo_id}/
+  https://repository.apache.org/content/repositories/${staged_repo_id}/
 
 Artifacts were signed with the ${GPG_KEY} key which can be found in:
 
- https://dist.apache.org/repos/dist/release/hbase/KEYS
+  https://downloads.apache.org/hbase/KEYS
 
-To learn more about Apache HBase, please see http://hbase.apache.org/
+To learn more about Apache ${PROJECT_TEXT}, please see
+
+  http://hbase.apache.org/
 
 Thanks,
 Your HBase Release Manager

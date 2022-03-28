@@ -16,6 +16,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+require 'irb'
+require 'irb/workspace'
+
+#
+# Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
+# in our HBase shell. This will hold all the commands we want in our shell.
+#
+class HBaseReceiver < Object
+  def get_binding
+    binding
+  end
+end
+
+##
+# HBaseIOExtensions is a module to be "mixed-in" (ie. included) to Ruby's IO class. It is required
+# if you want to use RubyLex with an IO object. RubyLex claims to take an IO but really wants an
+# InputMethod.
+module HBaseIOExtensions
+  def encoding
+    external_encoding
+  end
+end
+
 
 # Shell commands module
 module Shell
@@ -77,6 +100,18 @@ module Shell
     @debug = false
     attr_accessor :debug
 
+    # keep track of the passed exit code. nil means never called.
+    @exit_code = nil
+    attr_accessor :exit_code
+
+    alias __exit__ exit
+    # exit the interactive shell and save that this
+    # happend via a call to exit
+    def exit(ret = 0)
+      @exit_code = ret
+      IRB.irb_exit(IRB.CurrentContext.irb, ret)
+    end
+
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
@@ -115,20 +150,48 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
-    def export_commands(where)
+    ##
+    # Create singleton methods on the target receiver object for all the loaded commands
+    #
+    # Therefore, export_commands will create "class methods" if passed a Module/Class and if passed
+    # an instance the methods will not exist on any other instances of the instantiated class.
+    def export_commands(target)
+      # We need to store a reference to this Shell instance in the scope of this method so that it
+      # can be accessed later in the scope of the target object.
+      shell_inst = self
+      # Define each method as a lambda. We need to use a lambda (rather than a Proc or block) for
+      # its properties: preservation of local variables and return
       ::Shell.commands.keys.each do |cmd|
-        # here where is the IRB namespace
-        # this method just adds the call to the specified command
-        # which just references back to 'this' shell object
-        # a decently extensible way to add commands
-        where.send :instance_eval, <<-EOF
-          def #{cmd}(*args)
-            ret = @shell.command('#{cmd}', *args)
-            puts
-            return ret
-          end
-        EOF
+        target.send :define_singleton_method, cmd.to_sym, lambda { |*args|
+          ret = shell_inst.command(cmd.to_s, *args)
+          puts
+          ret
+        }
       end
+      # Export help method
+      target.send :define_singleton_method, :help, lambda { |command = nil|
+        shell_inst.help(command)
+        nil
+      }
+      # Export tools method for backwards compatibility
+      target.send :define_singleton_method, :tools, lambda {
+        shell_inst.help_group('tools')
+        nil
+      }
+    end
+
+    # Export HBase commands, constants, and variables to target receiver
+    def export_all(target)
+      raise ArgumentError, 'target should not be a module' if target.is_a? Module
+
+      # add constants to class of target
+      target.class.include ::HBaseConstants
+      target.class.include ::HBaseQuotasConstants
+      # add instance variables @hbase and @shell for backwards compatibility
+      target.instance_variable_set :'@hbase', @hbase
+      target.instance_variable_set :'@shell', self
+      # add commands to target
+      export_commands(target)
     end
 
     def command_instance(command)
@@ -238,6 +301,51 @@ The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
+
+    @irb_workspace = nil
+    ##
+    # Returns an IRB Workspace for this shell instance with all the IRB and HBase commands installed
+    def get_workspace
+      return @irb_workspace unless @irb_workspace.nil?
+
+      hbase_receiver = HBaseReceiver.new
+      # install all the IRB commands onto our receiver
+      IRB::ExtendCommandBundle.extend_object(hbase_receiver)
+      # Install all the hbase commands, constants, and instance variables @shell and @hbase. This
+      # will override names that conflict with IRB methods like "help".
+      export_all(hbase_receiver)
+      # make it so calling exit will hit our pass-through rather than going directly to IRB
+      hbase_receiver.send :define_singleton_method, :exit, lambda { |rc = 0|
+        @shell.exit(rc)
+      }
+      ::IRB::WorkSpace.new(hbase_receiver.get_binding)
+    end
+
+    ##
+    # Runs a block and logs exception from both Ruby and Java, optionally discarding the traceback
+    #
+    # @param [Boolean] hide_traceback if true, Exceptions will be converted to
+    #   a SystemExit so that the traceback is not printed
+    def self.exception_handler(hide_traceback)
+      begin
+        yield
+      rescue Exception => e
+        message = e.to_s
+        # exception unwrapping in shell means we'll have to handle Java exceptions
+        # as a special case in order to format them properly.
+        if e.is_a? java.lang.Exception
+          warn 'java exception'
+          message = e.get_message
+        end
+        # Include the 'ERROR' string to try to make transition easier for scripts that
+        # may have already been relying on grepping output.
+        puts "ERROR #{e.class}: #{message}"
+        raise e unless hide_traceback
+
+        exit 1
+      end
+      nil
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end
@@ -333,10 +441,15 @@ Shell.load_command_group(
     normalizer_switch
     normalizer_enabled
     is_in_maintenance_mode
+    clear_slowlog_responses
     close_region
     compact
     compaction_switch
     flush
+    get_balancer_decisions
+    get_balancer_rejections
+    get_slowlog_responses
+    get_largelog_responses
     major_compact
     move
     split
@@ -354,6 +467,8 @@ Shell.load_command_group(
     compact_rs
     compaction_state
     trace
+    snapshot_cleanup_switch
+    snapshot_cleanup_enabled
     splitormerge_switch
     splitormerge_enabled
     clear_compaction_queues
@@ -362,6 +477,7 @@ Shell.load_command_group(
     clear_block_cache
     stop_master
     stop_regionserver
+    regioninfo
     rit
     list_decommissioned_regionservers
     decommission_regionservers
@@ -429,6 +545,7 @@ Shell.load_command_group(
   commands: %w[
     update_config
     update_all_config
+    update_rsgroup_config
   ]
 )
 
@@ -502,5 +619,18 @@ Shell.load_command_group(
     get_server_rsgroup
     get_table_rsgroup
     remove_servers_rsgroup
+    rename_rsgroup
+    alter_rsgroup_config
+    show_rsgroup_config
+    get_namespace_rsgroup
+  ]
+)
+
+Shell.load_command_group(
+  'storefiletracker',
+  full_name: 'StoreFileTracker',
+  commands: %w[
+    change_sft
+    change_sft_all
   ]
 )

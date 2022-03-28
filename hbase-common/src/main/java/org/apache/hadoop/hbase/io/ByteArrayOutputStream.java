@@ -22,6 +22,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -110,6 +111,10 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferWri
    */
   public byte[] toByteArray() {
     return Arrays.copyOf(buf, pos);
+  }
+
+  public void toByteBuff(ByteBuff buff) {
+    buff.put(buf, 0, pos);
   }
 
   /**

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
@@ -55,7 +56,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -217,6 +217,15 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private TimeoutExecutorThread<TEnvironment> timeoutExecutor;
 
+  /**
+   * WorkerMonitor check for stuck workers and new worker thread when necessary, for example if
+   * there is no worker to assign meta, it will new worker thread for it, so it is very important.
+   * TimeoutExecutor execute many tasks like DeadServerMetricRegionChore RegionInTransitionChore
+   * and so on, some tasks may execute for a long time so will block other tasks like
+   * WorkerMonitor, so use a dedicated thread for executing WorkerMonitor.
+   */
+  private TimeoutExecutorThread<TEnvironment> workerMonitorExecutor;
+
   private int corePoolSize;
   private int maxPoolSize;
 
@@ -275,7 +284,7 @@ public class ProcedureExecutor<TEnvironment> {
         }
         long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
         long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
-        if (retainer.isExpired(System.currentTimeMillis(), evictTtl, evictAckTtl)) {
+        if (retainer.isExpired(EnvironmentEdgeManager.currentTime(), evictTtl, evictAckTtl)) {
           LOG.debug("Procedure {} has already been finished and expired, skip force updating",
             procId);
           return;
@@ -560,7 +569,8 @@ public class ProcedureExecutor<TEnvironment> {
         corePoolSize, maxPoolSize);
 
     this.threadGroup = new ThreadGroup("PEWorkerGroup");
-    this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup);
+    this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup, "ProcExecTimeout");
+    this.workerMonitorExecutor = new TimeoutExecutorThread<>(this, threadGroup, "WorkerMonitor");
 
     // Create the workers
     workerId.set(0);
@@ -604,12 +614,13 @@ public class ProcedureExecutor<TEnvironment> {
     // Start the executors. Here we must have the lastProcId set.
     LOG.trace("Start workers {}", workerThreads.size());
     timeoutExecutor.start();
+    workerMonitorExecutor.start();
     for (WorkerThread worker: workerThreads) {
       worker.start();
     }
 
     // Internal chores
-    timeoutExecutor.add(new WorkerMonitor());
+    workerMonitorExecutor.add(new WorkerMonitor());
 
     // Add completed cleaner chore
     addChore(new CompletedProcedureCleaner<>(conf, store, procExecutionLock, completed,
@@ -624,14 +635,16 @@ public class ProcedureExecutor<TEnvironment> {
     LOG.info("Stopping");
     scheduler.stop();
     timeoutExecutor.sendStopSignal();
+    workerMonitorExecutor.sendStopSignal();
   }
 
-  @VisibleForTesting
   public void join() {
     assert !isRunning() : "expected not running";
 
     // stop the timeout executor
     timeoutExecutor.awaitTermination();
+    // stop the work monitor executor
+    workerMonitorExecutor.awaitTermination();
 
     // stop the worker threads
     for (WorkerThread worker: workerThreads) {
@@ -718,7 +731,10 @@ public class ProcedureExecutor<TEnvironment> {
    * Add a chore procedure to the executor
    * @param chore the chore to add
    */
-  public void addChore(ProcedureInMemoryChore<TEnvironment> chore) {
+  public void addChore(@Nullable ProcedureInMemoryChore<TEnvironment> chore) {
+    if (chore == null) {
+      return;
+    }
     chore.setState(ProcedureState.WAITING_TIMEOUT);
     timeoutExecutor.add(chore);
   }
@@ -728,7 +744,10 @@ public class ProcedureExecutor<TEnvironment> {
    * @param chore the chore to remove
    * @return whether the chore is removed, or it will be removed later
    */
-  public boolean removeChore(ProcedureInMemoryChore<TEnvironment> chore) {
+  public boolean removeChore(@Nullable ProcedureInMemoryChore<TEnvironment> chore) {
+    if (chore == null) {
+      return true;
+    }
     chore.setState(ProcedureState.SUCCESS);
     return timeoutExecutor.remove(chore);
   }
@@ -828,10 +847,12 @@ public class ProcedureExecutor<TEnvironment> {
       return;
     }
 
-    Procedure<TEnvironment> proc =
-      new FailedProcedure<>(procId.longValue(), procName, procOwner, nonceKey, exception);
+    completed.computeIfAbsent(procId, (key) -> {
+      Procedure<TEnvironment> proc = new FailedProcedure<>(procId.longValue(),
+          procName, procOwner, nonceKey, exception);
 
-    completed.putIfAbsent(procId, new CompletedProcedureRetainer<>(proc));
+      return new CompletedProcedureRetainer<>(proc);
+    });
   }
 
   // ==========================================================================
@@ -958,7 +979,7 @@ public class ProcedureExecutor<TEnvironment> {
       while (current != null) {
         LOG.debug("Bypassing {}", current);
         current.bypass(getEnvironment());
-        store.update(procedure);
+        store.update(current);
         long parentID = current.getParentProcId();
         current = getProcedure(parentID);
       }
@@ -1309,12 +1330,10 @@ public class ProcedureExecutor<TEnvironment> {
     return procId;
   }
 
-  @VisibleForTesting
   protected long getLastProcId() {
     return lastProcId.get();
   }
 
-  @VisibleForTesting
   public Set<Long> getActiveProcIds() {
     return procedures.keySet();
   }
@@ -1820,7 +1839,8 @@ public class ProcedureExecutor<TEnvironment> {
       // children have completed, move parent to front of the queue.
       store.update(parent);
       scheduler.addFront(parent);
-      LOG.info("Finished subprocedure(s) of " + parent + "; resume parent processing.");
+      LOG.info("Finished subprocedure pid={}, resume processing ppid={}",
+        procedure.getProcId(), parent.getProcId());
       return;
     }
   }
@@ -1908,17 +1928,14 @@ public class ProcedureExecutor<TEnvironment> {
     return rollbackStack.get(rootProcId);
   }
 
-  @VisibleForTesting
   ProcedureScheduler getProcedureScheduler() {
     return scheduler;
   }
 
-  @VisibleForTesting
   int getCompletedSize() {
     return completed.size();
   }
 
-  @VisibleForTesting
   public IdLock getProcExecutionLock() {
     return procExecutionLock;
   }

@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.thrift.Constants;
 import org.apache.hadoop.hbase.thrift2.client.ThriftConnection;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -99,11 +100,11 @@ public class TestThriftConnection {
   private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
   private static final long ONE_HOUR = 60 * 60 * 1000;
-  private static final long TS_2 = System.currentTimeMillis();
+  private static final long TS_2 = EnvironmentEdgeManager.currentTime();
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static ThriftServer thriftServer;
 
@@ -164,11 +165,11 @@ public class TestThriftConnection {
     // Do not start info server
     TEST_UTIL.getConfiguration().setInt(THRIFT_INFO_SERVER_PORT , -1);
     TEST_UTIL.startMiniCluster();
-    thriftPort = HBaseTestingUtility.randomFreePort();
-    httpPort = HBaseTestingUtility.randomFreePort();
+    thriftPort = HBaseTestingUtil.randomFreePort();
+    httpPort = HBaseTestingUtil.randomFreePort();
     // Start a thrift server
     thriftServer = startThriftServer(thriftPort, false);
-    // Start a HTTP thrift server
+    // Start an HTTP thrift server
     thriftHttpServer = startThriftServer(httpPort, true);
     thriftConnection = createConnection(thriftPort, false);
     thriftHttpConnection = createConnection(httpPort, true);
@@ -196,10 +197,19 @@ public class TestThriftConnection {
   }
 
   @Test
-  public void testThrfitAdmin() throws Exception {
-    testThriftAdmin(thriftConnection, "testThrfitAdminNamesapce", "testThrfitAdminTable");
-    testThriftAdmin(thriftHttpConnection, "testThrfitHttpAdminNamesapce",
-        "testThrfitHttpAdminTable");
+  public void testGetClusterId() {
+    String actualClusterId = TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId();
+    for (Connection conn: new Connection[] {thriftConnection, thriftHttpConnection}) {
+      String thriftClusterId = conn.getClusterId();
+      assertEquals(actualClusterId, thriftClusterId);
+    }
+  }
+
+  @Test
+  public void testThriftAdmin() throws Exception {
+    testThriftAdmin(thriftConnection, "testThriftAdminNamespace", "testThriftAdminTable");
+    testThriftAdmin(thriftHttpConnection, "testThriftHttpAdminNamespace",
+        "testThriftHttpAdminTable");
   }
 
   @Test
@@ -209,7 +219,7 @@ public class TestThriftConnection {
 
   }
 
-  public void testGet(Connection connection, String tableName) throws IOException {
+  private void testGet(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
     try (Table table = connection.getTable(TableName.valueOf(tableName))){
       Get get = new Get(ROW_1);
@@ -731,7 +741,7 @@ public class TestThriftConnection {
       filterList.addFilter(prefixFilter);
       filterList.addFilter(columnValueFilter);
       Scan scan = new Scan();
-      scan.setMaxVersions(2);
+      scan.readVersions(2);
       scan.setFilter(filterList);
       ResultScanner scanner = table.getScanner(scan);
       Iterator<Result> iterator = scanner.iterator();

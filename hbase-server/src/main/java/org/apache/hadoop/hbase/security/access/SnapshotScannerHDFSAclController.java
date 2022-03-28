@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,7 +64,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
@@ -179,8 +177,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       // 1. Create table directories to make HDFS acls can be inherited
       hdfsAclHelper.createTableDirectories(tableName);
       // 2. Add table owner HDFS acls
-      String owner =
-          desc.getOwnerString() == null ? getActiveUser(c).getShortName() : desc.getOwnerString();
+      String owner = getActiveUser(c).getShortName();
       hdfsAclHelper.addTableAcl(tableName, Sets.newHashSet(owner), "create");
       // 3. Record table owner permission is synced to HDFS in acl table
       SnapshotScannerHDFSAclStorage.addUserTableHdfsAcl(c.getEnvironment().getConnection(), owner,
@@ -222,9 +219,9 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   }
 
   @Override
-  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void postCompletedDeleteTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName) throws IOException {
-    if (needHandleTableHdfsAcl(tableName, "deleteTable " + tableName)) {
+    if (!tableName.isSystemTable() && checkInitialized("deleteTable " + tableName)) {
       /*
        * Remove table user access HDFS acl from namespace directory if the user has no permissions
        * of global, ns of the table or other tables of the ns, eg: Bob has 'ns1:t1' read permission,
@@ -235,14 +232,16 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       try (Table aclTable =
           ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
         Set<String> users = SnapshotScannerHDFSAclStorage.getTableUsers(aclTable, tableName);
-        // 1. Remove table archive directory default ACLs
-        hdfsAclHelper.removeTableDefaultAcl(tableName, users);
-        // 2. Delete table owner permission is synced to HDFS in acl table
-        SnapshotScannerHDFSAclStorage.deleteTableHdfsAcl(aclTable, tableName);
-        // 3. Remove namespace access acls
-        Set<String> removeUsers = filterUsersToRemoveNsAccessAcl(aclTable, tableName, users);
-        if (removeUsers.size() > 0) {
-          hdfsAclHelper.removeNamespaceAccessAcl(tableName, removeUsers, "delete");
+        if (users.size() > 0) {
+          // 1. Remove table archive directory default ACLs
+          hdfsAclHelper.removeTableDefaultAcl(tableName, users);
+          // 2. Delete table owner permission is synced to HDFS in acl table
+          SnapshotScannerHDFSAclStorage.deleteTableHdfsAcl(aclTable, tableName);
+          // 3. Remove namespace access acls
+          Set<String> removeUsers = filterUsersToRemoveNsAccessAcl(aclTable, tableName, users);
+          if (removeUsers.size() > 0) {
+            hdfsAclHelper.removeNamespaceAccessAcl(tableName, removeUsers, "delete");
+          }
         }
       }
     }
@@ -541,7 +540,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
     return isSet;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   boolean checkInitialized(String operation) {
     if (initialized) {
       if (aclTableInitialized) {

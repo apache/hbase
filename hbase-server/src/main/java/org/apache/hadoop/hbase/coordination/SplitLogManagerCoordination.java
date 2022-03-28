@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Coordination for SplitLogManager. It creates and works with tasks for split log operations<BR>
  * Manager prepares task by calling {@link #prepareTask} and submit it by
@@ -40,8 +38,11 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * Methods required for task life circle: <BR>
  * {@link #checkTaskStillAvailable(String)} Check that task is still there <BR>
  * {@link #checkTasks()} check for unassigned tasks and resubmit them
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
 @InterfaceAudience.Private
+@Deprecated
 public interface SplitLogManagerCoordination {
   /**
    * Detail class that shares data between coordination and split log manager
@@ -144,6 +145,5 @@ public interface SplitLogManagerCoordination {
    * Support method to init constants such as timeout. Mostly required for UTs.
    * @throws IOException
    */
-  @VisibleForTesting
   void init() throws IOException;
 }

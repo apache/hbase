@@ -17,22 +17,25 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeoutException;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
@@ -41,10 +44,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.FastThreadLocal;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 
 /**
  * Utility to help ipc'ing.
@@ -62,19 +69,19 @@ class IPCUtil {
    * @throws IOException if write action fails
    */
   public static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuffer cellBlock) throws IOException {
+      final ByteBuf cellBlock) throws IOException {
     // Must calculate total size and write that first so other side can read it all in in one
     // swoop. This is dictated by how the server is currently written. Server needs to change
     // if we are to be able to write without the length prefixing.
     int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(header, param);
     if (cellBlock != null) {
-      totalSize += cellBlock.remaining();
+      totalSize += cellBlock.readableBytes();
     }
     return write(dos, header, param, cellBlock, totalSize);
   }
 
   private static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuffer cellBlock, final int totalSize) throws IOException {
+      final ByteBuf cellBlock, final int totalSize) throws IOException {
     // I confirmed toBytes does same as DataOutputStream#writeInt.
     dos.write(Bytes.toBytes(totalSize));
     // This allocates a buffer that is the size of the message internally.
@@ -83,7 +90,7 @@ class IPCUtil {
       param.writeDelimitedTo(dos);
     }
     if (cellBlock != null) {
-      dos.write(cellBlock.array(), 0, cellBlock.remaining());
+      cellBlock.readBytes(dos, cellBlock.readableBytes());
     }
     dos.flush();
     return totalSize;
@@ -108,11 +115,10 @@ class IPCUtil {
   static RequestHeader buildRequestHeader(Call call, CellBlockMeta cellBlockMeta) {
     RequestHeader.Builder builder = RequestHeader.newBuilder();
     builder.setCallId(call.id);
-    //TODO handle htrace API change, see HBASE-18895
-    /*if (call.span != null) {
-      builder.setTraceInfo(RPCTInfo.newBuilder().setParentId(call.span.getSpanId())
-          .setTraceId(call.span.getTracerId()));
-    }*/
+    RPCTInfo.Builder traceBuilder = RPCTInfo.newBuilder();
+    GlobalOpenTelemetry.getPropagators().getTextMapPropagator().inject(Context.current(),
+      traceBuilder, (carrier, key, value) -> carrier.putHeaders(key, value));
+    builder.setTraceInfo(traceBuilder.build());
     builder.setMethodName(call.md.getName());
     builder.setRequestParam(call.param != null);
     if (cellBlockMeta != null) {
@@ -156,15 +162,21 @@ class IPCUtil {
     }
   }
 
+  private static String getCallTarget(Address addr, RegionInfo regionInfo) {
+    return "address=" + addr +
+      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): "");
+  }
+
   /**
-   * Takes an Exception and the address we were trying to connect to and return an IOException with
-   * the input exception as the cause. The new exception provides the stack trace of the place where
-   * the exception is thrown and some extra diagnostics information.
+   * Takes an Exception, the address, and if pertinent, the RegionInfo for the Region we were trying
+   * to connect to and returns an IOException with the input exception as the cause. The new
+   * exception provides the stack trace of the place where the exception is thrown and some extra
+   * diagnostics information.
    * <p/>
    * Notice that we will try our best to keep the original exception type when creating a new
    * exception, especially for the 'connection' exceptions, as it is used to determine whether this
-   * is a network issue or the remote side tells us clearly what is wrong, which is very important
-   * to decide whether to retry. If it is not possible to create a new exception with the same type,
+   * is a network issue or the remote side tells us clearly what is wrong, which is important
+   * deciding whether to retry. If it is not possible to create a new exception with the same type,
    * for example, the {@code error} is not an {@link IOException}, an {@link IOException} will be
    * created.
    * @param addr target address
@@ -172,17 +184,17 @@ class IPCUtil {
    * @return an exception to throw
    * @see ClientExceptionsUtil#isConnectionException(Throwable)
    */
-  static IOException wrapException(InetSocketAddress addr, Throwable error) {
+  static IOException wrapException(Address addr, RegionInfo regionInfo, Throwable error) {
     if (error instanceof ConnectException) {
       // connection refused; include the host:port in the error
-      return (IOException) new ConnectException(
-        "Call to " + addr + " failed on connection exception: " + error).initCause(error);
+      return (IOException) new ConnectException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on connection exception: " + error).initCause(error);
     } else if (error instanceof SocketTimeoutException) {
       return (IOException) new SocketTimeoutException(
-        "Call to " + addr + " failed because " + error).initCause(error);
+        "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error).initCause(error);
     } else if (error instanceof ConnectionClosingException) {
-      return (IOException) new ConnectionClosingException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new ConnectionClosingException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) error;
@@ -191,48 +203,80 @@ class IPCUtil {
       try {
         return (IOException) error.getClass().asSubclass(DoNotRetryIOException.class)
           .getConstructor(String.class)
-          .newInstance("Call to " + addr + " failed on local exception: " + error).initCause(error);
+          .newInstance("Call to " + getCallTarget(addr, regionInfo) +
+            " failed on local exception: " + error).initCause(error);
       } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
           | InvocationTargetException | NoSuchMethodException | SecurityException e) {
         // just ignore, will just new a DoNotRetryIOException instead below
       }
-      return (IOException) new DoNotRetryIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new DoNotRetryIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ConnectionClosedException) {
-      return (IOException) new ConnectionClosedException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new ConnectionClosedException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof CallTimeoutException) {
-      return (IOException) new CallTimeoutException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new CallTimeoutException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ClosedChannelException) {
       // ClosedChannelException does not have a constructor which takes a String but it is a
       // connection exception so we keep its original type
       return (IOException) error;
     } else if (error instanceof TimeoutException) {
       // TimeoutException is not an IOException, let's convert it to TimeoutIOException.
-      return (IOException) new TimeoutIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new TimeoutIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else {
       // try our best to keep the original exception type
       if (error instanceof IOException) {
         try {
           return (IOException) error.getClass().asSubclass(IOException.class)
             .getConstructor(String.class)
-            .newInstance("Call to " + addr + " failed on local exception: " + error)
+            .newInstance("Call to " + getCallTarget(addr, regionInfo) +
+              " failed on local exception: " + error)
             .initCause(error);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
             | InvocationTargetException | NoSuchMethodException | SecurityException e) {
           // just ignore, will just new an IOException instead below
         }
       }
-      return (IOException) new HBaseIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new HBaseIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     }
   }
 
   static void setCancelled(Call call) {
-    call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
+    call.setException(new CallCancelledException(call.toShortString() + ", waitTime="
         + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
         + call.timeout));
+  }
+
+  private static final FastThreadLocal<MutableInt> DEPTH = new FastThreadLocal<MutableInt>() {
+
+    @Override
+    protected MutableInt initialValue() throws Exception {
+      return new MutableInt(0);
+    }
+  };
+
+  static final int MAX_DEPTH = 4;
+
+  static void execute(EventLoop eventLoop, Runnable action) {
+    if (eventLoop.inEventLoop()) {
+      // this is used to prevent stack overflow, you can see the same trick in netty's LocalChannel
+      // implementation.
+      MutableInt depth = DEPTH.get();
+      if (depth.intValue() < MAX_DEPTH) {
+        depth.increment();
+        try {
+          action.run();
+        } finally {
+          depth.decrement();
+        }
+      } else {
+        eventLoop.execute(action);
+      }
+    } else {
+      eventLoop.execute(action);
+    }
   }
 }

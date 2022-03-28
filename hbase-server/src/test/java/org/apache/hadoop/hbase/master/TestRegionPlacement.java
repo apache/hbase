@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,25 +32,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
@@ -80,7 +83,7 @@ public class TestRegionPlacement {
       HBaseClassTestRule.forClass(TestRegionPlacement.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int SLAVES = 10;
   private static Connection CONNECTION;
   private static Admin admin;
@@ -190,13 +193,13 @@ public class TestRegionPlacement {
       throws IOException, InterruptedException, KeeperException {
     ServerName serverToKill = null;
     int killIndex = 0;
-    Random random = new Random(System.currentTimeMillis());
+    Random rand = ThreadLocalRandom.current();
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     LOG.debug("Server holding meta " + metaServer);
     boolean isNamespaceServer = false;
     do {
       // kill a random non-meta server carrying at least one region
-      killIndex = random.nextInt(SLAVES);
+      killIndex = rand.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
       Collection<HRegion> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
@@ -256,10 +259,10 @@ public class TestRegionPlacement {
     int rows = 100;
     int cols = 100;
     float[][] matrix = new float[rows][cols];
-    Random random = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        matrix[i][j] = random.nextFloat();
+        matrix[i][j] = rand.nextFloat();
       }
     }
 
@@ -280,7 +283,7 @@ public class TestRegionPlacement {
     // the same values on the original matrix.
     int[] transformedIndices = new int[rows];
     for (int i = 0; i < rows; i++) {
-      transformedIndices[i] = random.nextInt(cols);
+      transformedIndices[i] = rand.nextInt(cols);
     }
     int[] invertedTransformedIndices = rm.invertIndices(transformedIndices);
     float[] transformedValues = new float[rows];
@@ -373,7 +376,7 @@ public class TestRegionPlacement {
    */
   private void verifyRegionMovementNum(int expected)
       throws InterruptedException, IOException {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     int lastRegionOpenedCount = m.getAssignmentManager().getNumRegionsOpened();
     // get the assignments start to execute
@@ -420,7 +423,7 @@ public class TestRegionPlacement {
    */
   private void verifyRegionServerUpdated(FavoredNodesPlan plan) throws IOException {
     // Verify all region servers contain the correct favored nodes information
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
       for (Region region: rs.getRegions(TableName.valueOf("testRegionAssignment"))) {
@@ -450,7 +453,7 @@ public class TestRegionPlacement {
 
             assertNotNull(addrFromRS);
             assertNotNull(addrFromPlan);
-            assertTrue("Region server " + rs.getServerName().getHostAndPort()
+            assertTrue("Region server " + rs.getServerName().getAddress()
                 + " has the " + positions[j] +
                 " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "
@@ -473,12 +476,12 @@ public class TestRegionPlacement {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          RegionInfo info = MetaTableAccessor.getRegionInfo(result);
+          RegionInfo info = CatalogFamilyFormat.getRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
@@ -549,9 +552,9 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, splitKeys);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(tableDescriptor, splitKeys);
 
     try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {
       List<HRegionLocation> regions = r.getAllRegionLocations();

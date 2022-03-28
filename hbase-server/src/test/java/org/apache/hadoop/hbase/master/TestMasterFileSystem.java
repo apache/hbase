@@ -18,23 +18,20 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
 
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -60,7 +57,7 @@ public class TestMasterFileSystem {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFileSystem.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupTest() throws Exception {
@@ -76,8 +73,8 @@ public class TestMasterFileSystem {
   public void testFsUriSetProperly() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     MasterFileSystem fs = master.getMasterFileSystem();
-    Path masterRoot = FSUtils.getRootDir(fs.getConfiguration());
-    Path rootDir = FSUtils.getRootDir(fs.getFileSystem().getConf());
+    Path masterRoot = CommonFSUtils.getRootDir(fs.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(fs.getFileSystem().getConf());
     // make sure the fs and the found root dir have the same scheme
     LOG.debug("from fs uri:" + FileSystem.getDefaultUri(fs.getFileSystem().getConf()));
     LOG.debug("from configuration uri:" + FileSystem.getDefaultUri(fs.getConfiguration()));
@@ -86,7 +83,7 @@ public class TestMasterFileSystem {
   }
 
   @Test
-  public void testCheckTempDir() throws Exception {
+  public void testCheckNoTempDir() throws Exception {
     final MasterFileSystem masterFileSystem =
       UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
 
@@ -111,28 +108,13 @@ public class TestMasterFileSystem {
     // disable the table so that we can manipulate the files
     UTIL.getAdmin().disableTable(tableName);
 
-    final Path tableDir = FSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
     final Path tempDir = masterFileSystem.getTempDir();
-    final Path tempTableDir = FSUtils.getTableDir(tempDir, tableName);
+    final Path tempNsDir = CommonFSUtils.getNamespaceDir(tempDir,
+      tableName.getNamespaceAsString());
     final FileSystem fs = masterFileSystem.getFileSystem();
 
-    // move the table to the temporary directory
-    if (!fs.rename(tableDir, tempTableDir)) {
-      fail();
-    }
-
-    masterFileSystem.checkTempDir(tempDir, UTIL.getConfiguration(), fs);
-
-    // check if the temporary directory exists and is empty
-    assertTrue(fs.exists(tempDir));
-    assertEquals(0, fs.listStatus(tempDir).length);
-
-    // check for the existence of the archive directory
-    for (HRegion region : regions) {
-      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
-        region);
-      assertTrue(fs.exists(archiveDir));
-    }
+    // checks the temporary directory does not exist
+    assertFalse(fs.exists(tempNsDir));
 
     UTIL.deleteTable(tableName);
   }

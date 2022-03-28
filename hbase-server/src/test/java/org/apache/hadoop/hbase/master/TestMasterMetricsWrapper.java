@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -54,7 +56,7 @@ public class TestMasterMetricsWrapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetricsWrapper.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int NUM_RS = 4;
 
   @BeforeClass
@@ -71,16 +73,17 @@ public class TestMasterMetricsWrapper {
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
-    assertEquals(master.getSplitPlanCount(), info.getSplitPlanCount(), 0);
-    assertEquals(master.getMergePlanCount(), info.getMergePlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getMergePlanCount(), info.getMergePlanCount(), 0);
     assertEquals(master.getAverageLoad(), info.getAverageLoad(), 0);
     assertEquals(master.getClusterId(), info.getClusterId());
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
     assertEquals(master.getMasterStartTime(), info.getStartTime());
     assertEquals(master.getMasterCoprocessors().length, info.getCoprocessors().length);
     assertEquals(master.getServerManager().getOnlineServersList().size(), info.getNumRegionServers());
-    int regionServerCount =
-      NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 1: 0);
+    int regionServerCount = NUM_RS;
     assertEquals(regionServerCount, info.getNumRegionServers());
 
     String zkServers = info.getZookeeperQuorum();
@@ -98,7 +101,9 @@ public class TestMasterMetricsWrapper {
     }
     assertEquals(regionServerCount - 1, info.getNumRegionServers());
     assertEquals(1, info.getNumDeadRegionServers());
-    assertEquals(1, info.getNumWALFiles());
+    // now we do not expose this information as WALProcedureStore is not the only ProcedureStore
+    // implementation any more.
+    assertEquals(0, info.getNumWALFiles());
   }
 
   @Test
@@ -123,13 +128,14 @@ public class TestMasterMetricsWrapper {
     TableName table = TableName.valueOf("testRegionNumber");
     try {
       RegionInfo hri;
-      HTableDescriptor desc = new HTableDescriptor(table);
       byte[] FAMILY = Bytes.toBytes("FAMILY");
-      desc.addFamily(new HColumnDescriptor(FAMILY));
-      TEST_UTIL.getAdmin().createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(table)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+      TEST_UTIL.getAdmin().createTable(tableDescriptor, Bytes.toBytes("A"),
+        Bytes.toBytes("Z"), 5);
 
       // wait till the table is assigned
-      long timeoutTime = System.currentTimeMillis() + 1000;
+      long timeoutTime = EnvironmentEdgeManager.currentTime() + 1000;
       while (true) {
         List<RegionInfo> regions = master.getAssignmentManager().
           getRegionStates().getRegionsOfTable(table);
@@ -137,7 +143,7 @@ public class TestMasterMetricsWrapper {
           hri = regions.get(2);
           break;
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > timeoutTime) {
           fail("Could not find an online region");
         }
@@ -150,14 +156,14 @@ public class TestMasterMetricsWrapper {
 
       TEST_UTIL.getAdmin().offline(hri.getRegionName());
 
-      timeoutTime = System.currentTimeMillis() + 800;
+      timeoutTime = EnvironmentEdgeManager.currentTime() + 800;
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       while (true) {
         if (regionStates.getRegionByStateOfTable(table)
             .get(RegionState.State.OFFLINE).contains(hri)) {
           break;
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > timeoutTime) {
           fail("Failed to offline the region in time");
           break;

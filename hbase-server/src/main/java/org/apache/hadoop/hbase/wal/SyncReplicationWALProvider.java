@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
@@ -52,7 +53,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Streams;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -71,7 +71,6 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   private static final Logger LOG = LoggerFactory.getLogger(SyncReplicationWALProvider.class);
 
   // only for injecting errors for testcase, do not use it for other purpose.
-  @VisibleForTesting
   public static final String DUAL_WAL_IMPL = "hbase.wal.sync.impl";
 
   private final WALProvider provider;
@@ -108,11 +107,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    provider.init(factory, conf, providerId);
+    provider.init(factory, conf, providerId, abortable);
     this.conf = conf;
     this.factory = factory;
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
@@ -344,7 +344,6 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     }
   }
 
-  @VisibleForTesting
   WALProvider getWrappedProvider() {
     return provider;
   }

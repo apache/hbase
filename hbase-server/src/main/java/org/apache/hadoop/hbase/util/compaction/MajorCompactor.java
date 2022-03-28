@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -45,12 +44,13 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -156,7 +156,8 @@ public class MajorCompactor extends Configured implements Tool {
     LOG.info("All regions major compacted successfully");
   }
 
-  @VisibleForTesting void initializeWorkQueues() throws IOException {
+  @InterfaceAudience.Private
+  void initializeWorkQueues() throws IOException {
     if (storesToCompact.isEmpty()) {
       connection.getTable(tableName).getDescriptor().getColumnFamilyNames()
           .forEach(a -> storesToCompact.add(Bytes.toString(a)));
@@ -201,8 +202,7 @@ public class MajorCompactor extends Configured implements Tool {
 
   protected Optional<MajorCompactionRequest> getMajorCompactionRequest(RegionInfo hri)
       throws IOException {
-    return MajorCompactionRequest.newRequest(connection.getConfiguration(), hri, storesToCompact,
-            timestamp);
+    return MajorCompactionRequest.newRequest(connection, hri, storesToCompact, timestamp);
   }
 
   private Collection<ServerName> getServersToCompact(Set<ServerName> snSet) {
@@ -351,8 +351,7 @@ public class MajorCompactor extends Configured implements Tool {
       for (HRegionLocation location : locations) {
         if (location.getRegion().getRegionId() > timestamp) {
           Optional<MajorCompactionRequest> compactionRequest = MajorCompactionRequest
-              .newRequest(connection.getConfiguration(), location.getRegion(), storesToCompact,
-                  timestamp);
+              .newRequest(connection, location.getRegion(), storesToCompact, timestamp);
           compactionRequest.ifPresent(request -> clusterCompactionQueues
               .addToCompactionQueue(location.getServerName(), request));
         }
@@ -487,7 +486,8 @@ public class MajorCompactor extends Configured implements Tool {
     Configuration configuration = getConf();
     int concurrency = Integer.parseInt(commandLine.getOptionValue("servers"));
     long minModTime = Long.parseLong(
-        commandLine.getOptionValue("minModTime", String.valueOf(System.currentTimeMillis())));
+        commandLine.getOptionValue("minModTime",
+          String.valueOf(EnvironmentEdgeManager.currentTime())));
     String quorum =
         commandLine.getOptionValue("zk", configuration.get(HConstants.ZOOKEEPER_QUORUM));
     String rootDir = commandLine.getOptionValue("rootDir", configuration.get(HConstants.HBASE_DIR));

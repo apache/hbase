@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.appendFromThrift;
@@ -50,8 +52,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
@@ -59,14 +61,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
+import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
@@ -77,14 +85,22 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
+import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -102,9 +118,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   private static final Logger LOG = LoggerFactory.getLogger(ThriftHBaseServiceHandler.class);
 
   // nextScannerId and scannerMap are used to manage scanner state
-  // TODO: Cleanup thread for Scanners, Scanner id wrap
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
-  private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<>();
+  private final Cache<Integer, ResultScanner> scannerMap;
 
   private static final IOException ioe
       = new DoNotRetryIOException("Thrift Server is in Read-only mode.");
@@ -148,7 +163,14 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   public ThriftHBaseServiceHandler(final Configuration conf,
       final UserProvider userProvider) throws IOException {
     super(conf, userProvider);
+    long cacheTimeout = conf.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
     isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
+    scannerMap = CacheBuilder.newBuilder()
+      .expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
+      .removalListener((RemovalListener<Integer, ResultScanner>) removalNotification ->
+          removalNotification.getValue().close())
+      .build();
   }
 
   @Override
@@ -178,6 +200,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   private TIOError getTIOError(IOException e) {
     TIOError err = new TIOErrorWithCause(e);
+    err.setCanRetry(!(e instanceof DoNotRetryIOException));
     err.setMessage(e.getMessage());
     return err;
   }
@@ -199,16 +222,15 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
    * @return a Scanner, or null if the Id is invalid
    */
   private ResultScanner getScanner(int id) {
-    return scannerMap.get(id);
+    return scannerMap.getIfPresent(id);
   }
 
   /**
    * Removes the scanner associated with the specified ID from the internal HashMap.
    * @param id of the Scanner to remove
-   * @return the removed Scanner, or <code>null</code> if the Id is invalid
    */
-  protected ResultScanner removeScanner(int id) {
-    return scannerMap.remove(id);
+  protected void removeScanner(int id) {
+    scannerMap.invalidate(id);
   }
 
   @Override
@@ -453,18 +475,15 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     return results;
   }
 
-
-
   @Override
   public void closeScanner(int scannerId) throws TIOError, TIllegalArgument, TException {
     LOG.debug("scannerClose: id=" + scannerId);
     ResultScanner scanner = getScanner(scannerId);
     if (scanner == null) {
-      String message = "scanner ID is invalid";
-      LOG.warn(message);
-      TIllegalArgument ex = new TIllegalArgument();
-      ex.setMessage("Invalid scanner Id");
-      throw ex;
+      LOG.warn("scanner ID: " + scannerId + "is invalid");
+      // While the scanner could be already expired,
+      // we should not throw exception here. Just log and return.
+      return;
     }
     scanner.close();
     removeScanner(scannerId);
@@ -809,6 +828,86 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     } catch (IOException e) {
       throw getTIOError(e);
     }
+  }
+
+  @Override
+  public TThriftServerType getThriftServerType() {
+    return TThriftServerType.TWO;
+  }
+
+  @Override
+  public String getClusterId() throws TException {
+    return connectionCache.getClusterId();
+  }
+
+  @Override
+  public List<TOnlineLogRecord> getSlowLogResponses(Set<TServerName> tServerNames,
+      TLogQueryFilter tLogQueryFilter) throws TIOError, TException {
+    try {
+      Set<ServerName> serverNames = ThriftUtilities.getServerNamesFromThrift(tServerNames);
+      LogQueryFilter logQueryFilter =
+        ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+      List<OnlineLogRecord> onlineLogRecords =
+        connectionCache.getAdmin().getSlowLogResponses(serverNames, logQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromHBase(onlineLogRecords);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(Set<TServerName> tServerNames)
+      throws TIOError, TException {
+    Set<ServerName> serverNames = ThriftUtilities.getServerNamesFromThrift(tServerNames);
+    try {
+      return connectionCache.getAdmin().clearSlowLogResponses(serverNames);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public boolean grant(TAccessControlEntity info) throws TIOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getTIOError((IOException) t);
+      } else {
+        throw getTIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean revoke(TAccessControlEntity info) throws TIOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getTIOError((IOException) t);
+      } else {
+        throw getTIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
   }
 
   @Override

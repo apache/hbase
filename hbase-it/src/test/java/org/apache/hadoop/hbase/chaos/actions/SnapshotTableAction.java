@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to take a snapshot of a table.
 */
 public class SnapshotTableAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
@@ -38,10 +42,14 @@ public class SnapshotTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    String snapshotName = tableName + "-it-" + System.currentTimeMillis();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
+    String snapshotName = tableName + "-it-" + EnvironmentEdgeManager.currentTime();
     Admin admin = util.getAdmin();
 
     // Don't try the snapshot if we're stopping
@@ -49,7 +57,7 @@ public class SnapshotTableAction extends Action {
       return;
     }
 
-    LOG.info("Performing action: Snapshot table " + tableName);
+    getLogger().info("Performing action: Snapshot table {}", tableName);
     admin.snapshot(snapshotName, tableName);
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

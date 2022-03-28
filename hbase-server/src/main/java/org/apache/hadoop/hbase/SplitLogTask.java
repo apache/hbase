@@ -31,7 +31,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Encapsulates protobuf serialization/deserialization so we don't leak generated pb outside of
  * this class.  Used by regionserver and master packages.
  * <p>Immutable
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
+@Deprecated
 @InterfaceAudience.Private
 public class SplitLogTask {
   private final ServerName originServer;

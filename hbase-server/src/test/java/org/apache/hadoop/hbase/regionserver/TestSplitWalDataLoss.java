@@ -28,7 +28,7 @@ import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Testcase for https://issues.apache.org/jira/browse/HBASE-13811
  */
-@Category({ MediumTests.class })
+@Category({ LargeTests.class })
 public class TestSplitWalDataLoss {
 
   @ClassRule
@@ -70,7 +70,7 @@ public class TestSplitWalDataLoss {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWalDataLoss.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private NamespaceDescriptor namespace = NamespaceDescriptor.create(getClass().getSimpleName())
       .build();
@@ -125,13 +125,13 @@ public class TestSplitWalDataLoss {
       Matchers.<Collection<HStore>> any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
-    for (Map.Entry<String, HRegion> entry: rs.onlineRegions.entrySet()) {
+    for (Map.Entry<String, HRegion> entry: rs.getOnlineRegions().entrySet()) {
       if (entry.getValue().getRegionInfo().getTable().equals(this.tableName)) {
         key = entry.getKey();
         break;
       }
     }
-    rs.onlineRegions.put(key, spiedRegion);
+    rs.getOnlineRegions().put(key, spiedRegion);
     Connection conn = testUtil.getConnection();
 
     try (Table table = conn.getTable(tableName)) {
@@ -141,7 +141,7 @@ public class TestSplitWalDataLoss {
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
     LOG.info("CHANGE OLDEST " + oldestSeqIdOfStore);
     assertTrue(oldestSeqIdOfStore > HConstants.NO_SEQNUM);
-    rs.cacheFlusher.requestFlush(spiedRegion, false, FlushLifeCycleTracker.DUMMY);
+    rs.getMemStoreFlusher().requestFlush(spiedRegion, FlushLifeCycleTracker.DUMMY);
     synchronized (flushed) {
       while (!flushed.booleanValue()) {
         flushed.wait();

@@ -45,10 +45,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -58,7 +59,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestByteBufferUtils {
 
@@ -77,13 +78,13 @@ public class TestByteBufferUtils {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   private static void setUnsafe(String fieldName, boolean value) throws Exception {
     Field field = ByteBufferUtils.class.getDeclaredField(fieldName);
     field.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    Field modifiersField = ReflectionUtils.getModifiersField();
     modifiersField.setAccessible(true);
     int oldModifiers = field.getModifiers();
     modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
@@ -106,14 +107,14 @@ public class TestByteBufferUtils {
   }
 
   static void detectAvailabilityOfUnsafe() throws Exception {
-    if (ByteBufferUtils.UNSAFE_AVAIL != UnsafeAvailChecker.isAvailable()) {
-      setUnsafe(UNSAFE_AVAIL_NAME, UnsafeAvailChecker.isAvailable());
+    if (ByteBufferUtils.UNSAFE_AVAIL != HBasePlatformDependent.isUnsafeAvailable()) {
+      setUnsafe(UNSAFE_AVAIL_NAME, HBasePlatformDependent.isUnsafeAvailable());
     }
-    if (ByteBufferUtils.UNSAFE_UNALIGNED != UnsafeAvailChecker.unaligned()) {
-      setUnsafe(UNSAFE_UNALIGNED_NAME, UnsafeAvailChecker.unaligned());
+    if (ByteBufferUtils.UNSAFE_UNALIGNED != HBasePlatformDependent.unaligned()) {
+      setUnsafe(UNSAFE_UNALIGNED_NAME, HBasePlatformDependent.unaligned());
     }
-    assertEquals(ByteBufferUtils.UNSAFE_AVAIL, UnsafeAvailChecker.isAvailable());
-    assertEquals(ByteBufferUtils.UNSAFE_UNALIGNED, UnsafeAvailChecker.unaligned());
+    assertEquals(ByteBufferUtils.UNSAFE_AVAIL, HBasePlatformDependent.isUnsafeAvailable());
+    assertEquals(ByteBufferUtils.UNSAFE_UNALIGNED, HBasePlatformDependent.unaligned());
   }
 
   public TestByteBufferUtils(boolean useUnsafeIfPossible) throws Exception {

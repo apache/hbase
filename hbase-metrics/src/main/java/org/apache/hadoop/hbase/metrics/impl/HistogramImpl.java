@@ -36,7 +36,7 @@ public class HistogramImpl implements Histogram {
   private final CounterImpl counter;
 
   public HistogramImpl() {
-    this(Integer.MAX_VALUE << 2);
+    this((long) Integer.MAX_VALUE << 2);
   }
 
   public HistogramImpl(long maxExpected) {
@@ -74,8 +74,16 @@ public class HistogramImpl implements Histogram {
     return this.histogram.getMax();
   }
 
+  public long getMin() {
+    return this.histogram.getMin();
+  }
+
   @Override
   public Snapshot snapshot() {
     return histogram.snapshotAndReset();
+  }
+
+  public long[] getQuantiles(double[] quantiles) {
+    return histogram.getQuantiles(quantiles);
   }
 }

@@ -62,12 +62,21 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(Scan scan) throws Exception {
+  protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     AsyncTable<?> table = ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     List<Result> results = new ArrayList<>();
+    // these tests batch settings with the sample data result in each result being
+    // split in two. so we must allow twice the expected results in order to reach
+    // our true limit. see convertFromBatchResult for details.
+    if (closeAfter > 0 && scan.getBatch() > 0) {
+      closeAfter = closeAfter * 2;
+    }
     try (ResultScanner scanner = table.getScanner(scan)) {
       for (Result result; (result = scanner.next()) != null;) {
         results.add(result);
+        if (closeAfter > 0 && results.size() >= closeAfter) {
+          break;
+        }
       }
     }
     if (scan.getBatch() > 0) {

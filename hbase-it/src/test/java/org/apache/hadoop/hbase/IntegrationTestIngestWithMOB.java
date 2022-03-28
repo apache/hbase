@@ -21,13 +21,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
@@ -120,14 +120,12 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
     TableName tableName = getTablename();
     try (Connection connection = ConnectionFactory.createConnection();
          Admin admin = connection.getAdmin()) {
-      HTableDescriptor tableDesc = new HTableDescriptor(admin.getDescriptor(tableName));
+      TableDescriptor tableDesc = admin.getDescriptor(tableName);
       LOG.info("Disabling table " + getTablename());
       admin.disableTable(tableName);
       ColumnFamilyDescriptor mobColumn = tableDesc.getColumnFamily(mobColumnFamily);
       ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(mobColumn)
-        .setMobEnabled(true)
-        .setMobThreshold((long) threshold)
-        .build();
+        .setMobEnabled(true).setMobThreshold((long) threshold).build();
       admin.modifyColumnFamily(tableName, cfd);
       LOG.info("Enabling table " + getTablename());
       admin.enableTable(tableName);

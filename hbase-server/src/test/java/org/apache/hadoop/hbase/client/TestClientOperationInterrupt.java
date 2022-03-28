@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -48,7 +48,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({LargeTests.class, ClientTests.class})
 public class TestClientOperationInterrupt {
 
   @ClassRule
@@ -57,7 +57,7 @@ public class TestClientOperationInterrupt {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationInterrupt.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
@@ -83,7 +83,7 @@ public class TestClientOperationInterrupt {
     conf = HBaseConfiguration.create();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         TestCoprocessor.class.getName());
-    util = new HBaseTestingUtility(conf);
+    util = new HBaseTestingUtil(conf);
     util.startMiniCluster();
 
     Admin admin = util.getAdmin();

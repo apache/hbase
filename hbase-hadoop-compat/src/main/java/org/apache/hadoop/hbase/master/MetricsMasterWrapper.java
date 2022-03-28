@@ -31,6 +31,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MetricsMasterWrapper {
 
   /**
+   * Returns if the master is currently running and is not attempting to shutdown.
+   */
+  boolean isRunning();
+
+  /**
    * Get ServerName
    */
   String getServerName();
@@ -112,6 +117,20 @@ public interface MetricsMasterWrapper {
    * @return number of Dead region Servers
    */
   int getNumDeadRegionServers();
+
+  /**
+   * Get the draining region servers
+   *
+   * @return Draining region server
+   */
+  String getDrainingRegionServers();
+
+  /**
+   * Get the number of draining region servers
+   *
+   * @return number of draining region servers
+   */
+  int getNumDrainingRegionServers();
 
   /**
    * Get the number of master WAL files.

@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.Service;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * Coprocessor endpoints providing protobuf services should implement this

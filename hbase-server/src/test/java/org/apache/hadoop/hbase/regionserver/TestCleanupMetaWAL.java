@@ -17,17 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.SPLITTING_EXT;
+import static org.junit.Assert.fail;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -36,14 +39,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.SPLITTING_EXT;
-import static org.junit.Assert.fail;
-
 @Category(MediumTests.class)
 public class TestCleanupMetaWAL {
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanupMetaWAL.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -75,9 +75,9 @@ public class TestCleanupMetaWAL {
     LOG.info("DONE WAITING");
     MasterFileSystem fs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path walPath = new Path(fs.getWALRootDir(), HConstants.HREGION_LOGDIR_NAME);
-    for (FileStatus status : FSUtils.listStatus(fs.getFileSystem(), walPath)) {
+    for (FileStatus status : CommonFSUtils.listStatus(fs.getFileSystem(), walPath)) {
       if (status.getPath().toString().contains(SPLITTING_EXT)) {
-        fail("Should not have splitting wal dir here:" + status);
+        fail("Splitting WAL dir should have been cleaned up: " + status);
       }
     }
   }

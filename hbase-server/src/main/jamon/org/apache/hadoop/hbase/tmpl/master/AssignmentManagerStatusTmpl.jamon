@@ -119,18 +119,9 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
              </div>
          </%if>
          </div>
-         <nav>
-             <ul class="nav nav-pills pagination">
-             <%for int i = 1 ; i <= numOfPages; i++ %>
-                 <%if i == 1 %>
-                 <li class="active">
-                 <%else>
-                 <li>
-                 </%if>
-                 <a href="#tab_rits<% i %>"><% i %></a></li>
-             </%for>
-             </ul>
-         </nav>
+         <input type="hidden" id ="rit_page_num" value="<% numOfRITs %>" />
+         <input type="hidden" id ="rit_per_page" value="<% ritsPerPage %>" />
+         <nav id="rit_pagination"></nav>
      </div>
    </section>
  </%if>

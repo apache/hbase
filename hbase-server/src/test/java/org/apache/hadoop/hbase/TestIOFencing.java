@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
@@ -210,18 +210,20 @@ public class TestIOFencing {
     }
 
     @Override
-    protected void completeCompaction(Collection<HStoreFile> compactedFiles) throws IOException {
-      try {
-        r.compactionsWaiting.countDown();
-        r.compactionsBlocked.await();
-      } catch (InterruptedException ex) {
-        throw new IOException(ex);
+    protected void refreshStoreSizeAndTotalBytes() throws IOException {
+      if (r != null) {
+        try {
+          r.compactionsWaiting.countDown();
+          r.compactionsBlocked.await();
+        } catch (InterruptedException ex) {
+          throw new IOException(ex);
+        }
       }
-      super.completeCompaction(compactedFiles);
+      super.refreshStoreSizeAndTotalBytes();
     }
   }
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName TABLE_NAME =
       TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
@@ -291,17 +293,16 @@ public class TestIOFencing {
 
       // add a compaction from an older (non-existing) region to see whether we successfully skip
       // those entries
-      HRegionInfo oldHri = new HRegionInfo(table.getName(),
-        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      RegionInfo oldHri = RegionInfoBuilder.newBuilder(table.getName()).build();
       CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(oldHri,
         FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
         new Path("store_dir"));
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(),
-          ((HRegion)compactingRegion).getReplicationScope(),
-        oldHri, compactionDescriptor, compactingRegion.getMVCC());
+        ((HRegion) compactingRegion).getReplicationScope(), oldHri, compactionDescriptor,
+        compactingRegion.getMVCC(), null);
 
       // Wait till flush has happened, otherwise there won't be multiple store files
-      long startWaitTime = System.currentTimeMillis();
+      long startWaitTime = EnvironmentEdgeManager.currentTime();
       while (compactingRegion.getEarliestFlushTimeForAllStores() <= lastFlushTime ||
           compactingRegion.countStoreFiles() <= 1) {
         LOG.info("Waiting for the region to flush " +
@@ -309,7 +310,7 @@ public class TestIOFencing {
         Thread.sleep(1000);
         admin.flush(table.getName());
         assertTrue("Timed out waiting for the region to flush",
-          System.currentTimeMillis() - startWaitTime < 30000);
+          EnvironmentEdgeManager.currentTime() - startWaitTime < 30000);
       }
       assertTrue(compactingRegion.countStoreFiles() > 1);
       final byte REGION_NAME[] = compactingRegion.getRegionInfo().getRegionName();
@@ -323,7 +324,7 @@ public class TestIOFencing {
       LOG.info("Killing region server ZK lease");
       TEST_UTIL.expireRegionServerSession(0);
       CompactionBlockerRegion newRegion = null;
-      startWaitTime = System.currentTimeMillis();
+      startWaitTime = EnvironmentEdgeManager.currentTime();
       LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
 
       // wait for region to be assigned and to go out of log replay if applicable
@@ -357,16 +358,16 @@ public class TestIOFencing {
       TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT,
         FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       admin.majorCompact(TABLE_NAME);
-      startWaitTime = System.currentTimeMillis();
+      startWaitTime = EnvironmentEdgeManager.currentTime();
       while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
         assertTrue("New region never compacted",
-          System.currentTimeMillis() - startWaitTime < 180000);
+          EnvironmentEdgeManager.currentTime() - startWaitTime < 180000);
       }
       int count;
       for (int i = 0;; i++) {
         try {
-          count = TEST_UTIL.countRows(table);
+          count = HBaseTestingUtil.countRows(table);
           break;
         } catch (DoNotRetryIOException e) {
           // wait up to 30s

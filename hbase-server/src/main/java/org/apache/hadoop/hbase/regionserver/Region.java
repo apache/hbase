@@ -22,11 +22,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,6 +44,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -196,7 +200,8 @@ public interface Region extends ConfigurationObserver {
    */
   enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH
+    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH,
+    CHECK_AND_MUTATE
   }
 
   /**
@@ -253,7 +258,6 @@ public interface Region extends ConfigurationObserver {
   }
 
   /**
-   *
    * Get a row lock for the specified row. All locks are reentrant.
    *
    * Before calling this function make sure that a region operation has already been
@@ -271,8 +275,6 @@ public interface Region extends ConfigurationObserver {
    * @see #startRegionOperation()
    * @see #startRegionOperation(Operation)
    */
-  // TODO this needs to be exposed as we have RowProcessor now. If RowProcessor is removed, we can
-  // remove this too..
   RowLock getRowLock(byte[] row, boolean readLock) throws IOException;
 
   ///////////////////////////////////////////////////////////////////////////
@@ -289,7 +291,9 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform a batch of mutations.
    * <p>
-   * Note this supports only Put and Delete mutations and will ignore other types passed.
+   * Please do not operate on a same column of a single row in a batch, we will not consider the
+   * previous operation in the same batch when performing the operations in the batch.
+   *
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
@@ -310,7 +314,11 @@ public interface Region extends ConfigurationObserver {
    * @param comparator the expected value
    * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
     ByteArrayComparable comparator, Mutation mutation) throws IOException {
     return checkAndMutate(row, family, qualifier, op, comparator, TimeRange.allTime(), mutation);
@@ -329,9 +337,46 @@ public interface Region extends ConfigurationObserver {
    * @param mutation data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the mutation. See
+   * checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  default boolean checkAndMutate(byte [] row, Filter filter, Mutation mutation)
+    throws IOException {
+    return checkAndMutate(row, filter, TimeRange.allTime(), mutation);
+  }
+
+  /**
+   * Atomically checks if a row value matches the filter and if it does, it performs the mutation.
+   * See checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  boolean checkAndMutate(byte [] row, Filter filter, TimeRange timeRange, Mutation mutation)
+    throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
@@ -345,7 +390,11 @@ public interface Region extends ConfigurationObserver {
    * @param comparator the expected value
    * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, RowMutations mutations) throws IOException {
     return checkAndRowMutate(row, family, qualifier, op, comparator, TimeRange.allTime(),
@@ -365,10 +414,59 @@ public interface Region extends ConfigurationObserver {
    * @param mutations data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
       throws IOException;
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  default boolean checkAndRowMutate(byte[] row, Filter filter, RowMutations mutations)
+    throws IOException {
+    return checkAndRowMutate(row, filter, TimeRange.allTime(), mutations);
+  }
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  boolean checkAndRowMutate(byte [] row, Filter filter, TimeRange timeRange,
+    RowMutations mutations) throws IOException;
+
+  /**
+   * Atomically checks if a row matches the conditions and if it does, it performs the actions.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param checkAndMutate the CheckAndMutate object
+   * @return true if mutations were applied, false otherwise
+   * @throws IOException if an error occurred in this method
+   */
+  CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException;
 
   /**
    * Deletes the specified cells/row.
@@ -432,13 +530,14 @@ public interface Region extends ConfigurationObserver {
   Result increment(Increment increment) throws IOException;
 
   /**
-   * Performs multiple mutations atomically on a single row. Currently
-   * {@link Put} and {@link Delete} are supported.
+   * Performs multiple mutations atomically on a single row.
    *
    * @param mutations object that specifies the set of mutations to perform atomically
+   * @return results of Increment/Append operations. If no Increment/Append operations, it returns
+   *   null
    * @throws IOException
    */
-  void mutateRow(RowMutations mutations) throws IOException;
+  Result mutateRow(RowMutations mutations) throws IOException;
 
   /**
    * Perform atomic mutations within the region.
@@ -454,51 +553,9 @@ public interface Region extends ConfigurationObserver {
    * @throws IOException
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
+  // Changing processRowsWithLocks
   void mutateRowsWithLocks(Collection<Mutation> mutations, Collection<byte[]> rowsToLock,
       long nonceGroup, long nonce) throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
-      throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @param timeout The timeout of the processor.process() execution
-   *                Use a negative number to switch off the time bound
-   * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long timeout, long nonceGroup, long nonce)
-      throws IOException;
 
   /**
    * Puts some data in the table.
@@ -541,4 +598,10 @@ public interface Region extends ConfigurationObserver {
    * max wait time period.
    */
   boolean waitForFlushes(long timeout);
+
+  /**
+   * @return a read only configuration of this region; throws {@link UnsupportedOperationException}
+   *         if you try to set a configuration.
+   */
+  Configuration getReadOnlyConfiguration();
 }

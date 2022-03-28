@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Objects;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,24 +172,22 @@ public class ModifyNamespaceProcedure
 
   /**
    * Action before any real action of adding namespace.
-   * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private boolean prepareModify(final MasterProcedureEnv env) throws IOException {
-    if (getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName()) == false) {
+    if (!getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName())) {
       setFailure("master-modify-namespace",
         new NamespaceNotFoundException(newNsDescriptor.getName()));
       return false;
     }
-    try {
-      getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
-    } catch (ConstraintException e) {
-      setFailure("master-modify-namespace", e);
-      return false;
-    }
+    getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
 
     // This is used for rollback
     oldNsDescriptor = getTableNamespaceManager(env).get(newNsDescriptor.getName());
+    if (!Objects.equals(
+      oldNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP),
+      newNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
+      checkNamespaceRSGroup(env, newNsDescriptor);
+    }
     return true;
   }
 }

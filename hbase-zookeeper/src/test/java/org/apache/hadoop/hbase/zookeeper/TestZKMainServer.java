@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
@@ -73,7 +72,7 @@ public class TestZKMainServer {
   @Test
   public void testCommandLineWorks() throws Exception {
     System.setSecurityManager(new NoExitSecurityManager());
-    HBaseZKTestingUtility htu = new HBaseZKTestingUtility();
+    HBaseZKTestingUtil htu = new HBaseZKTestingUtil();
     // Make it long so for sure succeeds.
     htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 30000);
     htu.startMiniZKCluster();
@@ -84,8 +83,8 @@ public class TestZKMainServer {
       ZKUtil.checkExists(zkw, znode);
       boolean exception = false;
       try {
-        ZKMainServer.main(new String [] {"-server",
-          "localhost:" + htu.getZkCluster().getClientPort(), "delete", znode});
+        ZKMainServer.main(new String [] {"-server", htu.getZkCluster().getAddress().toString(),
+          "delete", znode});
       } catch (ExitException ee) {
         // ZKMS calls System.exit which should trigger this exception.
         exception = true;
@@ -102,7 +101,7 @@ public class TestZKMainServer {
   public void testHostPortParse() {
     ZKMainServer parser = new ZKMainServer();
     Configuration c = HBaseConfiguration.create();
-    assertEquals("localhost:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT), parser.parse(c));
+    assertEquals("127.0.0.1:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT), parser.parse(c));
     final String port = "1234";
     c.set(HConstants.ZOOKEEPER_CLIENT_PORT, port);
     c.set("hbase.zookeeper.quorum", "example.com");

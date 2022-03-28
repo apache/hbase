@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha-3-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-protocol-shaded</artifactId>
@@ -33,20 +33,10 @@
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
-         3.5.1-1 is the same as 3.5.1 except includes corrected binaries for el6
-         to work around https://github.com/google/protobuf/issues/4109
-           -->
-    <internal.protobuf.version>3.5.1-1</internal.protobuf.version>
+    -->
+    <internal.protobuf.version>3.17.3</internal.protobuf.version>
   </properties>
   <build>
-    <resources>
-      <resource>
-        <directory>src/main/</directory>
-        <includes>
-          <include>**/*.proto</include>
-        </includes>
-      </resource>
-    </resources>
     <plugins>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
@@ -88,7 +78,6 @@
             </goals>
             <configuration>
               <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-              <attachProtoSources>false</attachProtoSources>
               <checkStaleness>true</checkStaleness>
             </configuration>
           </execution>
@@ -178,7 +167,7 @@
                   <exclude>org.slf4j:slf4j-api</exclude>
                   <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
-                  <exclude></exclude>
+                  <exclude>com.github.spotbugs:*</exclude>
                 </excludes>
               </artifactSet>
             </configuration>
@@ -211,10 +200,6 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core4</artifactId>
     </dependency>
   </dependencies>
   <profiles>

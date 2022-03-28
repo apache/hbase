@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -75,11 +76,13 @@ public interface MetricsWALSource extends BaseSource {
       "How many times a roll was requested due to file size roll threshold.";
   String WRITTEN_BYTES = "writtenBytes";
   String WRITTEN_BYTES_DESC = "Size (in bytes) of the data written to the WAL.";
+  String SUCCESSFUL_LOG_ROLLS = "successfulLogRolls";
+  String SUCCESSFUL_LOG_ROLLS_DESC = "Number of successful log rolls requests";
 
   /**
    * Add the append size.
    */
-  void incrementAppendSize(long size);
+  void incrementAppendSize(TableName tableName, long size);
 
   /**
    * Add the time it took to append.
@@ -89,7 +92,7 @@ public interface MetricsWALSource extends BaseSource {
   /**
    * Increment the count of wal appends
    */
-  void incrementAppendCount();
+  void incrementAppendCount(TableName tableName);
 
   /**
    * Increment the number of appends that were slow
@@ -115,5 +118,10 @@ public interface MetricsWALSource extends BaseSource {
 
   void incrementWrittenBytes(long val);
 
-  long getWrittenBytes();
+  /**
+   * Increment the number of successful log roll requests.
+   */
+  void incrementSuccessfulLogRolls();
+
+  long getSuccessfulLogRolls();
 }

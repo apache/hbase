@@ -45,5 +45,4 @@ public abstract class FlushPolicy extends Configured {
    * @return the stores need to be flushed.
    */
   public abstract Collection<HStore> selectStoresToFlush();
-
 }

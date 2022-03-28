@@ -23,7 +23,9 @@ package org.apache.hadoop.hbase.util;
  * the use of the injectEdge method giving it default permissions, but in
  * testing we may need to use this functionality elsewhere.
  */
-public class EnvironmentEdgeManagerTestHelper {
+public final class EnvironmentEdgeManagerTestHelper {
+  private EnvironmentEdgeManagerTestHelper() {
+  }
 
   public static void reset() {
     EnvironmentEdgeManager.reset();

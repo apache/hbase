@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -51,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -128,15 +128,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // It is possible that regions may move after we get the region server list.
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
-    List<Pair<RegionInfo, ServerName>> regionsAndLocations;
-
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regionsAndLocations = MetaTableLocator.getMetaRegionsAndLocations(
-        master.getZooKeeper());
-    } else {
-      regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getConnection(), tableName, false);
-    }
+    List<Pair<RegionInfo, ServerName>> regionsAndLocations =
+      master.getAssignmentManager().getTableRegionsAndLocations(tableName, false);
 
     Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<RegionInfo, ServerName> region : regionsAndLocations) {
@@ -149,11 +142,19 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
 
+    HBaseProtos.NameStringPair family = null;
+    for (HBaseProtos.NameStringPair nsp : desc.getConfigurationList()) {
+      if (HConstants.FAMILY_KEY_STR.equals(nsp.getName())) {
+        family = nsp;
+      }
+    }
+    byte[] procArgs = family != null ? family.toByteArray() : new byte[0];
+
     // Kick of the global procedure from the master coordinator to the region servers.
     // We rely on the existing Distributed Procedure framework to prevent any concurrent
     // procedure with the same name.
     Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(),
-      new byte[0], Lists.newArrayList(regionServers));
+      procArgs, Lists.newArrayList(regionServers));
     monitor.rethrowException();
     if (proc == null) {
       String msg = "Failed to submit distributed procedure " + desc.getSignature() + " for '"

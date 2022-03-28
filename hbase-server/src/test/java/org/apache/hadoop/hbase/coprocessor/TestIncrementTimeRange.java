@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -64,7 +64,7 @@ public class TestIncrementTimeRange {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestIncrementTimeRange.class);
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
   private static final TableName TEST_TABLE = TableName.valueOf("test");
@@ -165,7 +165,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range10 = new TimeRange(1, time+10);
+    TimeRange range10 = TimeRange.between(1, time+10);
     hTableInterface.increment(new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 10L)
         .setTimeRange(range10.getMin(), range10.getMax()));
     checkRowValue(ROW_A, Bytes.toBytes(11L));
@@ -174,7 +174,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range2 = new TimeRange(1, time+20);
+    TimeRange range2 = TimeRange.between(1, time + 20);
     List<Row> actions =
         Arrays.asList(new Row[] { new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L)
             .setTimeRange(range2.getMin(), range2.getMax()),

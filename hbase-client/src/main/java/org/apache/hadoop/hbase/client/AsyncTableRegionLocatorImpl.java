@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
+
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,19 +49,21 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
 
   @Override
   public CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId,
-      boolean reload) {
+    boolean reload) {
     return conn.getLocator().getRegionLocation(tableName, row, replicaId, RegionLocateType.CURRENT,
       reload, -1L);
   }
 
   @Override
   public CompletableFuture<List<HRegionLocation>> getAllRegionLocations() {
-    if (TableName.isMetaTableName(tableName)) {
-      return conn.registry.getMetaRegionLocation()
-        .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
-    }
-    return AsyncMetaTableAccessor.getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME),
-      Optional.of(tableName));
+    return tracedFuture(() -> {
+      if (TableName.isMetaTableName(tableName)) {
+        return conn.registry.getMetaRegionLocations()
+          .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+      }
+      return ClientMetaTableAccessor
+        .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+    }, getClass().getSimpleName() + ".getAllRegionLocations");
   }
 
   @Override

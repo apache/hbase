@@ -23,19 +23,21 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifestV1;
@@ -43,7 +45,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -52,7 +54,10 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +70,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category({LargeTests.class, ClientTests.class})
+@RunWith(Parameterized.class)
+@Category({ LargeTests.class, ClientTests.class })
 public class TestSnapshotFromClient {
 
   @ClassRule
@@ -74,7 +80,7 @@ public class TestSnapshotFromClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromClient.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final int NUM_RS = 2;
   protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
@@ -83,7 +89,16 @@ public class TestSnapshotFromClient {
   private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
+
+  @Parameter
+  public StoreFileTrackerFactory.Trackers trackerImpl;
+
+  @Parameters(name = "{index}: tracker={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { StoreFileTrackerFactory.Trackers.DEFAULT },
+      new Object[] { StoreFileTrackerFactory.Trackers.FILE });
+  }
 
   /**
    * Setup the config for the cluster
@@ -110,7 +125,6 @@ public class TestSnapshotFromClient {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
         ConstantSizeRegionSplitPolicy.class.getName());
-
   }
 
   @Before
@@ -119,9 +133,10 @@ public class TestSnapshotFromClient {
   }
 
   protected void createTable() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    htd.setRegionReplication(getNumReplicas());
-    UTIL.createTable(htd, new byte[][]{TEST_FAM}, null);
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas())
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL, trackerImpl.name()).build();
+    UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
   }
 
   protected int getNumReplicas() {
@@ -204,15 +219,15 @@ public class TestSnapshotFromClient {
     UTIL.loadTable(table, TEST_FAM, false);
 
     LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // XXX if this is flakey, might want to consider using the async version and looping as
     // disableTable can succeed and still timeout.
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
@@ -230,8 +245,8 @@ public class TestSnapshotFromClient {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     SnapshotTestingUtils.confirmSnapshotValid(
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
       rootDir, admin, fs);
@@ -279,13 +294,13 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     String snapshot = "testOfflineTableSnapshotWithEmptyRegions";
@@ -300,8 +315,8 @@ public class TestSnapshotFromClient {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();
@@ -317,11 +332,11 @@ public class TestSnapshotFromClient {
   @Test
   public void testListTableSnapshots() throws Exception {
     Admin admin = null;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";
@@ -402,11 +417,11 @@ public class TestSnapshotFromClient {
   @Test
   public void testDeleteTableSnapshots() throws Exception {
     Admin admin = null;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";

@@ -205,6 +205,11 @@ class ConnectionOverAsyncConnection implements Connection {
   }
 
   @Override
+  public String getClusterId() {
+    return conn.getClusterId();
+  }
+
+  @Override
   public Hbck getHbck() throws IOException {
     return FutureUtils.get(conn.getHbck());
   }

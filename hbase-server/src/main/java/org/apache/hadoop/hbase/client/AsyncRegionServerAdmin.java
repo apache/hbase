@@ -97,7 +97,7 @@ public class AsyncRegionServerAdmin {
 
   private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall, CellScanner cellScanner) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
-    HBaseRpcController controller = conn.rpcControllerFactory.newController(cellScanner);
+    HBaseRpcController controller = conn.rpcControllerFactory.newController(null, cellScanner);
     try {
       rpcCall.call(conn.getAdminStub(server), controller, new RpcCallback<RESP>() {
 
@@ -159,9 +159,11 @@ public class AsyncRegionServerAdmin {
   }
 
   public CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
-      ReplicateWALEntryRequest request, CellScanner cellScanner) {
-    return call((stub, controller, done) -> stub.replicateWALEntry(controller, request, done),
-      cellScanner);
+      ReplicateWALEntryRequest request, CellScanner cellScanner, int timeout) {
+    return call((stub, controller, done) -> {
+      controller.setCallTimeout(timeout);
+      stub.replicateWALEntry(controller, request, done);
+    }, cellScanner);
   }
 
   public CompletableFuture<ReplicateWALEntryResponse> replay(ReplicateWALEntryRequest request,

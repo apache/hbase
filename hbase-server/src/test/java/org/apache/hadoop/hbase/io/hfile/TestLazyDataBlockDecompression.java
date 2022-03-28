@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -65,7 +65,8 @@ public class TestLazyDataBlockDecompression {
       HBaseClassTestRule.forClass(TestLazyDataBlockDecompression.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
   private FileSystem fs;
 
@@ -101,14 +102,12 @@ public class TestLazyDataBlockDecompression {
         .withFileContext(cxt)
         .create();
 
-    // write a bunch of random kv's
-    Random rand = new Random(9713312); // some seed.
+    // write a bunch of random kvs
     final byte[] family = Bytes.toBytes("f");
     final byte[] qualifier = Bytes.toBytes("q");
-
     for (int i = 0; i < entryCount; i++) {
-      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
-      byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+      byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
       // make a real keyvalue so that hfile tool can examine it
       writer.append(new KeyValue(keyBytes, family, qualifier, valueBytes));
     }
@@ -124,9 +123,15 @@ public class TestLazyDataBlockDecompression {
     long fileSize = fs.getFileStatus(path).getLen();
     FixedFileTrailer trailer =
       FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-    HFile.Reader reader = new HFileReaderImpl(path, trailer, fsdis, fileSize, cacheConfig,
-      fsdis.getHfs(), conf);
-    reader.loadFileInfo();
+    ReaderContext context = new ReaderContextBuilder()
+        .withFilePath(path)
+        .withFileSize(fileSize)
+        .withFileSystem(fsdis.getHfs())
+        .withInputStreamWrapper(fsdis)
+        .build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    HFile.Reader reader = new HFilePreadReader(context, fileInfo, cacheConfig, conf);
+    fileInfo.initMetaAndIndex(reader);
     long offset = trailer.getFirstDataBlockOffset(),
       max = trailer.getLastDataBlockOffset();
     List<HFileBlock> blocks = new ArrayList<>(4);
@@ -138,6 +143,7 @@ public class TestLazyDataBlockDecompression {
       blocks.add(block);
     }
     LOG.info("read " + Iterables.toString(blocks));
+    reader.close();
   }
 
   @Test

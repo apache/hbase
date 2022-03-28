@@ -22,11 +22,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -44,9 +43,10 @@ import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -54,7 +54,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionWithThroughputController {
 
   @ClassRule
@@ -64,7 +64,7 @@ public class TestCompactionWithThroughputController {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final double EPSILON = 1E-6;
 
@@ -75,7 +75,7 @@ public class TestCompactionWithThroughputController {
   private final byte[] qualifier = Bytes.toBytes("q");
 
   private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
@@ -96,7 +96,7 @@ public class TestCompactionWithThroughputController {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        ThreadLocalRandom.current().nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
@@ -125,18 +125,18 @@ public class TestCompactionWithThroughputController {
     try {
       HStore store = prepareData();
       assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
-      long duration = System.currentTimeMillis() - startTime;
+      long duration = EnvironmentEdgeManager.currentTime() - startTime;
       double throughput = (double) store.getStorefilesSize() / duration * 1000;
       // confirm that the speed limit work properly(not too fast, and also not too slow)
       // 20% is the max acceptable error rate.
       assertTrue(throughput < throughputLimit * 1.2);
       assertTrue(throughput > throughputLimit * 0.8);
-      return System.currentTimeMillis() - startTime;
+      return EnvironmentEdgeManager.currentTime() - startTime;
     } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
@@ -154,12 +154,12 @@ public class TestCompactionWithThroughputController {
     try {
       HStore store = prepareData();
       assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
-      return System.currentTimeMillis() - startTime;
+      return EnvironmentEdgeManager.currentTime() - startTime;
     } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
@@ -208,7 +208,7 @@ public class TestCompactionWithThroughputController {
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       PressureAwareCompactionThroughputController throughputController =
-          (PressureAwareCompactionThroughputController) regionServer.compactSplitThread
+          (PressureAwareCompactionThroughputController) regionServer.getCompactSplitThread()
               .getCompactionThroughputController();
       assertEquals(10L * 1024 * 1024, throughputController.getMaxThroughput(), EPSILON);
       Table table = conn.getTable(tableName);
@@ -234,9 +234,9 @@ public class TestCompactionWithThroughputController {
 
       conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
         NoLimitThroughputController.class.getName());
-      regionServer.compactSplitThread.onConfigurationChange(conf);
+      regionServer.getCompactSplitThread().onConfigurationChange(conf);
       assertTrue(throughputController.isStopped());
-      assertTrue(regionServer.compactSplitThread.getCompactionThroughputController()
+      assertTrue(regionServer.getCompactSplitThread().getCompactionThroughputController()
         instanceof NoLimitThroughputController);
     } finally {
       conn.close();

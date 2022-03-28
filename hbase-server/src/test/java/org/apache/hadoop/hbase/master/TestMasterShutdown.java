@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,38 +18,52 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterShutdown {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterShutdown.class);
+    HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
+  private HBaseTestingUtil htu;
+
+  @Before
+  public void shutdownCluster() throws IOException {
+    if (htu != null) {
+      // an extra check in case the test cluster was not terminated after HBaseClassTestRule's
+      // Timeout interrupted the test thread.
+      LOG.warn("found non-null TestingUtility -- previous test did not terminate cleanly.");
+      htu.shutdownMiniCluster();
+    }
+  }
 
   /**
    * Simple test of shutdown.
@@ -59,110 +73,148 @@ public class TestMasterShutdown {
    */
   @Test
   public void testMasterShutdown() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 3;
-
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
 
     // Start the cluster
-    HBaseTestingUtility htu = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
-    htu.startMiniCluster(option);
-    MiniHBaseCluster cluster = htu.getHBaseCluster();
+    try {
+      htu = new HBaseTestingUtil(conf);
+      StartTestingClusterOption option = StartTestingClusterOption.builder()
+        .numMasters(3)
+        .numRegionServers(1)
+        .numDataNodes(1)
+        .build();
+      final SingleProcessHBaseCluster cluster = htu.startMiniCluster(option);
 
-    // get all the master threads
-    List<MasterThread> masterThreads = cluster.getMasterThreads();
+      // wait for all master thread to spawn and start their run loop.
+      final long thirtySeconds = TimeUnit.SECONDS.toMillis(30);
+      final long oneSecond = TimeUnit.SECONDS.toMillis(1);
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond, () -> {
+        final List<MasterThread> masterThreads = cluster.getMasterThreads();
+        return masterThreads != null
+          && masterThreads.size() >= 3
+          && masterThreads.stream().allMatch(Thread::isAlive);
+      }));
 
-    // wait for each to come online
-    for (MasterThread mt : masterThreads) {
-      assertTrue(mt.isAlive());
-    }
+      // find the active master
+      final HMaster active = cluster.getMaster();
+      assertNotNull(active);
 
-    // find the active master
-    HMaster active = null;
-    for (int i = 0; i < masterThreads.size(); i++) {
-      if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        active = masterThreads.get(i).getMaster();
-        break;
-      }
-    }
-    assertNotNull(active);
-    // make sure the other two are backup masters
-    ClusterMetrics status = active.getClusterMetrics();
-    assertEquals(2, status.getBackupMasterNames().size());
+      // make sure the other two are backup masters
+      ClusterMetrics status = active.getClusterMetrics();
+      assertEquals(2, status.getBackupMasterNames().size());
 
-    // tell the active master to shutdown the cluster
-    active.shutdown();
-
-    for (int i = NUM_MASTERS - 1; i >= 0 ;--i) {
-      cluster.waitOnMaster(i);
-    }
-    // make sure all the masters properly shutdown
-    assertEquals(0, masterThreads.size());
-
-    htu.shutdownMiniCluster();
-  }
-
-  private Connection createConnection(HBaseTestingUtility util) throws InterruptedException {
-    // the cluster may have not been initialized yet which means we can not get the cluster id thus
-    // an exception will be thrown. So here we need to retry.
-    for (;;) {
-      try {
-        return ConnectionFactory.createConnection(util.getConfiguration());
-      } catch (Exception e) {
-        Thread.sleep(10);
+      // tell the active master to shutdown the cluster
+      active.shutdown();
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond,
+        () -> CollectionUtils.isEmpty(cluster.getLiveMasterThreads())));
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond,
+        () -> CollectionUtils.isEmpty(cluster.getLiveRegionServerThreads())));
+    } finally {
+      if (htu != null) {
+        htu.shutdownMiniCluster();
+        htu = null;
       }
     }
   }
 
+  /**
+   * This test appears to be an intentional race between a thread that issues a shutdown RPC to the
+   * master, while the master is concurrently realizing it cannot initialize because there are no
+   * region servers available to it. The expected behavior is that master initialization is
+   * interruptable via said shutdown RPC.
+   */
   @Test
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 0;
+    LocalHBaseCluster hbaseCluster = null;
+    try {
+      htu = new HBaseTestingUtil(
+        createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
 
-    // Create config to use for this cluster
-    Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.ipc.client.failed.servers.expiry", 200);
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+      // configure a cluster with
+      final StartTestingClusterOption options = StartTestingClusterOption.builder()
+        .numDataNodes(1)
+        .numMasters(1)
+        .numRegionServers(0)
+        .masterClass(HMaster.class)
+        .rsClass(SingleProcessHBaseCluster.MiniHBaseClusterRegionServer.class)
+        .createRootDir(true)
+        .build();
 
-    // Start the cluster
-    final HBaseTestingUtility util = new HBaseTestingUtility(conf);
-    util.startMiniDFSCluster(3);
-    util.startMiniZKCluster();
-    util.createRootDir();
-    final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
-            MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
-    final int MASTER_INDEX = 0;
-    final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
-    master.start();
-    LOG.info("Called master start on " + master.getName());
-    Thread shutdownThread = new Thread("Shutdown-Thread") {
-      @Override
-      public void run() {
-        LOG.info("Before call to shutdown master");
-        try (Connection connection = createConnection(util); Admin admin = connection.getAdmin()) {
-          admin.shutdown();
-        } catch (Exception e) {
-          LOG.info("Error while calling Admin.shutdown, which is expected: " + e.getMessage());
+      // Can't simply `htu.startMiniCluster(options)` because that method waits for the master to
+      // start completely. However, this test's premise is that a partially started master should
+      // still respond to a shutdown RPC. So instead, we manage each component lifecycle
+      // independently.
+      // I think it's not worth refactoring HTU's helper methods just for this class.
+      htu.startMiniDFSCluster(options.getNumDataNodes());
+      htu.startMiniZKCluster(options.getNumZkServers());
+      htu.createRootDir();
+      hbaseCluster = new LocalHBaseCluster(htu.getConfiguration(), options.getNumMasters(),
+        options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
+      final MasterThread masterThread = hbaseCluster.getMasters().get(0);
+
+      masterThread.start();
+      // Switching to master registry exacerbated a race in the master bootstrap that can result
+      // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
+      // the server manager in HMaster is not initialized by the time shutdown() RPC (below) is
+      // made to the master. The suspected reason as to why it was uncommon before HBASE-18095
+      // is because the connection creation with ZK registry is so slow that by then the server
+      // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
+      // wait() in the test, waiting for the server manager to become available.
+      final long timeout = TimeUnit.MINUTES.toMillis(10);
+      assertNotEquals("timeout waiting for server manager to become available.", -1,
+        htu.waitFor(timeout, () -> masterThread.getMaster().getServerManager() != null));
+
+      // Master has come up far enough that we can terminate it without creating a zombie.
+      try {
+        // HBASE-24327 : (Resolve Flaky connection issues)
+        // shutdown() RPC can have flaky ZK connection issues.
+        // e.g
+        // ERROR [RpcServer.priority.RWQ.Fifo.read.handler=1,queue=1,port=53033]
+        // master.HMaster(2878): ZooKeeper exception trying to set cluster as down in ZK
+        // org.apache.zookeeper.KeeperException$SystemErrorException:
+        // KeeperErrorCode = SystemError
+        //
+        // However, even when above flakes happen, shutdown call does get completed even if
+        // RPC call has failure. Hence, subsequent retries will never succeed as HMaster is
+        // already shutdown. Hence, it can fail. To resolve it, after making one shutdown()
+        // call, we are ignoring IOException.
+        htu.getConnection().getAdmin().shutdown();
+      } catch (RetriesExhaustedException e) {
+        if (e.getCause() instanceof ConnectionClosedException) {
+          LOG.info("Connection is Closed to the cluster. The cluster is already down.", e);
+        } else {
+          throw e;
         }
-        LOG.info("After call to shutdown master");
-        cluster.waitOnMaster(MASTER_INDEX);
       }
-    };
-    shutdownThread.start();
-    LOG.info("Called master join on " + master.getName());
-    master.join();
-    shutdownThread.join();
+      LOG.info("Shutdown RPC sent.");
+      masterThread.join();
+    } finally {
+      if (hbaseCluster != null) {
+        hbaseCluster.shutdown();
+      }
+      if (htu != null) {
+        htu.shutdownMiniCluster();
+        htu = null;
+      }
+    }
+  }
 
-    List<MasterThread> masterThreads = cluster.getMasters();
-    // make sure all the masters properly shutdown
-    assertEquals(0, masterThreads.size());
-
-    util.shutdownMiniZKCluster();
-    util.shutdownMiniDFSCluster();
-    util.cleanupTestDir();
+  /**
+   * Create a cluster configuration suitable for
+   * {@link #testMasterShutdownBeforeStartingAnyRegionServer()}.
+   */
+  private static Configuration createMasterShutdownBeforeStartingAnyRegionServerConfiguration() {
+    final Configuration conf = HBaseConfiguration.create();
+    // make sure the master will wait forever in the absence of a RS.
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    // don't need a long write pipeline for this test.
+    conf.setInt("dfs.replication", 1);
+    // reduce client retries
+    conf.setInt("hbase.client.retries.number", 1);
+    // Recoverable ZK configs are tuned more aggressively
+    conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
+    conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
+    return conf;
   }
 }

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -82,7 +82,7 @@ public class TestTableInputFormat {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormat.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MiniMRCluster mrCluster;
   static final byte[] FAMILY = Bytes.toBytes("family");
 
@@ -169,8 +169,8 @@ public class TestTableInputFormat {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
         new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
     Scan s = new Scan();
-    s.setStartRow(Bytes.toBytes("aaa"));
-    s.setStopRow(Bytes.toBytes("zzz"));
+    s.withStartRow(Bytes.toBytes("aaa"));
+    s.withStopRow(Bytes.toBytes("zzz"));
     s.addFamily(FAMILY);
     trr.setScan(s);
     trr.setHTable(table);

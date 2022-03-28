@@ -43,7 +43,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 public abstract class AcidGuaranteesTestBase {
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();
 

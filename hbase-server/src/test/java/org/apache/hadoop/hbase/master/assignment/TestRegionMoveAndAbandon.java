@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,19 +18,18 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.After;
@@ -42,13 +41,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Testcase for HBASE-20792.
  */
-@Category({ LargeTests.class, MasterTests.class })
+@Category({ MediumTests.class, MasterTests.class })
 public class TestRegionMoveAndAbandon {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoveAndAbandon.class);
 
@@ -59,8 +57,8 @@ public class TestRegionMoveAndAbandon {
   @Rule
   public TestName name = new TestName();
 
-  private HBaseTestingUtility UTIL;
-  private MiniHBaseCluster cluster;
+  private HBaseTestingUtil UTIL;
+  private SingleProcessHBaseCluster cluster;
   private MiniZooKeeperCluster zkCluster;
   private HRegionServer rs1;
   private HRegionServer rs2;
@@ -69,9 +67,10 @@ public class TestRegionMoveAndAbandon {
 
   @Before
   public void setup() throws Exception {
-    UTIL = new HBaseTestingUtility();
+    UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     cluster = UTIL.startMiniHBaseCluster(option);
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);
@@ -105,17 +104,24 @@ public class TestRegionMoveAndAbandon {
     LOG.info("Killing RS {}", rs1.getServerName());
     // Stop RS1
     cluster.killRegionServer(rs1.getServerName());
+    UTIL.waitFor(30_000, () -> rs1.isStopped() && !rs1.isAlive());
     // Region should get moved to RS2
-    UTIL.waitTableAvailable(tableName, 30_000);
+    UTIL.waitTableAvailable(tableName, 60_000);
     // Restart the master
     LOG.info("Killing master {}", cluster.getMaster().getServerName());
     cluster.killMaster(cluster.getMaster().getServerName());
     // Stop RS2
     LOG.info("Killing RS {}", rs2.getServerName());
     cluster.killRegionServer(rs2.getServerName());
+    UTIL.waitFor(30_000, () -> rs2.isStopped() && !rs2.isAlive());
+    UTIL.waitFor(30_000, () -> rs1.isStopped() && !rs1.isAlive());
+    // make sure none of regionserver threads is alive.
+    UTIL.waitFor(30_000, () ->
+      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().isEmpty());
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();
+    UTIL.invalidateConnection();
     UTIL.ensureSomeRegionServersAvailable(2);
 
     UTIL.waitFor(30_000, new Waiter.Predicate<Exception>() {

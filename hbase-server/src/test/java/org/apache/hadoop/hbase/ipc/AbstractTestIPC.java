@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +17,42 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasDuration;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasTraceId;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
-
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -43,8 +60,20 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.util.StringUtils;
+import org.hamcrest.Matcher;
+import org.junit.Rule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
@@ -54,14 +83,6 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.PauseReq
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.Interface;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Some basic ipc tests.
@@ -85,6 +106,10 @@ public abstract class AbstractTestIPC {
       RpcScheduler scheduler) throws IOException;
 
   protected abstract AbstractRpcClient<?> createRpcClientNoCodec(Configuration conf);
+
+
+  @Rule
+  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
 
   /**
    * Ensure we do not HAVE TO HAVE a codec.
@@ -182,7 +207,7 @@ public abstract class AbstractTestIPC {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(
             SERVICE, null)), new InetSocketAddress("localhost", 0), CONF, scheduler);
-    verify(scheduler).init((RpcScheduler.Context) anyObject());
+    verify(scheduler).init(any(RpcScheduler.Context.class));
     try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
       rpcServer.start();
       verify(scheduler).start();
@@ -191,7 +216,7 @@ public abstract class AbstractTestIPC {
       for (int i = 0; i < 10; i++) {
         stub.echo(null, param);
       }
-      verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
+      verify(scheduler, times(10)).dispatch(any(CallRunner.class));
     } finally {
       rpcServer.stop();
       verify(scheduler).stop();
@@ -232,7 +257,6 @@ public abstract class AbstractTestIPC {
   /**
    * Tests that the RpcServer creates & dispatches CallRunner object to scheduler with non-null
    * remoteAddress set to its Call Object
-   * @throws ServiceException
    */
   @Test
   public void testRpcServerForNotNullRemoteAddressInCallObject()
@@ -424,6 +448,127 @@ public abstract class AbstractTestIPC {
       assertTrue(waitTime < ms);
     } finally {
       rpcServer.stop();
+    }
+  }
+
+  private SpanData waitSpan(Matcher<SpanData> matcher) {
+    Waiter.waitFor(CONF, 1000, new MatcherPredicate<>(
+      () -> traceRule.getSpans(), hasItem(matcher)));
+    return traceRule.getSpans()
+      .stream()
+      .filter(matcher::matches)
+      .findFirst()
+      .orElseThrow(AssertionError::new);
+  }
+
+  private static String buildIpcSpanName(final String packageAndService, final String methodName) {
+    return packageAndService + "/" + methodName;
+  }
+
+  private static Matcher<SpanData> buildIpcClientSpanMatcher(
+    final String packageAndService,
+    final String methodName
+  ) {
+    return allOf(
+      hasName(buildIpcSpanName(packageAndService, methodName)),
+      hasKind(SpanKind.CLIENT)
+    );
+  }
+
+  private static Matcher<SpanData> buildIpcServerSpanMatcher(
+    final String packageAndService,
+    final String methodName
+  ) {
+    return allOf(
+      hasName(buildIpcSpanName(packageAndService, methodName)),
+      hasKind(SpanKind.SERVER)
+    );
+  }
+
+  private static Matcher<SpanData> buildIpcClientSpanAttributesMatcher(
+    final String packageAndService,
+    final String methodName,
+    final InetSocketAddress isa
+  ) {
+    return hasAttributes(allOf(
+      containsEntry("rpc.system", "HBASE_RPC"),
+      containsEntry("rpc.service", packageAndService),
+      containsEntry("rpc.method", methodName),
+      containsEntry("net.peer.name", isa.getHostName()),
+      containsEntry(AttributeKey.longKey("net.peer.port"), (long) isa.getPort())));
+  }
+
+  private static Matcher<SpanData> buildIpcServerSpanAttributesMatcher(
+    final String packageAndService,
+    final String methodName
+  ) {
+    return hasAttributes(allOf(
+      containsEntry("rpc.system", "HBASE_RPC"),
+      containsEntry("rpc.service", packageAndService),
+      containsEntry("rpc.method", methodName)));
+  }
+
+  private void assertRemoteSpan() {
+    SpanData data = waitSpan(hasName("RpcServer.process"));
+    assertTrue(data.getParentSpanContext().isRemote());
+    assertEquals(SpanKind.SERVER, data.getKind());
+  }
+
+  @Test
+  public void testTracingSuccessIpc() throws IOException, ServiceException {
+    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
+      new InetSocketAddress("localhost", 0), CONF,
+      new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
+      // use the ISA from the running server so that we can get the port selected.
+      final InetSocketAddress isa = rpcServer.getListenerAddress();
+      final SpanData pauseClientSpan = waitSpan(buildIpcClientSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
+      assertThat(pauseClientSpan, buildIpcClientSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause", isa));
+      final SpanData pauseServerSpan = waitSpan(buildIpcServerSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
+      assertThat(pauseServerSpan, buildIpcServerSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
+      assertRemoteSpan();
+      assertFalse("no spans provided", traceRule.getSpans().isEmpty());
+      assertThat(traceRule.getSpans(), everyItem(allOf(
+        hasStatusWithCode(StatusCode.OK),
+        hasTraceId(traceRule.getSpans().iterator().next().getTraceId()),
+        hasDuration(greaterThanOrEqualTo(Duration.ofMillis(100L))))));
+    }
+  }
+
+  @Test
+  public void testTracingErrorIpc() throws IOException {
+    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
+      new InetSocketAddress("localhost", 0), CONF,
+      new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      // use the ISA from the running server so that we can get the port selected.
+      assertThrows(ServiceException.class,
+        () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
+      final InetSocketAddress isa = rpcServer.getListenerAddress();
+      final SpanData errorClientSpan = waitSpan(buildIpcClientSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
+      assertThat(errorClientSpan, buildIpcClientSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error", isa));
+      final SpanData errorServerSpan = waitSpan(buildIpcServerSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
+      assertThat(errorServerSpan, buildIpcServerSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
+      assertRemoteSpan();
+      assertFalse("no spans provided", traceRule.getSpans().isEmpty());
+      assertThat(traceRule.getSpans(), everyItem(allOf(
+        hasStatusWithCode(StatusCode.ERROR),
+        hasTraceId(traceRule.getSpans().iterator().next().getTraceId()))));
     }
   }
 }

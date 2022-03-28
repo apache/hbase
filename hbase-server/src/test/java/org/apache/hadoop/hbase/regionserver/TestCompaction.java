@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE_LIMIT_KEY;
+import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -34,6 +37,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -46,15 +50,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -67,6 +74,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -89,14 +97,15 @@ public class TestCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompaction.class);
+    HBaseClassTestRule.forClass(TestCompaction.class);
 
-  @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  @Rule
+  public TestName name = new TestName();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private HTableDescriptor htd = null;
+  private TableDescriptor tableDescriptor = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -126,17 +135,17 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name.getMethodName());
     if (name.getMethodName().equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
-      UTIL.getConfiguration().set(
-          DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
-          DummyCompactor.class.getName());
-      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-      hcd.setMaxVersions(65536);
-      this.htd.addFamily(hcd);
+      UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
+        DummyCompactor.class.getName());
+      ColumnFamilyDescriptor familyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(65536).build();
+      builder.setColumnFamily(familyDescriptor);
     }
-    this.r = UTIL.createLocalHRegion(htd, null, null);
+    this.tableDescriptor = builder.build();
+    this.r = UTIL.createLocalHRegion(tableDescriptor, null, null);
   }
 
   @After
@@ -149,15 +158,13 @@ public class TestCompaction {
   /**
    * Verify that you can stop a long-running compaction
    * (used during RS shutdown)
-   * @throws Exception
    */
   @Test
-  public void testInterruptCompaction() throws Exception {
+  public void testInterruptCompactionBySize() throws Exception {
     assertEquals(0, count());
 
     // lower the polling interval for this test
-    int origWI = HStore.closeCheckInterval;
-    HStore.closeCheckInterval = 10*1000; // 10 KB
+    conf.setInt(SIZE_LIMIT_KEY, 10 * 1000 /* 10 KB */);
 
     try {
       // Create a couple store files w/ 15KB (over 10KB interval)
@@ -170,13 +177,13 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         r.flush(true);
       }
 
       HRegion spyR = spy(r);
-      doAnswer(new Answer() {
+      doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
@@ -202,7 +209,84 @@ public class TestCompaction {
     } finally {
       // don't mess up future tests
       r.writestate.writesEnabled = true;
-      HStore.closeCheckInterval = origWI;
+      conf.setInt(SIZE_LIMIT_KEY, 10 * 1000 * 1000 /* 10 MB */);
+
+      // Delete all Store information once done using
+      for (int i = 0; i < compactionThreshold; i++) {
+        Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        byte [][] famAndQf = {COLUMN_FAMILY, null};
+        delete.addFamily(famAndQf[0]);
+        r.delete(delete);
+      }
+      r.flush(true);
+
+      // Multiple versions allowed for an entry, so the delete isn't enough
+      // Lower TTL and expire to ensure that all our entries have been wiped
+      final int ttl = 1000;
+      for (HStore store : this.r.stores.values()) {
+        ScanInfo old = store.getScanInfo();
+        ScanInfo si = old.customize(old.getMaxVersions(), ttl, old.getKeepDeletedCells());
+        store.setScanInfo(si);
+      }
+      Thread.sleep(ttl);
+
+      r.compact(true);
+      assertEquals(0, count());
+    }
+  }
+
+  @Test
+  public void testInterruptCompactionByTime() throws Exception {
+    assertEquals(0, count());
+
+    // lower the polling interval for this test
+    conf.setLong(TIME_LIMIT_KEY, 1 /* 1ms */);
+
+    try {
+      // Create a couple store files w/ 15KB (over 10KB interval)
+      int jmax = (int) Math.ceil(15.0/compactionThreshold);
+      byte [] pad = new byte[1000]; // 1 KB chunk
+      for (int i = 0; i < compactionThreshold; i++) {
+        Table loader = new RegionAsTable(r);
+        Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        p.setDurability(Durability.SKIP_WAL);
+        for (int j = 0; j < jmax; j++) {
+          p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
+        }
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        loader.put(p);
+        r.flush(true);
+      }
+
+      HRegion spyR = spy(r);
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          r.writestate.writesEnabled = false;
+          return invocation.callRealMethod();
+        }
+      }).when(spyR).doRegionCompactionPrep();
+
+      // force a minor compaction, but not before requesting a stop
+      spyR.compactStores();
+
+      // ensure that the compaction stopped, all old files are intact,
+      HStore s = r.getStore(COLUMN_FAMILY);
+      assertEquals(compactionThreshold, s.getStorefilesCount());
+      assertTrue(s.getStorefilesSize() > 15*1000);
+      // and no new store files persisted past compactStores()
+      // only one empty dir exists in temp dir
+      FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
+      assertEquals(1, ls.length);
+      Path storeTempDir =
+        new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
+      assertTrue(r.getFilesystem().exists(storeTempDir));
+      ls = r.getFilesystem().listStatus(storeTempDir);
+      assertEquals(0, ls.length);
+    } finally {
+      // don't mess up future tests
+      r.writestate.writesEnabled = true;
+      conf.setLong(TIME_LIMIT_KEY, 10 * 1000L /* 10 s */);
 
       // Delete all Store information once done using
       for (int i = 0; i < compactionThreshold; i++) {
@@ -230,15 +314,14 @@ public class TestCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (HStoreFile f: this.r.stores.
-        get(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f : this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;
       }
       do {
         count++;
-      } while(scanner.next());
+      } while (scanner.next());
     }
     return count;
   }
@@ -249,7 +332,7 @@ public class TestCompaction {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, family);
+    HTestConst.addContent(loader, family);
     region.flush(true);
   }
 
@@ -262,31 +345,22 @@ public class TestCompaction {
     HStore store = r.getStore(COLUMN_FAMILY);
 
     Collection<HStoreFile> storeFiles = store.getStorefiles();
-    DefaultCompactor tool = (DefaultCompactor)store.storeEngine.getCompactor();
-    tool.compactForTesting(storeFiles, false);
+    DefaultCompactor tool = (DefaultCompactor) store.storeEngine.getCompactor();
+    CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
+    tool.compact(request, NoLimitThroughputController.INSTANCE, null);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
-    Path dstPath = store.getRegionFileSystem().createTempName();
-    FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, 1024L, null);
-    stream.writeChars("CORRUPT FILE!!!!");
-    stream.close();
-    Path origPath = store.getRegionFileSystem().commitStoreFile(
-      Bytes.toString(COLUMN_FAMILY), dstPath);
-
-    try {
-      ((HStore)store).moveFileIntoPlace(origPath);
-    } catch (Exception e) {
-      // The complete compaction should fail and the corrupt file should remain
-      // in the 'tmp' directory;
-      assertTrue(fs.exists(origPath));
-      assertFalse(fs.exists(dstPath));
-      System.out.println("testCompactionWithCorruptResult Passed");
-      return;
+    Path tmpPath = store.getRegionFileSystem().createTempName();
+    try (FSDataOutputStream stream = fs.create(tmpPath, null, true, 512, (short) 3, 1024L, null)) {
+      stream.writeChars("CORRUPT FILE!!!!");
     }
-    fail("testCompactionWithCorruptResult failed since no exception was" +
-        "thrown while completing a corrupt file");
+    // The complete compaction should fail and the corrupt file should remain
+    // in the 'tmp' directory;
+    assertThrows(IOException.class, () -> store.doCompaction(null, null, null,
+      EnvironmentEdgeManager.currentTime(), Collections.singletonList(tmpPath)));
+    assertTrue(fs.exists(tmpPath));
   }
 
   /**
@@ -334,40 +408,41 @@ public class TestCompaction {
     }
 
     HRegion mockRegion = Mockito.spy(r);
-    Mockito.when(mockRegion.checkSplit()).thenThrow(new IndexOutOfBoundsException());
+    Mockito.when(mockRegion.checkSplit()).
+      thenThrow(new RuntimeException("Thrown intentionally by test!"));
 
-    MetricsRegionWrapper metricsWrapper = new MetricsRegionWrapperImpl(r);
+    try (MetricsRegionWrapperImpl metricsWrapper = new MetricsRegionWrapperImpl(r)) {
 
-    long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long preFailedCount = metricsWrapper.getNumCompactionsFailed();
+      long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long preFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    CountDownLatch latch = new CountDownLatch(1);
-    Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER,
-      tracker, null);
-    // wait for the latch to complete.
-    latch.await(120, TimeUnit.SECONDS);
+      CountDownLatch latch = new CountDownLatch(1);
+      Tracker tracker = new Tracker(latch);
+      thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER, tracker,
+        null);
+      // wait for the latch to complete.
+      latch.await(120, TimeUnit.SECONDS);
 
-    // compaction should have completed and been marked as failed due to error in split request
-    long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long postFailedCount = metricsWrapper.getNumCompactionsFailed();
+      // compaction should have completed and been marked as failed due to error in split request
+      long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long postFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    assertTrue("Completed count should have increased (pre=" + preCompletedCount +
-        ", post="+postCompletedCount+")",
-        postCompletedCount > preCompletedCount);
-    assertTrue("Failed count should have increased (pre=" + preFailedCount +
-        ", post=" + postFailedCount + ")",
-        postFailedCount > preFailedCount);
+      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post=" +
+        postCompletedCount + ")", postCompletedCount > preCompletedCount);
+      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post=" +
+        postFailedCount + ")", postFailedCount > preFailedCount);
+    }
   }
 
   /**
    * Test no new Compaction requests are generated after calling stop compactions
    */
-  @Test public void testStopStartCompaction() throws IOException {
+  @Test
+  public void testStopStartCompaction() throws IOException {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplit thread = new CompactSplit(mockServer);
+    final CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
     // setup a region/store with some files
     HStore store = r.getStore(COLUMN_FAMILY);
@@ -376,19 +451,28 @@ public class TestCompaction {
       createStoreFile(r);
     }
     thread.switchCompaction(false);
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
-    assertEquals(false, thread.isCompactionsEnabled());
-    assertEquals(0, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+      CompactionLifeCycleTracker.DUMMY, null);
+    assertFalse(thread.isCompactionsEnabled());
+    int longCompactions = thread.getLongCompactions().getActiveCount();
+    int shortCompactions = thread.getShortCompactions().getActiveCount();
+    assertEquals("longCompactions=" + longCompactions + "," +
+        "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
     thread.switchCompaction(true);
-    assertEquals(true, thread.isCompactionsEnabled());
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
-    assertEquals(1, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    assertTrue(thread.isCompactionsEnabled());
+    // Make sure no compactions have run.
+    assertEquals(0, thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount());
+    // Request a compaction and make sure it is submitted successfully.
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+        CompactionLifeCycleTracker.DUMMY, null);
+    // Wait until the compaction finishes.
+    Waiter.waitFor(UTIL.getConfiguration(), 5000,
+        (Waiter.Predicate<Exception>) () -> thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount() == 1);
+    // Make sure there are no compactions running.
+    assertEquals(0, thread.getLongCompactions().getActiveCount()
+        + thread.getShortCompactions().getActiveCount());
   }
 
   @Test public void testInterruptingRunningCompactions() throws Exception {
@@ -412,7 +496,7 @@ public class TestCompaction {
       for (int j = 0; j < jmax; j++) {
         p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
       }
-      HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+      HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
       loader.put(p);
       r.flush(true);
     }

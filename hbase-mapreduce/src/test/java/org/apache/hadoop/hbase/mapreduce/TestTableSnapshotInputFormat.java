@@ -19,6 +19,11 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -29,13 +34,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -44,7 +50,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -53,7 +59,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -92,9 +97,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     return yyy;
   }
 
-  @After
-  public void tearDown() throws Exception {
-  }
 
   @Test
   public void testGetBestLocations() throws IOException {
@@ -157,8 +159,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   public static class TestTableSnapshotReducer
     extends Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-        new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+        new HBaseTestingUtil.SeenRowTracker(bbb, yyy);
     @Override
     protected void reduce(ImmutableBytesWritable key, Iterable<NullWritable> values,
        Context context) throws IOException, InterruptedException {
@@ -174,7 +176,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
@@ -199,7 +200,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
+    }
+  }
+
+  @Test
+  public void testWithMockedMapReduceSingleRegionByRegionLocation() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION, true);
+    try {
+      testWithMockedMapReduce(UTIL, name.getMethodName() + "Snapshot", 1, 1, 1,
+        true);
+    } finally {
+      conf.unset(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION);
     }
   }
 
@@ -213,10 +225,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
+  public void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
@@ -224,9 +235,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       Configuration conf = util.getConfiguration();
       conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY, setLocalityEnabledTo);
+      conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
       Job job = new Job(conf);
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(getStartRow(), getEndRow()); // limit the scan
+      Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow()); // limit the scan
 
       if (numSplitsPerRegion > 1) {
         TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
@@ -244,13 +257,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithSplitsPerRegion() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -261,7 +272,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Job job = new Job(conf);
       Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
       // test scan with startRow and stopRow
-      Scan scan = new Scan(bbc, yya);
+      Scan scan = new Scan().withStartRow(bbc).withStopRow(yya);
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
         TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
@@ -271,13 +282,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithNoStartRowStopRow() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -300,13 +309,59 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
+    }
+  }
+
+  @Test
+  public void testScanLimit() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "Snapshot";
+    Table table = null;
+    try {
+      UTIL.getConfiguration().setInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 10);
+      if (UTIL.getAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+
+      UTIL.createTable(tableName, FAMILIES, new byte[][] { bbb, yyy });
+
+      Admin admin = UTIL.getAdmin();
+
+      int regionNum = admin.getRegions(tableName).size();
+      // put some stuff in the table
+      table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
+        null, snapshotName, rootDir, fs, true);
+
+      Job job = new Job(UTIL.getConfiguration());
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan();
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        TestTableSnapshotInputFormat.class);
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        RowCounter.RowCounterMapper.class, NullWritable.class, NullWritable.class, job, true,
+        tmpTableDir);
+      Assert.assertTrue(job.waitForCompletion(true));
+      Assert.assertEquals(10 * regionNum,
+        job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+      UTIL.getConfiguration().unset(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT);
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
     }
   }
 
   @Test
   public void testNoDuplicateResultsWhenSplitting() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
     String snapshotName = "testSnapshotBug";
     try {
@@ -325,7 +380,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       admin.split(tableName, Bytes.toBytes("eee"));
       TestTableSnapshotScanner.blockUntilSplitFinished(UTIL, tableName, 2);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
 
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
@@ -352,8 +407,37 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
+  }
+
+  @Test
+  public void testScannerReadTypeConfiguration() throws IOException {
+    Configuration conf = new Configuration(false);
+    // Explicitly set ReadTypes should persist
+    for (ReadType readType : Arrays.asList(ReadType.PREAD, ReadType.STREAM)) {
+      Scan scanWithReadType = new Scan();
+      scanWithReadType.setReadType(readType);
+      assertEquals(scanWithReadType.getReadType(),
+          serializeAndReturn(conf, scanWithReadType).getReadType());
+    }
+    // We should only see the DEFAULT ReadType getting updated to STREAM.
+    Scan scanWithoutReadType = new Scan();
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.STREAM, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+
+    // We should still be able to force a certain ReadType when DEFAULT is given.
+    conf.setEnum(SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE, ReadType.PREAD);
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.PREAD, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+  }
+
+  /**
+   * Serializes and deserializes the given scan in the same manner that
+   * TableSnapshotInputFormat does.
+   */
+  private Scan serializeAndReturn(Configuration conf, Scan s) throws IOException {
+    conf.set(TableInputFormat.SCAN, TableMapReduceUtil.convertScanToString(s));
+    return TableSnapshotInputFormatImpl.extractScanFromConf(conf);
   }
 
   private void verifyWithMockedMapReduce(Job job, int numRegions, int expectedNumSplits,
@@ -364,13 +448,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow,
+    HBaseTestingUtil.SeenRowTracker rowTracker = new HBaseTestingUtil.SeenRowTracker(startRow,
         stopRow.length > 0 ? stopRow : Bytes.toBytes("\uffff"));
 
     boolean localityEnabled =
         job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                           SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
 
+    boolean byRegionLoc =
+      job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+                                        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
       InputSplit split = splits.get(i);
@@ -378,6 +465,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
       if (localityEnabled) {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
+        if (byRegionLoc) {
+          // When it uses region location from meta, the hostname will be "localhost",
+          // the location from hdfs block location is "127.0.0.1".
+          Assert.assertEquals(1, split.getLocations().length);
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("localhost"));
+        } else {
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("127.0.0.1"));
+        }
       } else {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length == 0);
       }
@@ -419,7 +516,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
+  protected void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
       String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
       int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
@@ -427,7 +524,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
-  public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
+  public static void doTestWithMapReduce(HBaseTestingUtil util, TableName tableName,
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
 
@@ -444,7 +541,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     try {
       // create the job
       Job job = new Job(util.getConfiguration());
-      Scan scan = new Scan(startRow, endRow); // limit the scan
+      Scan scan = new Scan().withStartRow(startRow).withStopRow(endRow); // limit the scan
 
       job.setJarByClass(util.getClass());
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
@@ -477,5 +574,23 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
+  }
+
+  @Test
+  public void testCleanRestoreDir() throws Exception {
+    TableName tableName = TableName.valueOf("test_table");
+    String snapshotName = "test_snapshot";
+    createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
+    Job job = Job.getInstance(UTIL.getConfiguration());
+    Path workingDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+    TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
+      new Scan(), TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+      NullWritable.class, job, false, workingDir);
+    FileSystem fs = workingDir.getFileSystem(job.getConfiguration());
+    Path restorePath = new Path(job.getConfiguration()
+      .get("hbase.TableSnapshotInputFormat.restore.dir"));
+    Assert.assertTrue(fs.exists(restorePath));
+    TableSnapshotInputFormat.cleanRestoreDir(job, snapshotName);
+    Assert.assertFalse(fs.exists(restorePath));
   }
 }

@@ -21,16 +21,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
@@ -54,6 +54,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
@@ -74,7 +75,7 @@ public class TestJoinedScanners {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJoinedScanners.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] cf_essential = Bytes.toBytes("essential");
   private static final byte[] cf_joined = Bytes.toBytes("joined");
@@ -98,7 +99,7 @@ public class TestJoinedScanners {
 
     String[] dataNodeHosts = new String[] {"host1", "host2", "host3"};
     int regionServersCount = 3;
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(regionServersCount).dataNodeHosts(dataNodeHosts).build();
     TEST_UTIL.startMiniCluster(option);
   }
@@ -113,27 +114,27 @@ public class TestJoinedScanners {
     byte[][] families = {cf_essential, cf_joined};
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setDataBlockEncoding(blockEncoding);
-      desc.addFamily(hcd);
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setDataBlockEncoding(blockEncoding).build();
+      builder.setColumnFamily(familyDescriptor);
     }
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptor tableDescriptor = builder.build();
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     Table ht = TEST_UTIL.getConnection().getTable(tableName);
 
     long rows_to_insert = 1000;
     int insert_batch = 20;
-    long time = System.nanoTime();
-    Random rand = new Random(time);
 
     LOG.info("Make " + Long.toString(rows_to_insert) + " rows, total size = " + Float
       .toString(rows_to_insert * valueWidth / 1024 / 1024) + " MB");
 
+    long time = System.nanoTime();
+    Random rand = ThreadLocalRandom.current();
     byte[] val_large = new byte[valueWidth];
-
     List<Put> puts = new ArrayList<>();
-
     for (long i = 0; i < rows_to_insert; i++) {
       Put put = new Put(Bytes.toBytes(Long.toString(i)));
       if (rand.nextInt(100) <= selectionRatio) {

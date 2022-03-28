@@ -161,7 +161,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
     return regionSize;
   }
 
-  // VisibleForTesting
+  // visible for testing
   RegionSizeStore getRegionSizeStore() {
     return rs.getRegionServerSpaceQuotaManager().getRegionSizeStore();
   }

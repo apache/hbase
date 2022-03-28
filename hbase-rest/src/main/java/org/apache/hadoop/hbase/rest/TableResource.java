@@ -21,17 +21,9 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.List;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.Encoded;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.QueryParam;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -39,6 +31,15 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.javax.ws.rs.DefaultValue;
+import org.apache.hbase.thirdparty.javax.ws.rs.Encoded;
+import org.apache.hbase.thirdparty.javax.ws.rs.Path;
+import org.apache.hbase.thirdparty.javax.ws.rs.PathParam;
+import org.apache.hbase.thirdparty.javax.ws.rs.QueryParam;
 
 @InterfaceAudience.Private
 public class TableResource extends ResourceBase {
@@ -140,7 +141,7 @@ public class TableResource extends ResourceBase {
         byte[] prefixBytes = Bytes.toBytes(prefix);
         prefixFilter = new PrefixFilter(Bytes.toBytes(prefix));
         if (startRow.isEmpty()) {
-          tableScan.setStartRow(prefixBytes);
+          tableScan.withStartRow(prefixBytes);
         }
       }
       if (LOG.isTraceEnabled()) {
@@ -151,12 +152,12 @@ public class TableResource extends ResourceBase {
       }
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
-      tableScan.setMaxVersions(maxVersions);
+      tableScan.readVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
       if (!startRow.isEmpty()) {
-        tableScan.setStartRow(Bytes.toBytes(startRow));
+        tableScan.withStartRow(Bytes.toBytes(startRow));
       }
-      tableScan.setStopRow(Bytes.toBytes(endRow));
+      tableScan.withStopRow(Bytes.toBytes(endRow));
       for (String col : column) {
         byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {

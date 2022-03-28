@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,8 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.MasterClusterInfoProvider;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -46,8 +47,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement2 {
@@ -56,8 +55,7 @@ public class TestRegionPlacement2 {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionPlacement2.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement2.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int SLAVES = 7;
   private final static int PRIMARY = Position.PRIMARY.ordinal();
   private final static int SECONDARY = Position.SECONDARY.ordinal();
@@ -82,9 +80,13 @@ public class TestRegionPlacement2 {
   }
 
   @Test
-  public void testFavoredNodesPresentForRoundRobinAssignment() throws HBaseIOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+  public void testFavoredNodesPresentForRoundRobinAssignment() throws IOException {
+    FavoredNodeLoadBalancer balancer =
+      (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    balancer.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {
@@ -143,9 +145,13 @@ public class TestRegionPlacement2 {
   }
 
   @Test
-  public void testFavoredNodesPresentForRandomAssignment() throws HBaseIOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+  public void testFavoredNodesPresentForRandomAssignment() throws IOException {
+    FavoredNodeLoadBalancer balancer =
+      (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    balancer.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {

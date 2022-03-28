@@ -27,7 +27,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -40,14 +39,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -61,8 +61,9 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -110,6 +111,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  * Tests of HRegion methods for replaying flush, compaction, region open, etc events for secondary
  * region replicas
  */
+@SuppressWarnings("deprecation")
 @Category(LargeTests.class)
 public class TestHRegionReplayEvents {
 
@@ -120,7 +122,7 @@ public class TestHRegionReplayEvents {
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
   @Rule public TestName name = new TestName();
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   public static Configuration CONF;
   private String dir;
@@ -146,7 +148,7 @@ public class TestHRegionReplayEvents {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniDFSCluster(1);
   }
 
@@ -172,8 +174,9 @@ public class TestHRegionReplayEvents {
     }
     htd = builder.build();
 
-    long time = System.currentTimeMillis();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    long time = EnvironmentEdgeManager.currentTime();
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     primaryHri =
         RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(0).build();
     secondaryHri =
@@ -190,8 +193,8 @@ public class TestHRegionReplayEvents {
     String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
         .toString();
     ExecutorService es = new ExecutorService(string);
-    es.startExecutorService(
-      string+"-"+string, 1);
+    es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1).setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
@@ -212,10 +215,10 @@ public class TestHRegionReplayEvents {
     }
 
     if (primaryRegion != null) {
-      HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
+      HBaseTestingUtil.closeRegionAndWAL(primaryRegion);
     }
     if (secondaryRegion != null) {
-      HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
+      HBaseTestingUtil.closeRegionAndWAL(secondaryRegion);
     }
 
     EnvironmentEdgeManagerTestHelper.reset();
@@ -1121,7 +1124,7 @@ public class TestHRegionReplayEvents {
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
 
-    HRegion region = initHRegion(tableName, method, family);
+    HRegion region = initHRegion(tableName, family);
     try {
       // replay an entry that is bigger than current read point
       long readPoint = region.getMVCC().getReadPoint();
@@ -1162,8 +1165,8 @@ public class TestHRegionReplayEvents {
 
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
 
     // test for replay prepare flush
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
@@ -1178,12 +1181,12 @@ public class TestHRegionReplayEvents {
           primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
 
     secondaryRegion.close();
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
   }
 
   /**
@@ -1517,9 +1520,8 @@ public class TestHRegionReplayEvents {
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // bulk load a file into primary region
-    Random random = new Random();
     byte[] randomValues = new byte[20];
-    random.nextBytes(randomValues);
+    Bytes.random(randomValues);
     Path testPath = TEST_UTIL.getDataTestDirOnTestFS();
 
     List<Pair<byte[], String>> familyPaths = new ArrayList<>();
@@ -1656,11 +1658,17 @@ public class TestHRegionReplayEvents {
     FSDataOutputStream out = TEST_UTIL.getTestFileSystem().create(testFile);
     try {
       hFileFactory.withOutputStream(out);
-      hFileFactory.withFileContext(new HFileContext());
+      hFileFactory.withFileContext(new HFileContextBuilder().build());
       HFile.Writer writer = hFileFactory.create();
       try {
-        writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0L,
-          KeyValue.Type.Put.getCode(), valueBytes)));
+        writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          .setRow(valueBytes)
+          .setFamily(family)
+          .setQualifier(valueBytes)
+          .setTimestamp(0L)
+          .setType(KeyValue.Type.Put.getCode())
+          .setValue(valueBytes)
+          .build()));
       } finally {
         writer.close();
       }
@@ -1699,16 +1707,8 @@ public class TestHRegionReplayEvents {
     }
   }
 
-  private static HRegion initHRegion(byte[] tableName,
-      String callingMethod, byte[]... families) throws IOException {
-    return initHRegion(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      callingMethod, TEST_UTIL.getConfiguration(), false, Durability.SYNC_WAL, null, families);
-  }
-
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, callingMethod, conf,
-      isReadOnly, durability, wal, families);
+  private static HRegion initHRegion(byte[] tableName, byte[]... families) throws IOException {
+    return TEST_UTIL.createLocalHRegion(TableName.valueOf(tableName), HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.SYNC_WAL, null, families);
   }
 }

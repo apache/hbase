@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Stripe implementation of StoreFlusher. Flushes files either into L0 file w/o metadata, or
@@ -61,8 +60,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
 
     // Let policy select flush method.
     StripeFlushRequest req = this.policy.selectFlush(store.getComparator(), this.stripes,
@@ -72,12 +70,12 @@ public class StripeStoreFlusher extends StoreFlusher {
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(cellsCount);
+      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(snapshot);
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory);
 
       synchronized (flushLock) {
-        performFlush(scanner, mw, smallestReadPoint, throughputController);
+        performFlush(scanner, mw, throughputController);
         result = mw.commitWriters(cacheFlushSeqNum, false);
         success = true;
       }
@@ -100,13 +98,12 @@ public class StripeStoreFlusher extends StoreFlusher {
     return result;
   }
 
-  private StripeMultiFileWriter.WriterFactory createWriterFactory(final long kvCount) {
+  private StripeMultiFileWriter.WriterFactory createWriterFactory(MemStoreSnapshot snapshot) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        StoreFileWriter writer = store.createWriterInTmp(kvCount,
-            store.getColumnFamilyDescriptor().getCompressionType(), false, true, true, false);
-        return writer;
+        // XXX: it used to always pass true for includesTag, re-consider?
+        return StripeStoreFlusher.this.createWriter(snapshot, true);
       }
     };
   }
@@ -120,7 +117,6 @@ public class StripeStoreFlusher extends StoreFlusher {
       this.comparator = comparator;
     }
 
-    @VisibleForTesting
     public StripeMultiFileWriter createWriter() throws IOException {
       StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(comparator, 1,
           Long.MAX_VALUE, OPEN_KEY, OPEN_KEY);

@@ -257,12 +257,12 @@ The following examples illustrate some of the possibilities.
 Note that you always have at least one write queue, no matter what setting you use.
 
 * The default value of `0` does not split the queue.
-* A value of `.3` uses 30% of the queues for reading and 60% for writing.
+* A value of `.3` uses 30% of the queues for reading and 70% for writing.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 3 queues would be used for reads and 7 for writes.
 * A value of `.5` uses the same number of read queues and write queues.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 5 queues would be used for reads and 5 for writes.
-* A value of `.6` uses 60% of the queues for reading and 30% for reading.
-  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 7 queues would be used for reads and 3 for writes.
+* A value of `.6` uses 60% of the queues for reading and 40% for reading.
+  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 6 queues would be used for reads and 4 for writes.
 * A value of `1.0` uses one queue to process write requests, and all other queues process read requests.
   A value higher than `1.0` has the same effect as a value of `1.0`.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 9 queues would be used for reads and 1 for writes.
@@ -273,11 +273,11 @@ More queues are used for Gets if the value is below `.5` and more are used for s
 No matter what setting you use, at least one read queue is used for Get operations.
 
 * A value of `0` does not split the read queue.
-* A value of `.3` uses 60% of the read queues for Gets and 30% for Scans.
+* A value of `.3` uses 70% of the read queues for Gets and 30% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 7 would be used for Gets and 3 for Scans.
 * A value of `.5` uses half the read queues for Gets and half for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 5 would be used for Gets and 5 for Scans.
-* A value of `.6` uses 30% of the read queues for Gets and 60% for Scans.
+* A value of `.7` uses 30% of the read queues for Gets and 70% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 3 would be used for Gets and 7 for Scans.
 * A value of `1.0` uses all but one of the read queues for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of`.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 1 would be used for Gets and 9 for Scans.
@@ -593,7 +593,6 @@ See <<precreate.regions>>, as well as <<perf.configurations>>
 == Reading from HBase
 
 The mailing list can help if you are having performance issues.
-For example, here is a good general thread on what to look at addressing read-time issues: link:http://search-hadoop.com/m/qOo2yyHtCC1[HBase Random Read latency > 100ms]
 
 [[perf.hbase.client.caching]]
 === Scan Caching
@@ -801,6 +800,8 @@ See <<hbase_metrics>>  for more information.
   This could indicate that read requests are often slow, or that hedged reads are triggered too quickly.
 * hedgeReadOpsWin - the number of times the hedged read thread was faster than the original thread.
   This could indicate that a given RegionServer is having trouble servicing requests.
+* hedgedReadOpsInCurThread - the number of times hedged read was rejected from executor and needed to fallback to be executed in current thread.
+  This could indicate that current hedged read thread pool size is not appropriate.
 
 
 [[perf.deleting]]
@@ -844,7 +845,7 @@ See the link:https://issues.apache.org/jira/browse/HDFS-1599[Umbrella Jira Ticke
 Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via link:https://issues.apache.org/jira/browse/HDFS-2246[HDFS-2246], it is possible for the DFSClient to take a "short circuit" and read directly from the disk instead of going through the DataNode when the data is local.
 What this means for HBase is that the RegionServers can read directly off their machine's disks instead of having to open a socket to talk to the DataNode, the former being generally much faster.
 See JD's link:http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf[Performance Talk].
-Also see link:http://search-hadoop.com/m/zV6dKrLCVh1[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
+Also see link:https://lists.apache.org/thread.html/ce2ce3a3bbd20806d0c017b2e7528e78a46ccb87c063831db051949d%401347548325%40%3Cdev.hbase.apache.org%3E[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
 
 To enable "short circuit" reads, it will depend on your version of Hadoop.
 The original shortcircuit read patch was much improved upon in Hadoop 2 in link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347].

@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -37,10 +39,11 @@ import org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -56,7 +59,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeper {
 
   @ClassRule
@@ -65,7 +68,7 @@ public class TestZooKeeper {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeper.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -76,9 +79,12 @@ public class TestZooKeeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
-        LoadBalancer.class);
+      LoadBalancer.class);
+    TEST_UTIL.startMiniDFSCluster(2);
   }
 
   @AfterClass
@@ -88,7 +94,7 @@ public class TestZooKeeper {
 
   @Before
   public void setUp() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(2).numRegionServers(2).build();
     TEST_UTIL.startMiniHBaseCluster(option);
   }
@@ -104,7 +110,8 @@ public class TestZooKeeper {
       // Still need to clean things up
       TEST_UTIL.shutdownMiniHBaseCluster();
     } finally {
-      TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+      TEST_UTIL.getTestFileSystem().delete(CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()),
+        true);
       ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
     }
   }
@@ -131,7 +138,7 @@ public class TestZooKeeper {
   @Test
   public void testMasterZKSessionRecoveryFailure() throws Exception {
     LOG.info("Starting " + name.getMethodName());
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
@@ -143,7 +150,7 @@ public class TestZooKeeper {
    * Make sure we can use the cluster
    */
   private void testSanity(final String testName) throws Exception {
-    String tableName = testName + "_" + System.currentTimeMillis();
+    String tableName = testName + "_" + EnvironmentEdgeManager.currentTime();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build();
     LOG.info("Creating table " + tableName);
@@ -169,7 +176,7 @@ public class TestZooKeeper {
    */
   @Test
   public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
@@ -235,7 +242,7 @@ public class TestZooKeeper {
    */
   @Test
   public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] family = Bytes.toBytes("col");
@@ -276,6 +283,7 @@ public class TestZooKeeper {
     static boolean retainAssignCalled = false;
 
     @Override
+    @NonNull
     public Map<ServerName, List<RegionInfo>> retainAssignment(
         Map<RegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
       retainAssignCalled = true;

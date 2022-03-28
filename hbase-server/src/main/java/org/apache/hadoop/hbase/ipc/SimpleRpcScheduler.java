@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterAnnotationReadingPriorityFunction;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
@@ -88,10 +88,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     if (callqReadShare > 0) {
       // at least 1 read handler and 1 write handler
-      callExecutor = new RWQueueRpcExecutor("default.RWQ", Math.max(2, handlerCount),
+      callExecutor = new FastPathRWQueueRpcExecutor("default.FPRWQ", Math.max(2, handlerCount),
         maxQueueLength, priority, conf, server);
     } else {
-      if (RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)) {
+      if (RpcExecutor.isFifoQueueType(callQueueType) ||
+        RpcExecutor.isCodelQueueType(callQueueType) ||
+        RpcExecutor.isPluggableQueueWithFastPath(callQueueType, conf)) {
         callExecutor = new FastPathBalancedQueueRpcExecutor("default.FPBQ", handlerCount,
             maxQueueLength, priority, conf, server);
       } else {
@@ -100,10 +102,22 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       }
     }
 
-    // Create 2 queues to help priorityExecutor be more scalable.
-    this.priorityExecutor = priorityHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
-        "priority.FPBQ", priorityHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        maxPriorityQueueLength, priority, conf, abortable) : null;
+    float metaCallqReadShare =
+        conf.getFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY,
+            MetaRWQueueRpcExecutor.DEFAULT_META_CALL_QUEUE_READ_SHARE);
+    if (metaCallqReadShare > 0) {
+      // different read/write handler for meta, at least 1 read handler and 1 write handler
+      this.priorityExecutor =
+          new MetaRWQueueRpcExecutor("priority.RWQ", Math.max(2, priorityHandlerCount),
+              maxPriorityQueueLength, priority, conf, server);
+    } else {
+      // Create 2 queues to help priorityExecutor be more scalable.
+      this.priorityExecutor = priorityHandlerCount > 0 ?
+          new FastPathBalancedQueueRpcExecutor("priority.FPBQ", priorityHandlerCount,
+              RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+              abortable) :
+          null;
+    }
     this.replicationExecutor =
         replicationHandlerCount > 0
             ? new FastPathBalancedQueueRpcExecutor("replication.FPBQ", replicationHandlerCount,
@@ -142,7 +156,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
-    if (RpcExecutor.isCodelQueueType(callQueueType)) {
+    if (RpcExecutor.isCodelQueueType(callQueueType) ||
+      RpcExecutor.isPluggableQueueType(callQueueType)) {
       callExecutor.onConfigurationChange(conf);
     }
   }
@@ -183,7 +198,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   }
 
   @Override
-  public boolean dispatch(CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(CallRunner callTask) {
     RpcCall call = callTask.getRpcCall();
     int level = priority.getPriority(call.getHeader(), call.getParam(),
         call.getRequestUser().orElse(null));

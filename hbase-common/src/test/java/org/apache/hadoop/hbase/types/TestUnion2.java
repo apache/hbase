@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -30,9 +29,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestUnion2 {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUnion2.class);
@@ -41,7 +39,6 @@ public class TestUnion2 {
    * An example <code>Union</code>
    */
   private static class SampleUnion1 extends Union2<Integer, String> {
-
     private static final byte IS_INTEGER = 0x00;
     private static final byte IS_STRING  = 0x01;
 
@@ -79,13 +76,19 @@ public class TestUnion2 {
       String s = null;
       try {
         i = (Integer) val;
-      } catch (ClassCastException e) {}
+      } catch (ClassCastException ignored) {}
       try {
         s = (String) val;
-      } catch (ClassCastException e) {}
+      } catch (ClassCastException ignored) {}
 
-      if (null != i) return 1 + typeA.encodedLength(i);
-      if (null != s) return 1 + typeB.encodedLength(s);
+      if (null != i) {
+        return 1 + typeA.encodedLength(i);
+      }
+
+      if (null != s) {
+        return 1 + typeB.encodedLength(s);
+      }
+
       throw new IllegalArgumentException("val is not a valid member of this union.");
     }
 
@@ -95,10 +98,10 @@ public class TestUnion2 {
       String s = null;
       try {
         i = (Integer) val;
-      } catch (ClassCastException e) {}
+      } catch (ClassCastException ignored) {}
       try {
         s = (String) val;
-      } catch (ClassCastException e) {}
+      } catch (ClassCastException ignored) {}
 
       if (null != i) {
         dst.put(IS_INTEGER);
@@ -106,31 +109,31 @@ public class TestUnion2 {
       } else if (null != s) {
         dst.put(IS_STRING);
         return 1 + typeB.encode(dst, s);
-      }
-      else
+      } else {
         throw new IllegalArgumentException("val is not of a supported type.");
+      }
     }
   }
 
   @Test
   public void testEncodeDecode() {
-    Integer intVal = Integer.valueOf(10);
+    Integer intVal = 10;
     String strVal = "hello";
     PositionedByteRange buff = new SimplePositionedMutableByteRange(10);
     SampleUnion1 type = new SampleUnion1();
 
     type.encode(buff, intVal);
     buff.setPosition(0);
-    assertTrue(0 == intVal.compareTo(type.decodeA(buff)));
+    assertEquals(0, intVal.compareTo(type.decodeA(buff)));
     buff.setPosition(0);
     type.encode(buff, strVal);
     buff.setPosition(0);
-    assertTrue(0 == strVal.compareTo(type.decodeB(buff)));
+    assertEquals(0, strVal.compareTo(type.decodeB(buff)));
   }
 
   @Test
   public void testSkip() {
-    Integer intVal = Integer.valueOf(10);
+    Integer intVal = 10;
     String strVal = "hello";
     PositionedByteRange buff = new SimplePositionedMutableByteRange(10);
     SampleUnion1 type = new SampleUnion1();

@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -47,7 +47,7 @@ public class TestReadWriteSeqIdFiles {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadWriteSeqIdFiles.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static FileSystem walFS;
 
@@ -79,7 +79,7 @@ public class TestReadWriteSeqIdFiles {
     }
 
     Path editsdir = WALSplitUtil.getRegionDirRecoveredEditsDir(REGION_DIR);
-    FileStatus[] files = FSUtils.listStatus(walFS, editsdir, new PathFilter() {
+    FileStatus[] files = CommonFSUtils.listStatus(walFS, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         return WALSplitUtil.isSequenceIdFile(p);

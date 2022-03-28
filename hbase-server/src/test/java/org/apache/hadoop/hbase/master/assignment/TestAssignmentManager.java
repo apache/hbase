@@ -21,10 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -143,14 +145,14 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     TransitRegionStateProcedure[] assignments = new TransitRegionStateProcedure[nRegions];
 
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     bulkSubmit(assignments);
 
     for (int i = 0; i < assignments.length; ++i) {
       ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), assignments[i]);
       assertTrue(assignments[i].toString(), assignments[i].isSuccess());
     }
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     float sec = ((et - st) / 1000.0f);
     LOG.info(String.format("[T] Assigning %dprocs in %s (%.2fproc/sec)", assignments.length,
       StringUtils.humanTimeDiff(et - st), assignments.length / sec));
@@ -227,7 +229,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
   public void testAssignMetaAndCrashBeforeResponse() throws Exception {
     tearDown();
     // See setUp(), start HBase until set up meta
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor();
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
@@ -299,7 +301,8 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       RegionInfo hri = createRegionInfo(tableName, 1);
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      MetaTableAccessor.addRegionToMeta(this.util.getConnection(), hri);
+      MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
+        1);
       assertNull("RegionInfo was manually added in META, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       hri = am.loadRegionFromMeta(hri.getEncodedName());

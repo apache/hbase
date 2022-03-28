@@ -22,9 +22,10 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.After;
@@ -39,7 +40,7 @@ import org.junit.rules.TestName;
  * WAL tests that can be reused across providers.
  */
 public abstract class AbstractTestProtobufLog {
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected FileSystem fs;
   protected Path dir;
@@ -110,7 +111,7 @@ public abstract class AbstractTestProtobufLog {
     int recordCount = 5;
     TableName tableName = TableName.valueOf("tablename");
     byte[] row = Bytes.toBytes("row");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     Path path = new Path(dir, "tempwal");
     // delete the log if already exists, for test only
     fs.delete(path, true);

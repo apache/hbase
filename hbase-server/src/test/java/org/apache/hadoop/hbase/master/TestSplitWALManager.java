@@ -20,16 +20,15 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SPLIT_WAL;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -42,9 +41,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.After;
@@ -53,12 +53,13 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 
 public class TestSplitWALManager {
 
@@ -66,7 +67,8 @@ public class TestSplitWALManager {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSplitWALManager.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitWALManager.class);
+  private static HBaseTestingUtil TEST_UTIL;
   private HMaster master;
   private SplitWALManager splitWALManager;
   private TableName TABLE_NAME;
@@ -74,7 +76,7 @@ public class TestSplitWALManager {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     TEST_UTIL.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
     TEST_UTIL.startMiniCluster(3);
@@ -211,26 +213,59 @@ public class TestSplitWALManager {
     Assert.assertEquals(0, metaWals.size());
   }
 
-  @Test
-  public void testSplitLogs() throws Exception {
-    TEST_UTIL.createTable(TABLE_NAME, FAMILY, TEST_UTIL.KEYS_FOR_HBA_CREATE_TABLE);
+  private void splitLogsTestHelper(HBaseTestingUtil testUtil) throws Exception {
+    HMaster hmaster = testUtil.getHBaseCluster().getMaster();
+    SplitWALManager splitWALManager = hmaster.getSplitWALManager();
+    LOG.info("The Master FS is pointing to: " + hmaster.getMasterFileSystem()
+      .getFileSystem().getUri());
+    LOG.info("The WAL FS is pointing to: " + hmaster.getMasterFileSystem()
+      .getWALFileSystem().getUri());
+
+    testUtil.createTable(TABLE_NAME, FAMILY, testUtil.KEYS_FOR_HBA_CREATE_TABLE);
     // load table
-    TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(TABLE_NAME), FAMILY);
-    ProcedureExecutor<MasterProcedureEnv> masterPE = master.getMasterProcedureExecutor();
-    ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
-    ServerName testServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .map(rs -> rs.getRegionServer().getServerName()).filter(rs -> rs != metaServer).findAny()
-        .get();
+    testUtil.loadTable(testUtil.getConnection().getTable(TABLE_NAME), FAMILY);
+    ProcedureExecutor<MasterProcedureEnv> masterPE = hmaster.getMasterProcedureExecutor();
+    ServerName metaServer = testUtil.getHBaseCluster().getServerHoldingMeta();
+    ServerName testServer = testUtil.getHBaseCluster().getRegionServerThreads().stream()
+      .map(rs -> rs.getRegionServer().getServerName()).filter(rs -> rs != metaServer).findAny()
+      .get();
     List<Procedure> procedures = splitWALManager.splitWALs(testServer, false);
     Assert.assertEquals(1, procedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     Assert.assertEquals(0, splitWALManager.getWALsToSplit(testServer, false).size());
+
+    // Validate the old WAL file archive dir
+    Path walRootDir = hmaster.getMasterFileSystem().getWALRootDir();
+    Path walArchivePath = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    FileSystem walFS = hmaster.getMasterFileSystem().getWALFileSystem();
+    int archiveFileCount = walFS.listStatus(walArchivePath).length;
 
     procedures = splitWALManager.splitWALs(metaServer, true);
     Assert.assertEquals(1, procedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     Assert.assertEquals(0, splitWALManager.getWALsToSplit(metaServer, true).size());
     Assert.assertEquals(1, splitWALManager.getWALsToSplit(metaServer, false).size());
+    // There should be archiveFileCount + 1 WALs after SplitWALProcedure finish
+    Assert.assertEquals("Splitted WAL files should be archived", archiveFileCount + 1,
+      walFS.listStatus(walArchivePath).length);
+  }
+
+  @Test
+  public void testSplitLogs() throws Exception {
+    splitLogsTestHelper(TEST_UTIL);
+  }
+
+  @Test
+  public void testSplitLogsWithDifferentWalAndRootFS() throws Exception{
+    HBaseTestingUtil testUtil2 = new HBaseTestingUtil();
+    testUtil2.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
+    testUtil2.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testWalDir");
+    testUtil2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
+    CommonFSUtils.setWALRootDir(testUtil2.getConfiguration(), dir);
+    testUtil2.startMiniCluster(3);
+    splitLogsTestHelper(testUtil2);
+    testUtil2.shutdownMiniCluster();
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -27,24 +29,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -107,25 +111,48 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     conf.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("foobar"));
-    htd.addFamily(hcd);
-    HRegionInfo info =
-        new HRegionInfo(TableName.valueOf("foobar"), null, null, false);
-    WAL wal = hbaseUtility.createWal(conf, hbaseUtility.getDataTestDir(), info);
-    this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf, htd, wal, true);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf("foobar"))
+      .setColumnFamily(familyDescriptor).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf("foobar")).build();
+    WAL wal = HBaseTestingUtil.createWal(conf, hbaseUtility.getDataTestDir(), info);
+    this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf,
+      tableDescriptor, wal, true);
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
-    this.store = new HStore(region, hcd, conf, false);
+    this.store = new HStore(region, familyDescriptor, conf, false);
 
     long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
-    chunkCreator = ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false,
+    chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false,
         globalMemStoreLimit, 0.4f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-            null);
-    assertTrue(chunkCreator != null);
+            null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    assertNotNull(chunkCreator);
+  }
+
+  /**
+   * A simple test which flush in memory affect timeOfOldestEdit
+   */
+  @Test
+  public void testTimeOfOldestEdit() {
+    assertEquals(Long.MAX_VALUE,  memstore.timeOfOldestEdit());
+    final byte[] r = Bytes.toBytes("r");
+    final byte[] f = Bytes.toBytes("f");
+    final byte[] q = Bytes.toBytes("q");
+    final byte[] v = Bytes.toBytes("v");
+    final KeyValue kv = new KeyValue(r, f, q, v);
+    memstore.add(kv, null);
+    long timeOfOldestEdit = memstore.timeOfOldestEdit();
+    assertNotEquals(Long.MAX_VALUE, timeOfOldestEdit);
+
+    ((CompactingMemStore)memstore).flushInMemory();
+    assertEquals(timeOfOldestEdit, memstore.timeOfOldestEdit());
+    memstore.add(kv, null);
+    assertEquals(timeOfOldestEdit, memstore.timeOfOldestEdit());
+    memstore.snapshot();
+    assertEquals(Long.MAX_VALUE, memstore.timeOfOldestEdit());
   }
 
   /**
@@ -151,11 +178,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     // use case 1: both kvs in kvset
     this.memstore.add(kv1.clone(), null);
     this.memstore.add(kv2.clone(), null);
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // snapshot is empty,active segment is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
     this.memstore.snapshot();
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // active segment is empty,snapshot is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
@@ -203,15 +234,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     addRows(this.memstore);
     Cell closestToEmpty = ((CompactingMemStore)this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparator.getInstance().compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+        EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
         assertTrue(CellComparator.getInstance().compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -319,7 +350,6 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   /**
    * Tests that the timeOfOldestEdit is updated correctly for the
    * various edit operations in memstore.
-   * @throws Exception
    */
   @Override
   @Test
@@ -684,8 +714,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     // simulate flusher
-    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
-      mss.getCellsCount());
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(7, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -762,8 +791,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     // simulate flusher
-    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
-      mss.getCellsCount());
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -841,7 +869,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
@@ -865,7 +893,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);
@@ -883,12 +911,9 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
     @Override
     public long currentTime() {
-            return t;
-        }
-      public void setCurrentTimeMillis(long t) {
-        this.t = t;
-      }
+      return t;
     }
+  }
 
   static protected class MyCompactingMemStore extends CompactingMemStore {
 

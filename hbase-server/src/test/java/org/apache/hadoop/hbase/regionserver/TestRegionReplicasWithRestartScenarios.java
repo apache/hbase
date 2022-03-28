@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -37,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -49,6 +46,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.*;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionReplicasWithRestartScenarios {
@@ -64,31 +63,27 @@ public class TestRegionReplicasWithRestartScenarios {
 
   private static final int NB_SERVERS = 3;
   private Table table;
+  private TableName tableName;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    // Reduce the hdfs block size and prefetch to trigger the file-link reopen
-    // when the file is moved to archive (e.g. compaction)
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 8192);
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 1);
-    HTU.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 128 * 1024 * 1024);
-    HTU.getConfiguration().setInt(">hbase.master.wait.on.regionservers.mintostart", 3);
+    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", NB_SERVERS);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
   @Before
   public void before() throws IOException {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
-    // Create table then get the single region for our new table.
-    this.table = createTableDirectlyFromHTD(tableName);
+    this.tableName = TableName.valueOf(this.name.getMethodName());
+    this.table = createTableDirectlyFromHTD(this.tableName);
   }
 
   @After
   public void after() throws IOException {
     this.table.close();
+    HTU.deleteTable(this.tableName);
   }
 
   private static Table createTableDirectlyFromHTD(final TableName tableName) throws IOException {
@@ -107,7 +102,6 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
   }
 
@@ -125,7 +119,32 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @Test
   public void testRegionReplicasCreated() throws Exception {
-    Collection<HRegion> onlineRegions = getRS().getOnlineRegionsLocalContext();
+    assertReplicaDistributed();
+  }
+
+  @Test
+  public void testWhenRestart() throws Exception {
+    // Start Region before stopping other so SCP has three servers to play with when it goes
+    // about assigning instead of two, depending on sequencing of SCP and RS stop/start.
+    // If two only, then it'll be forced to assign replicas alongside primaries.
+    HTU.getHBaseCluster().startRegionServerAndWait(60000).getRegionServer();
+    HRegionServer stopRegionServer = getRS();
+    ServerName serverName = stopRegionServer.getServerName();
+    // Make a copy because this is actual instance from HRegionServer
+    Collection<HRegion> regionsOnStoppedServer =
+      new ArrayList<HRegion>(stopRegionServer.getOnlineRegionsLocalContext());
+    HTU.getHBaseCluster().stopRegionServer(serverName);
+    HTU.getHBaseCluster().waitForRegionServerToStop(serverName, 60000);
+    HTU.waitTableAvailable(this.tableName);
+    assertReplicaDistributed(regionsOnStoppedServer);
+  }
+
+  private void assertReplicaDistributed() throws Exception {
+    assertReplicaDistributed(getRS().getOnlineRegionsLocalContext());
+  }
+
+  private void assertReplicaDistributed(Collection<HRegion> onlineRegions) throws Exception {
+    LOG.info("ASSERT DISTRIBUTED {}", onlineRegions);
     boolean res = checkDuplicates(onlineRegions);
     assertFalse(res);
     Collection<HRegion> onlineRegions2 = getSecondaryRS().getOnlineRegionsLocalContext();
@@ -134,7 +153,8 @@ public class TestRegionReplicasWithRestartScenarios {
     Collection<HRegion> onlineRegions3 = getTertiaryRS().getOnlineRegionsLocalContext();
     checkDuplicates(onlineRegions3);
     assertFalse(res);
-    int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
+    int totalRegions = HTU.getMiniHBaseCluster().getLiveRegionServerThreads().stream().
+      mapToInt(l -> l.getRegionServer().getOnlineRegions().size()).sum();
     assertEquals(61, totalRegions);
   }
 
@@ -150,7 +170,7 @@ public class TestRegionReplicasWithRestartScenarios {
           RegionReplicaUtil.getRegionInfoForDefaultReplica(actualRegion.getRegionInfo()))) {
           i++;
           if (i > 1) {
-            LOG.info("Duplicate found " + actualRegion.getRegionInfo() + " " +
+            LOG.warn("Duplicate found {} and {}", actualRegion.getRegionInfo(),
                 region.getRegionInfo());
             assertTrue(Bytes.equals(region.getRegionInfo().getStartKey(),
               actualRegion.getRegionInfo().getStartKey()));

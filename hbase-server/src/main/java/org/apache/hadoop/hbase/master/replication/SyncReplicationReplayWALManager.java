@@ -47,8 +47,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The manager for replaying remote wal.
  * <p/>
@@ -289,7 +287,6 @@ public class SyncReplicationReplayWALManager {
     return fs.getFileStatus(walPath).getLen() == 0;
   }
 
-  @VisibleForTesting
   public Path getRemoteWALDir() {
     return remoteWALDir;
   }

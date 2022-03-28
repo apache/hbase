@@ -41,10 +41,9 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.security.auth.x500.X500Principal;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
@@ -102,7 +101,12 @@ public final class KeyStoreTestUtil {
 
   private static KeyStore createEmptyKeyStore()
     throws GeneralSecurityException, IOException {
-    KeyStore ks = KeyStore.getInstance("JKS");
+    return createEmptyKeyStore("jks");
+  }
+
+  private static KeyStore createEmptyKeyStore(String keyStoreType)
+    throws GeneralSecurityException, IOException {
+    KeyStore ks = KeyStore.getInstance(keyStoreType);
     ks.load(null, null); // initialize
     return ks;
   }
@@ -118,18 +122,29 @@ public final class KeyStoreTestUtil {
     }
   }
 
+  /**
+   * Creates a keystore with a single key and saves it to a file.
+   * This method will use the same password for the keystore and for the key.
+   * This method will always generate a keystore file in JKS format.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on keystore
+   * @param alias String alias to use for the key
+   * @param privateKey Key to save in keystore
+   * @param cert Certificate to use as certificate chain associated to key
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
   public static void createKeyStore(String filename,
                                     String password, String alias,
                                     Key privateKey, Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
-    ks.setKeyEntry(alias, privateKey, password.toCharArray(),
-                   new Certificate[]{cert});
-    saveKeyStore(ks, filename, password);
+    createKeyStore(filename, password, password, alias, privateKey, cert);
   }
 
   /**
    * Creates a keystore with a single key and saves it to a file.
+   * This method will always generate a keystore file in JKS format.
    *
    * @param filename String file to save
    * @param password String store password to set on keystore
@@ -144,17 +159,66 @@ public final class KeyStoreTestUtil {
                                     String password, String keyPassword, String alias,
                                     Key privateKey, Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
+    createKeyStore(filename, password, keyPassword, alias, privateKey, cert, "JKS");
+  }
+
+
+  /**
+   * Creates a keystore with a single key and saves it to a file.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on keystore
+   * @param keyPassword String key password to set on key
+   * @param alias String alias to use for the key
+   * @param privateKey Key to save in keystore
+   * @param cert Certificate to use as certificate chain associated to key
+   * @param keystoreType String keystore file type (e.g. "JKS")
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void createKeyStore(String filename, String password, String keyPassword,
+                                    String alias, Key privateKey, Certificate cert,
+                                    String keystoreType)
+          throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore(keystoreType);
     ks.setKeyEntry(alias, privateKey, keyPassword.toCharArray(),
                    new Certificate[]{cert});
     saveKeyStore(ks, filename, password);
   }
 
+  /**
+   * Creates a truststore with a single certificate and saves it to a file.
+   * This method uses the default JKS truststore type.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on truststore
+   * @param alias String alias to use for the certificate
+   * @param cert Certificate to add
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
   public static void createTrustStore(String filename,
                                       String password, String alias,
                                       Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
+    createTrustStore(filename, password, alias, cert, "JKS");
+  }
+
+  /**
+   * Creates a truststore with a single certificate and saves it to a file.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on truststore
+   * @param alias String alias to use for the certificate
+   * @param cert Certificate to add
+   * @param trustStoreType String keystore file type (e.g. "JKS")
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void createTrustStore(String filename, String password, String alias,
+                                      Certificate cert, String trustStoreType)
+    throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore(trustStoreType);
     ks.setCertificateEntry(alias, cert);
     saveKeyStore(ks, filename, password);
   }
@@ -169,17 +233,27 @@ public final class KeyStoreTestUtil {
     saveKeyStore(ks, filename, password);
   }
 
-  public static void cleanupSSLConfig(String keystoresDir, String sslConfDir)
+  public static void cleanupSSLConfig(Configuration conf)
     throws Exception {
-    File f = new File(keystoresDir + "/clientKS.jks");
+    File f = new File(conf.get(FileBasedKeyStoresFactory.resolvePropertyName(SSLFactory.Mode.SERVER,
+        FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY)));
     f.delete();
-    f = new File(keystoresDir + "/serverKS.jks");
+    f = new File(conf.get(FileBasedKeyStoresFactory.resolvePropertyName(SSLFactory.Mode.SERVER,
+        FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY)));
     f.delete();
-    f = new File(keystoresDir + "/trustKS.jks");
+
+    String clientKeyStore = conf.get(FileBasedKeyStoresFactory
+        .resolvePropertyName(SSLFactory.Mode.CLIENT,
+            FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY));
+    if (clientKeyStore != null) {
+      f = new File(clientKeyStore);
+      f.delete();
+    }
+    f = new File(KeyStoreTestUtil.getClasspathDir(KeyStoreTestUtil.class) + "/" + conf
+        .get(SSLFactory.SSL_CLIENT_CONF_KEY));
     f.delete();
-    f = new File(sslConfDir + "/ssl-client.xml");
-    f.delete();
-    f = new File(sslConfDir +  "/ssl-server.xml");
+    f = new File(KeyStoreTestUtil.getClasspathDir(KeyStoreTestUtil.class) + "/" + conf
+        .get(SSLFactory.SSL_SERVER_CONF_KEY));
     f.delete();
   }
 
@@ -206,8 +280,12 @@ public final class KeyStoreTestUtil {
     String trustKS = keystoresDir + "/trustKS.jks";
     String trustPassword = "trustP";
 
-    File sslClientConfFile = new File(sslConfDir + "/ssl-client.xml");
-    File sslServerConfFile = new File(sslConfDir + "/ssl-server.xml");
+    File sslClientConfFile = new File(
+        sslConfDir + "/ssl-client-" + System.nanoTime() + "-" + HBaseCommonTestingUtil
+            .getRandomUUID() + ".xml");
+    File sslServerConfFile = new File(
+        sslConfDir + "/ssl-server-" + System.nanoTime() + "-" + HBaseCommonTestingUtil
+            .getRandomUUID() + ".xml");
 
     Map<String, X509Certificate> certs = new HashMap<>();
 
@@ -242,6 +320,9 @@ public final class KeyStoreTestUtil {
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "ALLOW_ALL");
     conf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile.getName());
     conf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile.getName());
+    conf.set("dfs.https.server.keystore.resource", sslServerConfFile.getName());
+
+
     conf.setBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY, useClientCert);
   }
 

@@ -21,7 +21,7 @@ package org.apache.hbase.shaded;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestShadedHBaseTestingUtility {
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

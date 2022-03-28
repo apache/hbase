@@ -33,10 +33,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadOnlyFavoredStochasticBalancer;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -77,7 +75,7 @@ public class TestTableFavoredNodes {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableFavoredNodes.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int WAIT_TIMEOUT = 60000;
   private final static int SLAVES = 8;
   private FavoredNodesManager fnm;
@@ -97,8 +95,6 @@ public class TestTableFavoredNodes {
         LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
     conf.set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "" + SLAVES);
 
-    // This helps test if RS get the appropriate FN updates.
-    conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(WAIT_TIMEOUT);
   }
@@ -246,7 +242,7 @@ public class TestTableFavoredNodes {
     LOG.info("regionA: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionA));
     LOG.info("regionB: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionB));
 
-    int countOfRegions = MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName);
+    int countOfRegions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName).size();
     admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(),
         regionB.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
 
@@ -294,7 +290,6 @@ public class TestTableFavoredNodes {
    * 3. Is the FN information consistent between Master and the respective RegionServer?
    */
   private void checkIfFavoredNodeInformationIsCorrect(TableName tableName) throws Exception {
-
     /*
      * Since we need HRegionServer to check for consistency of FN between Master and RS,
      * lets construct a map for each serverName lookup. Makes it easy later.
@@ -304,13 +299,8 @@ public class TestTableFavoredNodes {
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
       snRSMap.put(rst.getRegionServer().getServerName(), rst.getRegionServer());
     }
-    // Also include master, since it can also host user regions.
-    for (JVMClusterUtil.MasterThread rst :
-      TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads()) {
-      snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
-    }
 
-    int dnPort = fnm.getDataNodePort();
+    int dnPort = FavoredNodeAssignmentHelper.getDataNodePort(TEST_UTIL.getConfiguration());
     RegionLocator regionLocator = admin.getConnection().getRegionLocator(tableName);
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
 
@@ -392,7 +382,9 @@ public class TestTableFavoredNodes {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName) == numRegions;
+        try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+          return locator.getAllRegionLocations().size() == numRegions;
+        }
       }
     });
   }

@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.hbase.security.visibility;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
 import static org.apache.hadoop.hbase.HConstants.OperationStatusCode.SANITY_CHECK_FAILURE;
 import static org.apache.hadoop.hbase.HConstants.OperationStatusCode.SUCCESS;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
@@ -38,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -46,24 +40,21 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -76,25 +67,12 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -108,14 +86,32 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 
 /**
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
@@ -207,21 +203,21 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   /********************************* Master related hooks **********************************/
 
   @Override
-  public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+  public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
     // Need to create the new system table for labels here
-    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
-      HTableDescriptor labelsTable = new HTableDescriptor(LABELS_TABLE_NAME);
-      HColumnDescriptor labelsColumn = new HColumnDescriptor(LABELS_TABLE_FAMILY);
-      labelsColumn.setBloomFilterType(BloomType.NONE);
-      labelsColumn.setBlockCacheEnabled(false); // We will cache all the labels. No need of normal
-                                                 // table block cache.
-      labelsTable.addFamily(labelsColumn);
-      // Let the "labels" table having only one region always. We are not expecting too many labels in
-      // the system.
-      labelsTable.setValue(HTableDescriptor.SPLIT_POLICY,
-          DisabledRegionSplitPolicy.class.getName());
-      try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
-        admin.createTable(labelsTable);
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      if (!admin.tableExists(LABELS_TABLE_NAME)) {
+        // We will cache all the labels. No need of normal table block cache.
+        // Let the "labels" table having only one region always. We are not expecting too many
+        // labels in the system.
+        TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(LABELS_TABLE_NAME)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(LABELS_TABLE_FAMILY)
+            .setBloomFilterType(BloomType.NONE).setBlockCacheEnabled(false).build())
+          .setValue(TableDescriptorBuilder.SPLIT_POLICY, DisabledRegionSplitPolicy.class.getName())
+          .build();
+
+        admin.createTable(tableDescriptor);
       }
     }
   }
@@ -324,7 +320,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
           }
         }
       }
-      if (!sanityFailure) {
+      if (!sanityFailure && (m instanceof Put || m instanceof Delete)) {
         if (cellVisibility != null) {
           String labelsExp = cellVisibility.getExpression();
           List<Tag> visibilityTags = labelCache.get(labelsExp);
@@ -361,7 +357,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
               if (m instanceof Put) {
                 Put p = (Put) m;
                 p.add(cell);
-              } else if (m instanceof Delete) {
+              } else {
                 Delete d = (Delete) m;
                 d.add(cell);
               }
@@ -401,20 +397,24 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
     get.setFilter(new DeleteVersionVisibilityExpressionFilter(visibilityTags,
         VisibilityConstants.SORTED_ORDINAL_SERIALIZATION_FORMAT));
-    List<Cell> result = ctx.getEnvironment().getRegion().get(get, false);
+    try (RegionScanner scanner = ctx.getEnvironment().getRegion().getScanner(new Scan(get))) {
+      // NOTE: Please don't use HRegion.get() instead,
+      // because it will copy cells to heap. See HBASE-26036
+      List<Cell> result = new ArrayList<>();
+      scanner.next(result);
 
-    if (result.size() < get.getMaxVersions()) {
-      // Nothing to delete
-      PrivateCellUtil.updateLatestStamp(cell, byteNow);
-      return;
+      if (result.size() < get.getMaxVersions()) {
+        // Nothing to delete
+        PrivateCellUtil.updateLatestStamp(cell, byteNow);
+        return;
+      }
+      if (result.size() > get.getMaxVersions()) {
+        throw new RuntimeException("Unexpected size: " + result.size() +
+          ". Results more than the max versions obtained.");
+      }
+      Cell getCell = result.get(get.getMaxVersions() - 1);
+      PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
     }
-    if (result.size() > get.getMaxVersions()) {
-      throw new RuntimeException("Unexpected size: " + result.size()
-          + ". Results more than the max versions obtained.");
-    }
-    Cell getCell = result.get(get.getMaxVersions() - 1);
-    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
-
     // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
     // update with the current timestamp after again doing a get. As the hook as already determined
     // the needed timestamp we need to bypass here.
@@ -469,35 +469,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
     pair.setFirst(true);
     return pair;
-  }
-
-  /**
-   * Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE. This
-   * tag type is reserved and should not be explicitly set by user. There are
-   * two versions of this method one that accepts pair and other without pair.
-   * In case of preAppend and preIncrement the additional operations are not
-   * needed like checking for STRING_VIS_TAG_TYPE and hence the API without pair
-   * could be used.
-   *
-   * @param cell
-   * @throws IOException
-   */
-  private boolean checkForReservedVisibilityTagPresence(Cell cell) throws IOException {
-    // Bypass this check when the operation is done by a system/super user.
-    // This is done because, while Replication, the Cells coming to the peer
-    // cluster with reserved
-    // typed tags and this is fine and should get added to the peer cluster
-    // table
-    if (isSystemOrSuperUser()) {
-      return true;
-    }
-    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
-    while (tagsItr.hasNext()) {
-      if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private void removeReplicationVisibilityTag(List<Tag> tags) throws IOException {
@@ -659,36 +630,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
-      throws IOException {
-    // If authorization is not enabled, we don't care about reserved tags
-    if (!authorizationEnabled) {
-      return null;
-    }
-    for (CellScanner cellScanner = append.cellScanner(); cellScanner.advance();) {
-      if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
-        throw new FailedSanityCheckException("Append contains cell with reserved type tag");
-      }
-    }
-    return null;
-  }
-
-  @Override
-  public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
-      throws IOException {
-    // If authorization is not enabled, we don't care about reserved tags
-    if (!authorizationEnabled) {
-      return null;
-    }
-    for (CellScanner cellScanner = increment.cellScanner(); cellScanner.advance();) {
-      if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
-        throw new FailedSanityCheckException("Increment contains cell with reserved type tag");
-      }
-    }
-    return null;
-  }
-
-  @Override
   public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
       ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
@@ -739,13 +680,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
 
     return PrivateCellUtil.createCell(newCell, tags);
-  }
-
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
   }
 
   /****************************** VisibilityEndpoint service related methods ******************************/
@@ -999,7 +933,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
               + "' is not authorized to perform this action.");
         }
         labels = this.visibilityLabelService.listLabels(regex);
-        logResult(false, "listLabels", "Listing labels allowed", null, null, regex);
+        logResult(true, "listLabels", "Listing labels allowed", null, null, regex);
       } catch (AccessDeniedException e) {
         logResult(false, "listLabels", e.getMessage(), null, null, regex);
         CoprocessorRpcUtils.setControllerException(controller, e);

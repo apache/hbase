@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -81,14 +82,16 @@ public class TestCellFlatSet {
     long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(CONF, false));
     if (chunkType.equals("NORMAL_CHUNKS")) {
-      chunkCreator = ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false,
-          globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+      chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false,
+        globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       assertNotNull(chunkCreator);
       smallChunks = false;
     } else {
       // chunkCreator with smaller chunk size, so only 3 cell-representations can accommodate a chunk
       chunkCreator = ChunkCreator.initialize(SMALL_CHUNK_SIZE, false,
-          globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+        globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       assertNotNull(chunkCreator);
       smallChunks = true;
     }
@@ -279,8 +282,8 @@ public class TestCellFlatSet {
 
     // allocate new chunks and use the data chunk to hold the full data of the cells
     // and the index chunk to hold the cell-representations
-    Chunk dataChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
-    Chunk idxChunk  = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+    Chunk dataChunk = chunkCreator.getChunk();
+    Chunk idxChunk = chunkCreator.getChunk();
     // the array of index chunks to be used as a basis for CellChunkMap
     Chunk chunkArray[] = new Chunk[8];  // according to test currently written 8 is way enough
     int chunkArrayIdx = 0;
@@ -297,7 +300,7 @@ public class TestCellFlatSet {
       // do we have enough space to write the cell data on the data chunk?
       if (dataOffset + kv.getSerializedSize() > chunkCreator.getChunkSize()) {
         // allocate more data chunks if needed
-        dataChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+        dataChunk = chunkCreator.getChunk();
         dataBuffer = dataChunk.getData();
         dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
@@ -307,7 +310,7 @@ public class TestCellFlatSet {
       // do we have enough space to write the cell-representation on the index chunk?
       if (idxOffset + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkCreator.getChunkSize()) {
         // allocate more index chunks if needed
-        idxChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+        idxChunk = chunkCreator.getChunk();
         idxBuffer = idxChunk.getData();
         idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
         chunkArray[chunkArrayIdx++] = idxChunk;
@@ -328,8 +331,10 @@ public class TestCellFlatSet {
     // allocate new chunks and use the data JUMBO chunk to hold the full data of the cells
     // and the normal index chunk to hold the cell-representations
     Chunk dataJumboChunk =
-        chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, smallChunkSize);
-    Chunk idxChunk  = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+        chunkCreator.getChunk(ChunkType.JUMBO_CHUNK,
+          smallChunkSize);
+    assertTrue(dataJumboChunk.isJumbo());
+    Chunk idxChunk = chunkCreator.getChunk();
     // the array of index chunks to be used as a basis for CellChunkMap
     Chunk[] chunkArray = new Chunk[8];  // according to test currently written 8 is way enough
     int chunkArrayIdx = 0;
@@ -349,7 +354,7 @@ public class TestCellFlatSet {
       // do we have enough space to write the cell-representation on the index chunk?
       if (idxOffset + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkCreator.getChunkSize()) {
         // allocate more index chunks if needed
-        idxChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+        idxChunk = chunkCreator.getChunk();
         idxBuffer = idxChunk.getData();
         idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
         chunkArray[chunkArrayIdx++] = idxChunk;
@@ -362,7 +367,10 @@ public class TestCellFlatSet {
 
       // Jumbo chunks are working only with one cell per chunk, thus always allocate a new jumbo
       // data chunk for next cell
-      dataJumboChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP,smallChunkSize);
+      dataJumboChunk =
+          chunkCreator.getChunk(ChunkType.JUMBO_CHUNK,
+            smallChunkSize);
+      assertTrue(dataJumboChunk.isJumbo());
       dataBuffer = dataJumboChunk.getData();
       dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
     }

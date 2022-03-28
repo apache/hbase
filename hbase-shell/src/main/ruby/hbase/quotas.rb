@@ -30,6 +30,7 @@ java_import org.apache.hadoop.hbase.quotas.QuotaTableUtil
 java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
 
 module HBaseQuotasConstants
+  QUOTA_TABLE_NAME = QuotaTableUtil::QUOTA_TABLE_NAME
   # RPC Quota constants
   GLOBAL_BYPASS = 'GLOBAL_BYPASS'.freeze
   THROTTLE_TYPE = 'THROTTLE_TYPE'.freeze
@@ -60,6 +61,9 @@ end
 module Hbase
   # rubocop:disable Metrics/ClassLength
   class QuotasAdmin
+    include HBaseConstants
+    include HBaseQuotasConstants
+
     def initialize(admin)
       @admin = admin
     end

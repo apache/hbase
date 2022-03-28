@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +20,23 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -61,18 +64,16 @@ public class TestFavoredNodeTableImport {
 
   private static final int SLAVES = 3;
   private static final int REGION_NUM = 20;
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration conf = UTIL.getConfiguration();
 
   @After
   public void stopCluster() throws Exception {
-    UTIL.cleanupTestDir();
     UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testTableCreation() throws Exception {
-
     conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, StochasticLoadBalancer.class.getName());
 
     LOG.info("Starting up cluster");
@@ -84,10 +85,12 @@ public class TestFavoredNodeTableImport {
     admin.balancerSwitch(false, true);
 
     String tableName = "testFNImport";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, Bytes.toBytes("a"), Bytes.toBytes("z"), REGION_NUM);
-    UTIL.waitTableAvailable(desc.getTableName());
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(tableDescriptor, Bytes.toBytes("a"), Bytes.toBytes("z"), REGION_NUM);
+    UTIL.waitTableAvailable(tableDescriptor.getTableName());
+    admin.balancerSwitch(true, true);
 
     LOG.info("Shutting down cluster");
     UTIL.shutdownMiniHBaseCluster();
@@ -97,18 +100,26 @@ public class TestFavoredNodeTableImport {
     UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         FavoredStochasticBalancer.class.getName());
     UTIL.restartHBaseCluster(SLAVES);
-    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    while (!master.isInitialized()) {
       Threads.sleep(1);
     }
+    UTIL.waitTableAvailable(tableDescriptor.getTableName());
+    UTIL.waitUntilNoRegionsInTransition(10000);
+    assertTrue(master.isBalancerOn());
+
+    FavoredNodesManager fnm = master.getFavoredNodesManager();
+    assertNotNull(fnm);
+
     admin = UTIL.getAdmin();
-
-    UTIL.waitTableAvailable(desc.getTableName());
-
-    FavoredNodesManager fnm = UTIL.getHBaseCluster().getMaster().getFavoredNodesManager();
-
     List<RegionInfo> regionsOfTable = admin.getRegions(TableName.valueOf(tableName));
     for (RegionInfo rInfo : regionsOfTable) {
-      Set<ServerName> favNodes = Sets.newHashSet(fnm.getFavoredNodes(rInfo));
+      assertNotNull(rInfo);
+      assertNotNull(fnm);
+      List<ServerName> fns = fnm.getFavoredNodes(rInfo);
+      LOG.info("FNS {} {}", rInfo, fns);
+      assertNotNull(rInfo.toString(), fns);
+      Set<ServerName> favNodes = Sets.newHashSet(fns);
       assertNotNull(favNodes);
       assertEquals("Required no of favored nodes not found.", FAVORED_NODES_NUM, favNodes.size());
       for (ServerName fn : favNodes) {

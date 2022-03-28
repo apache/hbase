@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -37,7 +33,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -58,6 +53,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -98,11 +94,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -125,7 +117,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -136,12 +127,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasPermissionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -427,7 +429,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     DELETE("delete"),
     CHECK_AND_PUT("checkAndPut"),
     CHECK_AND_DELETE("checkAndDelete"),
-    INCREMENT_COLUMN_VALUE("incrementColumnValue"),
     APPEND("append"),
     INCREMENT("increment");
 
@@ -716,11 +717,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
 
-    if (zkPermissionWatcher == null) {
-      throw new NullPointerException("ZKPermissionWatcher is null");
-    } else if (accessChecker == null) {
-      throw new NullPointerException("AccessChecker is null");
-    }
+    Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
+    Preconditions.checkState(accessChecker != null, "AccessChecker is null");
+
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
     tableAcls = new MapMaker().weakValues().makeMap();
@@ -773,7 +772,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       familyMap.put(family, null);
     }
     requireNamespacePermission(c, "createTable",
-        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.CREATE);
+        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
@@ -804,10 +804,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             + PermissionStorage.ACL_TABLE_NAME + " is not yet created. "
             + getClass().getSimpleName() + " should be configured as the first Coprocessor");
       } else {
-        String owner = desc.getOwnerString();
-        // default the table owner to current user, if not specified.
-        if (owner == null)
-          owner = getActiveUser(c).getShortName();
+        String owner = getActiveUser(c).getShortName();
         final UserPermission userPermission = new UserPermission(owner,
             Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
         // switch to the real hbase master user for doing the RPC on the ACL table
@@ -902,12 +899,28 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public String preModifyTableStoreFileTracker(ObserverContext<MasterCoprocessorEnvironment> c,
+    TableName tableName, String dstSFT) throws IOException {
+    requirePermission(c, "modifyTableStoreFileTracker", tableName, null, null, Action.ADMIN,
+      Action.CREATE);
+    return dstSFT;
+  }
+
+  @Override
+  public String preModifyColumnFamilyStoreFileTracker(
+    ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    requirePermission(c, "modifyColumnFamilyStoreFileTracker", tableName, family, null,
+      Action.ADMIN, Action.CREATE);
+    return dstSFT;
+  }
+
+  @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = (currentDesc.getOwnerString() != null) ? currentDesc.getOwnerString() :
-      getActiveUser(c).getShortName();
+    final String owner = getActiveUser(c).getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -984,8 +997,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo,
-      boolean force) throws IOException {
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo)
+      throws IOException {
     requirePermission(c, "unassign",
         regionInfo.getTable(), null, null, Action.ADMIN);
   }
@@ -1005,7 +1018,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
+  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c, BalanceRequest request)
       throws IOException {
     requirePermission(c, "balance", Action.ADMIN);
   }
@@ -1502,15 +1515,27 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           // We have a failure with table, cf and q perm checks and now giving a chance for cell
           // perm check
           OpType opType;
+          long timestamp;
           if (m instanceof Put) {
             checkForReservedTagPresence(user, m);
             opType = OpType.PUT;
-          } else {
+            timestamp = m.getTimestamp();
+          } else if (m instanceof Delete) {
             opType = OpType.DELETE;
+            timestamp = m.getTimestamp();
+          } else if (m instanceof Increment) {
+            opType = OpType.INCREMENT;
+            timestamp = ((Increment) m).getTimeRange().getMax();
+          } else if (m instanceof Append) {
+            opType = OpType.APPEND;
+            timestamp = ((Append) m).getTimeRange().getMax();
+          } else {
+            // If the operation type is not Put/Delete/Increment/Append, do nothing
+            continue;
           }
           AuthResult authResult = null;
           if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
-            m.getFamilyCellMap(), m.getTimestamp(), Action.WRITE)) {
+            m.getFamilyCellMap(), timestamp, Action.WRITE)) {
             authResult = AuthResult.allow(opType.toString(), "Covering cell set",
               user, Action.WRITE, table, m.getFamilyCellMap());
           } else {
@@ -1692,32 +1717,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preAppendAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Append append) throws IOException {
-    if (append.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.APPEND, c.getEnvironment(), append.getRow(),
-          append.getFamilyCellMap(), append.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
-    return null;
-  }
-
-  @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
       throws IOException {
@@ -1753,38 +1752,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment) throws IOException {
-    if (increment.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.INCREMENT, c.getEnvironment(), increment.getRow(),
-          increment.getFamilyCellMap(), increment.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
-    return null;
-  }
-
-  @Override
   public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
       ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
-    if (!cellFeaturesEnabled) {
+    if (!cellFeaturesEnabled || mutation.getACL() == null) {
       return cellPairs;
     }
     return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
@@ -1798,7 +1771,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
-    if (!cellFeaturesEnabled) {
+    if (!cellFeaturesEnabled || mutation.getACL() == null) {
       return cellPairs;
     }
     return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
@@ -1807,50 +1780,28 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   private Cell createNewCellWithTags(Mutation mutation, Cell oldCell, Cell newCell) {
-    // Collect any ACLs from the old cell
+    // As Increment and Append operations have already copied the tags of oldCell to the newCell,
+    // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
+    // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
-    List<Tag> aclTags = Lists.newArrayList();
-    ListMultimap<String,Permission> perms = ArrayListMultimap.create();
-    if (oldCell != null) {
-      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(oldCell);
+    if (newCell != null) {
+      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != PermissionStorage.ACL_TAG_TYPE) {
           // Not an ACL tag, just carry it through
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType()
-                + " length " + tag.getValueLength());
+            LOG.trace("Carrying forward tag from " + newCell + ": type " + tag.getType()
+              + " length " + tag.getValueLength());
           }
           tags.add(tag);
-        } else {
-          aclTags.add(tag);
         }
       }
     }
 
-    // Do we have an ACL on the operation?
-    byte[] aclBytes = mutation.getACL();
-    if (aclBytes != null) {
-      // Yes, use it
-      tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, aclBytes));
-    } else {
-      // No, use what we carried forward
-      if (perms != null) {
-        // TODO: If we collected ACLs from more than one tag we may have a
-        // List<Permission> of size > 1, this can be collapsed into a single
-        // Permission
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
-        }
-        tags.addAll(aclTags);
-      }
-    }
-
-    // If we have no tags to add, just return
-    if (tags.isEmpty()) {
-      return newCell;
-    }
-
+    // We have checked the ACL tag of mutation is not null.
+    // So that the tags could not be empty.
+    tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, mutation.getACL()));
     return PrivateCellUtil.createCell(newCell, tags);
   }
 
@@ -1892,13 +1843,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     scannerOwners.remove(s);
   }
 
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
-  }
-
   /**
    * Verify, when servicing an RPC, that the caller is the scanner owner.
    * If so, we assume that access control is correctly enforced based on
@@ -1916,7 +1860,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * Verifies user has CREATE privileges on
+   * Verifies user has CREATE or ADMIN privileges on
    * the Column Families involved in the bulkLoadHFile
    * request. Specific Column Write privileges are presently
    * ignored.
@@ -1928,7 +1872,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     for(Pair<byte[],String> el : familyPaths) {
       accessChecker.requirePermission(user, "preBulkLoadHFile",
         ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), el.getFirst(), null,
-        null, Action.CREATE);
+        null, Action.ADMIN, Action.CREATE);
     }
   }
 
@@ -1942,7 +1886,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "prePrepareBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /**
@@ -1955,7 +1900,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "preCleanupBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /* ---- EndpointObserver implementation ---- */
@@ -2584,8 +2530,115 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           result = AuthResult.allow(request, "Self user validation allowed", caller, null, null,
             null, null);
         }
-        accessChecker.logResult(result);
+        AccessChecker.logResult(result);
       }
     }
+  }
+
+  @Override
+  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "moveServersAndTables",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "moveServers",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<TableName> tables, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "moveTables",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String name) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "addRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String name) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "removeRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName, BalanceRequest request) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "balanceRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveServers(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "removeServers",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfo(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfo",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfoOfTable",
+        null, Permission.Action.ADMIN);
+    //todo: should add check for table existence
+  }
+
+  @Override
+  public void preListRSGroups(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "listRSGroups",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "listTablesInRSGroup",
+      null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetConfiguredNamespacesAndTablesInRSGroup(
+    ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "getConfiguredNamespacesAndTablesInRSGroup",
+      null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Address server) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfoOfServer",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "renameRSGroup",
+      null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final String groupName, final Map<String, String> configuration) throws IOException {
+    accessChecker
+      .requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null, Permission.Action.ADMIN);
   }
 }

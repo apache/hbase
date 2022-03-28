@@ -24,6 +24,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -52,6 +54,8 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   private final Configuration conf;
 
+  private final SaslClientAuthenticationProvider provider;
+
   // flag to mark if Crypto AES encryption is enable
   private boolean needProcessConnectionHeader = false;
 
@@ -60,14 +64,15 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    *          simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
-      AuthMethod method, Token<? extends TokenIdentifier> token, String serverPrincipal,
-      boolean fallbackAllowed, Configuration conf)
-      throws IOException {
+      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+      Configuration conf) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
-    this.saslRpcClient = new NettyHBaseSaslRpcClient(method, token, serverPrincipal,
-        fallbackAllowed, conf.get(
+    this.provider = provider;
+    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
+        securityInfo, fallbackAllowed, conf.get(
         "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
@@ -80,6 +85,11 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
   private void tryComplete(ChannelHandlerContext ctx) {
     if (!saslRpcClient.isComplete()) {
       return;
+    }
+
+    // HBASE-23881 Clearly log when the client thinks that the SASL negotiation is complete.
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("SASL negotiation for {} is complete", provider.getSaslAuthMethod().getName());
     }
 
     saslRpcClient.setupSaslHandler(ctx.pipeline());
@@ -109,10 +119,19 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
           return saslRpcClient.getInitialResponse();
         }
       });
-      if (initialResponse != null) {
-        writeResponse(ctx, initialResponse);
-      }
-      tryComplete(ctx);
+      assert initialResponse != null;
+      writeResponse(ctx, initialResponse);
+      // HBASE-23881 We do not want to check if the SaslClient thinks the handshake is
+      // complete as, at this point, we've not heard a back from the server with it's reply
+      // to our first challenge response. We should wait for at least one reply
+      // from the server before calling negotiation complete.
+      //
+      // Each SASL mechanism has its own handshake. Some mechanisms calculate a single client buffer
+      // to be sent to the server while others have multiple exchanges to negotiate authentication.
+      // GSSAPI(Kerberos) and DIGEST-MD5 both are examples of mechanisms which have multiple steps.
+      // Mechanisms which have multiple steps will not return true on `SaslClient#isComplete()`
+      // until the handshake has fully completed. Mechanisms which only send a single buffer may
+      // return true on `isComplete()` after that initial response is calculated.
     } catch (Exception e) {
       // the exception thrown by handlerAdded will not be passed to the exceptionCaught below
       // because netty will remove a handler if handlerAdded throws an exception.
@@ -144,6 +163,8 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     });
     if (response != null) {
       writeResponse(ctx, response);
+    } else {
+      LOG.trace("SASL challenge response was empty, not sending response to server.");
     }
     tryComplete(ctx);
   }

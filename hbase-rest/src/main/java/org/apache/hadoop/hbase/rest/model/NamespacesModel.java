@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacesMessage.Namespaces;
+
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.NamespacesMessage.Namespaces;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

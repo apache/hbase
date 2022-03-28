@@ -29,7 +29,7 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
@@ -62,7 +62,7 @@ public class TestAppendTimeRange {
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
@@ -128,15 +128,15 @@ public class TestAppendTimeRange {
 
       time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);
-      TimeRange range10 = new TimeRange(1, time + 10);
-      Result r = table.append(new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("b"))
-          .setTimeRange(range10.getMin(), range10.getMax()));
+      TimeRange range10 = TimeRange.between(1, time + 10);
+      table.append(new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("b"))
+        .setTimeRange(range10.getMin(), range10.getMax()));
       checkRowValue(table, ROW, Bytes.toBytes("ab"));
       assertEquals(MyObserver.tr10.getMin(), range10.getMin());
       assertEquals(MyObserver.tr10.getMax(), range10.getMax());
       time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);
-      TimeRange range2 = new TimeRange(1, time+20);
+      TimeRange range2 = TimeRange.between(1, time + 20);
       List<Row> actions =
           Arrays.asList(new Row[] {
               new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))

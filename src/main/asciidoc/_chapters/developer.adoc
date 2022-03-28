@@ -35,7 +35,7 @@ Being familiar with these guidelines will help the HBase committers to use your 
 
 Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)[issues in JIRA tagged with the label 'beginner'].
 These are issues HBase contributors have deemed worthy but not of immediate priority and a good way to ramp on HBase internals.
-See link:http://search-hadoop.com/m/DHED43re96[What label
+See link:https://lists.apache.org/thread.html/b122265f4e4054cf08f8cd38609fb06af72f398c44f9086b05ef4e21%401407246237%40%3Cdev.hbase.apache.org%3E[What label
                 is used for issues that are good on ramps for new contributors?] from the dev mailing list for background.
 
 Before you get started submitting code to HBase, please refer to <<developing,developing>>.
@@ -284,22 +284,37 @@ For additional information on setting up Eclipse for HBase development on Window
 
 === IntelliJ IDEA
 
-You can set up IntelliJ IDEA for similar functionality as Eclipse.
-Follow these steps.
+A functional development environment can be setup around an IntelliJ IDEA installation that has the
+plugins necessary for building Java projects with Maven.
 
-. Select
-. You do not need to select a profile.
-  Be sure [label]#Maven project
-  required# is selected, and click btn:[Next].
-. Select the location for the JDK.
+. Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
+. Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
+type.
 
-.Using the HBase Formatter in IntelliJ IDEA
-Using the Eclipse Code Formatter plugin for IntelliJ IDEA, you can import the HBase code formatter described in <<eclipse.code.formatting,eclipse.code.formatting>>.
+The following plugins are recommended:
+
+. Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
+. EditorConfig, bundled. This will apply project whitespace settings found in the the
+`.editorconfig` file available on branches with
+link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
+. link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
+against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
+(If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
+sure the plugin's `version` popup menu matches the hbase checkstyle version -- see
+link:https://issues.apache.org/jira/browse/HBASE-23242[HBASE-23242] for more).
+This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
+pre-commit process.
+. link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
+link:https://developers.google.com/protocol-buffers/[Protocol Buffers] in a number of places where
+serialization is required. This plugin is helpful when editing these object definitions.
+. link:https://plugins.jetbrains.com/plugin/7391-asciidoc/[AsciiDoc]. HBase uses
+link:http://asciidoc.org[AsciiDoc] for  building it's project documentation. This plugin is helpful
+when editing this book.
 
 === Other IDEs
 
-It would be useful to mirror the <<eclipse,eclipse>> set-up instructions for other IDEs.
-If you would like to assist, please have a look at link:https://issues.apache.org/jira/browse/HBASE-11704[HBASE-11704].
+If you'd have another environment with which you'd like to develop on HBase, please consider
+documenting your setup process here.
 
 [[build]]
 == Building Apache HBase
@@ -307,16 +322,15 @@ If you would like to assist, please have a look at link:https://issues.apache.or
 [[build.basic]]
 === Basic Compile
 
-HBase is compiled using Maven.
-You must use at least Maven 3.0.4.
-To check your Maven version, run the command +mvn -version+.
+HBase is compiled using Maven. You must use at least Maven 3.0.4. To check your Maven version, run
+the command +mvn -version+.
 
-.JDK Version Requirements
-[NOTE]
-====
-Starting with HBase 1.0 you must use Java 7 or later to build from source code.
-See <<java,java>> for more complete information about supported JDK versions.
-====
+[[build.basic.jdk_requirements]]
+==== JDK Version Requirements
+
+HBase has Java version compiler requirements that vary by release branch. At compilation time,
+HBase has the same version requirements as it does for runtime. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
 
 [[maven.build.commands]]
 ==== Maven Build Commands
@@ -382,28 +396,111 @@ mvn clean install -DskipTests
 See the <<hbase.unittests.cmds,hbase.unittests.cmds>> section in <<hbase.unittests,hbase.unittests>>
 
 [[maven.build.hadoop]]
-==== Building against various hadoop versions.
+==== Building against various Hadoop versions
 
-HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts). By default we build against Hadoop 2.x.
+HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts).
+Exactly which version of Hadoop is used by default varies by release branch. See the section
+<<hadoop,Hadoop>> for the complete breakdown of supported Hadoop version by HBase release.
 
-To build against a specific release from the Hadoop 2.y line, set e.g. `-Dhadoop-two.version=2.6.3`.
+The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
+version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
+profiles. Due to the peculiarities of Maven profile mutual exclusion, the profile that builds
+against a particular Hadoop version is activated by setting a property, *not* the usual profile
+activation. Hadoop version profile activation is summarized by the following table.
+
+.Hadoop Profile Activation by HBase Release
+[cols="3*^.^", options="header"]
+|===
+| | Hadoop2 Activation | Hadoop3 Activation
+| HBase 1.3+ | _active by default_ | `-Dhadoop.profile=3.0`
+| HBase 3.0+ | _not supported_ | _active by default_
+|===
+
+[WARNING]
+====
+Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
+====
+
+Once the Hadoop major version profile is activated, the exact Hadoop version can be
+specified by overriding the appropriate property value. For Hadoop2 versions, the property name
+is `hadoop-two.version`. With Hadoop3 versions, the property name is `hadoop-three.version`.
+
+.Example 1, Building HBase 1.7 against Hadoop 2.10.0
+
+For example, to build HBase 1.7 against Hadoop 2.10.0, the profile is set for Hadoop2 by default,
+so only `hadoop-two.version` must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop-two.version=2.6.3 ...
+git checkout branch-1
+mvn -Dhadoop-two.version=2.10.0 ...
 ----
 
-To change the major release line of Hadoop we build against, add a hadoop.profile property when you invoke +mvn+:
+.Example 2, Building HBase 2.3 or 2.4 against Hadoop 3.4.0-SNAPSHOT
+
+This is how a developer might check the compatibility of HBase 2.3 or 2.4 against an unreleased
+Hadoop version (currently 3.4). Both the Hadoop3 profile and version must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop.profile=3.0 ...
+git checkout branch-2.4
+mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.4.0-SNAPSHOT ...
 ----
 
-The above will build against whatever explicit hadoop 3.y version we have in our _pom.xml_ as our '3.0' version.
-Tests may not all pass so you may need to pass `-DskipTests` unless you are inclined to fix the failing tests.
+.Example 3, Building HBase 3.0 against Hadoop 3.4.0-SNAPSHOT
 
-To pick a particular Hadoop 3.y release, you'd set hadoop-three.version property e.g. `-Dhadoop-three.version=3.0.0`.
+The same developer might want also to check the development version of HBase (currently 3.0)
+against the development version of Hadoop (currently 3.4). In this case, the Hadoop3 profile is
+active by default, so only `hadoop-three.version` must be specified:
+
+[source,bourne]
+----
+git checkout master
+mvn -Dhadoop-three.version=3.4.0-SNAPSHOT ...
+----
+
+[[maven.build.jdk11_hadoop3]]
+==== Building with JDK11 and Hadoop3
+
+HBase manages JDK-specific build settings using Maven profiles. The profile appropriate to the JDK
+in use is automatically activated. Building and running on JDK8 supports both Hadoop2 and Hadoop3.
+For JDK11, only Hadoop3 is supported. Thus, the Hadoop3 profile must be active when building on
+JDK11, and the artifacts used when running HBase on JDK11 must be compiled against Hadoop3.
+Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
+by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
+For details on Hadoop profile activation by HBase branch, see
+<<maven.build.hadoop,Building against various Hadoop versions>>. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
+
+.Example 1, Building HBase 2.3 or 2.4 with JDK11
+
+To build HBase 2.3 or 2.4 with JDK11, the Hadoop3 profile must be activated explicitly.
+
+[source,bourne]
+----
+git checkout branch-2.4
+JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
+----
+
+.Example 2, Building HBase 3.0 with JDK11
+
+For HBase 3.0, the Hadoop3 profile is active by default, no additional properties need be
+specified.
+
+[source,bourne]
+----
+git checkout master
+JAVA_HOME=/usr/lib/jvm/java-11 mvn ...
+----
+
+[[maven.build.jdk11_hadoop3_ide]]
+==== Building and testing in an IDE with JDK11 and Hadoop3
+
+Continuing the discussion from the <<maven.build.jdk11_hadoop3,earlier section>>, building and
+testing with JDK11 and Hadoop3 within an IDE may require additional configuration. Specifically,
+make sure the JVM version used by the IDE is a JDK11, the active JDK Maven profile is for JDK11,
+and the Maven profile for JDK8 is NOT active. Likewise, ensure the Hadoop3 Maven profile is active
+and the Hadoop2 Maven profile is NOT active.
 
 [[build.protobuf]]
 ==== Build Protobuf
@@ -488,21 +585,135 @@ If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
 
+[[build.on.linux.aarch64]]
+=== Build On Linux Aarch64
+HBase runs on both Windows and UNIX-like systems, and it should run on any platform
+that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
+The documentation below describes how to build hbase on aarch64 platform.
+
+==== Set Environment Variables
+Manually install Java and Maven on aarch64 servers if they are not installed,
+and set environment variables. For example:
+
+[source,bourne]
+----
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64
+export MAVEN_HOME=/opt/maven
+export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+----
+
+==== Use Protobuf Supported On Aarch64
+Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
+internally and version '2.5.0' as external usage.
+Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
+profile '-Paarch64' when building. It downloads protoc-2.5.0 package from maven
+repository which we made on aarch64 platform locally.
+
+[source,bourne]
+----
+mvn clean install -Paarch64 -DskipTests
+----
+
+[NOTE]
+Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
+upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+
+
 [[releasing]]
 == Releasing Apache HBase
 
 .Building against HBase 1.x
 [NOTE]
 ====
-HBase 1.x requires Java 7 to build.
-See <<java,java>> for Java requirements per HBase release.
+See old refguides for how to build HBase 1.x.
+The below is for building hbase2.
+====
+
+[[maven.release]]
+=== Making a Release Candidate
+Only committers can make releases of hbase artifacts.
+
+.Before You Begin
+Check to be sure recent builds have been passing for the branch from where you
+are going to take your release. You should also have tried recent branch tips
+out on a cluster under load, perhaps by running the `hbase-it` integration test
+suite for a few hours to 'burn in' the near-candidate bits.
+
+You will need a published signing key added to the hbase
+link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
+(For how to add a KEY, see _Step 1._ in link:https://cwiki.apache.org/confluence/display/HADOOP2/HowToRelease[How To Release],
+the Hadoop version of this document).
+
+Next make sure JIRA is properly primed, that all issues targeted against
+the prospective release have been resolved and are present in git on the
+particular branch. If any outstanding issues, move them out of the release by
+adjusting the fix version to remove this pending release as a target.
+Any JIRA with a fix version that matches the release candidate
+target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
+files that ship with the release so make sure JIRA is correct before you begin.
+
+After doing the above, you can move to the manufacture of an RC.
+
+Building an RC is involved so we've scripted it. The script builds in a Docker
+container to ensure we have a consistent environment building. It will ask you
+for passwords for apache and for your gpg signing key so it can sign and commit
+on your behalf. The passwords are passed to gpg-agent in the container and
+purged along with the container when the build is done.
+
+The script will:
+
+ * Set version to the release version 
+ * Updates RELEASENOTES.md and CHANGES.md
+ * Tag the RC
+ * Set version to next SNAPSHOT version. 
+ * Builds, signs, and hashes all artifacts. 
+ * Generates the api compatibility report
+ * Pushes release tgzs to the dev dir in a apache dist. 
+ * Pushes to repository.apache.org staging. 
+ * Creates vote email template.
+
+The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
+Generating script is maintained in the master branch but can generate RCs
+for any 2.x+ branch (The script does not work against branch-1). Check out
+and update the master branch when making RCs. See
+_dev-support/create-release/README.txt_ for how to configure your
+environment and run the script.
+
+[NOTE]
+====
+_dev-support/create-release/do-release-docker.sh_ supercedes the previous
+_dev-support/make_rc.sh_ script. It is more comprehensive automating all
+steps, rather than a portion, building a RC.
+====
+
+==== Release Candidate Procedure
+Here we outline the steps involved generating a Release Candidate, the steps
+automated by the _dev-support/create-release/do-release-docker.sh_ script
+described in the previous section. Running these steps manually tends to
+be error-prone so is not recommended. The below is informational only.
+
+The process below makes use of various tools, mainly _git_ and _maven_.
+
+.Specifying the Heap Space for Maven
+[NOTE]
+====
+You may run into OutOfMemoryErrors building, particularly building the site and
+documentation. Up the heap for Maven by setting the `MAVEN_OPTS` variable.
+You can prefix the variable to the Maven command, as in the following example:
+
+----
+MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
+----
+
+You could also set this in an environment variable or alias in your shell.
 ====
 
 [[maven.settings.xml]]
 .Example _~/.m2/settings.xml_ File
 ====
 Publishing to maven requires you sign the artifacts you want to upload.
-For the build to sign them for you, you a properly configured _settings.xml_ in your local repository under _.m2_, such as the following.
+For the build to sign them for you, you a properly configured _settings.xml_
+in your local repository under _.m2_, such as the following.
 
 [source,xml]
 ----
@@ -542,196 +753,6 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
   </profiles>
 </settings>
 ----
-====
-
-[[maven.release]]
-=== Making a Release Candidate
-Only committers can make releases of hbase artifacts.
-
-Making a Release Candidate (RC) is comprised of many involved steps.
-The steps are described in detail below in the section
-<<rc_procedure>> but a script that automates the process is
-described first in <<do-release-docker.sh>>.
-
-.Before You Begin
-Check to be sure recent builds have been passing for the branch from where you
-are going to take your release. You should also have tried recent branch tips
-out on a cluster under load, perhaps by running the `hbase-it` integration test
-suite for a few hours to 'burn in' the near-candidate bits.
-
-Make sure your environment is properly set up.
-
-You will need to have a published signing key added to the hbase
-link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
-Browse the Hadoop link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
-wiki page on how to release. It is a model for the instructions below. It often has more
-detail on particular steps. For example, _Step 1._ describes how to add
-your code signing key to the
-link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file up in Apache
-(as well as outlinks on what a signing key is).
-
-Next make sure JIRA is properly primed, that all issues targeted against
-the prospective release have been resolved and are present in git on the
-particular branch. If any outstanding, move them out of the release by
-adjusting the fix version to remove this pending release as a target.
-Any JIRA with a fix version that matches the release candidate
-target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
-that ship with the release so make sure JIRA is correct before you begin.
-(_Step 2._ in link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
-talks of how it is done in Hadoop).
-
-[[do-release-docker.sh]]
-==== Release Candidate Generating Script
-The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
-Generating script is maintained in the master branch but can generate RCs
-for any 2.x+ branch (The script does not work against branch-1). Check out
-and update the master branch when making RCs.
-
-The script builds in a Docker container to ensure we have a consistent
-environment building. It will ask you for passwords for apache and for your
-gpg signing key so it can sign and commit on your behalf. The passwords
-are passed to gpg-agent in the container and purged along with the container
-when the build is done.
-
-[NOTE]
-====
-_dev-support/create-release/do-release-docker.sh_ supercedes the previous
-_dev-support/make_rc.sh_ script. It is more comprehensive automating all
-steps, rather than a portion, building a RC.
-====
-
-The script will:
-
- * Set version to the release version 
- * Updates RELEASENOTES.md and CHANGES.md
- * Tag the RC
- * Set version to next SNAPSHOT version. 
- * Builds, signs, and hashes all artifacts. 
- * Generates the api compatibility report
- * Pushes release tgzs to the dev dir in a apache dist. 
- * Pushes to repository.apache.org staging. 
- * Creates vote email template.
-
-Pass _-h_ to _dev-support/create-release/do-release-docker.sh_ to
-see available options:
-
-```
-Usage: do-release-docker.sh [options]
-
-This script runs the release scripts inside a docker image.
-
-Options:
-
-  -d [path]  required. working directory. output will be written to "output" in here.
-  -n         dry run mode. Checks and local builds, but does not upload anything.
-  -t [tag]   tag for the hbase-rm docker image to use for building (default: "latest").
-  -j [path]  path to local JDK installation to use building. By default the script will
-               use openjdk8 installed in the docker image.
-  -s [step]  runs a single step of the process; valid steps are: tag, build, publish. if
-               none specified, runs tag, then build, and then publish.
-```
-
-Running the below command will do all steps above using the
-'rm' working directory under Downloads as workspace: 
-```
-  $ ./dev-support/create-release/do-release-docker.sh -d ~/Downloads/rm  
-```
-
-The script will ask you a set of questions about the release version
-and branch, the version to generate the compatibility report against,
-and so on, before it starts executing (If you set the appropriate
-environment variables, the script will skip asking you questions --
-which can come in handy if you end up having to re-run the script
-multiple times).
-
-On branch 2.1, a Release Candidate (RC) creation can take many hours
-(~8 hours) so run your build on a machine you know will be
-around for this swath of time. Start the build inside a _screen_
-or _tmux_ session in case you become disconnected from your
-build box.
-
-The build is made of three stages: tag, build, and
-publish. If the script fails, you may resort to 'fixing' the
-failure manually and then asking the script to run the
-subsequent stage rather than start over.
-
-When the scripts run, they use the passed working directory.
-Under the working directory is an _output_ dir. In here is
-where the checkouts go, where we build up the _svn_ directory
-to _svn_ commit to _apache/dist/dev_, etc. Each step also
-dumps a log file in here: e.g. _tag.log_ for the tagging
-step and _build.log_ for building.
-
-The _tagging_ step will checkout hbase, set the version number
-in all the poms – e.g. if branch-2.0 is at 2.0.6-SNAPSHOT
-and you are making a 2.0.5 RC, it will set the versions in
-all poms to 2.0.5 – appropriately. It then generate CHANGES.md
-and RELEASENOTES.md by checking out yetus and then
-calling its generator scripts. It then commits the poms with
-their new versions along with the changed CHANGES.md and
-RELEASENOTES.md, tags, and pushes up all changes to the
-apache repo.
-
-The _build_ step will checkout hbase, build all including
-javadoc and doc (javadoc takes the bulk of the time – 4 hours plus),
-run assemblies to produce src and bin tarballs, sign and hash it
-all, and then make a dir under apache dist dev named for the RC.
-It will copy all artifacts in here including top-level CHANGES.md
-and RELEASENOTES.md. It will generate api diff docs and put them
-into this RC dir too. When done, it commits the svn RC.
-
-The publish step will checkout hbase, build, and then copy up all
-artifacts to repository.apache.org (signed and hashed). When done,
-it will dump out an email template with all the correct links in place.
-
-Check the artifacts pushed to the dev distribution directory and up
-in repository.apache.org. If all looks good, check the generated
-email and send to the dev list.
-
-Under the create-release dir, scripts should make some sense:
-```
-do-release-docker.sh   # Main entrance.
-do-release.sh .        # More checks. Not usable really other than by setting env variables before running it.
-release-tag.sh         # Does tagging steps.
-release-build.sh .     # Does the build and publish step.
-release-util.sh        # Utility used by all of the above.
-vote.tmpl              # Template for email to send out.
-hbase-rm               # Has docker image we use.
-```
-
-If the RC fails, the script will do the right thing when it comes
-to edit of the _CHANGES.md_ and _RELEASENOTES.md_ removing the old
-and updating the files with the updated content (No harm verifying
-though).
-
-One trick for checking stuff especially in utility is to do as follows:
-
-```
-$ source release-util.sh ; generate_api_report ../../ rel/2.1.3 2.14RC1
-```
-
-i.e. source the release-util.sh script and then run one of its functions
-passing args. Helped debugging stuff.
-
-[[rc_procedure]]
-==== Release Candidate Procedure
-Here we describe the steps involved generating a Release Candidate, the steps
-automated by the script described in the previous section.
-
-The process below makes use of various tools, mainly _git_ and _maven_.
-
-.Specifying the Heap Space for Maven
-[NOTE]
-====
-You may run into OutOfMemoryErrors building, particularly building the site and
-documentation. Up the heap for Maven by setting the `MAVEN_OPTS` variable.
-You can prefix the variable to the Maven command, as in the following example:
-
-----
-MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
-----
-
-You could also set this in an environment variable or alias in your shell.
 ====
 
 ===== Update the _CHANGES.md_  and _RELEASENOTES.md_ files and the POM files.
@@ -1001,7 +1022,7 @@ requirements of the ASF policy on releases.
 ____
 
 Regards the latter, run `mvn apache-rat:check` to verify all files are suitably licensed.
-See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On recent discussion clarifying ASF release policy]
+See link:https://mail-archives.apache.org/mod_mbox/hbase-dev/201406.mbox/%3CCA%2BRK%3D_B8EP0JMFV%2Bdt-k1g%3DBmedzyq2z1GSqrnMMiH6%3DcdoiAA%40mail.gmail.com%3E[HBase, mail # dev - On recent discussion clarifying ASF release policy]
 for how we arrived at this process.
 
 To help with the release verification, please follow the guideline below and vote based on the your verification.
@@ -1027,7 +1048,7 @@ hbase-vote. A script for standard vote which verifies the following items
 4. Built from source
 5. Unit tests
 
-Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>]
+Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests] [-D property[=value]]
        hbase-vote.sh -h | --help
 
   -h | --help                   Show this screen.
@@ -1035,8 +1056,10 @@ Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-f
                                 e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
   -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
   -f | --keys-file-url '<url>'   the URL of the key file, default is
-                                http://www.apache.org/dist/hbase/KEYS
+                                https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+  -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
+  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
 ----
 * If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. link:https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html[dashboard of master branch] (please change the test branch accordingly).
 
@@ -1263,17 +1286,22 @@ Small Tests (((SmallTests)))::
   _Small_ test cases are executed in a shared JVM and each test suite/test class should
    run in 15 seconds or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
    up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
-   it has. These test cases should not use a minicluster.
+   it has. These test cases should not use a minicluster as a minicluster starts many services,
+   most unrelated to what is being tested. Multiple start/stops may leak resources or just overwhelm
+   the single JVM context.
 
 Medium Tests (((MediumTests)))::
   _Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
   junit parlance, link:https://en.wikipedia.org/wiki/JUnit[test fixture], should run in 50 seconds
-   or less. These test cases can use a mini cluster.
+   or less. These test cases can use a mini cluster. Since we start up a JVM per test fixture (and
+   often a cluster too), be sure to make the startup pay by writing test fixtures that do a lot of
+   testing running tens of seconds perhaps combining test rather than spin up a jvm (and cluster)
+   per test method; this practice will help w/ overall test times.
 
 Large Tests (((LargeTests)))::
   _Large_ test cases are everything else. They are typically large-scale tests, regression tests
   for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
-  ten minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+  thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
   to run longer.
 
 Integration Tests (((IntegrationTests)))::
@@ -1284,22 +1312,46 @@ Integration Tests (((IntegrationTests)))::
 [[hbase.unittests.cmds]]
 === Running tests
 
+The state of tests on the hbase branches varies. Some branches keep good test hygiene and all tests pass
+reliably with perhaps an unlucky sporadic flakey test failure. On other branches, the case may be less so with
+frequent flakies and even broken tests in need of attention that fail 100% of the time. Try and figure
+the state of tests on the branch you are currently interested in; the current state of nightly
+link:https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/[apache jenkins builds] is a good
+place to start. Tests on master branch are generally not in the best of condition as releases
+are less frequent off master. This can make it hard landing patches especially given our dictum that
+patches land on master branch first.
+
+The full test suite can take from 5-6 hours on an anemic VM with 4 CPUs and minimal
+parallelism to 50 minutes or less on a linux machine with dozens of CPUs and plenty of
+RAM.
+
+When you go to run the full test suite, make sure you up the test runner user nproc
+(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+Errors because the test run hits
+limits are often only opaquely related to the constraint. You can see the current
+user settings by running `ulimit -a`.
+
 [[hbase.unittests.cmds.test]]
 ==== Default: small and medium category tests
 
-Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a separate JVM for each test instance.
-Medium tests are NOT executed if there is an error in a small test. Large tests are NOT executed.
+Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a
+forked, separate JVM for each test instance (For definition of 'small' test and so on, see
+<<hbase.unittests>>). Medium tests are NOT executed if there is an error in a
+small test. Large tests are NOT executed.
 
 [[hbase.unittests.cmds.test.runalltests]]
 ==== Running all tests
 
-Running `mvn test -P runAllTests` will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
-Medium and large tests are NOT executed if there is an error in a small test.
+Running `mvn test -P runAllTests` will execute small tests in a single JVM, then medium and large tests
+in a forked, separate JVM for each test. Medium and large tests are NOT executed if there is an error in
+a small test.
 
 [[hbase.unittests.cmds.test.localtests.mytest]]
 ==== Running a single test or all tests in a package
 
-To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple, individual tests as a comma-delimited list:
+To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
+individual tests as a comma-delimited list:
 [source,bash]
 ----
 mvn test  -Dtest=MyTest1,MyTest2,MyTest3
@@ -1311,10 +1363,12 @@ mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
 ----
 
 When `-Dtest` is specified, the `localTests` profile will be used.
-Each junit test is executed in a separate JVM (A fork per test class). There is no parallelization when tests are running in this mode.
+Each junit test is executed in a separate JVM (A fork per test class).
+There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
-It's harmless.
-However, you need to make sure the sum of `Tests run:` in the `Results:` section of test reports matching the number of tests you specified because no error will be reported when a non-existent test case is specified.
+It's harmless.  However, you need to make sure the sum of
+`Tests run:` in the `Results:` section of test reports matching the number of tests
+you specified because no error will be reported when a non-existent test case is specified.
 
 [[hbase.unittests.cmds.test.profiles]]
 ==== Other test invocation permutations
@@ -1330,17 +1384,36 @@ For convenience, you can run `mvn test -P runDevTests` to execute both small and
 [[hbase.unittests.test.faster]]
 ==== Running tests faster
 
-By default, `$ mvn test -P runAllTests` runs 5 tests in parallel.
-It can be increased on a developer's machine.
-Allowing that you can have 2 tests in parallel per core, and you need about 2GB of memory per test (at the extreme), if you have an 8 core, 24GB box, you can have 16 tests in parallel.
-but the memory available limits it to 12 (24/2), To run all tests with 12 tests in parallel, do this: +mvn test -P runAllTests
-                        -Dsurefire.secondPartForkCount=12+.
-If using a version earlier than  2.0, do: +mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12
-                    +.
-To increase the speed, you can as well use a ramdisk.
-You will need 2GB  of memory to run all tests.
-You will also need to delete the files between two  test run.
-The typical way to configure a ramdisk on Linux is:
+By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CPUs available on machine
+hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
+hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
+You can also have hbase modules
+run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
+maven, where `N` is the amount of parallelism wanted.
+maven, where `N` is the amount of _module_ parallelism wanted.
+
+For example, allowing that you want to use all cores on a machine to run tests,
+you could start up the maven test run with:
+
+----
+  $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount=$x test -PrunAllTests
+----
+
+If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
+Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
+and move up gradually.
+
+Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
+set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
+2 * CPU, a count likely to overcommit the host machine (with attendant test exits failures).
+
+You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
+
+===== RAM Disk
+
+To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
+delete the files between each test run. The typical way to configure a ramdisk on Linux is:
 
 ----
 $ sudo mkdir /ram2G
@@ -1350,17 +1423,7 @@ sudo mount -t tmpfs -o size=2048M tmpfs /ram2G
 You can then use it to run all HBase tests on 2.0 with the command:
 
 ----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartForkCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
-----
-
-On earlier versions, use:
-
-----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartThreadCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
+mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
 ----
 
 [[hbase.unittests.cmds.test.hbasetests]]
@@ -1773,6 +1836,46 @@ properties file, which may be `hbase-site.xml` or a different properties file.
   <value>zookeeper</value>
 </property>
 ----
+
+==== Customizing Destructive ChaosMonkey Actions
+
+The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
+running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
+_heavy weight_. Although it's possible to define some properties for the different actions
+(such as timeouts, frequency, etc), the actions themselves are not configurable.
+
+For certain deployments, it may be interesting to define its own test strategy, either less or more
+aggressive than the pre-defined set of actions provided by _slowDeterministic_. For such cases,
+the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
+_heavy weight_ actions to be defined in the _monkey.properties_ properties file:
+
+[source]
+----
+batch.restart.rs.ratio=0.3f
+heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
+----
+
+The above properties file definition instructs chaos monkey to perform a RegionServer crash every 8 minutes,
+a random region move every 6 minutes, and at least one split of all table regions.
+
+To run this policy, just specify _configurableSlowDeterministic_ as the monkey policy to run, together
+with a property file containing the _heavy.actions_ property definition:
+
+[source,bourne]
+----
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m configurableSlowDeterministic -monkeyProps monkey.properties
+----
+
+When specifying monkey actions, make sure to define all required constructor parameters. For actions
+that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
+automatically resort to the table created by the integration test run.
+
+If _heavy.actions_ property is omitted in the properties file,  _configurableSlowDeterministic_ will
+just run as the _slowDeterministic_ policy
+(it will execute all the heavy weight actions defined by _slowDeterministic_ policy).
+
+
 
 [[developing]]
 == Developer Guidelines
@@ -2233,6 +2336,30 @@ Patches larger than one screen, or patches that will be tricky to review, should
 For more information on how to use ReviewBoard, see link:http://www.reviewboard.org/docs/manual/1.5/[the ReviewBoard
                         documentation].
 
+[[github]]
+==== GitHub
+Submitting link:https://github.com/apache/hbase[GitHub] pull requests is another accepted form of
+contributing patches. Refer to GitHub link:https://help.github.com/[documentation] for details on
+how to create pull requests.
+
+NOTE: This section is incomplete and needs to be updated. Refer to
+link:https://issues.apache.org/jira/browse/HBASE-23557[HBASE-23557]
+
+===== GitHub Tooling
+
+====== Browser bookmarks
+
+Following is a useful javascript based browser bookmark that redirects from GitHub pull
+requests to the corresponding jira work item. This redirects based on the HBase jira  ID mentioned
+in the issue title for the PR. Add the following javascript snippet as a browser bookmark to the
+tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you to the corresponding
+jira item.
+
+[source, javascript]
+-----
+javascript:location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
+-----
+
 ==== Guide for HBase Committers
 
 ===== Becoming a committer
@@ -2321,7 +2448,7 @@ then wait for a `+1` response from another committer before committing.
 
 Patches which do not adhere to the guidelines in
 link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the
-link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist]
+link:https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist[code review checklist]
 should be rejected. Committers should always be polite to contributors and try
 to instruct and encourage them to contribute better patches. If a committer
 wishes to improve an unacceptable patch, then it should first be rejected, and a
@@ -2520,7 +2647,7 @@ A committer should.
 [[git.patch.flow]]
 ====== Patching Etiquette
 
-In the thread link:http://search-hadoop.com/m/DHED4EiwOz[HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
+In the thread link:https://lists.apache.org/thread.html/186fcd5eb71973a7b282ecdba41606d3d221efd505d533bb729e1fad%401400648690%40%3Cdev.hbase.apache.org%3E[HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
                                 Re: Git Migration)], it was agreed on the following patch flow
 
 . Develop and commit the patch against master first.
@@ -2564,7 +2691,7 @@ However any substantive discussion (as with any off-list project-related discuss
 
 ==== Do not edit JIRA comments
 
-Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at link:http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&fc_project=HBase[Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo]
+Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit.
 
 [[thirdparty]]
 === The hbase-thirdparty dependency and shading/relocation

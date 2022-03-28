@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +59,7 @@ import org.slf4j.LoggerFactory;
  * To only retrieve columns with a specific timestamp, call {@link #setTimestamp(long) setTimestamp}
  * .
  * <p>
- * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)
- * setMaxVersions}.
+ * To limit the number of versions of each column to be returned, call {@link #readVersions(int)}.
  * <p>
  * To limit the maximum number of values returned for each call to next(), call
  * {@link #setBatch(int) setBatch}.
@@ -147,17 +145,6 @@ public class Scan extends Query {
   public static final boolean DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH = false;
 
   /**
-   * Set it true for small scan to get better performance Small scan should use pread and big scan
-   * can use seek + read seek + read is fast but can cause two problem (1) resource contention (2)
-   * cause too much network io [89-fb] Using pread for non-compaction read request
-   * https://issues.apache.org/jira/browse/HBASE-7266 On the other hand, if setting it true, we
-   * would do openScanner,next,closeScanner in one RPC call. It means the better performance for
-   * small scan. [HBASE-9488]. Generally, if the scan range is within one data block(64KB), it could
-   * be considered as a small scan.
-   */
-  private boolean small = false;
-
-  /**
    * The mvcc read point to use when open a scanner. Remember to clear it after switching regions as
    * the mvcc is only valid within region scope.
    */
@@ -180,46 +167,6 @@ public class Scan extends Query {
    * Create a Scan operation across all rows.
    */
   public Scan() {}
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow, Filter filter) {
-    this(startRow);
-    this.filter = filter;
-  }
-
-  /**
-   * Create a Scan operation starting at the specified row.
-   * <p>
-   * If the specified row does not exist, the Scanner will start from the next closest row after the
-   * specified row.
-   * @param startRow row to start scanner at or after
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow) {
-    setStartRow(startRow);
-  }
-
-  /**
-   * Create a Scan operation for the range of rows specified.
-   * @param startRow row to start scanner at or after (inclusive)
-   * @param stopRow row to stop scanner before (exclusive)
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow, byte[] stopRow) {
-    setStartRow(startRow);
-    setStopRow(stopRow);
-  }
 
   /**
    * Creates a new instance of this class while copying all values.
@@ -245,7 +192,6 @@ public class Scan extends Query {
     this.setIsolationLevel(scan.getIsolationLevel());
     reversed = scan.isReversed();
     asyncPrefetch = scan.isAsyncPrefetch();
-    small = scan.isSmall();
     allowPartialResults = scan.getAllowPartialResults();
     tr = scan.getTimeRange(); // TimeRange is immutable
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -353,12 +299,12 @@ public class Scan extends Query {
    * returned, up the number of versions beyond the default.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @see #setMaxVersions()
-   * @see #setMaxVersions(int)
+   * @see #readAllVersions()
+   * @see #readVersions(int)
    * @return this
    */
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
-    tr = new TimeRange(minStamp, maxStamp);
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 
@@ -368,31 +314,13 @@ public class Scan extends Query {
    * and you want all versions returned, up the number of versions beyond the
    * defaut.
    * @param timestamp version timestamp
-   * @see #setMaxVersions()
-   * @see #setMaxVersions(int)
-   * @return this
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #setTimestamp(long)} instead
-   */
-  @Deprecated
-  public Scan setTimeStamp(long timestamp)
-  throws IOException {
-    return this.setTimestamp(timestamp);
-  }
-
-  /**
-   * Get versions of columns with the specified timestamp. Note, default maximum
-   * versions to return is 1.  If your time range spans more than one version
-   * and you want all versions returned, up the number of versions beyond the
-   * defaut.
-   * @param timestamp version timestamp
-   * @see #setMaxVersions()
-   * @see #setMaxVersions(int)
+   * @see #readAllVersions()
+   * @see #readVersions(int)
    * @return this
    */
   public Scan setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp + 1);
+      tr = TimeRange.at(timestamp);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
@@ -411,31 +339,11 @@ public class Scan extends Query {
    * <p>
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
-   * @param startRow row to start scanner at or after
-   * @return this
-   * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
-   *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStartRow(byte[])}
-   *   instead. This method may change the inclusive of the stop row to keep compatible with the old
-   *   behavior.
-   * @see #withStartRow(byte[])
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan setStartRow(byte[] startRow) {
-    withStartRow(startRow);
-    if (ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow)) {
-      // for keeping the old behavior that a scan with the same start and stop row is a get scan.
-      this.includeStopRow = true;
-    }
-    return this;
-  }
-
-  /**
-   * Set the start row of the scan.
    * <p>
-   * If the specified row does not exist, the Scanner will start from the next closest row after the
-   * specified row.
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
+   * Doing so will make the scan result unexpected or even undefined.
+   * </p>
    * @param startRow row to start scanner at or after
    * @return this
    * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
@@ -450,6 +358,11 @@ public class Scan extends Query {
    * <p>
    * If the specified row does not exist, or the {@code inclusive} is {@code false}, the Scanner
    * will start from the next closest row after the specified row.
+   * <p>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
+   * Doing so will make the scan result unexpected or even undefined.
+   * </p>
    * @param startRow row to start scanner at or after
    * @param inclusive whether we should include the start row when scan
    * @return this
@@ -471,36 +384,9 @@ public class Scan extends Query {
    * <p>
    * The scan will include rows that are lexicographically less than the provided stopRow.
    * <p>
-   * <b>Note:</b> When doing a filter for a rowKey <u>Prefix</u> use
-   * {@link #setRowPrefixFilter(byte[])}. The 'trailing 0' will not yield the desired result.
-   * </p>
-   * @param stopRow row to end at (exclusive)
-   * @return this
-   * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
-   *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStopRow(byte[])} instead.
-   *   This method may change the inclusive of the stop row to keep compatible with the old
-   *   behavior.
-   * @see #withStopRow(byte[])
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan setStopRow(byte[] stopRow) {
-    withStopRow(stopRow);
-    if (ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow)) {
-      // for keeping the old behavior that a scan with the same start and stop row is a get scan.
-      this.includeStopRow = true;
-    }
-    return this;
-  }
-
-  /**
-   * Set the stop row of the scan.
-   * <p>
-   * The scan will include rows that are lexicographically less than the provided stopRow.
-   * <p>
-   * <b>Note:</b> When doing a filter for a rowKey <u>Prefix</u> use
-   * {@link #setRowPrefixFilter(byte[])}. The 'trailing 0' will not yield the desired result.
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
+   * Doing so will make the scan result unexpected or even undefined.
    * </p>
    * @param stopRow row to end at (exclusive)
    * @return this
@@ -516,6 +402,11 @@ public class Scan extends Query {
    * <p>
    * The scan will include rows that are lexicographically less than (or equal to if
    * {@code inclusive} is {@code true}) the provided stopRow.
+   * <p>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
+   * Doing so will make the scan result unexpected or even undefined.
+   * </p>
    * @param stopRow row to end at
    * @param inclusive whether we should include the stop row when scan
    * @return this
@@ -538,89 +429,40 @@ public class Scan extends Query {
    * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
    * for the startRow and stopRow to achieve the desired result.</p>
    * <p>This can safely be used in combination with setFilter.</p>
-   * <p><b>NOTE: Doing a {@link #setStartRow(byte[])} and/or {@link #setStopRow(byte[])}
-   * after this method will yield undefined results.</b></p>
+   * <p><strong>This CANNOT be used in combination with withStartRow and/or withStopRow.</strong>
+   * Such a combination will yield unexpected and even undefined results.</p>
+   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
+   * @return this
+   * @deprecated since 2.5.0, will be removed in 4.0.0.
+   *       The name of this method is considered to be confusing as it does not
+   *       use a {@link Filter} but uses setting the startRow and stopRow instead.
+   *       Use {@link #setStartStopRowForPrefixScan(byte[])} instead.
+   */
+  @Deprecated
+  public Scan setRowPrefixFilter(byte[] rowPrefix) {
+    return setStartStopRowForPrefixScan(rowPrefix);
+  }
+
+  /**
+   * <p>Set a filter (using stopRow and startRow) so the result set only contains rows where the
+   * rowKey starts with the specified prefix.</p>
+   * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
+   * for the startRow and stopRow to achieve the desired result.</p>
+   * <p>This can safely be used in combination with setFilter.</p>
+   * <p><strong>This CANNOT be used in combination with withStartRow and/or withStopRow.</strong>
+   * Such a combination will yield unexpected and even undefined results.</p>
    * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    * @return this
    */
-  public Scan setRowPrefixFilter(byte[] rowPrefix) {
+  public Scan setStartStopRowForPrefixScan(byte[] rowPrefix) {
     if (rowPrefix == null) {
-      setStartRow(HConstants.EMPTY_START_ROW);
-      setStopRow(HConstants.EMPTY_END_ROW);
+      withStartRow(HConstants.EMPTY_START_ROW);
+      withStopRow(HConstants.EMPTY_END_ROW);
     } else {
-      this.setStartRow(rowPrefix);
-      this.setStopRow(calculateTheClosestNextRowKeyForPrefix(rowPrefix));
+      this.withStartRow(rowPrefix);
+      this.withStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
     }
     return this;
-  }
-
-  /**
-   * <p>When scanning for a prefix the scan should stop immediately after the the last row that
-   * has the specified prefix. This method calculates the closest next rowKey immediately following
-   * the given rowKeyPrefix.</p>
-   * <p><b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.</p>
-   * <p>If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can
-   * simply increment the last byte of the array.
-   * But if your application uses real binary rowids you may run into the scenario that your
-   * prefix is something like:</p>
-   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x23, 0xFF, 0xFF }</b><br/>
-   * Then this stopRow needs to be fed into the actual scan<br/>
-   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x24 }</b> (Notice that it is shorter now)<br/>
-   * This method calculates the correct stop row value for this usecase.
-   *
-   * @param rowKeyPrefix the rowKey<u>Prefix</u>.
-   * @return the closest next rowKey immediately following the given rowKeyPrefix.
-   */
-  private byte[] calculateTheClosestNextRowKeyForPrefix(byte[] rowKeyPrefix) {
-    // Essentially we are treating it like an 'unsigned very very long' and doing +1 manually.
-    // Search for the place where the trailing 0xFFs start
-    int offset = rowKeyPrefix.length;
-    while (offset > 0) {
-      if (rowKeyPrefix[offset - 1] != (byte) 0xFF) {
-        break;
-      }
-      offset--;
-    }
-
-    if (offset == 0) {
-      // We got an 0xFFFF... (only FFs) stopRow value which is
-      // the last possible prefix before the end of the table.
-      // So set it to stop at the 'end of the table'
-      return HConstants.EMPTY_END_ROW;
-    }
-
-    // Copy the right length of the original
-    byte[] newStopRow = Arrays.copyOfRange(rowKeyPrefix, 0, offset);
-    // And increment the last one
-    newStopRow[newStopRow.length - 1]++;
-    return newStopRow;
-  }
-
-  /**
-   * Get all available versions.
-   * @return this
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
-   *   family's max versions, so use {@link #readAllVersions()} instead.
-   * @see #readAllVersions()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
-   */
-  @Deprecated
-  public Scan setMaxVersions() {
-    return readAllVersions();
-  }
-
-  /**
-   * Get up to the specified number of versions of each column.
-   * @param maxVersions maximum versions for each column
-   * @return this
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
-   *   family's max versions, so use {@link #readVersions(int)} instead.
-   * @see #readVersions(int)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
-   */
-  @Deprecated
-  public Scan setMaxVersions(int maxVersions) {
-    return readVersions(maxVersions);
   }
 
   /**
@@ -1027,43 +869,6 @@ public class Scan extends Query {
   public boolean isRaw() {
     byte[] attr = getAttribute(RAW_ATTR);
     return attr == null ? false : Bytes.toBoolean(attr);
-  }
-
-  /**
-   * Set whether this scan is a small scan
-   * <p>
-   * Small scan should use pread and big scan can use seek + read seek + read is fast but can cause
-   * two problem (1) resource contention (2) cause too much network io [89-fb] Using pread for
-   * non-compaction read request https://issues.apache.org/jira/browse/HBASE-7266 On the other hand,
-   * if setting it true, we would do openScanner,next,closeScanner in one RPC call. It means the
-   * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
-   * data block(64KB), it could be considered as a small scan.
-   * @param small
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
-   *   {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we will also
-   *   fetch data when openScanner, and if the number of rows reaches the limit then we will close
-   *   the scanner automatically which means we will fall back to one rpc.
-   * @see #setLimit(int)
-   * @see #setReadType(ReadType)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
-   */
-  @Deprecated
-  public Scan setSmall(boolean small) {
-    this.small = small;
-    this.readType = ReadType.PREAD;
-    return this;
-  }
-
-  /**
-   * Get whether this scan is a small scan
-   * @return true if small scan
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. See the comment of
-   *   {@link #setSmall(boolean)}
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
-   */
-  @Deprecated
-  public boolean isSmall() {
-    return small;
   }
 
   @Override

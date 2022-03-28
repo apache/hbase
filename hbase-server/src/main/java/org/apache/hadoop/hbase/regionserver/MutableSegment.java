@@ -28,10 +28,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A mutable segment in memstore, specifically the active segment.
@@ -124,7 +122,6 @@ public class MutableSegment extends Segment {
    * Returns the first cell in the segment
    * @return the first cell in the segment
    */
-  @VisibleForTesting
   Cell first() {
     return this.getCellSet().first();
   }

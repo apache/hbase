@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -59,7 +58,7 @@ import org.slf4j.LoggerFactory;
 public abstract class TestTableInputFormatScanBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormatScanBase.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");
   static final byte[][] INPUT_FAMILYS = {Bytes.toBytes("content1"), Bytes.toBytes("content2")};
@@ -70,13 +69,6 @@ public abstract class TestTableInputFormatScanBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    // test intermittently fails under hadoop2 (2.0.2-alpha) if shortcircuit-read (scr) is on.
-    // this turns it off for this test.  TODO: Figure out why scr breaks recovery.
-    System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
-
-    // switch TIF to log at DEBUG level
-    TEST_UTIL.enableDebug(TableInputFormat.class);
-    TEST_UTIL.enableDebug(TableInputFormatBase.class);
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
@@ -93,7 +85,7 @@ public abstract class TestTableInputFormatScanBase {
    * Pass the key and value to reduce.
    */
   public static class ScanMapper
-  extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     /**
      * Pass the key and value to reduce.
@@ -106,7 +98,7 @@ public abstract class TestTableInputFormatScanBase {
     @Override
     public void map(ImmutableBytesWritable key, Result value,
       Context context)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       if (value.size() != 2) {
         throw new IOException("There should be two input columns");
       }
@@ -130,7 +122,7 @@ public abstract class TestTableInputFormatScanBase {
    * Checks the last and first key seen against the scanner boundaries.
    */
   public static class ScanReducer
-  extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
+    extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
                     NullWritable, NullWritable> {
 
     private String first = null;
@@ -138,7 +130,7 @@ public abstract class TestTableInputFormatScanBase {
 
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
-    throws IOException ,InterruptedException {
+      throws IOException ,InterruptedException {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
@@ -151,7 +143,7 @@ public abstract class TestTableInputFormatScanBase {
     }
 
     protected void cleanup(Context context)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
@@ -256,6 +248,12 @@ public abstract class TestTableInputFormatScanBase {
     tif.setConf(job.getConfiguration());
     Assert.assertEquals(TABLE_NAME, table.getName());
     List<InputSplit> splits = tif.getSplits(job);
+    for (InputSplit split : splits) {
+      TableSplit tableSplit = (TableSplit) split;
+      // In table input format, we do no store the scanner at the split level
+      // because we use the scan object from the map-reduce job conf itself.
+      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
+    }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }
 

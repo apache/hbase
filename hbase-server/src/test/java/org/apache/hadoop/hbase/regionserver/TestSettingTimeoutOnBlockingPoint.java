@@ -20,20 +20,20 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -45,14 +45,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({LargeTests.class})
+@Category({MediumTests.class})
 public class TestSettingTimeoutOnBlockingPoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSettingTimeoutOnBlockingPoint.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM = Bytes.toBytes("f");
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
@@ -92,11 +92,10 @@ public class TestSettingTimeoutOnBlockingPoint {
 
   @Test
   public void testRowLock() throws IOException {
-    TableName tableName = TableName.valueOf(testName.getMethodName());
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(tableName);
-    hdt.addCoprocessor(SleepCoprocessor.class.getName());
-    TEST_UTIL.createTable(hdt, new byte[][]{FAM}, TEST_UTIL.getConfiguration());
-
+    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(testName.getMethodName())
+      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+    TEST_UTIL.createTable(hdt, new byte[][] { FAM }, TEST_UTIL.getConfiguration());
+    TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {
       try {
         try( Table table = TEST_UTIL.getConnection().getTable(tableName)) {

@@ -77,6 +77,9 @@ public abstract class MonkeyFactory {
   public static final String MOB_NO_KILL = "mobNoKill";
   public static final String MOB_SLOW_DETERMINISTIC = "mobSlowDeterministic";
   public static final String SERVER_AND_DEPENDENCIES_KILLING = "serverAndDependenciesKilling";
+  public static final String DISTRIBUTED_ISSUES = "distributedIssues";
+  public static final String DATA_ISSUES = "dataIssues";
+  public static final String CONFIGURABLE_SLOW_DETERMINISTIC = "configurableSlowDeterministic";
 
   public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
@@ -89,6 +92,9 @@ public abstract class MonkeyFactory {
     .put(MOB_NO_KILL, new MobNoKillMonkeyFactory())
     .put(MOB_SLOW_DETERMINISTIC, new MobNoKillMonkeyFactory())
     .put(SERVER_AND_DEPENDENCIES_KILLING, new ServerAndDependenciesKillingMonkeyFactory())
+    .put(DISTRIBUTED_ISSUES, new DistributedIssuesMonkeyFactory())
+    .put(DATA_ISSUES, new DataIssuesMonkeyFactory())
+    .put(CONFIGURABLE_SLOW_DETERMINISTIC, new ConfigurableSlowDeterministicMonkeyFactory())
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
@@ -98,6 +104,7 @@ public abstract class MonkeyFactory {
       try {
         klass = Class.forName(factoryName);
         if (klass != null) {
+          LOG.info("Instantiating {}", klass.getName());
           fact = (MonkeyFactory) ReflectionUtils.newInstance(klass);
         }
       } catch (Exception e) {

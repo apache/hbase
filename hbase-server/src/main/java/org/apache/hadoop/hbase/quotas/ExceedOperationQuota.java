@@ -75,7 +75,6 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       }
       // 4. Region server limiter is enough and grab estimated consume quota.
       readAvailable = Math.max(readAvailable, regionServerLimiter.getReadAvailable());
-      writeAvailable = Math.max(writeAvailable, regionServerLimiter.getWriteAvailable());
       regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
         writeCapacityUnitConsumed, writeCapacityUnitConsumed);
       if (exceed) {

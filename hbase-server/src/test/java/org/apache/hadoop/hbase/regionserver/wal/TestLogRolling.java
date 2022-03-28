@@ -51,8 +51,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -173,6 +175,11 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public long getLength() {
           return oldWriter1.getLength();
         }
+
+        @Override
+        public long getSyncedLength() {
+          return oldWriter1.getSyncedLength();
+        }
       };
       log.setWriter(newWriter1);
 
@@ -230,6 +237,11 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public long getLength() {
           return oldWriter2.getLength();
         }
+
+        @Override
+        public long getSyncedLength() {
+          return oldWriter2.getSyncedLength();
+        }
       };
       log.setWriter(newWriter2);
 
@@ -278,7 +290,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     }
     Put tmpPut = new Put(Bytes.toBytes("tmprow"));
     tmpPut.addColumn(HConstants.CATALOG_FAMILY, null, value);
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long remaining = timeout;
     while (remaining > 0) {
       if (log.isLowReplicationRollEnabled() == expect) {
@@ -291,7 +303,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         } catch (InterruptedException e) {
           // continue
         }
-        remaining = timeout - (System.currentTimeMillis() - startTime);
+        remaining = timeout - (EnvironmentEdgeManager.currentTime() - startTime);
       }
     }
   }
@@ -356,7 +368,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     writeData(table, 2);
 
-    long curTime = System.currentTimeMillis();
+    long curTime = EnvironmentEdgeManager.currentTime();
     LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
     long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
     assertTrue("Log should have a timestamp older than now",
@@ -451,7 +463,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       writeData(table, 1002);
 
-      long curTime = System.currentTimeMillis();
+      long curTime = EnvironmentEdgeManager.currentTime();
       LOG.info("log.getCurrentFileName()): " + AbstractFSWALProvider.getCurrentFileName(log));
       long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
       assertTrue("Log should have a timestamp older than now",
@@ -494,13 +506,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // read back the data written
       Set<String> loggedRows = new HashSet<>();
-      FSUtils fsUtils = FSUtils.getInstance(fs, TEST_UTIL.getConfiguration());
       for (Path p : paths) {
         LOG.debug("recovering lease for " + p);
-        fsUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p, TEST_UTIL.getConfiguration(),
-          null);
+        RecoverLeaseFSUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p,
+          TEST_UTIL.getConfiguration(), null);
 
-        LOG.debug("Reading WAL " + FSUtils.getPath(p));
+        LOG.debug("Reading WAL " + CommonFSUtils.getPath(p));
         WAL.Reader reader = null;
         try {
           reader = WALFactory.createReader(fs, p, TEST_UTIL.getConfiguration());
@@ -513,7 +524,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
             }
           }
         } catch (EOFException e) {
-          LOG.debug("EOF reading file " + FSUtils.getPath(p));
+          LOG.debug("EOF reading file " + CommonFSUtils.getPath(p));
         } finally {
           if (reader != null) reader.close();
         }

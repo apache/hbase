@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility methods helpful slinging {@link Cell} instances. It has more powerful and
  * rich set of APIs than those in {@link CellUtil} for internal usage.
@@ -767,6 +765,9 @@ public final class PrivateCellUtil {
     if (startsWith == null || startsWith.length == 0) {
       throw new IllegalArgumentException("Cannot pass an empty startsWith");
     }
+    if (left.getQualifierLength() < startsWith.length) {
+      return false;
+    }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
           ((ByteBufferExtendedCell) left).getQualifierPosition(), startsWith.length,
@@ -809,6 +810,31 @@ public final class PrivateCellUtil {
 
   public static boolean matchingType(Cell a, Cell b) {
     return a.getTypeByte() == b.getTypeByte();
+  }
+
+  public static boolean matchingTags(final Cell left, final Cell right, int llength,
+                                     int rlength) {
+    if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
+      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
+      return ByteBufferUtils.equals(
+        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
+        rightBBCell.getTagsByteBuffer(),rightBBCell.getTagsPosition(), rlength);
+    }
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
+      return ByteBufferUtils.equals(
+        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
+        right.getTagsArray(), right.getTagsOffset(), rlength);
+    }
+    if (right instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
+      return ByteBufferUtils.equals(
+        rightBBCell.getTagsByteBuffer(), rightBBCell.getTagsPosition(), rlength,
+        left.getTagsArray(), left.getTagsOffset(), llength);
+    }
+    return Bytes.equals(left.getTagsArray(), left.getTagsOffset(), llength,
+      right.getTagsArray(), right.getTagsOffset(), rlength);
   }
 
   /**
@@ -912,7 +938,7 @@ public final class PrivateCellUtil {
    * Retrieve Cell's first tag, matching the passed in type
    * @param cell The Cell
    * @param type Type of the Tag to retrieve
-   * @return null if there is no tag of the passed in tag type
+   * @return Optional, empty if there is no tag of the passed in tag type
    */
   public static Optional<Tag> getTag(Cell cell, byte type) {
     boolean bufferBacked = cell instanceof ByteBufferExtendedCell;
@@ -955,7 +981,34 @@ public final class PrivateCellUtil {
       return tagsIterator(((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
         ((ByteBufferExtendedCell) cell).getTagsPosition(), tagsLength);
     }
-    return CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+
+    return new Iterator<Tag>() {
+      private int offset = cell.getTagsOffset();
+      private int pos = offset;
+      private int endOffset = offset + cell.getTagsLength() - 1;
+
+      @Override
+      public boolean hasNext() {
+        return this.pos < endOffset;
+      }
+
+      @Override
+      public Tag next() {
+        if (hasNext()) {
+          byte[] tags = cell.getTagsArray();
+          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
+          Tag tag = new ArrayBackedTag(tags, pos, curTagLen + TAG_LENGTH_SIZE);
+          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
+          return tag;
+        }
+        return null;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   public static Iterator<Tag> tagsIterator(final ByteBuffer tags, final int offset,
@@ -1498,7 +1551,7 @@ public final class PrivateCellUtil {
 
     @Override
     public byte[] getTagsArray() {
-      return CellUtil.cloneTags(this);
+      return PrivateCellUtil.cloneTags(this);
     }
 
     @Override
@@ -1712,7 +1765,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -1947,7 +2000,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -2605,7 +2658,6 @@ public final class PrivateCellUtil {
    * @return an int greater than 0 if left is greater than right lesser than 0 if left is lesser
    *         than right equal to 0 if left is equal to right
    */
-  @VisibleForTesting
   public static final int compare(CellComparator comparator, Cell left, byte[] key, int offset,
       int length) {
     // row
@@ -2708,7 +2760,7 @@ public final class PrivateCellUtil {
     byte type = cell.getTypeByte();
     if (type != KeyValue.Type.Minimum.getCode()) {
       type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
-    } else if (ts != HConstants.OLDEST_TIMESTAMP) {
+    } else if (ts != PrivateConstants.OLDEST_TIMESTAMP) {
       ts = ts - 1;
       type = KeyValue.Type.Maximum.getCode();
     } else {

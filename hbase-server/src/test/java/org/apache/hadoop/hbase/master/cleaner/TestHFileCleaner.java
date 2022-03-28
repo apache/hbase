@@ -24,24 +24,27 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -61,27 +64,30 @@ public class TestHFileCleaner {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileCleaner.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
+
+  private static DirScanPool POOL;
 
   @BeforeClass
   public static void setupCluster() throws Exception {
     // have to use a minidfs cluster because the localfs doesn't modify file times correctly
     UTIL.startMiniDFSCluster(1);
-    CleanerChore.initChorePool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void shutdownCluster() throws IOException {
     UTIL.shutdownMiniDFSCluster();
+    POOL.shutdownNow();
   }
 
   @Test
-  public void testTTLCleaner() throws IOException, InterruptedException {
+  public void testTTLCleaner() throws IOException {
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
     Path root = UTIL.getDataTestDirOnTestFS();
     Path file = new Path(root, "file");
     fs.createNewFile(file);
-    long createTime = System.currentTimeMillis();
+    long createTime = EnvironmentEdgeManager.currentTime();
     assertTrue("Test file not created!", fs.exists(file));
     TimeToLiveHFileCleaner cleaner = new TimeToLiveHFileCleaner();
     // update the time info for the file, so the cleaner removes it
@@ -91,6 +97,44 @@ public class TestHFileCleaner {
     cleaner.setConf(conf);
     assertTrue("File not set deletable - check mod time:" + getFileStats(file, fs)
         + " with create time:" + createTime, cleaner.isFileDeletable(fs.getFileStatus(file)));
+  }
+
+  @Test
+  public void testManualMobCleanerStopsMobRemoval() throws IOException {
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    Path root = UTIL.getDataTestDirOnTestFS();
+    TableName table = TableName.valueOf("testManualMobCleanerStopsMobRemoval");
+    Path mob = HFileArchiveUtil.getRegionArchiveDir(root, table,
+        MobUtils.getMobRegionInfo(table).getEncodedName());
+    Path family= new Path(mob, "family");
+
+    Path file = new Path(family, "someHFileThatWouldBeAUUID");
+    fs.createNewFile(file);
+    assertTrue("Test file not created!", fs.exists(file));
+
+    ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
+
+    assertFalse("Mob File shouldn't have been deletable. check path. '"+file+"'",
+        cleaner.isFileDeletable(fs.getFileStatus(file)));
+  }
+
+  @Test
+  public void testManualMobCleanerLetsNonMobGo() throws IOException {
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    Path root = UTIL.getDataTestDirOnTestFS();
+    TableName table = TableName.valueOf("testManualMobCleanerLetsNonMobGo");
+    Path nonmob = HFileArchiveUtil.getRegionArchiveDir(root, table,
+      RegionInfoBuilder.newBuilder(table).build().getEncodedName());
+    Path family= new Path(nonmob, "family");
+
+    Path file = new Path(family, "someHFileThatWouldBeAUUID");
+    fs.createNewFile(file);
+    assertTrue("Test file not created!", fs.exists(file));
+
+    ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
+
+    assertTrue("Non-Mob File should have been deletable. check path. '"+file+"'",
+        cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   /**
@@ -111,15 +155,17 @@ public class TestHFileCleaner {
     // set TTL
     long ttl = 2000;
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner");
+        "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner," +
+        "org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
-    Path archivedHfileDir = new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path archivedHfileDir =
+      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
     FileSystem fs = FileSystem.get(conf);
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
-    final long createTime = System.currentTimeMillis();
+    final long createTime = EnvironmentEdgeManager.currentTime();
     fs.delete(archivedHfileDir, true);
     fs.mkdirs(archivedHfileDir);
     // Case 1: 1 invalid file, which should be deleted directly
@@ -179,11 +225,12 @@ public class TestHFileCleaner {
     // no cleaner policies = delete all files
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
     Server server = new DummyServer();
-    Path archivedHfileDir = new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path archivedHfileDir =
+      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
     // make all the directories for archiving files
     Path table = new Path(archivedHfileDir, "table");
@@ -205,7 +252,7 @@ public class TestHFileCleaner {
     assertTrue("archive directory", fs.exists(archivedHfileDir));
   }
 
-  static class DummyServer implements Server {
+  static class DummyServer extends MockServer {
     @Override
     public Configuration getConfiguration() {
       return UTIL.getConfiguration();
@@ -220,64 +267,6 @@ public class TestHFileCleaner {
       }
       return null;
     }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-
-    @Override
-    public Connection getConnection() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf("regionserver,60020,000000");
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public FileSystem getFileSystem() {
-      return null;
-    }
-
-    @Override
-    public boolean isStopping() {
-      return false;
-    }
-
-    @Override
-    public Connection createConnection(Configuration conf) throws IOException {
-      return null;
-    }
-
-    @Override
-    public AsyncClusterConnection getAsyncClusterConnection() {
-      return null;
-    }
   }
 
   @Test
@@ -290,7 +279,7 @@ public class TestHFileCleaner {
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
     // clean up archive directory
     fs.delete(archivedHfileDir, true);
     fs.mkdirs(archivedHfileDir);
@@ -319,7 +308,7 @@ public class TestHFileCleaner {
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
     // clean up archive directory
     fs.delete(archivedHfileDir, true);
     fs.mkdirs(archivedHfileDir);
@@ -360,7 +349,7 @@ public class TestHFileCleaner {
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
-    final HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    final HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
     Assert.assertEquals(ORIGINAL_THROTTLE_POINT, cleaner.getThrottlePoint());
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getLargeQueueInitSize());
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getSmallQueueInitSize());
@@ -431,7 +420,7 @@ public class TestHFileCleaner {
 
   private void createFilesForTesting(int largeFileNum, int smallFileNum, FileSystem fs,
       Path archivedHfileDir) throws IOException {
-    final Random rand = new Random();
+    final Random rand = ThreadLocalRandom.current();
     final byte[] large = new byte[1024 * 1024];
     for (int i = 0; i < large.length; i++) {
       large[i] = (byte) rand.nextInt(128);

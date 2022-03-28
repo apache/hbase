@@ -32,4 +32,5 @@ public interface MetricsReplicationSinkSource {
   void incrAppliedOps(long batchsize);
   long getLastAppliedOpAge();
   void incrAppliedHFiles(long hfileSize);
+  long getSinkAppliedOps();
 }

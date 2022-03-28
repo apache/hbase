@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Collections;
+import java.util.List;
+
 public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrapper {
 
   @Override
@@ -137,6 +140,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public long getByteBuffAllocatorUsedBufferCount() {
+    return 0;
+  }
+
+  @Override
+  public int getActiveScanners() {
     return 0;
   }
 
@@ -376,6 +384,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public List<String> getWALExcludeDNs() {
+    return Collections.emptyList();
+  }
+
+  @Override
   public long getNumWALSlowAppend() {
     return 0;
   }
@@ -418,6 +431,31 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getHedgedReadWins() {
     return 10;
+  }
+
+  @Override
+  public long getHedgedReadOpsInCurThread() {
+    return 5;
+  }
+
+  @Override
+  public long getTotalBytesRead() {
+    return 0;
+  }
+
+  @Override
+  public long getLocalBytesRead() {
+    return 0;
+  }
+
+  @Override
+  public long getShortCircuitBytesRead() {
+    return 0;
+  }
+
+  @Override
+  public long getZeroCopyBytesRead() {
+    return 0;
   }
 
   @Override
@@ -603,5 +641,10 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getAverageRegionSize() {
     return 10000000;
+  }
+
+  @Override
+  public  long getRpcFullScanRequestsCount() {
+    return 10;
   }
 }

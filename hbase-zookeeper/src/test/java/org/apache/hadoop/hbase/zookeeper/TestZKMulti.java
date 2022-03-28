@@ -30,7 +30,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +57,7 @@ public class TestZKMulti {
       HBaseClassTestRule.forClass(TestZKMulti.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKMulti.class);
-  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
+  private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
   private static ZKWatcher zkw = null;
 
   private static class ZKMultiAbortable implements Abortable {

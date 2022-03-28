@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -53,7 +54,7 @@ public class TestTransitRegionStateProcedure {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTransitRegionStateProcedure.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static byte[] CF = Bytes.toBytes("cf");
 
@@ -130,6 +131,8 @@ public class TestTransitRegionStateProcedure {
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableName);
     HRegion region = rs.getRegions(tableName).get(0);
+    region.addReadRequestsCount(1);
+    region.addWriteRequestsCount(2);
     long openSeqNum = region.getOpenSeqNum();
     TransitRegionStateProcedure proc =
       TransitRegionStateProcedure.reopen(env, region.getRegionInfo());
@@ -139,6 +142,10 @@ public class TestTransitRegionStateProcedure {
     long openSeqNum2 = region2.getOpenSeqNum();
     // confirm that the region is successfully opened
     assertTrue(openSeqNum2 > openSeqNum);
+    // we check the available by scan after table created,
+    // so the readRequestsCount should be 2 here
+    assertEquals(2, region2.getReadRequestsCount());
+    assertEquals(2, region2.getWriteRequestsCount());
   }
 
   @Test

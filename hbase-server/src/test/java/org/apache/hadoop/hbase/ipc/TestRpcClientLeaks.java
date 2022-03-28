@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -28,7 +28,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -63,6 +63,9 @@ public class TestRpcClientLeaks {
 
   public static class MyRpcClientImpl extends BlockingRpcClient {
 
+    // Exceptions thrown only when this is set to false.
+    private static boolean throwException = false;
+
     public MyRpcClientImpl(Configuration conf) {
       super(conf);
     }
@@ -78,15 +81,21 @@ public class TestRpcClientLeaks {
         @Override
         protected synchronized void setupConnection() throws IOException {
           super.setupConnection();
-          SAVED_SOCKETS.add(socket);
-          throw new IOException(
-            "Sample exception for verifying socket closure in case of exceptions.");
+          if (throwException) {
+            SAVED_SOCKETS.add(socket);
+            throw new IOException(
+                "Sample exception for verifying socket closure in case of exceptions.");
+          }
         }
       };
     }
+
+    public static void enableThrowExceptions() {
+      throwException = true;
+    }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -110,6 +119,7 @@ public class TestRpcClientLeaks {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection connection = ConnectionFactory.createConnection(conf);
       Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+      MyRpcClientImpl.enableThrowExceptions();
       table.get(new Get(Bytes.toBytes("asd")));
       fail("Should fail because the injected error");
     } catch (RetriesExhaustedException e) {

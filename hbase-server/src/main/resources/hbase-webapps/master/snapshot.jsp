@@ -22,6 +22,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.SnapshotDescription"
+  import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
@@ -30,7 +31,7 @@
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
+  boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   String snapshotName = request.getParameter("name");
   SnapshotDescription snapshot = null;
   SnapshotInfo.SnapshotStats stats = null;

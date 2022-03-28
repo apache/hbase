@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -43,8 +42,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.AfterClass;
@@ -57,7 +56,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestBlocksRead  {
 
   @ClassRule
@@ -69,10 +68,10 @@ public class TestBlocksRead  {
   public TestName testName = new TestName();
 
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
-      BloomType.ROW, BloomType.NONE };
+    BloomType.ROW, BloomType.NONE };
 
   HRegion region = null;
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
   private Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -88,12 +87,7 @@ public class TestBlocksRead  {
   }
 
   /**
-   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   * @param tableName
-   * @param callingMethod
-   * @param conf
-   * @param family
-   * @throws IOException
+   * Callers must afterward call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    * @return created and initialized region.
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
@@ -102,7 +96,7 @@ public class TestBlocksRead  {
   }
 
   /**
-   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * Callers must afterward call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       String family, BlockCache blockCache) throws IOException {
@@ -117,9 +111,9 @@ public class TestBlocksRead  {
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     Path path = new Path(DIR + callingMethod);
     if (blockCache != null) {
-      return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build(), blockCache);
+      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build(), blockCache);
     } else {
-      return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build());
+      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
     }
   }
 
@@ -138,7 +132,7 @@ public class TestBlocksRead  {
 
   private void putData(byte[] cf, String row, String col, long versionStart,
       long versionEnd) throws IOException {
-    byte columnBytes[] = Bytes.toBytes(col);
+    byte [] columnBytes = Bytes.toBytes(col);
     Put put = new Put(Bytes.toBytes(row));
     put.setDurability(Durability.SKIP_WAL);
 
@@ -208,23 +202,22 @@ public class TestBlocksRead  {
     assertTrue("RowCheck", CellUtil.matchingRows(kv,  Bytes.toBytes(expectedRow)));
     assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
-    assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));
+    assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol,
+      expectedVersion)));
   }
 
   private static long getBlkAccessCount(byte[] cf) {
-      return HFile.DATABLOCK_READ_COUNT.sum();
+    return HFile.DATABLOCK_READ_COUNT.sum();
   }
 
   /**
    * Test # of blocks read for some simple seek cases.
-   *
-   * @throws Exception
    */
   @Test
   public void testBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
-    Cell kvs[];
+    Cell [] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
@@ -266,21 +259,19 @@ public class TestBlocksRead  {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col5", 5);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
 
   /**
    * Test # of blocks read (targeted at some of the cases Lazy Seek optimizes).
-   *
-   * @throws Exception
    */
   @Test
   public void testLazySeekBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
-    Cell kvs[];
+    Cell [] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
@@ -374,14 +365,13 @@ public class TestBlocksRead  {
       verifyData(kvs[1], "row", "col2", 12);
       verifyData(kvs[2], "row", "col3", 13);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
 
   /**
    * Test # of blocks read to ensure disabling cache-fill on Scan works.
-   * @throws Exception
    */
   @Test
   public void testBlocksStoredWhenCachingDisabled() throws Exception {
@@ -423,7 +413,7 @@ public class TestBlocksRead  {
 
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -432,7 +422,7 @@ public class TestBlocksRead  {
   public void testLazySeekBlocksReadWithDelete() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
-    Cell kvs[];
+    Cell [] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
     try {
       deleteFamily(FAMILY, "row", 200);
@@ -449,7 +439,7 @@ public class TestBlocksRead  {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col99", 201);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }

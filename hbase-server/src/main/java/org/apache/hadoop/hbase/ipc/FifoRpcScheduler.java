@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -25,11 +24,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 
 /**
@@ -60,14 +59,11 @@ public class FifoRpcScheduler extends RpcScheduler {
   public void start() {
     LOG.info("Using {} as user call queue; handlerCount={}; maxQueueLength={}",
       this.getClass().getSimpleName(), handlerCount, maxQueueLength);
-    this.executor = new ThreadPoolExecutor(
-        handlerCount,
-        handlerCount,
-        60,
-        TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(maxQueueLength),
-        new DaemonThreadFactory("FifoRpcScheduler.handler"),
-        new ThreadPoolExecutor.CallerRunsPolicy());
+    this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
+      new ArrayBlockingQueue<>(maxQueueLength),
+      new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   @Override
@@ -94,7 +90,7 @@ public class FifoRpcScheduler extends RpcScheduler {
   }
 
   @Override
-  public boolean dispatch(final CallRunner task) throws IOException, InterruptedException {
+  public boolean dispatch(final CallRunner task) {
     return executeRpcCall(executor, queueSize, task);
   }
 

@@ -24,10 +24,10 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureSkipPersistence {
 
   @ClassRule
@@ -45,7 +45,7 @@ public class TestProcedureSkipPersistence {
   private ProcedureExecutor<ProcEnv> procExecutor;
   private ProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
@@ -125,7 +125,7 @@ public class TestProcedureSkipPersistence {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
     assertTrue(testDir.depth() > 1);

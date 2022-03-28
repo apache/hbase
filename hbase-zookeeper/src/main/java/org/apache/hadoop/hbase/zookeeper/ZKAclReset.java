@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -57,19 +56,19 @@ public class ZKAclReset extends Configured implements Tool {
 
     ZooKeeper zk = zkw.getRecoverableZooKeeper().getZooKeeper();
     if (eraseAcls) {
-      LOG.info(" - erase ACLs for " + znode);
+      LOG.info(" - erase ACLs for {}", znode);
       zk.setACL(znode, ZooDefs.Ids.OPEN_ACL_UNSAFE, -1);
     } else {
-      LOG.info(" - set ACLs for " + znode);
-      zk.setACL(znode, ZKUtil.createACL(zkw, znode, true), -1);
+      LOG.info(" - set ACLs for {}", znode);
+      zk.setACL(znode, zkw.createACL(znode, true), -1);
     }
   }
 
   private static void resetAcls(final Configuration conf, boolean eraseAcls)
       throws Exception {
     try (ZKWatcher zkw = new ZKWatcher(conf, "ZKAclReset", null)) {
-      LOG.info((eraseAcls ? "Erase" : "Set") + " HBase ACLs for " +
-              zkw.getQuorum() + " " + zkw.getZNodePaths().baseZNode);
+      LOG.info((eraseAcls ? "Erase" : "Set") + " HBase ACLs for {} {}", zkw.getQuorum(),
+        zkw.getZNodePaths().baseZNode);
       resetAcls(zkw, zkw.getZNodePaths().baseZNode, eraseAcls);
     }
   }

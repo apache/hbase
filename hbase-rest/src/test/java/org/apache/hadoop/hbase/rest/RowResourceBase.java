@@ -19,26 +19,23 @@ package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-
 import java.util.HashMap;
 import java.util.Map;
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -51,8 +48,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class RowResourceBase {
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
+public class RowResourceBase {
   protected static final String TABLE = "TestRowResource";
 
   protected static final TableName TABLE_NAME = TableName.valueOf(TABLE);
@@ -73,7 +72,7 @@ public class RowResourceBase {
   protected static final String VALUE_5 = "5";
   protected static final String VALUE_6 = "6";
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   protected static Client client;
@@ -82,7 +81,6 @@ public class RowResourceBase {
   protected static Unmarshaller xmlUnmarshaller;
   protected static Configuration conf;
   protected static ObjectMapper jsonMapper;
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -113,10 +111,15 @@ public class RowResourceBase {
     if (admin.tableExists(TABLE_NAME)) {
       TEST_UTIL.deleteTable(TABLE_NAME);
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
-    htd.addFamily(new HColumnDescriptor(CFA));
-    htd.addFamily(new HColumnDescriptor(CFB));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
+    ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(CFB)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
   }
 
   @After
@@ -178,8 +181,8 @@ public class RowResourceBase {
     assertEquals(Bytes.toString(cell.getValue()), value);
   }
 
-  protected static void checkIncrementValueXML(String table, String row, String column,
-                                      long value) throws IOException, JAXBException {
+  protected static void checkIncrementValueXML(String table, String row, String column, long value)
+      throws IOException, JAXBException {
     Response response1 = getValueXML(table, row, column);
     assertEquals(200, response1.getCode());
     assertEquals(Constants.MIMETYPE_XML, response1.getHeader("content-type"));
@@ -261,16 +264,17 @@ public class RowResourceBase {
     assertEquals(Bytes.toLong(cell.getValue()), value);
   }
 
-  protected static Response checkAndPutValuePB(String url, String table,
-      String row, String column, String valueToCheck, String valueToPut, HashMap<String,String> otherCells)
-        throws IOException {
+  protected static Response checkAndPutValuePB(String url, String table, String row, String column,
+      String valueToCheck, String valueToPut, HashMap<String,String> otherCells)
+      throws IOException {
     RowModel rowModel = new RowModel(row);
     rowModel.addCell(new CellModel(Bytes.toBytes(column),
       Bytes.toBytes(valueToPut)));
 
-    if(otherCells != null) {
-      for (Map.Entry<String,String> entry :otherCells.entrySet()) {
-        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue())));
+    if (otherCells != null) {
+      for (Map.Entry<String,String> entry : otherCells.entrySet()) {
+        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()),
+          Bytes.toBytes(entry.getValue())));
       }
     }
 
@@ -290,8 +294,10 @@ public class RowResourceBase {
       String column, String valueToCheck, String valueToPut) throws IOException {
     return checkAndPutValuePB(table,row,column,valueToCheck,valueToPut,null);
   }
-    protected static Response checkAndPutValuePB(String table, String row,
-      String column, String valueToCheck, String valueToPut, HashMap<String,String> otherCells) throws IOException {
+
+  protected static Response checkAndPutValuePB(String table, String row, String column,
+      String valueToCheck, String valueToPut, HashMap<String,String> otherCells)
+      throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);
@@ -302,16 +308,17 @@ public class RowResourceBase {
       valueToCheck, valueToPut, otherCells);
   }
 
-  protected static Response checkAndPutValueXML(String url, String table,
-      String row, String column, String valueToCheck, String valueToPut, HashMap<String,String> otherCells)
-        throws IOException, JAXBException {
+  protected static Response checkAndPutValueXML(String url, String table, String row, String column,
+      String valueToCheck, String valueToPut, HashMap<String,String> otherCells)
+      throws IOException, JAXBException {
     RowModel rowModel = new RowModel(row);
     rowModel.addCell(new CellModel(Bytes.toBytes(column),
       Bytes.toBytes(valueToPut)));
 
-    if(otherCells != null) {
-      for (Map.Entry<String,String> entry :otherCells.entrySet()) {
-        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue())));
+    if (otherCells != null) {
+      for (Map.Entry<String,String> entry : otherCells.entrySet()) {
+        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()),
+          Bytes.toBytes(entry.getValue())));
       }
     }
 
@@ -328,9 +335,8 @@ public class RowResourceBase {
     return response;
   }
 
-  protected static Response checkAndPutValueXML(String table, String row,
-                                                String column, String valueToCheck, String valueToPut)
-          throws IOException, JAXBException {
+  protected static Response checkAndPutValueXML(String table, String row, String column,
+      String valueToCheck, String valueToPut) throws IOException, JAXBException {
     return checkAndPutValueXML(table,row,column,valueToCheck,valueToPut, null);
   }
 
@@ -352,9 +358,10 @@ public class RowResourceBase {
         throws IOException, JAXBException {
     RowModel rowModel = new RowModel(row);
 
-    if(cellsToDelete != null) {
-      for (Map.Entry<String,String> entry :cellsToDelete.entrySet()) {
-        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue())));
+    if (cellsToDelete != null) {
+      for (Map.Entry<String,String> entry : cellsToDelete.entrySet()) {
+        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()),
+          Bytes.toBytes(entry.getValue())));
       }
     }
     // Add this at the end
@@ -374,8 +381,10 @@ public class RowResourceBase {
       String column, String valueToCheck) throws IOException, JAXBException {
     return checkAndDeleteXML(table, row, column, valueToCheck, null);
   }
+
   protected static Response checkAndDeleteXML(String table, String row,
-      String column, String valueToCheck, HashMap<String,String> cellsToDelete) throws IOException, JAXBException {
+      String column, String valueToCheck, HashMap<String,String> cellsToDelete)
+      throws IOException, JAXBException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);
@@ -386,12 +395,13 @@ public class RowResourceBase {
   }
 
   protected static Response checkAndDeleteJson(String table, String row,
-      String column, String valueToCheck) throws IOException, JAXBException {
+      String column, String valueToCheck) throws IOException {
     return checkAndDeleteJson(table, row, column, valueToCheck, null);
   }
 
   protected static Response checkAndDeleteJson(String table, String row,
-      String column, String valueToCheck, HashMap<String,String> cellsToDelete) throws IOException, JAXBException {
+      String column, String valueToCheck, HashMap<String,String> cellsToDelete)
+      throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);
@@ -403,12 +413,13 @@ public class RowResourceBase {
 
   protected static Response checkAndDeleteJson(String url, String table,
       String row, String column, String valueToCheck, HashMap<String,String> cellsToDelete)
-        throws IOException, JAXBException {
+      throws IOException {
     RowModel rowModel = new RowModel(row);
 
-    if(cellsToDelete != null) {
-      for (Map.Entry<String,String> entry :cellsToDelete.entrySet()) {
-        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue())));
+    if (cellsToDelete != null) {
+      for (Map.Entry<String,String> entry : cellsToDelete.entrySet()) {
+        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()),
+          Bytes.toBytes(entry.getValue())));
       }
     }
     // Add this at the end
@@ -423,9 +434,8 @@ public class RowResourceBase {
     return response;
   }
 
-  protected static Response checkAndDeletePB(String table, String row,
-      String column, String value) throws IOException {
-
+  protected static Response checkAndDeletePB(String table, String row, String column, String value)
+      throws IOException {
     return checkAndDeletePB(table, row, column, value, null);
   }
 
@@ -444,9 +454,10 @@ public class RowResourceBase {
       throws IOException {
     RowModel rowModel = new RowModel(row);
 
-    if(cellsToDelete != null) {
-      for (Map.Entry<String,String> entry :cellsToDelete.entrySet()) {
-        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue())));
+    if (cellsToDelete != null) {
+      for (Map.Entry<String,String> entry : cellsToDelete.entrySet()) {
+        rowModel.addCell(new CellModel(Bytes.toBytes(entry.getKey()),
+          Bytes.toBytes(entry.getValue())));
       }
     }
     // Add this at the end
@@ -535,12 +546,12 @@ public class RowResourceBase {
   }
 
   protected static void checkValueJSON(String table, String row, String column,
-      String value) throws IOException, JAXBException {
+      String value) throws IOException {
     Response response = getValueJson(table, row, column);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-    .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
     RowModel rowModel = cellSet.getRows().get(0);
     CellModel cell = rowModel.getCells().get(0);
@@ -549,7 +560,7 @@ public class RowResourceBase {
   }
 
   protected static void checkIncrementValueJSON(String table, String row, String column,
-      long value) throws IOException, JAXBException {
+      long value) throws IOException {
     Response response = getValueJson(table, row, column);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
@@ -563,7 +574,7 @@ public class RowResourceBase {
   }
 
   protected static Response putValueJson(String table, String row, String column,
-      String value) throws IOException, JAXBException {
+      String value) throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);
@@ -575,7 +586,7 @@ public class RowResourceBase {
   }
 
   protected static Response putValueJson(String url, String table, String row, String column,
-      String value) throws IOException, JAXBException {
+      String value) throws IOException {
     RowModel rowModel = new RowModel(row);
     rowModel.addCell(new CellModel(Bytes.toBytes(column),
       Bytes.toBytes(value)));
@@ -600,7 +611,7 @@ public class RowResourceBase {
   }
 
   protected static Response appendValuePB(String table, String row, String column,
-      String value) throws IOException, JAXBException {
+      String value) throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);
@@ -633,7 +644,7 @@ public class RowResourceBase {
   }
 
   protected static Response incrementValuePB(String table, String row, String column,
-      String value) throws IOException, JAXBException {
+      String value) throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
     path.append(table);

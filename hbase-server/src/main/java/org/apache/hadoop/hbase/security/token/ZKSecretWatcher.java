@@ -18,19 +18,16 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.List;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,6 +88,7 @@ public class ZKSecretWatcher extends ZKListener {
       try {
         Integer id = Integer.valueOf(keyId);
         secretManager.removeKey(id);
+        LOG.info("Node deleted id={}", id);
       } catch (NumberFormatException nfe) {
         LOG.error("Invalid znode name for key ID '"+keyId+"'", nfe);
       }
@@ -234,7 +232,6 @@ public class ZKSecretWatcher extends ZKListener {
    * get token keys parent node
    * @return token keys parent node
    */
-  @VisibleForTesting
   String getKeysParentZNode() {
     return keysParentZNode;
   }

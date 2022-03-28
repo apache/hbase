@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,21 +28,23 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -100,9 +102,10 @@ public class TestOpenTableInCoprocessor {
     private ExecutorService getPool() {
       int maxThreads = 1;
       long keepAliveTime = 60;
-      ThreadPoolExecutor pool =
-          new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-              new SynchronousQueue<>(), Threads.newDaemonThreadFactory("hbase-table"));
+      ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
+        TimeUnit.SECONDS, new SynchronousQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }
@@ -128,7 +131,7 @@ public class TestOpenTableInCoprocessor {
     }
   }
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -160,22 +163,23 @@ public class TestOpenTableInCoprocessor {
     runCoprocessorConnectionToRemoteTable(CustomThreadPoolCoprocessor.class, completedWithPool);
   }
 
-  private void runCoprocessorConnectionToRemoteTable(Class clazz, boolean[] completeCheck)
+  private void runCoprocessorConnectionToRemoteTable(Class<?> clazz, boolean[] completeCheck)
       throws Throwable {
     // Check if given class implements RegionObserver.
-    assert(RegionObserver.class.isAssignableFrom(clazz));
-    HTableDescriptor primary = new HTableDescriptor(primaryTable);
-    primary.addFamily(new HColumnDescriptor(family));
+    assert (RegionObserver.class.isAssignableFrom(clazz));
     // add our coprocessor
-    primary.addCoprocessor(clazz.getName());
+    TableDescriptor primaryDescriptor = TableDescriptorBuilder.newBuilder(primaryTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCoprocessor(clazz.getName())
+      .build();
 
-    HTableDescriptor other = new HTableDescriptor(otherTable);
-    other.addFamily(new HColumnDescriptor(family));
+
+    TableDescriptor otherDescriptor = TableDescriptorBuilder.newBuilder(otherTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
 
     Admin admin = UTIL.getAdmin();
-    admin.createTable(primary);
-    admin.createTable(other);
+    admin.createTable(primaryDescriptor);
+    admin.createTable(otherDescriptor);
 
     Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
@@ -197,7 +201,7 @@ public class TestOpenTableInCoprocessor {
    */
   private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions(Integer.MAX_VALUE - 1);
+    scan.readVersions(Integer.MAX_VALUE - 1);
 
     ResultScanner results = table.getScanner(scan);
     int count = 0;

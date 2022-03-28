@@ -21,17 +21,18 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,9 +59,18 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     htd = TableDescriptorBuilder.newBuilder(htd).setReadOnly(true).build();
 
     // open region from the snapshot directory
-    region = HRegion.newHRegion(FSUtils.getTableDir(rootDir, htd.getTableName()), null, fs, conf,
-      hri, htd, null);
+    region = HRegion.newHRegion(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), null, fs,
+      conf, hri, htd, null);
     region.setRestoredRegion(true);
+    // non RS process does not have a block cache, and this a client side scanner,
+    // create one for MapReduce jobs to cache the INDEX block by setting to use
+    // IndexOnlyLruBlockCache and set a value to HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY
+    conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
+    conf.setIfUnset(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
+        String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
+    // don't allow L2 bucket cache for non RS process to avoid unexpected disk usage.
+    conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
+    region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
     // we won't initialize the MobFileCache when not running in RS process. so provided an
     // initialized cache. Consider the case: an CF was set from an mob to non-mob. if we only
     // initialize cache for MOB region, NPE from HMobStore will still happen. So Initialize the
@@ -121,6 +131,10 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
         LOG.warn("Exception while closing region", ex);
       }
     }
+  }
+
+  HRegion getRegion() {
+    return region;
   }
 
   @Override

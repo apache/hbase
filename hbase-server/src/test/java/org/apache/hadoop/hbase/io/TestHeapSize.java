@@ -62,12 +62,14 @@ import org.apache.hadoop.hbase.regionserver.ImmutableSegment;
 import org.apache.hadoop.hbase.regionserver.MemStoreCompactor;
 import org.apache.hadoop.hbase.regionserver.MutableSegment;
 import org.apache.hadoop.hbase.regionserver.Segment;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker.NonSyncTimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker.SyncTimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -602,5 +604,19 @@ public class TestHeapSize  {
       assertEquals(ClassSize.ARRAY, ClassSize.OBJECT + 8);
     }
   }
-}
 
+  @Test
+  public void testAutoCalcFixedOverHead() {
+    Class[] classList = new Class[] { HFileContext.class, HRegion.class, BlockCacheKey.class,
+      HFileBlock.class, HStore.class, LruBlockCache.class, StoreContext.class };
+    for (Class cl : classList) {
+      // do estimate in advance to ensure class is loaded
+      ClassSize.estimateBase(cl, false);
+
+      long startTime = EnvironmentEdgeManager.currentTime();
+      ClassSize.estimateBase(cl, false);
+      long endTime = EnvironmentEdgeManager.currentTime();
+      assertTrue(endTime - startTime < 5);
+    }
+  }
+}

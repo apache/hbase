@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Map;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -154,4 +155,37 @@ public interface RegionMetrics {
    * @return the reference count for the stores of this region
    */
   int getStoreRefCount();
+
+  /**
+   * @return the max reference count for any store file among all compacted stores files
+   *   of this region
+   */
+  int getMaxCompactedStoreFileRefCount();
+
+  /**
+   * Different from dataLocality,this metric's numerator only include the data stored on ssd
+   * @return the data locality for ssd of region in the regionserver
+   */
+  float getDataLocalityForSsd();
+
+  /**
+   * @return the data at local weight of this region in the regionserver
+   */
+  long getBlocksLocalWeight();
+
+  /**
+   * Different from blocksLocalWeight,this metric's numerator only include the data stored on ssd
+   * @return the data at local with ssd weight of this region in the regionserver
+   */
+  long getBlocksLocalWithSsdWeight();
+
+  /**
+   * @return the block total weight of this region
+   */
+  long getBlocksTotalWeight();
+
+  /**
+   * @return the compaction state of this region
+   */
+  CompactionState getCompactionState();
 }

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,34 +43,17 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
-      ReplicationSource source) {
-    super(fs, conf, logQueue, startPosition, filter, source);
+      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
+      ReplicationSource source, String walGroupId) {
+    super(fs, conf, logQueue, startPosition, filter, source, walGroupId);
     checker = new SerialReplicationChecker(conf, source);
   }
 
   @Override
-  protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
-      throws IOException, InterruptedException {
+  protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
+    throws IOException, InterruptedException {
     Path currentPath = entryStream.getCurrentPath();
-    if (!entryStream.hasNext()) {
-      // check whether we have switched a file
-      if (currentPath != null && switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
-      } else {
-        return null;
-      }
-    }
-    if (currentPath != null) {
-      if (switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
-      }
-    } else {
-      // when reading from the entry stream first time we will enter here
-      currentPath = entryStream.getCurrentPath();
-    }
     long positionBefore = entryStream.getPosition();
-    WALEntryBatch batch = createBatch(entryStream);
     for (;;) {
       Entry entry = entryStream.peek();
       boolean doFiltering = true;
@@ -123,7 +105,6 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
         break;
       }
     }
-    return batch;
   }
 
   private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch)

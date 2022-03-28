@@ -16,15 +16,20 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
-import static org.junit.Assert.*;
-
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.MAX_ALLOC_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -35,21 +40,22 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestMemStoreLAB {
 
   @ClassRule
@@ -65,7 +71,7 @@ public class TestMemStoreLAB {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     ChunkCreator.initialize(1 * 1024, false, 50 * 1024000L, 0.2f,
-        MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   @AfterClass
@@ -74,7 +80,7 @@ public class TestMemStoreLAB {
         (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
             * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit, 0.2f,
-      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   /**
@@ -82,7 +88,6 @@ public class TestMemStoreLAB {
    */
   @Test
   public void testLABRandomAllocation() {
-    Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
@@ -90,6 +95,7 @@ public class TestMemStoreLAB {
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100000; i++) {
       int valSize = rand.nextInt(3);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
@@ -139,10 +145,9 @@ public class TestMemStoreLAB {
       allocations.add(allocsByThisThread);
 
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
-        private Random r = new Random();
         @Override
         public void doAnAction() throws Exception {
-          int valSize = r.nextInt(3);
+          int valSize = ThreadLocalRandom.current().nextInt(3);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
           int size = kv.getSerializedSize();
           ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);
@@ -166,7 +171,9 @@ public class TestMemStoreLAB {
     int sizeCounted = 0;
     for (AllocRecord rec : Iterables.concat(allocations)) {
       sizeCounted += rec.size;
-      if (rec.size == 0) continue;
+      if (rec.size == 0) {
+        continue;
+      }
       Map<Integer, AllocRecord> mapForThisByteArray =
         mapsByChunk.get(rec.alloc);
       if (mapForThisByteArray == null) {
@@ -211,12 +218,13 @@ public class TestMemStoreLAB {
       Configuration conf = HBaseConfiguration.create();
       conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
       // set chunk size to default max alloc size, so we could easily trigger chunk retirement
-      conf.setLong(MemStoreLABImpl.CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
+      conf.setLong(CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
       // reconstruct mslab
       long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
           .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
       ChunkCreator.initialize(MemStoreLABImpl.MAX_ALLOC_DEFAULT, false,
-        globalMemStoreLimit, 0.1f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+        globalMemStoreLimit, 0.1f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       ChunkCreator.clearDisableFlag();
       mslab = new MemStoreLABImpl(conf);
       // launch multiple threads to trigger frequent chunk retirement
@@ -251,17 +259,77 @@ public class TestMemStoreLAB {
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
           ChunkCreator.instance.numberOfMappedChunks() != 0);
+      Set<Integer> chunkIds = new HashSet<Integer>(mslab.chunks);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
       // make sure all chunks where reclaimed back to pool
-      int queueLength = mslab.getNumOfChunksReturnedToPool();
+      int queueLength = mslab.getNumOfChunksReturnedToPool(chunkIds);
       assertTrue("All chunks in chunk queue should be reclaimed or removed"
           + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
           pooledChunksNum-queueLength == 0);
     } finally {
       ChunkCreator.instance = oldInstance;
     }
+  }
+
+  /**
+   * Test cell with right length, which constructed by testForceCopyOfBigCellInto. (HBASE-26467)
+   */
+  @Test
+  public void testForceCopyOfBigCellInto() {
+    Configuration conf = HBaseConfiguration.create();
+    int chunkSize = ChunkCreator.getInstance().getChunkSize();
+    conf.setInt(CHUNK_SIZE_KEY, chunkSize);
+    conf.setInt(MAX_ALLOC_KEY, chunkSize / 2);
+
+    MemStoreLABImpl mslab = new MemStoreLABImpl(conf);
+    byte[] row = Bytes.toBytes("row");
+    byte[] columnFamily = Bytes.toBytes("columnFamily");
+    byte[] qualify = Bytes.toBytes("qualify");
+    byte[] smallValue = new byte[chunkSize / 2];
+    byte[] bigValue = new byte[chunkSize];
+    KeyValue smallKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), smallValue);
+
+    assertEquals(smallKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(smallKV).getSerializedSize());
+
+    KeyValue bigKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), bigValue);
+    assertEquals(bigKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
+
+    /**
+     * Add test by HBASE-26576,all the chunks are in {@link ChunkCreator#chunkIdMap}
+     */
+    assertTrue(mslab.chunks.size() == 2);
+    Chunk dataChunk = null;
+    Chunk jumboChunk = null;
+
+    for (Integer chunkId : mslab.chunks) {
+      Chunk chunk = ChunkCreator.getInstance().getChunk(chunkId);
+      assertTrue(chunk != null);
+      if (chunk.getChunkType() == ChunkType.JUMBO_CHUNK) {
+        jumboChunk = chunk;
+      } else if (chunk.getChunkType() == ChunkType.DATA_CHUNK) {
+        dataChunk = chunk;
+      }
+    }
+
+    assertTrue(dataChunk != null);
+    assertTrue(jumboChunk != null);
+
+    mslab.close();
+    /**
+     * After mslab close, jumboChunk is removed from {@link ChunkCreator#chunkIdMap} but because
+     * dataChunk is recycled to pool so it is still in {@link ChunkCreator#chunkIdMap}.
+     */
+    assertTrue(ChunkCreator.getInstance().getChunk(jumboChunk.getId()) == null);
+    assertTrue(!ChunkCreator.getInstance().isChunkInPool(jumboChunk.getId()));
+    assertTrue(ChunkCreator.getInstance().getChunk(dataChunk.getId()) == dataChunk);
+    assertTrue(ChunkCreator.getInstance().isChunkInPool(dataChunk.getId()));
+
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

@@ -29,14 +29,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.quotas.FileArchiverNotifierImpl.SnapshotWithSize;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -82,7 +81,7 @@ public class TestFileArchiverNotifierImpl {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFileArchiverNotifierImpl.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final AtomicLong COUNTER = new AtomicLong();
 
   @Rule
@@ -289,7 +288,7 @@ public class TestFileArchiverNotifierImpl {
   private Set<String> getFilesReferencedBySnapshot(String snapshotName) throws IOException {
     HashSet<String> files = new HashSet<>();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotName, FSUtils.getRootDir(conf));
+        snapshotName, CommonFSUtils.getRootDir(conf));
     SnapshotProtos.SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(
         fs, snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);

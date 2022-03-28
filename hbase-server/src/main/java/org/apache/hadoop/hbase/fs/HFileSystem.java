@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -82,10 +82,14 @@ public class HFileSystem extends FilterFileSystem {
     // Create the default filesystem with checksum verification switched on.
     // By default, any operation to this FilterFileSystem occurs on
     // the underlying filesystem that has checksums switched on.
-    this.fs = FileSystem.get(conf);
+    // This FS#get(URI, conf) clearly indicates in the javadoc that if the FS is
+    // not created it will initialize the FS and return that created FS. If it is
+    // already created it will just return the FS that was already created.
+    // We take pains to funnel all of our FileSystem instantiation through this call to ensure
+    // we never need to call FS.initialize ourself so that we do not have to track any state to
+    // avoid calling initialize more than once.
+    this.fs = FileSystem.get(getDefaultUri(conf), conf);
     this.useHBaseChecksum = useHBaseChecksum;
-
-    fs.initialize(getDefaultUri(conf), conf);
 
     // disable checksum verification for local fileSystem, see HBASE-11218
     if (fs instanceof LocalFileSystem) {
@@ -154,7 +158,7 @@ public class HFileSystem extends FilterFileSystem {
    * 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public void setStoragePolicy(Path path, String policyName) {
-    FSUtils.setStoragePolicy(this.fs, path, policyName);
+    CommonFSUtils.setStoragePolicy(this.fs, path, policyName);
   }
 
   /**
@@ -331,7 +335,7 @@ public class HFileSystem extends FilterFileSystem {
     try {
       Field nf = DFSClient.class.getDeclaredField("namenode");
       nf.setAccessible(true);
-      Field modifiersField = Field.class.getDeclaredField("modifiers");
+      Field modifiersField = ReflectionUtils.getModifiersField();
       modifiersField.setAccessible(true);
       modifiersField.setInt(nf, nf.getModifiers() & ~Modifier.FINAL);
 

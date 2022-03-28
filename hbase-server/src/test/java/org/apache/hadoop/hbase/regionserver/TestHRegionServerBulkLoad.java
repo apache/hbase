@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -37,23 +37,25 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -71,6 +73,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -99,7 +102,7 @@ public class TestHRegionServerBulkLoad {
       HBaseClassTestRule.forClass(TestHRegionServerBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
-  protected static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected final static Configuration conf = UTIL.getConfiguration();
   protected final static byte[] QUAL = Bytes.toBytes("qual");
   protected final static int NUM_CFS = 10;
@@ -157,7 +160,7 @@ public class TestHRegionServerBulkLoad {
         .withPath(fs, path)
         .withFileContext(context)
         .create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (int i = 0; i < numRows; i++) {
@@ -311,14 +314,18 @@ public class TestHRegionServerBulkLoad {
   public void setupTable(TableName table, int cfs) throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(table);
-      htd.addCoprocessor(MyObserver.class.getName());
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(table);
+
+      tableDescriptorBuilder.setCoprocessor(MyObserver.class.getName());
       MyObserver.sleepDuration = this.sleepDuration;
       for (int i = 0; i < 10; i++) {
-        htd.addFamily(new HColumnDescriptor(family(i)));
+        ColumnFamilyDescriptor columnFamilyDescriptor =
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family(i))).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
       }
 
-      UTIL.getAdmin().createTable(htd);
+      UTIL.getAdmin().createTable(tableDescriptorBuilder.build());
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }
@@ -335,7 +342,7 @@ public class TestHRegionServerBulkLoad {
     int numScanners = 50;
 
     // Set createWALDir to true and use default values for other options.
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().createWALDir(true).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().createWALDir(true).build());
     try {
       WAL log = UTIL.getHBaseCluster().getRegionServer(0).getWAL(null);
       FindBulkHBaseListener listener = new FindBulkHBaseListener();
@@ -394,14 +401,14 @@ public class TestHRegionServerBulkLoad {
   }
 
   private void setConf(Configuration c) {
-    UTIL = new HBaseTestingUtility(c);
+    UTIL = new HBaseTestingUtil(c);
   }
 
   static class FindBulkHBaseListener extends TestWALActionsListener.DummyWALActionsListener {
     private boolean found = false;
 
     @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
+    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
       for (Cell cell : logEdit.getCells()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         for (Map.Entry entry : kv.toStringMap().entrySet()) {

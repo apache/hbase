@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
@@ -72,13 +72,14 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public HBaseRpcController newController(final CellScanner cellScanner) {
-      return new CountingRpcController(super.newController(cellScanner));
+    public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+      return new CountingRpcController(super.newController(regionInfo, cellScanner));
     }
 
     @Override
-    public HBaseRpcController newController(final List<CellScannable> cellIterables) {
-      return new CountingRpcController(super.newController(cellIterables));
+    public HBaseRpcController newController(RegionInfo regionInfo,
+        List<CellScannable> cellIterables) {
+      return new CountingRpcController(super.newController(regionInfo, cellIterables));
     }
   }
 
@@ -98,7 +99,7 @@ public class TestRpcControllerFactory {
     }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();

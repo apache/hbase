@@ -30,6 +30,7 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegi
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
@@ -46,11 +47,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -61,7 +63,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
@@ -72,13 +73,11 @@ class AsyncNonMetaRegionLocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncNonMetaRegionLocator.class);
 
-  @VisibleForTesting
   static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
     "hbase.client.meta.max.concurrent.locate.per.table";
 
   private static final int DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE = 8;
 
-  @VisibleForTesting
   static String LOCATE_PREFETCH_LIMIT = "hbase.client.locate.prefetch.limit";
 
   private static final int DEFAULT_LOCATE_PREFETCH_LIMIT = 10;
@@ -89,7 +88,10 @@ class AsyncNonMetaRegionLocator {
 
   private final int locatePrefetchLimit;
 
-  private final boolean useMetaReplicas;
+  // The mode tells if HedgedRead, LoadBalance mode is supported.
+  // The default mode is CatalogReplicaMode.None.
+  private CatalogReplicaMode metaReplicaMode;
+  private CatalogReplicaLoadBalanceSelector metaReplicaSelector;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
 
@@ -145,7 +147,7 @@ class AsyncNonMetaRegionLocator {
       return allRequests.keySet().stream().filter(r -> !isPending(r)).findFirst();
     }
 
-    public void clearCompletedRequests(Optional<RegionLocations> locations) {
+    public void clearCompletedRequests(RegionLocations locations) {
       for (Iterator<Map.Entry<LocateRequest, CompletableFuture<RegionLocations>>> iter =
         allRequests.entrySet().iterator(); iter.hasNext();) {
         Map.Entry<LocateRequest, CompletableFuture<RegionLocations>> entry = iter.next();
@@ -156,15 +158,14 @@ class AsyncNonMetaRegionLocator {
     }
 
     private boolean tryComplete(LocateRequest req, CompletableFuture<RegionLocations> future,
-        Optional<RegionLocations> locations) {
+        RegionLocations locations) {
       if (future.isDone()) {
         return true;
       }
-      if (!locations.isPresent()) {
+      if (locations == null) {
         return false;
       }
-      RegionLocations locs = locations.get();
-      HRegionLocation loc = ObjectUtils.firstNonNull(locs.getRegionLocations());
+      HRegionLocation loc = ObjectUtils.firstNonNull(locations.getRegionLocations());
       // we should at least have one location available, otherwise the request should fail and
       // should not arrive here
       assert loc != null;
@@ -183,7 +184,7 @@ class AsyncNonMetaRegionLocator {
         completed = loc.getRegion().containsRow(req.row);
       }
       if (completed) {
-        future.complete(locs);
+        future.complete(locations);
         return true;
       } else {
         return false;
@@ -197,8 +198,41 @@ class AsyncNonMetaRegionLocator {
       MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
     this.locatePrefetchLimit =
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
-    this.useMetaReplicas =
-      conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
+
+    // Get the region locator's meta replica mode.
+    this.metaReplicaMode = CatalogReplicaMode.fromString(conn.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    switch (this.metaReplicaMode) {
+      case LOAD_BALANCE:
+        String replicaSelectorClass = conn.getConfiguration().
+          get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+          CatalogReplicaLoadBalanceSimpleSelector.class.getName());
+
+        this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory.createSelector(
+          replicaSelectorClass, META_TABLE_NAME, conn, () -> {
+            int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
+            try {
+              RegionLocations metaLocations = conn.registry.getMetaRegionLocations().get(
+                conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+              numOfReplicas = metaLocations.size();
+            } catch (Exception e) {
+              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+            }
+            return numOfReplicas;
+          });
+        break;
+      case NONE:
+        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
+        boolean useMetaReplicas = conn.getConfiguration().getBoolean(USE_META_REPLICAS,
+          DEFAULT_USE_META_REPLICAS);
+        if (useMetaReplicas) {
+          this.metaReplicaMode = CatalogReplicaMode.HEDGED_READ;
+        }
+        break;
+      default:
+        // Doing nothing
+    }
   }
 
   private TableCache getTableCache(TableName tableName) {
@@ -238,7 +272,7 @@ class AsyncNonMetaRegionLocator {
   // which prevents us being added. The upper layer can use this value to complete pending requests.
   private RegionLocations addToCache(TableCache tableCache, RegionLocations locs) {
     LOG.trace("Try adding {} to cache", locs);
-    byte[] startKey = locs.getDefaultRegionLocation().getRegion().getStartKey();
+    byte[] startKey = locs.getRegionLocation().getRegion().getStartKey();
     for (;;) {
       RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
       if (oldLocs == null) {
@@ -286,7 +320,7 @@ class AsyncNonMetaRegionLocator {
       RegionLocations addedLocs = addToCache(tableCache, locs);
       synchronized (tableCache) {
         tableCache.pendingRequests.remove(req);
-        tableCache.clearCompletedRequests(Optional.of(addedLocs));
+        tableCache.clearCompletedRequests(addedLocs);
         // Remove a complete locate request in a synchronized block, so the table cache must have
         // quota to send a candidate request.
         toSend = tableCache.getCandidate();
@@ -304,7 +338,7 @@ class AsyncNonMetaRegionLocator {
         if (future != null) {
           future.completeExceptionally(error);
         }
-        tableCache.clearCompletedRequests(Optional.empty());
+        tableCache.clearCompletedRequests(null);
         // Remove a complete locate request in a synchronized block, so the table cache must have
         // quota to send a candidate request.
         toSend = tableCache.getCandidate();
@@ -316,7 +350,7 @@ class AsyncNonMetaRegionLocator {
 
   // return whether we should stop the scan
   private boolean onScanNext(TableName tableName, LocateRequest req, Result result) {
-    RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
+    RegionLocations locs = CatalogFamilyFormat.getRegionLocations(result);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
         Bytes.toStringBinary(req.row), req.locateType, locs);
@@ -434,9 +468,24 @@ class AsyncNonMetaRegionLocator {
     Scan scan = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
       .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(locatePrefetchLimit)
       .setReadType(ReadType.PREAD);
-    if (useMetaReplicas) {
-      scan.setConsistency(Consistency.TIMELINE);
+
+    switch (this.metaReplicaMode) {
+      case LOAD_BALANCE:
+        int metaReplicaId = this.metaReplicaSelector.select(tableName, req.row, req.locateType);
+        if (metaReplicaId != RegionInfo.DEFAULT_REPLICA_ID) {
+          // If the selector gives a non-primary meta replica region, then go with it.
+          // Otherwise, just go to primary in non-hedgedRead mode.
+          scan.setConsistency(Consistency.TIMELINE);
+          scan.setReplicaId(metaReplicaId);
+        }
+        break;
+      case HEDGED_READ:
+        scan.setConsistency(Consistency.TIMELINE);
+        break;
+      default:
+        // do nothing
     }
+
     conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
 
       private boolean completeNormally = false;
@@ -477,7 +526,7 @@ class AsyncNonMetaRegionLocator {
         if (i < results.length) {
           TableCache tableCache = getTableCache(tableName);
           for (; i < results.length; i++) {
-            RegionLocations locs = MetaTableAccessor.getRegionLocations(results[i]);
+            RegionLocations locs = CatalogFamilyFormat.getRegionLocations(results[i]);
             if (locs == null) {
               continue;
             }
@@ -491,7 +540,7 @@ class AsyncNonMetaRegionLocator {
             }
             RegionLocations addedLocs = addToCache(tableCache, locs);
             synchronized (tableCache) {
-              tableCache.clearCompletedRequests(Optional.of(addedLocs));
+              tableCache.clearCompletedRequests(addedLocs);
             }
           }
         }
@@ -571,10 +620,20 @@ class AsyncNonMetaRegionLocator {
     byte[] startKey = loc.getRegion().getStartKey();
     for (;;) {
       RegionLocations oldLocs = tableCache.cache.get(startKey);
+      if (oldLocs == null) {
+        return;
+      }
       HRegionLocation oldLoc = oldLocs.getRegionLocation(loc.getRegion().getReplicaId());
       if (!canUpdateOnError(loc, oldLoc)) {
         return;
       }
+      // Tell metaReplicaSelector that the location is stale. It will create a stale entry
+      // with timestamp internally. Next time the client looks up the same location,
+      // it will pick a different meta replica region.
+      if (this.metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+        metaReplicaSelector.onError(loc);
+      }
+
       RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
       if (newLocs == null) {
         if (tableCache.cache.remove(startKey, oldLocs)) {
@@ -604,8 +663,9 @@ class AsyncNonMetaRegionLocator {
   }
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
+    Optional<MetricsConnection> connectionMetrics = conn.getConnectionMetrics();
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
-      this::addLocationToCache, this::removeLocationFromCache, conn.getConnectionMetrics());
+      this::addLocationToCache, this::removeLocationFromCache, connectionMetrics.orElse(null));
   }
 
   void clearCache(TableName tableName) {
@@ -646,7 +706,6 @@ class AsyncNonMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a region.
-  @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
     TableCache tableCache = cache.get(tableName);
     if (tableCache == null) {
@@ -656,7 +715,6 @@ class AsyncNonMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a table.
-  @VisibleForTesting
   int getNumberOfCachedRegionLocations(TableName tableName) {
     TableCache tableCache = cache.get(tableName);
     if (tableCache == null) {

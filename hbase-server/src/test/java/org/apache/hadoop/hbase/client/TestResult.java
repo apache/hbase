@@ -17,30 +17,43 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
-import junit.framework.TestCase;
+import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SmallTests.class, ClientTests.class})
-public class TestResult extends TestCase {
+@Category({ SmallTests.class, ClientTests.class })
+public class TestResult {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -66,11 +79,12 @@ public class TestResult extends TestCase {
   static final byte [] row = Bytes.toBytes("row");
   static final byte [] family = Bytes.toBytes("family");
   static final byte [] value = Bytes.toBytes("value");
+  static final byte [] qual = Bytes.toBytes("qual");
 
   /**
    * Run some tests to ensure Result acts like a proper CellScanner.
-   * @throws IOException
    */
+  @Test
   public void testResultAsCellScanner() throws IOException {
     Cell [] cells = genKVs(row, family, value, 1, 10);
     Arrays.sort(cells, CellComparator.getInstance());
@@ -92,6 +106,7 @@ public class TestResult extends TestCase {
     assertEquals(cells.length, count);
   }
 
+  @Test
   public void testBasicGetColumn() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
@@ -109,23 +124,24 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testCurrentOnEmptyCell() throws IOException {
     Result r = Result.create(new Cell[0]);
     assertFalse(r.advance());
     assertNull(r.current());
   }
 
-  public void testAdvanceTwiceOnEmptyCell() throws IOException {
+  @Test
+  public void testAdvanceMultipleOnEmptyCell() throws IOException {
     Result r = Result.create(new Cell[0]);
-    assertFalse(r.advance());
-    try {
-      r.advance();
-      fail("NoSuchElementException should have been thrown!");
-    } catch (NoSuchElementException ex) {
-      LOG.debug("As expected: " + ex.getMessage());
+    // After HBASE-26688, advance of result with empty cell list will always return false.
+    // Here 10 is an arbitrary number to test the logic.
+    for (int i = 0; i < 10; i++) {
+      assertFalse(r.advance());
     }
   }
 
+  @Test
   public void testMultiVersionGetColumn() throws Exception {
     KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
     KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
@@ -148,6 +164,7 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testBasicGetValue() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
@@ -158,11 +175,12 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      assertByteEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
+      assertArrayEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
       assertTrue(r.containsColumn(family, qf));
     }
   }
 
+  @Test
   public void testMultiVersionGetValue() throws Exception {
     KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
     KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
@@ -177,11 +195,12 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      assertByteEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
+      assertArrayEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
       assertTrue(r.containsColumn(family, qf));
     }
   }
 
+  @Test
   public void testBasicLoadValue() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
@@ -202,6 +221,7 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testMultiVersionLoadValue() throws Exception {
     KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
     KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
@@ -230,6 +250,7 @@ public class TestResult extends TestCase {
   /**
    * Verify that Result.compareResults(...) behaves correctly.
    */
+  @Test
   public void testCompareResults() throws Exception {
     byte [] value1 = Bytes.toBytes("value1");
     byte [] qual = Bytes.toBytes("qual");
@@ -250,9 +271,178 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
+  public void testCompareResultsWithTags() throws Exception {
+    Tag t1 = new ArrayBackedTag((byte) 1, Bytes.toBytes("TAG1"));
+    Tag t2 = new ArrayBackedTag((byte) 2, Bytes.toBytes("TAG2"));
+    // Both BB backed tags KV are null
+    Result result1 = getByteBufferBackedTagResult(null);
+    Result result2 = getByteBufferBackedTagResult(null);
+    Result.compareResults(result1, result2);
+
+    // Test both byte buffer backed tags KeyValue
+    result1 = getByteBufferBackedTagResult(t1);
+    result2 = getByteBufferBackedTagResult(t1);
+    Result.compareResults(result1, result2);
+
+    // Both array backed tags KV are null
+    result1 = getArrayBackedTagResult(null);
+    result2 = getArrayBackedTagResult(null);
+    Result.compareResults(result1, result2);
+
+    // Test both array backed tags KeyValue
+    result1 = getArrayBackedTagResult(t1);
+    result2 = getArrayBackedTagResult(t1);
+    Result.compareResults(result1, result2);
+
+    // left instance of byte buffer and right instance of array backed
+    result1 = getByteBufferBackedTagResult(t1);
+    result2 = getArrayBackedTagResult(t1);
+    Result.compareResults(result1, result2);
+
+    // left instance of array backed and right instance of byte buffer backed.
+    result1 = getArrayBackedTagResult(t1);
+    result2 = getByteBufferBackedTagResult(t1);
+    Result.compareResults(result1, result2);
+
+    // Left BB backed null tag and right BB backed non null tag
+    result1 = getByteBufferBackedTagResult(null);
+    result2 = getByteBufferBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // Left BB backed non null tag and right BB backed null tag
+    result1 = getByteBufferBackedTagResult(t1);
+    result2 = getByteBufferBackedTagResult(null);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // Both byte buffer backed tags KV are different
+    result1 = getByteBufferBackedTagResult(t1);
+    result2 = getByteBufferBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // Left array backed non null tag and right array backed null tag
+    result1 = getArrayBackedTagResult(t1);
+    result2 = getArrayBackedTagResult(null);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // Left array backed null tag and right array backed non null tag
+    result1 = getByteBufferBackedTagResult(null);
+    result2 = getByteBufferBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // Both array backed tags KV are different
+    result1 = getArrayBackedTagResult(t1);
+    result2 = getArrayBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // left instance of byte buffer and right instance of array backed are different
+    result1 = getByteBufferBackedTagResult(t1);
+    result2 = getArrayBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+
+    // left instance of array backed and right instance of byte buffer backed are different
+    result1 = getArrayBackedTagResult(t1);
+    result2 = getByteBufferBackedTagResult(t2);
+    try {
+      Result.compareResults(result1, result2);
+      fail();
+    } catch (Exception e) {
+      // Expected
+    }
+  }
+
+  @Test
+  public void testCompareResultMemoryUsage() {
+    List<Cell> cells1 = new ArrayList<>();
+    for (long i = 0; i < 100; i++) {
+      cells1.add(new KeyValue(row, family, Bytes.toBytes(i), value));
+    }
+
+    List<Cell> cells2 = new ArrayList<>();
+    for (long i = 0; i < 100; i++) {
+      cells2.add(new KeyValue(row, family, Bytes.toBytes(i), Bytes.toBytes(i)));
+    }
+
+    Result r1 = Result.create(cells1);
+    Result r2 = Result.create(cells2);
+    try {
+      Result.compareResults(r1, r2);
+      fail();
+    } catch (Exception x) {
+      assertTrue(x.getMessage().startsWith("This result was different:"));
+      assertThat(x.getMessage().length(), greaterThan(100));
+    }
+
+    try {
+      Result.compareResults(r1, r2, false);
+      fail();
+    } catch (Exception x) {
+      assertEquals("This result was different: row=row", x.getMessage());
+      assertThat(x.getMessage().length(), lessThan(100));
+    }
+  }
+
+  private Result getArrayBackedTagResult(Tag tag) {
+    List<Tag> tags = null;
+    if (tag != null) {
+      tags = Arrays.asList(tag);
+    }
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
+      value, tags);
+    return Result.create(new Cell[] {kvCell});
+  }
+
+  private Result getByteBufferBackedTagResult(Tag tag) {
+    List<Tag> tags = null;
+    if (tag != null) {
+      tags = Arrays.asList(tag);
+    }
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
+        value, tags);
+    ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
+    ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
+    ByteBufferKeyValue bbKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
+    return Result.create(new Cell[] {bbKV});
+  }
   /**
    * Verifies that one can't modify instance of EMPTY_RESULT.
    */
+  @Test
   public void testEmptyResultIsReadonly() {
     Result emptyResult = Result.EMPTY_RESULT;
     Result otherResult = new Result();

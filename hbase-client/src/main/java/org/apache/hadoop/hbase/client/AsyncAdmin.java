@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import com.google.protobuf.RpcChannel;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -40,16 +41,22 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * The asynchronous administrative API for HBase.
@@ -177,6 +184,13 @@ public interface AsyncAdmin {
   CompletableFuture<Void> modifyTable(TableDescriptor desc);
 
   /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT);
+
+  /**
    * Deletes a table.
    * @param tableName name of table to delete
    */
@@ -246,6 +260,15 @@ public interface AsyncAdmin {
       ColumnFamilyDescriptor columnFamily);
 
   /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family,
+    String dstSFT);
+
+  /**
    * Create a new namespace.
    * @param descriptor descriptor which describes the new namespace
    */
@@ -299,10 +322,26 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flush(TableName tableName);
 
   /**
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
+   * @param tableName table to flush
+   * @param columnFamily column family within a table
+   */
+  CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily);
+
+  /**
    * Flush an individual region.
    * @param regionName region to flush
    */
   CompletableFuture<Void> flushRegion(byte[] regionName);
+
+  /**
+   * Flush a column family within a region.
+   * @param regionName region to flush
+   * @param columnFamily column family within a region. If not present, flush the region's all
+   *          column families.
+   */
+  CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily);
 
   /**
    * Flush all region on the region server.
@@ -513,18 +552,17 @@ public interface AsyncAdmin {
    * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
+   * @deprecated since 2.3.0 and will be removed in 4.0.0.Use {@link #mergeRegions(List, boolean)}
+   *             instead.
    */
+  @Deprecated
   default CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) {
     return mergeRegions(Arrays.asList(nameOfRegionA, nameOfRegionB), forcible);
   }
 
   /**
-   * Merge regions.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2).
    * @param nameOfRegionsToMerge encoded or full name of daughter regions
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
@@ -564,6 +602,11 @@ public interface AsyncAdmin {
   CompletableFuture<Void> assign(byte[] regionName);
 
   /**
+   * @param regionName Encoded or full name of region to unassign.
+   */
+  CompletableFuture<Void> unassign(byte[] regionName);
+
+  /**
    * Unassign a region from current hosting regionserver. Region will then be assigned to a
    * regionserver chosen at random. Region could be reassigned back to the same server. Use
    * {@link #move(byte[], ServerName)} if you want to control the region movement.
@@ -572,8 +615,14 @@ public interface AsyncAdmin {
    * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
    *          present. If results in double assignment use hbck -fix to resolve. To be used by
    *          experts).
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  CompletableFuture<Void> unassign(byte[] regionName, boolean forcible);
+  @Deprecated
+  default CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+    return unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
@@ -862,8 +911,20 @@ public interface AsyncAdmin {
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to restore acl of snapshot
    */
+  default CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl) {
+    return cloneSnapshot(snapshotName, tableName, restoreAcl, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   * @param customSFT specify the StroreFileTracker used for the table
+   */
   CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl);
+      boolean restoreAcl, String customSFT);
 
   /**
    * List completed snapshots.
@@ -1048,8 +1109,34 @@ public interface AsyncAdmin {
    * @return current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
-    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .thenApply(cm -> cm.getLiveServerMetrics().keySet());
+    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
+        .thenApply(ClusterMetrics::getServersName);
+  }
+
+  default CompletableFuture<Collection<ServerName>> getRegionServers(
+    boolean excludeDecommissionedRS) {
+    CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
+    addListener(
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
+      (allServers, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          if (!excludeDecommissionedRS) {
+            future.complete(allServers);
+          } else {
+            addListener(listDecommissionedRegionServers(), (decomServers, decomErr) -> {
+              if (decomErr != null) {
+                future.completeExceptionally(decomErr);
+              } else {
+                future.complete(allServers.stream().filter(s -> !decomServers.contains(s))
+                  .collect(ImmutableList.toImmutableList()));
+              }
+            });
+          }
+        }
+      });
+    return future;
   }
 
   /**
@@ -1096,6 +1183,13 @@ public interface AsyncAdmin {
    * regionservers.
    */
   CompletableFuture<Void> updateConfiguration();
+
+  /**
+   * Update the configuration and trigger an online config change on all the regionservers in
+   * the RSGroup.
+   * @param groupName the group name
+   */
+  CompletableFuture<Void> updateConfiguration(String groupName);
 
   /**
    * Roll the log writer. I.e. for filesystem based write ahead logs, start writing to a new file.
@@ -1221,7 +1315,8 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> balance() {
-    return balance(false);
+    return balance(BalanceRequest.defaultInstance())
+      .thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
@@ -1231,8 +1326,25 @@ public interface AsyncAdmin {
    * @param forcible whether we should force balance even if there is region in transition.
    * @return True if balancer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}.
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
+   *  Use {@link #balance(BalanceRequest)} instead.
    */
-  CompletableFuture<Boolean> balance(boolean forcible);
+  default CompletableFuture<Boolean> balance(boolean forcible) {
+    return balance(
+      BalanceRequest.newBuilder()
+        .setIgnoreRegionsInTransition(forcible)
+        .build()
+    ).thenApply(BalanceResponse::isBalancerRan);
+  }
+
+  /**
+   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
+   * balancer will run. See {@link BalanceRequest} for more details.
+   *
+   * @param request defines how the balancer should run
+   * @return {@link BalanceResponse} with details about the results of the invocation.
+   */
+  CompletableFuture<BalanceResponse> balance(BalanceRequest request);
 
   /**
    * Query the current state of the balancer.
@@ -1260,7 +1372,17 @@ public interface AsyncAdmin {
    * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> normalize();
+  default CompletableFuture<Boolean> normalize() {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons. Check logs.
+   * @param ntfp limit to tables matching the specified filter.
+   * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
    * Turn the cleaner chore on/off.
@@ -1381,7 +1503,7 @@ public interface AsyncAdmin {
    * @param newTableName name of the new table where the table will be created
    * @param preserveSplits True if the splits should be preserved
    */
-  CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
+  CompletableFuture<Void> cloneTableSchema(final TableName tableName,
       final TableName newTableName, final boolean preserveSplits);
 
   /**
@@ -1484,4 +1606,213 @@ public interface AsyncAdmin {
   default CompletableFuture<List<Boolean>> hasUserPermissions(List<Permission> permissions) {
     return hasUserPermissions(null, permissions);
   }
+
+  /**
+   * Turn on or off the auto snapshot cleanup based on TTL.
+   * <p/>
+   * Notice that, the method itself is always non-blocking, which means it will always return
+   * immediately. The {@code sync} parameter only effects when will we complete the returned
+   * {@link CompletableFuture}.
+   *
+   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param sync If <code>true</code>, it waits until current snapshot cleanup is completed,
+   *   if outstanding.
+   * @return Previous auto snapshot cleanup value wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> snapshotCleanupSwitch(boolean on, boolean sync);
+
+  /**
+   * Query the current state of the auto snapshot cleanup based on TTL.
+   *
+   * @return true if the auto snapshot cleanup is enabled, false otherwise.
+   *   The return value will be wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isSnapshotCleanupEnabled();
+
+  /**
+   * Retrieves online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get slowlog responses from
+   * @param logQueryFilter filter to be used if provided
+   * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
+   */
+  @Deprecated
+  default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+    String logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = "LARGE_LOG";
+    } else {
+      logType = "SLOW_LOG";
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    CompletableFuture<List<LogEntry>> logEntries =
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
+    return logEntries.thenApply(
+      logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+        .collect(Collectors.toList()));
+  }
+
+  /**
+   * Clears online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Set of Server names to clean slowlog responses from
+   * @return List of booleans representing if online slowlog response buffer is cleaned
+   *   from each RegionServer. The return value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<Boolean>> clearSlowLogResponses(final Set<ServerName> serverNames);
+
+  /**
+   * Creates a new RegionServer group with the given name
+   * @param groupName the name of the group
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> addRSGroup(String groupName);
+
+  /**
+   * Get group info for the given group name
+   * @param groupName the group name
+   * @return group info
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(String groupName);
+
+  /**
+   * Get group info for the given hostPort
+   * @param hostPort HostPort to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort);
+
+  /**
+   * Get group info for the given table
+   * @param tableName table name to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(TableName tableName);
+
+  /**
+   * Lists current set of RegionServer groups
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<List<RSGroupInfo>> listRSGroups();
+
+  /**
+   * Get all tables in this RegionServer group.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #getConfiguredNamespacesAndTablesInRSGroup(String)
+   */
+  CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName);
+
+  /**
+   * Get the namespaces and tables which have this RegionServer group in descriptor.
+   * <p/>
+   * The difference between this method and {@link #listTablesInRSGroup(String)} is that, this
+   * method will not include the table which is actually in this RegionServr group but without the
+   * RegionServer group configuration in its {@link TableDescriptor}. For example, we have a group
+   * 'A', and we make namespace 'nsA' in this group, then all the tables under this namespace will
+   * in the group 'A', but this method will not return these tables but only the namespace 'nsA',
+   * while the {@link #listTablesInRSGroup(String)} will return all these tables.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTablesInRSGroup(String)
+   */
+  CompletableFuture<Pair<List<String>, List<TableName>>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName);
+
+  /**
+   * Remove RegionServer group associated with the given name
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeRSGroup(String groupName);
+
+  /**
+   * Remove decommissioned servers from group
+   *  1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   *     the server for repairing. Or we need to move some servers to join other clusters.
+   *     So we need to remove these servers from the group.
+   *  2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers);
+
+  /**
+   * Move given set of servers to the specified target RegionServer group
+   * @param servers set of servers to move
+   * @param groupName the group to move servers to
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName);
+
+  /**
+   * Set the RegionServer group for tables
+   * @param tables tables to set group for
+   * @param groupName group name for tables
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName);
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @return BalanceResponse details about the balancer run
+   * @throws IOException if a remote or network exception occurs
+   */
+  default CompletableFuture<BalanceResponse> balanceRSGroup(String groupName) {
+    return balanceRSGroup(groupName, BalanceRequest.defaultInstance());
+  }
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @param request options to define how the balancer should run
+   * @return BalanceResponse details about the balancer run
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<BalanceResponse> balanceRSGroup(String groupName, BalanceRequest request);
+
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> renameRSGroup(String oldName, String newName);
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
+
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *   only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   */
+  CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams);
 }

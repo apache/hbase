@@ -18,17 +18,25 @@
 package org.apache.hadoop.hbase.shaded.protobuf;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -63,7 +71,8 @@ public class TestProtobufUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProtobufUtil.class);
-
+  private static final String TAG_STR = "tag-1";
+  private static final byte TAG_TYPE = (byte)10;
   public TestProtobufUtil() {
   }
 
@@ -271,9 +280,10 @@ public class TestProtobufUtil {
     ByteBuffer dbb = ByteBuffer.allocateDirect(arr.length);
     dbb.put(arr);
     ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
-    CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV);
+    CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV, false);
     Cell newOffheapKV =
-        ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell);
+        ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell,
+          false);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 
@@ -285,7 +295,22 @@ public class TestProtobufUtil {
    */
   @Test
   public void testIncrement() throws IOException {
-    long timeStamp = 111111;
+
+    MutationProto proto = getIncrementMutation(111111L);
+    // default fields
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
+
+    // set the default value for equal comparison
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder(proto);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
+
+    Increment increment = ProtobufUtil.toIncrement(proto, null);
+    mutateBuilder.setTimestamp(increment.getTimestamp());
+    mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(increment.getTimeRange()));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
+  }
+
+  private MutationProto getIncrementMutation(Long timestamp) {
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
     mutateBuilder.setMutateType(MutationProto.MutationType.INCREMENT);
@@ -294,25 +319,33 @@ public class TestProtobufUtil {
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
-    qualifierBuilder.setTimestamp(timeStamp);
+
+    if (timestamp != null) {
+      qualifierBuilder.setTimestamp(timestamp);
+    }
+
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    MutationProto proto = mutateBuilder.build();
-    // default fields
-    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
+    return mutateBuilder.build();
+  }
 
-    // set the default value for equal comparison
-    mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
-
-    Increment increment = ProtobufUtil.toIncrement(proto, null);
-    mutateBuilder.setTimestamp(increment.getTimestamp());
-    mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(increment.getTimeRange()));
-    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
+  /**
+   * Older clients may not send along a timestamp in the MutationProto. Check that we
+   * default correctly.
+   */
+  @Test
+  public void testIncrementNoTimestamp() throws IOException {
+    MutationProto mutation = getIncrementMutation(null);
+    Increment increment = ProtobufUtil.toIncrement(mutation, null);
+    assertEquals(HConstants.LATEST_TIMESTAMP, increment.getTimestamp());
+    increment.getFamilyCellMap().values()
+      .forEach(cells ->
+        cells.forEach(cell ->
+          assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
   }
 
   /**
@@ -322,29 +355,12 @@ public class TestProtobufUtil {
    */
   @Test
   public void testAppend() throws IOException {
-    long timeStamp = 111111;
-    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
-    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutationType.APPEND);
-    mutateBuilder.setTimestamp(timeStamp);
-    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
-    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
-    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
-    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
-    qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
-    qualifierBuilder.setTimestamp(timeStamp);
-    valueBuilder.addQualifierValue(qualifierBuilder.build());
-    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
-    qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
-    valueBuilder.addQualifierValue(qualifierBuilder.build());
-    mutateBuilder.addColumnValue(valueBuilder.build());
-
-    MutationProto proto = mutateBuilder.build();
+    MutationProto proto = getAppendMutation(111111L);
     // default fields
     assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
-    mutateBuilder = MutationProto.newBuilder(proto);
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Append append = ProtobufUtil.toAppend(proto, null);
@@ -354,6 +370,42 @@ public class TestProtobufUtil {
     mutateBuilder.setTimestamp(append.getTimestamp());
     mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(append.getTimeRange()));
     assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
+  }
+
+  /**
+   * Older clients may not send along a timestamp in the MutationProto. Check that we
+   * default correctly.
+   */
+  @Test
+  public void testAppendNoTimestamp() throws IOException {
+    MutationProto mutation = getAppendMutation(null);
+    Append append = ProtobufUtil.toAppend(mutation, null);
+    assertEquals(HConstants.LATEST_TIMESTAMP, append.getTimestamp());
+    append.getFamilyCellMap().values().forEach(cells -> cells.forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+  }
+
+  private MutationProto getAppendMutation(Long timestamp) {
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
+    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
+    mutateBuilder.setMutateType(MutationType.APPEND);
+    if (timestamp != null) {
+      mutateBuilder.setTimestamp(timestamp);
+    }
+    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
+    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
+    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
+    if (timestamp != null) {
+      qualifierBuilder.setTimestamp(timestamp);
+    }
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    mutateBuilder.addColumnValue(valueBuilder.build());
+
+    return mutateBuilder.build();
   }
 
   private static ProcedureProtos.Procedure.Builder createProcedureBuilder(long procId) {
@@ -478,5 +530,93 @@ public class TestProtobufUtil {
         + "},"
         + "\"sharedLockCount\":0"
         + "}]", lockJson);
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encode/decode tags is set to true.
+   */
+  @Test
+  public void testCellConversionWithTags() {
+
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, true);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(1,  decodedTags.size());
+    Tag decodedTag = decodedTags.get(0);
+    assertEquals(TAG_TYPE, decodedTag.getType());
+    assertEquals(TAG_STR, Tag.getValueAsString(decodedTag));
+  }
+
+  private Cell getCellWithTags() {
+    Tag tag = new ArrayBackedTag(TAG_TYPE, TAG_STR);
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    cellBuilder.setRow(Bytes.toBytes("row1"));
+    cellBuilder.setFamily(Bytes.toBytes("f1"));
+    cellBuilder.setQualifier(Bytes.toBytes("q1"));
+    cellBuilder.setValue(Bytes.toBytes("value1"));
+    cellBuilder.setType(Cell.Type.Delete);
+    cellBuilder.setTags(Collections.singletonList(tag));
+    return cellBuilder.build();
+  }
+
+  private Cell getCellFromProtoResult(CellProtos.Cell protoCell, boolean decodeTags) {
+    ExtendedCellBuilder decodedBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    return ProtobufUtil.toCell(decodedBuilder, protoCell, decodeTags);
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encode/decode tags is set to false.
+   */
+  @Test
+  public void testCellConversionWithoutTags() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(0,  decodedTags.size());
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encoding of tags is set to false
+   * and decoding of tags is set to true.
+   */
+  @Test
+  public void testTagEncodeFalseDecodeTrue() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, true);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(0,  decodedTags.size());
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encoding of tags is set to true
+   * and decoding of tags is set to false.
+   */
+  @Test
+  public void testTagEncodeTrueDecodeFalse() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(0,  decodedTags.size());
   }
 }

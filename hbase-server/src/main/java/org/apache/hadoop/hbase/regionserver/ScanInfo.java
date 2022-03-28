@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -26,15 +26,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Immutable information for scans over a store.
  */
 // Has to be public for PartitionedMobCompactor to access; ditto on tests making use of a few of
 // the accessors below. Shutdown access. TODO
-@VisibleForTesting
 @InterfaceAudience.Private
 public class ScanInfo {
   private byte[] family;
@@ -171,11 +169,37 @@ public class ScanInfo {
   }
 
   /**
-   * Used for CP users for customizing max versions, ttl and keepDeletedCells.
+   * Used by CP users for customizing max versions, ttl and keepDeletedCells.
    */
   ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells) {
+    return customize(maxVersions, ttl, keepDeletedCells, minVersions, timeToPurgeDeletes);
+  }
+
+  /**
+   * Used by CP users for customizing max versions, ttl, keepDeletedCells, min versions,
+   * and time to purge deletes.
+   */
+  ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells,
+    int minVersions, long timeToPurgeDeletes) {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
-        comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
-        preadMaxBytes, newVersionBehavior);
+      comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
+      preadMaxBytes, newVersionBehavior);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("family", Bytes.toStringBinary(family))
+      .append("minVersions", minVersions)
+      .append("maxVersions", maxVersions)
+      .append("ttl", ttl)
+      .append("keepDeletedCells", keepDeletedCells)
+      .append("timeToPurgeDeletes", timeToPurgeDeletes)
+      .append("tableMaxRowSize", tableMaxRowSize)
+      .append("usePread", usePread)
+      .append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
+      .append("parallelSeekEnabled", parallelSeekEnabled)
+      .append("preadMaxBytes", preadMaxBytes)
+      .append("newVersionBehavior", newVersionBehavior).toString();
   }
 }

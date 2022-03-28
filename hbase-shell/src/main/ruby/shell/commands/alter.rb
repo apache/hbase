@@ -48,24 +48,24 @@ To delete the 'f1' column family in table 'ns1:t1', use one of:
 
 You can also change table-scope attributes like MAX_FILESIZE, READONLY,
 MEMSTORE_FLUSHSIZE, NORMALIZATION_ENABLED, NORMALIZER_TARGET_REGION_COUNT,
-NORMALIZER_TARGET_REGION_SIZE(MB), DURABILITY, etc. These can be put at the end;
+NORMALIZER_TARGET_REGION_SIZE_MB, DURABILITY, etc. These can be put at the end;
 for example, to change the max size of a region to 128MB, do:
 
   hbase> alter 't1', MAX_FILESIZE => '134217728'
 
-You can add a table coprocessor by setting a table coprocessor attribute:
+You can add a table coprocessor by setting a table coprocessor attribute. Only the CLASSNAME is
+required in the coprocessor specification.
 
-  hbase> alter 't1',
-    'coprocessor'=>'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'
+  hbase> alter 't1', COPROCESSOR => {
+           CLASSNAME => 'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
+           JAR_PATH => 'hdfs:///foo.jar',
+           PRIORITY => 12,
+           PROPERTIES => {'a' => '17' }
+         }
 
 Since you can have multiple coprocessors configured for a table, a
 sequence number will be automatically appended to the attribute name
-to uniquely identify it.
-
-The coprocessor attribute must match the pattern below in order for
-the framework to understand how to load the coprocessor classes:
-
-  [coprocessor jar file location] | class name | [priority] | [arguments]
+to uniquely identify it. For example, the attribute name might be "coprocessor$1".
 
 You can also set configuration settings specific to this table or column family:
 
@@ -82,6 +82,18 @@ You can also remove a table-scope attribute:
 
   hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
 
+Other than removing coprocessor from the table-scope attribute via 'table_att_unset', you can also
+use 'table_remove_coprocessor' by specifying the class name:
+
+  hbase> alter 't1', METHOD => 'table_remove_coprocessor', CLASSNAME =>
+           'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver'
+
+You can also remove multiple coprocessors at once:
+
+  hbase> alter 't1', METHOD => 'table_remove_coprocessor', CLASSNAME =>
+           ['org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
+            'org.apache.hadoop.hbase.coprocessor.Export']
+
 You can also set REGION_REPLICATION:
 
   hbase> alter 't1', {REGION_REPLICATION => 2}
@@ -95,7 +107,7 @@ There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 },
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
-   OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
+   METADATA => { 'mykey' => 'myvalue' }
 EOF
       end
 

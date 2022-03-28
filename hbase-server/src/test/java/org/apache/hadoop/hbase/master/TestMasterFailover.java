@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
@@ -65,12 +65,12 @@ public class TestMasterFailover {
     final int NUM_RS = 3;
 
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     try {
-      StartMiniClusterOption option = StartMiniClusterOption.builder()
+      StartTestingClusterOption option = StartTestingClusterOption.builder()
           .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
       TEST_UTIL.startMiniCluster(option);
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
       // get all the master threads
       List<MasterThread> masterThreads = cluster.getMasterThreads();
@@ -100,7 +100,7 @@ public class TestMasterFailover {
       // Check that ClusterStatus reports the correct active and backup masters
       assertNotNull(active);
       ClusterMetrics status = active.getClusterMetrics();
-      assertTrue(status.getMasterName().equals(activeName));
+      assertEquals(activeName, status.getMasterName());
       assertEquals(2, status.getBackupMasterNames().size());
 
       // attempt to stop one of the inactive masters
@@ -113,7 +113,7 @@ public class TestMasterFailover {
       // Verify still one active master and it's the same
       for (int i = 0; i < masterThreads.size(); i++) {
         if (masterThreads.get(i).getMaster().isActiveMaster()) {
-          assertTrue(activeName.equals(masterThreads.get(i).getMaster().getServerName()));
+          assertEquals(activeName, masterThreads.get(i).getMaster().getServerName());
           activeIndex = i;
           active = masterThreads.get(activeIndex).getMaster();
         }
@@ -126,10 +126,15 @@ public class TestMasterFailover {
           " regions servers");
       assertEquals(3, rsCount);
 
+      // wait for the active master to acknowledge loss of the backup from ZK
+      final HMaster activeFinal = active;
+      TEST_UTIL.waitFor(
+        TimeUnit.MINUTES.toMillis(5), () -> activeFinal.getBackupMasters().size() == 1);
+
       // Check that ClusterStatus reports the correct active and backup masters
       assertNotNull(active);
       status = active.getClusterMetrics();
-      assertTrue(status.getMasterName().equals(activeName));
+      assertEquals(activeName, status.getMasterName());
       assertEquals(1, status.getBackupMasterNames().size());
 
       // kill the active master
@@ -148,13 +153,13 @@ public class TestMasterFailover {
       active = masterThreads.get(0).getMaster();
       assertNotNull(active);
       status = active.getClusterMetrics();
-      ServerName mastername = status.getMasterName();
-      assertTrue(mastername.equals(active.getServerName()));
+      ServerName masterName = status.getMasterName();
+      assertNotNull(masterName);
+      assertEquals(active.getServerName(), masterName);
       assertTrue(active.isActiveMaster());
       assertEquals(0, status.getBackupMasterNames().size());
       int rss = status.getLiveServerMetrics().size();
-      LOG.info("Active master " + mastername.getServerName() + " managing " +
-          rss + " region servers");
+      LOG.info("Active master {} managing {} region servers", masterName.getServerName(), rss);
       assertEquals(3, rss);
     } finally {
       // Stop the cluster
@@ -170,10 +175,10 @@ public class TestMasterFailover {
   @Test
   public void testMetaInTransitionWhenMasterFailover() throws Exception {
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniCluster();
     try {
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       LOG.info("Cluster started");
 
       HMaster activeMaster = cluster.getMaster();

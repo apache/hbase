@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -48,8 +49,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize,
+        StreamSlowMonitor monitor) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   /**
@@ -67,7 +68,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
    * Public because of FSHLog. Should be package-private
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-    final boolean overwritable, long blocksize) throws IOException {
+      final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
         conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
@@ -76,7 +77,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
       FileSystem rootFs = FileSystem.get(path.toUri(), conf);
-      writer.init(rootFs, path, conf, overwritable, blocksize);
+      writer.init(rootFs, path, conf, overwritable, blocksize,
+          StreamSlowMonitor.create(conf, path.getName()));
       return writer;
     } catch (Exception e) { 
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
@@ -88,21 +90,14 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }
-      if (writer != null) {
-        try{
-          writer.close();
-        } catch(IOException ee){
-          LOG.error("cannot close log writer", ee);
-        }
-      }
       throw new IOException("cannot get log writer", e);
     }
   }
 
   @Override
   protected FSHLog createWAL() throws IOException {
-    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        getWALDirectoryName(factory.factoryId),
+    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
+        CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
         getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }

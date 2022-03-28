@@ -17,25 +17,26 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,7 +67,7 @@ public class TestParallelPut {
   @Rule public TestName name = new TestName();
 
   private HRegion region = null;
-  private static HBaseTestingUtility HBTU = new HBaseTestingUtility();
+  private static HBaseTestingUtil HBTU = new HBaseTestingUtil();
   private static final int THREADS100 = 100;
 
   // Test names
@@ -97,7 +98,9 @@ public class TestParallelPut {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
-    if (region != null) region.close(true);
+    if (region != null) {
+      region.close(true);
+    }
   }
 
   public String getName() {
@@ -177,15 +180,17 @@ public class TestParallelPut {
     assertTrue(Bytes.compareTo(r, value) == 0);
   }
 
-  private HRegion initHRegion(byte [] tableName, String callingMethod,
-    byte[] ... families)
-  throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+  private HRegion initHRegion(byte [] tableName, String callingMethod, byte[] ... families)
+      throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      builder.setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(family));
     }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    return HBTU.createLocalHRegion(info, htd);
+    TableDescriptor tableDescriptor = builder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    return HBTU.createLocalHRegion(info, tableDescriptor);
   }
 
   /**
@@ -196,7 +201,6 @@ public class TestParallelPut {
     private final HRegion region;
     private final int threadNumber;
     private final int numOps;
-    private final Random rand = new Random();
     byte [] rowkey = null;
 
     public Putter(HRegion region, int threadNumber, int numOps) {
@@ -215,7 +219,7 @@ public class TestParallelPut {
       // iterate for the specified number of operations
       for (int i=0; i<numOps; i++) {
         // generate random bytes
-        rand.nextBytes(value);
+        Bytes.random(value);
 
         // put the randombytes and verify that we can read it. This is one
         // way of ensuring that rwcc manipulation in HRegion.put() is fine.

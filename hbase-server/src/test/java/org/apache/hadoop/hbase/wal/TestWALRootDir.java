@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -37,7 +37,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -55,7 +56,7 @@ public class TestWALRootDir {
       HBaseClassTestRule.forClass(TestWALRootDir.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALRootDir.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
   private static FileSystem fs;
   private static FileSystem walFs;
@@ -77,8 +78,8 @@ public class TestWALRootDir {
     TEST_UTIL.startMiniDFSCluster(1);
     rootDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    fs = FSUtils.getRootDirFileSystem(conf);
-    walFs = FSUtils.getWALFileSystem(conf);
+    fs = CommonFSUtils.getRootDirFileSystem(conf);
+    walFs = CommonFSUtils.getWALFileSystem(conf);
   }
 
   @AfterClass
@@ -97,9 +98,9 @@ public class TestWALRootDir {
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        System.currentTimeMillis(), value));
-    long txid = log.append(regionInfo,
-        getWalKey(System.currentTimeMillis(), regionInfo, 0), edit, true);
+      EnvironmentEdgeManager.currentTime(), value));
+    long txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
+      regionInfo, 0), edit);
     log.sync(txid);
     assertEquals("Expect 1 log have been created", 1,
         getWALFiles(walFs, walRootDir).size());
@@ -108,9 +109,9 @@ public class TestWALRootDir {
     assertEquals(2, getWALFiles(walFs, new Path(walRootDir,
         HConstants.HREGION_LOGDIR_NAME)).size());
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-        System.currentTimeMillis(), value));
-    txid = log.append(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1),
-        edit, true);
+      EnvironmentEdgeManager.currentTime(), value));
+    txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
+      regionInfo, 1), edit);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();

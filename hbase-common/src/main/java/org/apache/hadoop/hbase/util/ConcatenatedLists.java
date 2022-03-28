@@ -79,7 +79,10 @@ public class ConcatenatedLists<T> extends AbstractCollection<T> {
       if (!components.isEmpty()) {
         this.nextWasCalled = true;
         List<T> src = components.get(currentComponent);
-        if (++indexWithinComponent < src.size()) return src.get(indexWithinComponent);
+        if (++indexWithinComponent < src.size()) {
+          return src.get(indexWithinComponent);
+        }
+
         if (++currentComponent < components.size()) {
           indexWithinComponent = 0;
           src = components.get(currentComponent);

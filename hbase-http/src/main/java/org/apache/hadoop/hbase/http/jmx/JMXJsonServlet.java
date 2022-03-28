@@ -67,6 +67,21 @@ import org.slf4j.LoggerFactory;
  * </code> will return the cluster id of the namenode mxbean.
  * </p>
  * <p>
+ * If we are not sure on the exact attribute and we want to get all the attributes that match one or
+ * more given pattern then the format is
+ * <code>http://.../jmx?get=MXBeanName::*[RegExp1],*[RegExp2]</code>
+ * </p>
+ * <p>
+ * For example
+ * <code>
+ * <p>
+ * http://../jmx?get=Hadoop:service=HBase,name=RegionServer,sub=Tables::[a-zA-z_0-9]*memStoreSize
+ * </p>
+ * <p>
+ * http://../jmx?get=Hadoop:service=HBase,name=RegionServer,sub=Tables::[a-zA-z_0-9]*memStoreSize,[a-zA-z_0-9]*storeFileSize
+ * </p>
+ * </code>
+ * </p>
  * If the <code>qry</code> or the <code>get</code> parameter is not formatted
  * correctly then a 400 BAD REQUEST http response code will be returned.
  * </p>
@@ -119,7 +134,7 @@ public class JMXJsonServlet extends HttpServlet {
   /**
    * If query string includes 'description', then we will emit bean and attribute descriptions to
    * output IFF they are not null and IFF the description is not the same as the attribute name:
-   * i.e. specify an URL like so: /jmx?description=true
+   * i.e. specify a URL like so: /jmx?description=true
    */
   private static final String INCLUDE_DESCRIPTION = "description";
 
@@ -197,7 +212,11 @@ public class JMXJsonServlet extends HttpServlet {
         if (qry == null) {
           qry = "*:*";
         }
-        if (beanWriter.write(this.mBeanServer, new ObjectName(qry), null, description) != 0) {
+        String excl = request.getParameter("excl");
+        ObjectName excluded = excl == null ? null : new ObjectName(excl);
+
+        if (beanWriter.write(this.mBeanServer, new ObjectName(qry),
+            null, description, excluded) != 0) {
           beanWriter.flush();
           response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }

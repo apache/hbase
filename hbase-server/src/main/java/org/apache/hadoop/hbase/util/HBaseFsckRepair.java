@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -167,10 +169,10 @@ public class HBaseFsckRepair {
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
     Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     if (numReplicas > 1) {
-      Random r = new Random();
+      Random rand = ThreadLocalRandom.current();
       ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);
       for (int i = 1; i < numReplicas; i++) {
-        ServerName sn = serversArr[r.nextInt(serversArr.length)];
+        ServerName sn = serversArr[rand.nextInt(serversArr.length)];
         // the column added here is just to make sure the master is able to
         // see the additional replicas when it is asked to assign. The
         // final value of these columns will be different and will be updated
@@ -189,7 +191,7 @@ public class HBaseFsckRepair {
   public static HRegion createHDFSRegionDir(Configuration conf,
       RegionInfo hri, TableDescriptor htd) throws IOException {
     // Create HRegion
-    Path root = FSUtils.getRootDir(conf);
+    Path root = CommonFSUtils.getRootDir(conf);
     HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
 
     // Close the new region to flush to disk. Close log file too.
@@ -201,7 +203,6 @@ public class HBaseFsckRepair {
    * Remove parent
    */
   public static void removeParentInMeta(Configuration conf, RegionInfo hri) throws IOException {
-    Connection conn = ConnectionFactory.createConnection(conf);
-    MetaTableAccessor.deleteRegionInfo(conn, hri);
+    throw new UnsupportedOperationException("HBCK1 is read-only now, use HBCK2 instead");
   }
 }

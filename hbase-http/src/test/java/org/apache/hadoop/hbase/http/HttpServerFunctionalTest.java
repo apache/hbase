@@ -46,7 +46,7 @@ public class HttpServerFunctionalTest extends Assert {
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
   /** expected location of the test.build.webapps dir: {@value} */
-  private static final String BUILD_WEBAPPS_DIR = "src/main/resources/hbase-webapps";
+  private static final String BUILD_WEBAPPS_DIR = "src/test/resources/webapps";
 
   /** name of the test webapp: {@value} */
   private static final String TEST = "test";
@@ -102,11 +102,22 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   public static HttpServer createTestServerWithSecurity(Configuration conf) throws IOException {
+      prepareTestWebapp();
+      return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
+          // InfoServer normally sets these for us
+          .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
+          .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
+          .build();
+    }
+
+  public static HttpServer createTestServerWithSecurityAndAcl(Configuration conf, AccessControlList acl) throws IOException {
     prepareTestWebapp();
     return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
         // InfoServer normally sets these for us
         .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
         .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
+        .setSecurityEnabled(true)
+        .setACL(acl)
         .build();
   }
 

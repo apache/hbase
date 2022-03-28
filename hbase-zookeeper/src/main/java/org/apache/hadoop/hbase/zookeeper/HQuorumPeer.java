@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -42,8 +41,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
+import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+import org.apache.zookeeper.server.DatadirCleanupManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +76,7 @@ public final class HQuorumPeer {
       zkConfig.parseProperties(zkProperties);
 
       // login the zookeeper server principal (if using security)
-      ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+      ZKAuthentication.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
         HConstants.ZK_SERVER_KERBEROS_PRINCIPAL,
         zkConfig.getClientPortAddress().getHostName());
 
@@ -87,7 +88,21 @@ public final class HQuorumPeer {
   }
 
   private static void runZKServer(QuorumPeerConfig zkConfig)
-          throws UnknownHostException, IOException {
+          throws IOException, AdminServer.AdminServerException {
+
+    /**
+     *  Start and schedule the purge task
+     *  autopurge.purgeInterval is 0 by default,so in fact the DatadirCleanupManager task will not
+     *  be started to clean the logs by default. Config is recommended only for standalone server.
+     */
+
+    DatadirCleanupManager purgeMgr=new DatadirCleanupManager(
+      zkConfig.getDataDir(),
+      zkConfig.getDataLogDir(),
+      zkConfig.getSnapRetainCount(),
+      zkConfig.getPurgeInterval());
+    purgeMgr.start();
+
     if (zkConfig.isDistributed()) {
       QuorumPeerMain qp = new QuorumPeerMain();
       qp.runFromConfig(zkConfig);

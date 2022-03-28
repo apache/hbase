@@ -32,6 +32,9 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -40,12 +43,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -61,6 +61,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteArrayDataInput;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteArrayDataOutput;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.Public
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
@@ -149,10 +152,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return a list of Cell objects, returns an empty list if one doesn't exist.
    */
   List<Cell> getCellList(byte[] family) {
-    List<Cell> list = this.familyMap.get(family);
+    List<Cell> list = getFamilyCellMap().get(family);
     if (list == null) {
       list = new ArrayList<>();
-      this.familyMap.put(family, list);
+      getFamilyCellMap().put(family, list);
     }
     return list;
   }
@@ -201,11 +204,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<>();
-    List<String> families = new ArrayList<>(this.familyMap.entrySet().size());
+    List<String> families = new ArrayList<>(getFamilyCellMap().entrySet().size());
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
-    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
     return map;
@@ -229,7 +232,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
-    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       // map from this family to details for each cell affected within the family
       List<Map<String, Object>> qualifierDetails = new ArrayList<>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
@@ -302,24 +305,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * Method for setting the mutation's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Mutation#Mutation(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  public Mutation setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
-    // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
-    // this internal data member.
-    this.familyMap = map;
-    return this;
-  }
-
-  /**
    * Method to check if the familyMap is empty
    * @return true if empty, false otherwise
    */
   public boolean isEmpty() {
-    return familyMap.isEmpty();
+    return getFamilyCellMap().isEmpty();
   }
 
   /**
@@ -329,27 +319,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   @Override
   public byte [] getRow() {
     return this.row;
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Row#COMPARATOR} instead
-   */
-  @Deprecated
-  @Override
-  public int compareTo(final Row d) {
-    return Bytes.compareTo(this.getRow(), d.getRow());
-  }
-
-  /**
-   * Method for retrieving the timestamp
-   * @return timestamp
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getTimestamp()} instead
-   */
-  @Deprecated
-  public long getTimeStamp() {
-    return this.getTimestamp();
   }
 
   /**
@@ -461,7 +430,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   public int size() {
     int size = 0;
-    for (List<Cell> cells : this.familyMap.values()) {
+    for (List<Cell> cells : getFamilyCellMap().values()) {
       size += cells.size();
     }
     return size;
@@ -471,7 +440,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return the number of different families
    */
   public int numFamilies() {
-    return familyMap.size();
+    return getFamilyCellMap().size();
   }
 
   /**
@@ -485,8 +454,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
     // Adding map overhead
     heapsize +=
-      ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
-    for(Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+      ClassSize.align(getFamilyCellMap().size() * ClassSize.MAP_ENTRY);
+    for(Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       //Adding key overhead
       heapsize +=
         ClassSize.align(ClassSize.ARRAY + entry.getKey().length);
@@ -808,6 +777,104 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     return this;
   }
 
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * @param cellBuilderType e.g CellBuilderType.SHALLOW_COPY
+   * @return CellBuilder which already has relevant Type and Row set.
+   */
+  public abstract CellBuilder getCellBuilder(CellBuilderType cellBuilderType);
+
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * the default CellBuilderType is CellBuilderType.SHALLOW_COPY
+   * @return CellBuilder which already has relevant Type and Row set.
+   */
+  public CellBuilder getCellBuilder() {
+    return getCellBuilder(CellBuilderType.SHALLOW_COPY);
+  }
+
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * @param cellBuilderType e.g CellBuilderType.SHALLOW_COPY
+   * @param cellType e.g Cell.Type.Put
+   * @return CellBuilder which already has relevant Type and Row set.
+     */
+  protected CellBuilder getCellBuilder(CellBuilderType cellBuilderType, Cell.Type cellType) {
+    CellBuilder builder = CellBuilderFactory.create(cellBuilderType).setRow(row).setType(cellType);
+    return new CellBuilder() {
+      @Override
+      public CellBuilder setRow(byte[] row) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setType(Cell.Type type) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setRow(byte[] row, int rOffset, int rLength) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setFamily(byte[] family) {
+        builder.setFamily(family);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setFamily(byte[] family, int fOffset, int fLength) {
+        builder.setFamily(family, fOffset, fLength);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setQualifier(byte[] qualifier) {
+        builder.setQualifier(qualifier);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setQualifier(byte[] qualifier, int qOffset, int qLength) {
+        builder.setQualifier(qualifier, qOffset, qLength);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setTimestamp(long timestamp) {
+        builder.setTimestamp(timestamp);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setValue(byte[] value) {
+        builder.setValue(value);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setValue(byte[] value, int vOffset, int vLength) {
+        builder.setValue(value, vOffset, vLength);
+        return this;
+      }
+
+      @Override
+      public Cell build() {
+        return builder.build();
+      }
+
+      @Override
+      public CellBuilder clear() {
+        builder.clear();
+        // reset the row and type
+        builder.setRow(row);
+        builder.setType(cellType);
+        return this;
+      }
+    };
+  }
+
   private static final class CellWrapper implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT              // object header
@@ -932,25 +999,16 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
     @Override
     public Optional<Tag> getTag(byte type) {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).getTag(type);
-      }
       return PrivateCellUtil.getTag(cell, type);
     }
 
     @Override
     public Iterator<Tag> getTags() {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).getTags();
-      }
       return PrivateCellUtil.tagsIterator(cell);
     }
 
     @Override
     public byte[] cloneTags() {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).cloneTags();
-      }
       return PrivateCellUtil.cloneTags(cell);
     }
 

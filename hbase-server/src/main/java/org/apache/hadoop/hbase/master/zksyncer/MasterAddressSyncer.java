@@ -18,9 +18,8 @@
  */
 package org.apache.hadoop.hbase.master.zksyncer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
+import java.util.Collections;
+import java.util.Set;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,14 +38,12 @@ public class MasterAddressSyncer extends ClientZKSyncer {
   }
 
   @Override
-  boolean validate(String path) {
+  protected boolean validate(String path) {
     return path.equals(masterAddressZNode);
   }
 
   @Override
-  Collection<String> getNodesToWatch() {
-    ArrayList<String> toReturn = new ArrayList<>();
-    toReturn.add(masterAddressZNode);
-    return toReturn;
+  protected Set<String> getPathsToWatch() {
+    return Collections.singleton(masterAddressZNode);
   }
 }

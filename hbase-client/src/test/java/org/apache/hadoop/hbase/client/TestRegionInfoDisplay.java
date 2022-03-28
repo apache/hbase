@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -57,7 +57,7 @@ public class TestRegionInfoDisplay {
     .setStartKey(startKey)
     .setEndKey(endKey)
     .setSplit(false)
-    .setRegionId(System.currentTimeMillis())
+    .setRegionId(EnvironmentEdgeManager.currentTime())
     .setReplicaId(1).build();
     checkEquality(ri, conf);
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
@@ -65,7 +65,7 @@ public class TestRegionInfoDisplay {
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
         RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
 
-    RegionState state = RegionState.createForTesting(convert(ri), RegionState.State.OPEN);
+    RegionState state = RegionState.createForTesting(ri, RegionState.State.OPEN);
     String descriptiveNameForDisplay =
         RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
     String originalDescriptive = state.toDescriptiveString();
@@ -119,12 +119,5 @@ public class TestRegionInfoDisplay {
           RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
       }
     }
-  }
-
-  private HRegionInfo convert(RegionInfo ri) {
-    HRegionInfo hri =new HRegionInfo(ri.getTable(), ri.getStartKey(), ri.getEndKey(),
-        ri.isSplit(), ri.getRegionId());
-    hri.setOffline(ri.isOffline());
-    return hri;
   }
 }

@@ -18,20 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
-
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -40,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -52,8 +48,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -62,8 +62,14 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * The table implementation based on {@link AsyncTable}.
@@ -220,63 +226,96 @@ class TableOverAsyncTable implements Table {
     FutureUtils.get(table.deleteAll(deletes));
   }
 
-  private static final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
-
-    private final AsyncTable.CheckAndMutateBuilder builder;
-
-    public CheckAndMutateBuilderImpl(
-        org.apache.hadoop.hbase.client.AsyncTable.CheckAndMutateBuilder builder) {
-      this.builder = builder;
-    }
-
-    @Override
-    public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      builder.qualifier(qualifier);
-      return this;
-    }
-
-    @Override
-    public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
-      builder.timeRange(timeRange);
-      return this;
-    }
-
-    @Override
-    public CheckAndMutateBuilder ifNotExists() {
-      builder.ifNotExists();
-      return this;
-    }
-
-    @Override
-    public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
-      builder.ifMatches(compareOp, value);
-      return this;
-    }
-
-    @Override
-    public boolean thenPut(Put put) throws IOException {
-      return FutureUtils.get(builder.thenPut(put));
-    }
-
-    @Override
-    public boolean thenDelete(Delete delete) throws IOException {
-      return FutureUtils.get(builder.thenDelete(delete));
-    }
-
-    @Override
-    public boolean thenMutate(RowMutations mutation) throws IOException {
-      return FutureUtils.get(builder.thenMutate(mutation));
-    }
-  }
-
   @Override
   public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
-    return new CheckAndMutateBuilderImpl(table.checkAndMutate(row, family));
+    return new CheckAndMutateBuilder() {
+
+      private final AsyncTable.CheckAndMutateBuilder builder = table.checkAndMutate(row, family);
+
+      @Override
+      public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+        builder.qualifier(qualifier);
+        return this;
+      }
+
+      @Override
+      public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public CheckAndMutateBuilder ifNotExists() {
+        builder.ifNotExists();
+        return this;
+      }
+
+      @Override
+      public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+        builder.ifMatches(compareOp, value);
+        return this;
+      }
+
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
+
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
+
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
-    FutureUtils.get(table.mutateRow(rm));
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilder() {
+      private final AsyncTable.CheckAndMutateWithFilterBuilder builder =
+        table.checkAndMutate(row, filter);
+
+      @Override
+      public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
+
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
+
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
+  }
+
+  @Override
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return FutureUtils.get(table.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
+    return FutureUtils.get(table.checkAndMutateAll(checkAndMutates));
+  }
+
+  @Override
+  public Result mutateRow(RowMutations rm) throws IOException {
+    return FutureUtils.get(table.mutateRow(rm));
   }
 
   @Override
@@ -422,25 +461,22 @@ class TableOverAsyncTable implements Table {
     R call(RegionCoprocessorRpcChannel channel) throws Exception;
   }
 
-  private <R> void coprocssorService(String serviceName, byte[] startKey, byte[] endKey,
+  private <R> void coprocessorService(String serviceName, byte[] startKey, byte[] endKey,
       Callback<R> callback, StubCall<R> call) throws Throwable {
     // get regions covered by the row range
-    ExecutorService pool = this.poolSupplier.get();
+    ExecutorService pool = Context.current().wrap(this.poolSupplier.get());
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
     Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     try {
       for (byte[] r : keys) {
         RegionCoprocessorRpcChannel channel = coprocessorService(r);
-        Future<R> future = pool.submit(new Callable<R>() {
-          @Override
-          public R call() throws Exception {
-            R result = call.call(channel);
-            byte[] region = channel.getLastRegion();
-            if (callback != null) {
-              callback.update(region, r, result);
-            }
-            return result;
+        Future<R> future = pool.submit(() -> {
+          R result = call.call(channel);
+          byte[] region = channel.getLastRegion();
+          if (callback != null) {
+            callback.update(region, r, result);
           }
+          return result;
         });
         futures.put(r, future);
       }
@@ -456,7 +492,7 @@ class TableOverAsyncTable implements Table {
       try {
         e.getValue().get();
       } catch (ExecutionException ee) {
-        LOG.warn("Error calling coprocessor service " + serviceName + " for row " +
+        LOG.warn("Error calling coprocessor service {} for row {}", serviceName,
           Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
@@ -469,10 +505,18 @@ class TableOverAsyncTable implements Table {
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
       byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
-    coprocssorService(service.getName(), startKey, endKey, callback, channel -> {
-      T instance = org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
-      return callable.call(instance);
-    });
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
+      .setTableName(table.getName())
+      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+    TraceUtil.trace(() -> {
+      final Context context = Context.current();
+      coprocessorService(service.getName(), startKey, endKey, callback, channel -> {
+        try (Scope ignored = context.makeCurrent()) {
+          T instance = ProtobufUtil.newServiceStub(service, channel);
+          return callable.call(instance);
+        }
+      });
+    }, supplier);
   }
 
   @SuppressWarnings("unchecked")
@@ -480,9 +524,18 @@ class TableOverAsyncTable implements Table {
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
       Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
       throws ServiceException, Throwable {
-    coprocssorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
-      return (R) channel.callBlockingMethod(methodDescriptor, null, request, responsePrototype);
-    });
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
+      .setTableName(table.getName())
+      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+    TraceUtil.trace(() -> {
+      final Context context = Context.current();
+      coprocessorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
+        try (Scope ignored = context.makeCurrent()) {
+          return (R) channel.callBlockingMethod(
+            methodDescriptor, null, request, responsePrototype);
+        }
+      });
+    }, supplier);
   }
 
   @Override

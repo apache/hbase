@@ -22,18 +22,16 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -47,7 +45,7 @@ public class TestAsyncTableBatchRetryImmediately {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncTableBatchRetryImmediately.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
 
@@ -61,15 +59,18 @@ public class TestAsyncTableBatchRetryImmediately {
 
   private static AsyncConnection CONN;
 
+  private static String LOG_LEVEL;
+
   @BeforeClass
   public static void setUp() throws Exception {
     // disable the debug log to avoid flooding the output
-    LogManager.getLogger(AsyncRegionLocatorHelper.class).setLevel(Level.INFO);
+    LOG_LEVEL = Log4jUtils.getEffectiveLevel(AsyncRegionLocatorHelper.class.getName());
+    Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), "INFO");
     UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY, 1024);
     UTIL.startMiniCluster(1);
     Table table = UTIL.createTable(TABLE_NAME, FAMILY);
     UTIL.waitTableAvailable(TABLE_NAME);
-    ThreadLocalRandom.current().nextBytes(VALUE_PREFIX);
+    Bytes.random(VALUE_PREFIX);
     for (int i = 0; i < COUNT; i++) {
       table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL,
         Bytes.add(VALUE_PREFIX, Bytes.toBytes(i))));
@@ -79,6 +80,9 @@ public class TestAsyncTableBatchRetryImmediately {
 
   @AfterClass
   public static void tearDown() throws Exception {
+    if (LOG_LEVEL != null) {
+      Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), LOG_LEVEL);
+    }
     CONN.close();
     UTIL.shutdownMiniCluster();
   }

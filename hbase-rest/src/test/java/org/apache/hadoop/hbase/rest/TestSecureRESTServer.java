@@ -17,26 +17,23 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.rest.RESTServlet.HBASE_REST_SUPPORT_PROXYUSER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
-
-import javax.ws.rs.core.MediaType;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -56,8 +53,8 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -97,11 +94,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+
 /**
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestSecureRESTServer {
 
   @ClassRule
@@ -109,12 +109,13 @@ public class TestSecureRESTServer {
       HBaseClassTestRule.forClass(TestSecureRESTServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureRESTServer.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST = new HBaseRESTTestingUtility();
-  private static MiniHBaseCluster CLUSTER;
+  private static SingleProcessHBaseCluster CLUSTER;
 
   private static final String HOSTNAME = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";
+  private static final String WHEEL_PRINCIPAL = "wheel";
   // The principal for accepting SPNEGO authn'ed requests (*must* be HTTP/fqdn)
   private static final String SPNEGO_SERVICE_PRINCIPAL = "HTTP/" + HOSTNAME;
   // The principal we use to connect to HBase
@@ -126,6 +127,7 @@ public class TestSecureRESTServer {
   private static RESTServer server;
   private static File restServerKeytab;
   private static File clientKeytab;
+  private static File wheelKeytab;
   private static File serviceKeytab;
 
   @BeforeClass
@@ -148,6 +150,8 @@ public class TestSecureRESTServer {
     restServerKeytab = new File(keytabDir, "spnego.keytab");
     // Keytab for the client
     clientKeytab = new File(keytabDir, CLIENT_PRINCIPAL + ".keytab");
+    // Keytab for wheel
+    wheelKeytab = new File(keytabDir, WHEEL_PRINCIPAL + ".keytab");
 
     /*
      * Update UGI
@@ -159,6 +163,7 @@ public class TestSecureRESTServer {
      */
     KDC = TEST_UTIL.setupMiniKdc(serviceKeytab);
     KDC.createPrincipal(clientKeytab, CLIENT_PRINCIPAL);
+    KDC.createPrincipal(wheelKeytab, WHEEL_PRINCIPAL);
     KDC.createPrincipal(serviceKeytab, SERVICE_PRINCIPAL);
     // REST server's keytab contains keys for both principals REST uses
     KDC.createPrincipal(restServerKeytab, SPNEGO_SERVICE_PRINCIPAL, REST_SERVER_PRINCIPAL);
@@ -168,7 +173,7 @@ public class TestSecureRESTServer {
     HBaseKerberosUtils.setKeytabFileForTesting(serviceKeytab.getAbsolutePath());
     // Why doesn't `setKeytabFileForTesting` do this?
     conf.set("hbase.master.keytab.file", serviceKeytab.getAbsolutePath());
-    conf.set("hbase.regionserver.hostname", "localhost");
+    conf.set("hbase.unsafe.regionserver.hostname", "localhost");
     conf.set("hbase.master.hostname", "localhost");
     HBaseKerberosUtils.setSecuredConfiguration(conf,
         SERVICE_PRINCIPAL+ "@" + KDC.getRealm(), SPNEGO_SERVICE_PRINCIPAL+ "@" + KDC.getRealm());
@@ -184,13 +189,15 @@ public class TestSecureRESTServer {
     conf.set("hbase.superuser", "hbase");
     conf.set("hadoop.proxyuser.rest.hosts", "*");
     conf.set("hadoop.proxyuser.rest.users", "*");
+    conf.set("hadoop.proxyuser.wheel.hosts", "*");
+    conf.set("hadoop.proxyuser.wheel.users", "*");
     UserGroupInformation.setConfiguration(conf);
 
     updateKerberosConfiguration(conf, REST_SERVER_PRINCIPAL, SPNEGO_SERVICE_PRINCIPAL,
         restServerKeytab);
 
     // Start HDFS
-    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder()
+    TEST_UTIL.startMiniCluster(StartTestingClusterOption.builder()
         .numMasters(1)
         .numRegionServers(1)
         .numZkServers(1)
@@ -230,6 +237,7 @@ public class TestSecureRESTServer {
         return null;
       }
     });
+    instertData();
   }
 
   @AfterClass
@@ -299,21 +307,21 @@ public class TestSecureRESTServer {
     // Keytab for both principals above
     conf.set(RESTServer.REST_KEYTAB_FILE, serverKeytab.getAbsolutePath());
     conf.set("hbase.rest.authentication.kerberos.keytab", serverKeytab.getAbsolutePath());
+    conf.set(HBASE_REST_SUPPORT_PROXYUSER, "true");
   }
 
-  @Test
-  public void testPositiveAuthorization() throws Exception {
+  private static void instertData() throws IOException, InterruptedException {
     // Create a table, write a row to it, grant read perms to the client
     UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
     final TableName table = TableName.valueOf("publicTable");
     superuser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
           TableDescriptor desc = TableDescriptorBuilder.newBuilder(table)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
-              .build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
+            .build();
           conn.getAdmin().createTable(desc);
           try (Table t = conn.getTable(table)) {
             Put p = new Put(Bytes.toBytes("a"));
@@ -331,6 +339,12 @@ public class TestSecureRESTServer {
         return null;
       }
     });
+  }
+
+  public void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode) throws Exception{
+    UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+    final TableName table = TableName.valueOf("publicTable");
 
     // Read that row as the client
     Pair<CloseableHttpClient,HttpClientContext> pair = getClient();
@@ -338,31 +352,53 @@ public class TestSecureRESTServer {
     HttpClientContext context = pair.getSecond();
 
     HttpGet get = new HttpGet(new URL("http://localhost:"+ REST_TEST.getServletPort()).toURI()
-        + "/" + table + "/a");
+      + "/" + table + "/a" + extraArgs);
     get.addHeader("Accept", "application/json");
     UserGroupInformation user = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        CLIENT_PRINCIPAL, clientKeytab.getAbsolutePath());
+      PRINCIPAL, keytab.getAbsolutePath());
     String jsonResponse = user.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
         try (CloseableHttpResponse response = client.execute(get, context)) {
           final int statusCode = response.getStatusLine().getStatusCode();
-          assertEquals(response.getStatusLine().toString(), HttpURLConnection.HTTP_OK, statusCode);
+          assertEquals(response.getStatusLine().toString(), responseCode, statusCode);
           HttpEntity entity = response.getEntity();
           return EntityUtils.toString(entity);
         }
       }
     });
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
-    CellSetModel model = mapper.readValue(jsonResponse, CellSetModel.class);
-    assertEquals(1, model.getRows().size());
-    RowModel row = model.getRows().get(0);
-    assertEquals("a", Bytes.toString(row.getKey()));
-    assertEquals(1, row.getCells().size());
-    CellModel cell = row.getCells().get(0);
-    assertEquals("1", Bytes.toString(cell.getValue()));
+    if(responseCode == HttpURLConnection.HTTP_OK) {
+      ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+      CellSetModel model = mapper.readValue(jsonResponse, CellSetModel.class);
+      assertEquals(1, model.getRows().size());
+      RowModel row = model.getRows().get(0);
+      assertEquals("a", Bytes.toString(row.getKey()));
+      assertEquals(1, row.getCells().size());
+      CellModel cell = row.getCells().get(0);
+      assertEquals("1", Bytes.toString(cell.getValue()));
+    }
   }
+
+  @Test
+  public void testPositiveAuthorization() throws Exception {
+    testProxy("", CLIENT_PRINCIPAL, clientKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testDoAs() throws Exception {
+    testProxy("?doAs="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testDoas() throws Exception {
+    testProxy("?doas="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testWithoutDoAs() throws Exception {
+    testProxy("", WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_FORBIDDEN);
+  }
+
 
   @Test
   public void testNegativeAuthorization() throws Exception {

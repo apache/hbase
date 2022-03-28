@@ -72,7 +72,7 @@ class HbaseIfFactory {
 
 class HbaseIfSingletonFactory : virtual public HbaseIfFactory {
  public:
-  HbaseIfSingletonFactory(const boost::shared_ptr<HbaseIf>& iface) : iface_(iface) {}
+  HbaseIfSingletonFactory(const std::shared_ptr<HbaseIf>& iface) : iface_(iface) {}
   virtual ~HbaseIfSingletonFactory() {}
 
   virtual HbaseIf* getHandler(const ::apache::thrift::TConnectionInfo&) {
@@ -81,7 +81,7 @@ class HbaseIfSingletonFactory : virtual public HbaseIfFactory {
   virtual void releaseHandler(HbaseIf* /* handler */) {}
 
  protected:
-  boost::shared_ptr<HbaseIf> iface_;
+  std::shared_ptr<HbaseIf> iface_;
 };
 
 class HbaseNull : virtual public HbaseIf {
@@ -6010,22 +6010,22 @@ class Hbase_getRegionInfo_presult {
 
 class HbaseClient : virtual public HbaseIf {
  public:
-  HbaseClient(boost::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) :
+  HbaseClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) :
     piprot_(prot),
     poprot_(prot) {
     iprot_ = prot.get();
     oprot_ = prot.get();
   }
-  HbaseClient(boost::shared_ptr< ::apache::thrift::protocol::TProtocol> iprot, boost::shared_ptr< ::apache::thrift::protocol::TProtocol> oprot) :
+  HbaseClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> iprot, std::shared_ptr< ::apache::thrift::protocol::TProtocol> oprot) :
     piprot_(iprot),
     poprot_(oprot) {
     iprot_ = iprot.get();
     oprot_ = oprot.get();
   }
-  boost::shared_ptr< ::apache::thrift::protocol::TProtocol> getInputProtocol() {
+  std::shared_ptr< ::apache::thrift::protocol::TProtocol> getInputProtocol() {
     return piprot_;
   }
-  boost::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
+  std::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
   void enableTable(const Bytes& tableName);
@@ -6158,15 +6158,15 @@ class HbaseClient : virtual public HbaseIf {
   void send_getRegionInfo(const Text& row);
   void recv_getRegionInfo(TRegionInfo& _return);
  protected:
-  boost::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
-  boost::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
+  std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
+  std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
   ::apache::thrift::protocol::TProtocol* iprot_;
   ::apache::thrift::protocol::TProtocol* oprot_;
 };
 
 class HbaseProcessor : public ::apache::thrift::TDispatchProcessor {
  protected:
-  boost::shared_ptr<HbaseIf> iface_;
+  std::shared_ptr<HbaseIf> iface_;
   virtual bool dispatchCall(::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, const std::string& fname, int32_t seqid, void* callContext);
  private:
   typedef  void (HbaseProcessor::*ProcessFunction)(int32_t, ::apache::thrift::protocol::TProtocol*, ::apache::thrift::protocol::TProtocol*, void*);
@@ -6216,7 +6216,7 @@ class HbaseProcessor : public ::apache::thrift::TDispatchProcessor {
   void process_getRowOrBefore(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_getRegionInfo(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
-  HbaseProcessor(boost::shared_ptr<HbaseIf> iface) :
+  HbaseProcessor(std::shared_ptr<HbaseIf> iface) :
     iface_(iface) {
     processMap_["enableTable"] = &HbaseProcessor::process_enableTable;
     processMap_["disableTable"] = &HbaseProcessor::process_disableTable;
@@ -6268,24 +6268,24 @@ class HbaseProcessor : public ::apache::thrift::TDispatchProcessor {
 
 class HbaseProcessorFactory : public ::apache::thrift::TProcessorFactory {
  public:
-  HbaseProcessorFactory(const ::boost::shared_ptr< HbaseIfFactory >& handlerFactory) :
+  HbaseProcessorFactory(const std::shared_ptr< HbaseIfFactory >& handlerFactory) :
       handlerFactory_(handlerFactory) {}
 
-  ::boost::shared_ptr< ::apache::thrift::TProcessor > getProcessor(const ::apache::thrift::TConnectionInfo& connInfo);
+  std::shared_ptr< ::apache::thrift::TProcessor > getProcessor(const ::apache::thrift::TConnectionInfo& connInfo);
 
  protected:
-  ::boost::shared_ptr< HbaseIfFactory > handlerFactory_;
+  std::shared_ptr< HbaseIfFactory > handlerFactory_;
 };
 
 class HbaseMultiface : virtual public HbaseIf {
  public:
-  HbaseMultiface(std::vector<boost::shared_ptr<HbaseIf> >& ifaces) : ifaces_(ifaces) {
+  HbaseMultiface(std::vector<std::shared_ptr<HbaseIf> >& ifaces) : ifaces_(ifaces) {
   }
   virtual ~HbaseMultiface() {}
  protected:
-  std::vector<boost::shared_ptr<HbaseIf> > ifaces_;
+  std::vector<std::shared_ptr<HbaseIf> > ifaces_;
   HbaseMultiface() {}
-  void add(boost::shared_ptr<HbaseIf> iface) {
+  void add(std::shared_ptr<HbaseIf> iface) {
     ifaces_.push_back(iface);
   }
  public:

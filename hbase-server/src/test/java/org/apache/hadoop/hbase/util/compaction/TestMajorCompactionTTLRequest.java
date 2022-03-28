@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.util.compaction;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -31,7 +29,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -72,29 +69,28 @@ public class TestMajorCompactionTTLRequest extends TestMajorCompactionRequest {
     MajorCompactionTTLRequest request = makeMockRequest(storeFiles);
     // All files are <= 100, so region should not be compacted.
     Optional<MajorCompactionRequest> result =
-        request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 10);
+        request.createRequest(mock(Connection.class), Sets.newHashSet(FAMILY), 10);
     assertFalse(result.isPresent());
 
     // All files are <= 100, so region should not be compacted yet.
-    result = request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 100);
+    result = request.createRequest(mock(Connection.class), Sets.newHashSet(FAMILY), 100);
     assertFalse(result.isPresent());
 
     // All files are <= 100, so they should be considered for compaction
-    result = request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 101);
+    result = request.createRequest(mock(Connection.class), Sets.newHashSet(FAMILY), 101);
     assertTrue(result.isPresent());
   }
 
   private MajorCompactionTTLRequest makeMockRequest(List<StoreFileInfo> storeFiles)
       throws IOException {
-    Configuration configuration = mock(Configuration.class);
+    Connection connection = mock(Connection.class);
     RegionInfo regionInfo = mock(RegionInfo.class);
     when(regionInfo.getEncodedName()).thenReturn("HBase");
     when(regionInfo.getTable()).thenReturn(TableName.valueOf("foo"));
-    MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(configuration, regionInfo);
+    MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(connection, regionInfo);
     MajorCompactionTTLRequest spy = spy(request);
     HRegionFileSystem fileSystem = mockFileSystem(regionInfo, false, storeFiles);
-    doReturn(fileSystem).when(spy).getFileSystem(isA(Connection.class));
-    doReturn(mock(Connection.class)).when(spy).getConnection(eq(configuration));
+    doReturn(fileSystem).when(spy).getFileSystem();
     return spy;
   }
 }

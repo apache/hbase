@@ -49,6 +49,17 @@ t to table 't1', the corresponding commands would be:
  hbase> t.count FILTER => "
     (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"
  hbase> t.count COLUMNS => ['c1', 'c2'], STARTROW => 'abc', STOPROW => 'xyz'
+
+By default, this operation does not cause any new blocks to be read into
+the RegionServer block cache. This is typically the desired action; however,
+if you want to force all blocks for a table to be loaded into the block cache
+on-demand, you can pass the 'CACHE_BLOCKS' option with a value of 'true'. A value
+of 'false' is the default and will result in no blocks being cached. This
+command can be used in conjunction with all other options.
+
+hbase> count 'ns1:t1', CACHE_BLOCKS => true
+hbase> count 'ns1:t1', CACHE_BLOCKS => 'true'
+hbase> count 'ns1:t1', INTERVAL => 100000, CACHE_BLOCKS => false
 EOF
       end
 
@@ -60,17 +71,29 @@ EOF
         # If the second parameter is an integer, then it is the old command syntax
         params = { 'INTERVAL' => params } if params.is_a?(Integer)
 
+        # Try to be nice and convert a string to a bool
+        if params.include?('CACHE_BLOCKS') and params['CACHE_BLOCKS'].is_a?(String)
+          if params['CACHE_BLOCKS'].downcase == 'true'
+            params['CACHE_BLOCKS'] = true
+          elsif params['CACHE_BLOCKS'].downcase == 'false'
+            params['CACHE_BLOCKS'] = false
+          else
+            raise(ArgumentError, "Expected CACHE_BLOCKS value to be a boolean or the string 'true' or 'false'")
+          end
+        end
+
         # Merge params with defaults
         params = {
           'INTERVAL' => 1000,
-          'CACHE' => 10
+          'CACHE' => 10,
+          'CACHE_BLOCKS' => false
         }.merge(params)
 
         scan = table._hash_to_scan(params)
         # Call the counter method
         @start_time = Time.now
         formatter.header
-        count = table._count_internal(params['INTERVAL'].to_i, scan) do |cnt, row|
+        count = table._count_internal(params['INTERVAL'].to_i, scan, params['CACHE_BLOCKS']) do |cnt, row|
           formatter.row(["Current count: #{cnt}, row: #{row}"])
         end
         formatter.footer(count)

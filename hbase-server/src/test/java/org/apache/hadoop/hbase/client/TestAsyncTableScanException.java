@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,7 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -56,7 +56,7 @@ public class TestAsyncTableScanException {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncTableScanException.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("scan");
 
@@ -73,6 +73,8 @@ public class TestAsyncTableScanException {
   private static volatile boolean ERROR;
 
   private static volatile boolean DO_NOT_RETRY;
+
+  private static final int ROW_COUNT = 100;
 
   public static final class ErrorCP implements RegionObserver, RegionCoprocessor {
 
@@ -99,13 +101,13 @@ public class TestAsyncTableScanException {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(3);
+    UTIL.startMiniCluster(1);
     UTIL.getAdmin()
       .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
         .setCoprocessor(ErrorCP.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < ROW_COUNT; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)));
       }
     }
@@ -151,7 +153,7 @@ public class TestAsyncTableScanException {
 
   private void count() throws IOException {
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(1))) {
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < ROW_COUNT; i++) {
         Result result = scanner.next();
         assertArrayEquals(Bytes.toBytes(i), result.getRow());
         assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUAL));
