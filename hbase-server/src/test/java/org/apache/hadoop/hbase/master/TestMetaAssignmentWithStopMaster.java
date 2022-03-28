@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,7 @@ import org.slf4j.LoggerFactory;
 @Category({ LargeTests.class })
 public class TestMetaAssignmentWithStopMaster {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestMetaAssignmentWithStopMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaAssignmentWithStopMaster.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -52,8 +51,8 @@ public class TestMetaAssignmentWithStopMaster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
@@ -71,8 +70,8 @@ public class TestMetaAssignmentWithStopMaster {
 
     UTIL.getMiniHBaseCluster().getMaster().stop("Stop master for test");
     long startTime = System.currentTimeMillis();
-    while (UTIL.getMiniHBaseCluster().getMaster() == null || UTIL.getMiniHBaseCluster().getMaster()
-        .getServerName().equals(oldMaster)) {
+    while (UTIL.getMiniHBaseCluster().getMaster() == null
+        || UTIL.getMiniHBaseCluster().getMaster().getServerName().equals(oldMaster)) {
       LOG.info("Wait the standby master become active");
       Thread.sleep(3000);
       if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
@@ -89,7 +88,8 @@ public class TestMetaAssignmentWithStopMaster {
     }
 
     ServerName newMetaServer = conn.locateRegions(TableName.META_TABLE_NAME).get(0).getServerName();
-    assertTrue("The new meta server " + newMetaServer + " should be same with" +
-        " the old meta server " + oldMetaServer, newMetaServer.equals(oldMetaServer));
+    assertTrue("The new meta server " + newMetaServer + " should be same with"
+        + " the old meta server " + oldMetaServer,
+      newMetaServer.equals(oldMetaServer));
   }
 }

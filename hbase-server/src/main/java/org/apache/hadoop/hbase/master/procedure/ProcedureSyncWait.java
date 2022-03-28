@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -43,9 +42,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
- * Helper to synchronously wait on conditions.
- * This will be removed in the future (mainly when the AssignmentManager will be
- * replaced with a Procedure version) by using ProcedureYieldException,
+ * Helper to synchronously wait on conditions. This will be removed in the future (mainly when the
+ * AssignmentManager will be replaced with a Procedure version) by using ProcedureYieldException,
  * and the queue will handle waiting and scheduling based on events.
  */
 @InterfaceAudience.Private
@@ -53,7 +51,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 public final class ProcedureSyncWait {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureSyncWait.class);
 
-  private ProcedureSyncWait() {}
+  private ProcedureSyncWait() {
+  }
 
   @InterfaceAudience.Private
   public interface Predicate<T> {
@@ -209,7 +208,7 @@ public final class ProcedureSyncWait {
         Thread.sleep(waitingTimeForEvents);
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while sleeping, waiting on " + purpose);
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace("waitFor " + purpose);
@@ -239,23 +238,23 @@ public final class ProcedureSyncWait {
     final RegionStates states = env.getAssignmentManager().getRegionStates();
     for (final RegionInfo region : regions) {
       ProcedureSyncWait.waitFor(env, "regions " + region.getRegionNameAsString() + " in transition",
-          new ProcedureSyncWait.Predicate<Boolean>() {
-        @Override
-        public Boolean evaluate() throws IOException {
-          return !states.isRegionInTransition(region);
-        }
-      });
+        new ProcedureSyncWait.Predicate<Boolean>() {
+          @Override
+          public Boolean evaluate() throws IOException {
+            return !states.isRegionInTransition(region);
+          }
+        });
     }
   }
 
   protected static MasterQuotaManager getMasterQuotaManager(final MasterProcedureEnv env)
       throws IOException {
     return ProcedureSyncWait.waitFor(env, "quota manager to be available",
-        new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
-      @Override
-      public MasterQuotaManager evaluate() throws IOException {
-        return env.getMasterServices().getMasterQuotaManager();
-      }
-    });
+      new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
+        @Override
+        public MasterQuotaManager evaluate() throws IOException {
+          return env.getMasterServices().getMasterQuotaManager();
+        }
+      });
   }
 }

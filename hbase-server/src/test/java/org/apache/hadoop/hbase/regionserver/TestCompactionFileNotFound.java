@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,8 +77,7 @@ public class TestCompactionFileNotFound {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = util.getConfiguration();
-    conf.setInt("hbase.hfile.compaction.discharger.interval",
-      Integer.MAX_VALUE);
+    conf.setInt("hbase.hfile.compaction.discharger.interval", Integer.MAX_VALUE);
     util.startMiniCluster(3);
   }
 

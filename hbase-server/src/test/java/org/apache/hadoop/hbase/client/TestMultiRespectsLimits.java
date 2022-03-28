@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ import org.junit.rules.TestName;
  * This test sets the multi size WAAAAAY low and then checks to make sure that gets will still make
  * progress.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestMultiRespectsLimits {
 
   @ClassRule
@@ -70,9 +70,8 @@ public class TestMultiRespectsLimits {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setLong(
-        HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
-        MAX_SIZE);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
+      MAX_SIZE);
 
     // Only start on regionserver so that all regions are on the same server.
     TEST_UTIL.startMiniCluster(1);
@@ -116,10 +115,10 @@ public class TestMultiRespectsLimits {
     // Cells from TEST_UTIL.loadTable have a length of 27.
     // Multiplying by less than that gives an easy lower bound on size.
     // However in reality each kv is being reported as much higher than that.
-    METRICS_ASSERT.assertCounterGt("exceptions",
-        startingExceptions + ((MAX_SIZE * 25) / MAX_SIZE), s);
+    METRICS_ASSERT.assertCounterGt("exceptions", startingExceptions + ((MAX_SIZE * 25) / MAX_SIZE),
+      s);
     METRICS_ASSERT.assertCounterGt("exceptions.multiResponseTooLarge",
-        startingMultiExceptions + ((MAX_SIZE * 25) / MAX_SIZE), s);
+      startingMultiExceptions + ((MAX_SIZE * 25) / MAX_SIZE), s);
   }
 
   @Test
@@ -139,8 +138,7 @@ public class TestMultiRespectsLimits {
     long startingMultiExceptions = METRICS_ASSERT.getCounter("exceptions.multiResponseTooLarge", s);
 
     byte[] row = Bytes.toBytes("TEST");
-    byte[][] cols = new byte[][]{
-        Bytes.toBytes("0"), // Get this
+    byte[][] cols = new byte[][] { Bytes.toBytes("0"), // Get this
         Bytes.toBytes("1"), // Buffer
         Bytes.toBytes("2"), // Buffer
         Bytes.toBytes("3"), // Get This
@@ -154,16 +152,11 @@ public class TestMultiRespectsLimits {
     byte[] value = new byte[MAX_SIZE - 100];
     Bytes.random(value);
 
-    for (byte[] col:cols) {
+    for (byte[] col : cols) {
       Put p = new Put(row);
-      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-              .setRow(row)
-              .setFamily(FAMILY)
-              .setQualifier(col)
-              .setTimestamp(p.getTimestamp())
-              .setType(Cell.Type.Put)
-              .setValue(value)
-              .build());
+      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row).setFamily(FAMILY)
+          .setQualifier(col).setTimestamp(p.getTimestamp()).setType(Cell.Type.Put).setValue(value)
+          .build());
       t.put(p);
     }
 
@@ -190,7 +183,6 @@ public class TestMultiRespectsLimits {
     Result[] results = t.get(gets);
     assertEquals(2, results.length);
     METRICS_ASSERT.assertCounterGt("exceptions", startingExceptions, s);
-    METRICS_ASSERT.assertCounterGt("exceptions.multiResponseTooLarge",
-        startingMultiExceptions, s);
+    METRICS_ASSERT.assertCounterGt("exceptions.multiResponseTooLarge", startingMultiExceptions, s);
   }
 }

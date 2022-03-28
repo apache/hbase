@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestJul2Slf4j {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJul2Slf4j.class);
+      HBaseClassTestRule.forClass(TestJul2Slf4j.class);
 
   static {
     System.setProperty("java.util.logging.config.class", JulToSlf4jInitializer.class.getName());

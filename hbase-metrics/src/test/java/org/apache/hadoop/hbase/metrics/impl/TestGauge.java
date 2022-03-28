@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,18 +34,17 @@ import org.junit.experimental.categories.Category;
 public class TestGauge {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGauge.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestGauge.class);
 
   @Test
   public void testGetValue() {
     SimpleGauge gauge = new SimpleGauge();
 
-    assertEquals(0, (long)gauge.getValue());
+    assertEquals(0, (long) gauge.getValue());
 
     gauge.setValue(1000L);
 
-    assertEquals(1000L, (long)gauge.getValue());
+    assertEquals(1000L, (long) gauge.getValue());
   }
 
   /**
@@ -55,7 +54,8 @@ public class TestGauge {
 
     private final AtomicLong value = new AtomicLong(0L);
 
-    @Override public Long getValue() {
+    @Override
+    public Long getValue() {
       return this.value.get();
     }
 

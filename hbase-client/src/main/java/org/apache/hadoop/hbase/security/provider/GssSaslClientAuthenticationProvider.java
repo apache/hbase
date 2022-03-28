@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -41,8 +39,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 @InterfaceAudience.Private
 public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationProvider
     implements SaslClientAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      GssSaslClientAuthenticationProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GssSaslClientAuthenticationProvider.class);
 
   String getServerPrincipal(Configuration conf, SecurityInfo securityInfo, InetAddress server)
       throws IOException {
@@ -52,7 +50,7 @@ public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationPr
           "Can't obtain server Kerberos config key from SecurityInfo");
     }
     return SecurityUtil.getServerPrincipal(conf.get(serverKey),
-        server.getCanonicalHostName().toLowerCase());
+      server.getCanonicalHostName().toLowerCase());
   }
 
   @Override
@@ -63,11 +61,11 @@ public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationPr
     LOG.debug("Setting up Kerberos RPC to server={}", serverPrincipal);
     String[] names = SaslUtil.splitKerberosName(serverPrincipal);
     if (names.length != 3) {
-      throw new IOException("Kerberos principal '" + serverPrincipal
-          + "' does not have the expected format");
+      throw new IOException(
+          "Kerberos principal '" + serverPrincipal + "' does not have the expected format");
     }
     return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
-        names[0], names[1], saslProps, null);
+      names[0], names[1], saslProps, null);
   }
 
   @Override

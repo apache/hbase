@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,8 +47,8 @@ import org.slf4j.LoggerFactory;
  * 2. parallelPutToStoreThreadLimit: The amount of concurrency allowed to write puts to a Store at
  * the same time.
  * <p>
- * 3. parallelPreparePutToStoreThreadLimit: The amount of concurrency allowed to
- * prepare writing puts to a Store at the same time.
+ * 3. parallelPreparePutToStoreThreadLimit: The amount of concurrency allowed to prepare writing
+ * puts to a Store at the same time.
  * <p>
  * Notice that our writing pipeline includes three key process: MVCC acquire, writing MemStore, and
  * WAL. Only limit the concurrency of writing puts to Store(parallelPutToStoreThreadLimit) is not
@@ -89,10 +88,10 @@ public class StoreHotnessProtector {
     this.parallelPutToStoreThreadLimit =
         conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT, DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT);
     this.parallelPreparePutToStoreThreadLimit = conf.getInt(PARALLEL_PREPARE_PUT_STORE_MULTIPLIER,
-        DEFAULT_PARALLEL_PREPARE_PUT_STORE_MULTIPLIER) * parallelPutToStoreThreadLimit;
+      DEFAULT_PARALLEL_PREPARE_PUT_STORE_MULTIPLIER) * parallelPutToStoreThreadLimit;
     this.parallelPutToStoreThreadLimitCheckMinColumnCount =
         conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT,
-            DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_NUM);
+          DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_NUM);
 
   }
 
@@ -119,18 +118,16 @@ public class StoreHotnessProtector {
 
       if (e.getValue().size() > this.parallelPutToStoreThreadLimitCheckMinColumnCount) {
 
-        //we need to try to add #preparePutCount at first because preparePutToStoreMap will be
-        //cleared when changing the configuration.
+        // we need to try to add #preparePutCount at first because preparePutToStoreMap will be
+        // cleared when changing the configuration.
         int preparePutCount = preparePutToStoreMap
-            .computeIfAbsent(e.getKey(), key -> new AtomicInteger())
-            .incrementAndGet();
+            .computeIfAbsent(e.getKey(), key -> new AtomicInteger()).incrementAndGet();
         boolean storeAboveThread =
-          store.getCurrentParallelPutCount() > this.parallelPutToStoreThreadLimit;
+            store.getCurrentParallelPutCount() > this.parallelPutToStoreThreadLimit;
         boolean storeAbovePrePut = preparePutCount > this.parallelPreparePutToStoreThreadLimit;
         if (storeAboveThread || storeAbovePrePut) {
-          tooBusyStore = (tooBusyStore == null ?
-              store.getColumnFamilyName() :
-              tooBusyStore + "," + store.getColumnFamilyName());
+          tooBusyStore = (tooBusyStore == null ? store.getColumnFamilyName()
+              : tooBusyStore + "," + store.getColumnFamilyName());
         }
         aboveParallelThreadLimit |= storeAboveThread;
         aboveParallelPrePutLimit |= storeAbovePrePut;
@@ -143,14 +140,16 @@ public class StoreHotnessProtector {
     }
 
     if (aboveParallelThreadLimit || aboveParallelPrePutLimit) {
-      String msg =
-          "StoreTooBusy," + this.region.getRegionInfo().getRegionNameAsString() + ":" + tooBusyStore
-              + " Above "
-              + (aboveParallelThreadLimit ? "parallelPutToStoreThreadLimit("
-              + this.parallelPutToStoreThreadLimit + ")" : "")
-              + (aboveParallelThreadLimit && aboveParallelPrePutLimit ? " or " : "")
-              + (aboveParallelPrePutLimit ? "parallelPreparePutToStoreThreadLimit("
-              + this.parallelPreparePutToStoreThreadLimit + ")" : "");
+      String msg = "StoreTooBusy," + this.region.getRegionInfo().getRegionNameAsString() + ":"
+          + tooBusyStore + " Above "
+          + (aboveParallelThreadLimit
+              ? "parallelPutToStoreThreadLimit(" + this.parallelPutToStoreThreadLimit + ")"
+              : "")
+          + (aboveParallelThreadLimit && aboveParallelPrePutLimit ? " or " : "")
+          + (aboveParallelPrePutLimit
+              ? "parallelPreparePutToStoreThreadLimit(" + this.parallelPreparePutToStoreThreadLimit
+                  + ")"
+              : "");
       LOG.trace(msg);
       throw new RegionTooBusyException(msg);
     }
@@ -182,9 +181,8 @@ public class StoreHotnessProtector {
     return "StoreHotnessProtector, parallelPutToStoreThreadLimit="
         + this.parallelPutToStoreThreadLimit + " ; minColumnNum="
         + this.parallelPutToStoreThreadLimitCheckMinColumnCount + " ; preparePutThreadLimit="
-        + this.parallelPreparePutToStoreThreadLimit + " ; hotProtect now " + (this.isEnable() ?
-        "enable" :
-        "disable");
+        + this.parallelPreparePutToStoreThreadLimit + " ; hotProtect now "
+        + (this.isEnable() ? "enable" : "disable");
   }
 
   public boolean isEnable() {

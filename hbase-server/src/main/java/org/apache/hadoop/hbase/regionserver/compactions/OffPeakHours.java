@@ -17,18 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
 
 @InterfaceAudience.Private
 public abstract class OffPeakHours {
   private static final Logger LOG = LoggerFactory.getLogger(OffPeakHours.class);
 
   public static final OffPeakHours DISABLED = new OffPeakHours() {
-    @Override public boolean isOffPeakHour() { return false; }
-    @Override public boolean isOffPeakHour(int targetHour) { return false; }
+    @Override
+    public boolean isOffPeakHour() {
+      return false;
+    }
+
+    @Override
+    public boolean isOffPeakHour(int targetHour) {
+      return false;
+    }
   };
 
   public static OffPeakHours getInstance(Configuration conf) {
@@ -46,11 +53,10 @@ public abstract class OffPeakHours {
       return DISABLED;
     }
 
-    if (! isValidHour(startHour) || ! isValidHour(endHour)) {
+    if (!isValidHour(startHour) || !isValidHour(endHour)) {
       if (LOG.isWarnEnabled()) {
-        LOG.warn("Ignoring invalid start/end hour for peak hour : start = " +
-            startHour + " end = " + endHour +
-            ". Valid numbers are [0-23]");
+        LOG.warn("Ignoring invalid start/end hour for peak hour : start = " + startHour + " end = "
+            + endHour + ". Valid numbers are [0-23]");
       }
       return DISABLED;
     }

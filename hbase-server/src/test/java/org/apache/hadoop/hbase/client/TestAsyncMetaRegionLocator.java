@@ -40,7 +40,7 @@ public class TestAsyncMetaRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
+      HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

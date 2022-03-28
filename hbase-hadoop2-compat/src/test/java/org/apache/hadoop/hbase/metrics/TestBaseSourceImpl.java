@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,9 +31,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test of default BaseSource for hadoop 2
+ * Test of default BaseSource for hadoop 2
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestBaseSourceImpl {
 
   @ClassRule

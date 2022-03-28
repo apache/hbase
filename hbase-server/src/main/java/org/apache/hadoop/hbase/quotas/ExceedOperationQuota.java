@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,13 +26,11 @@ import org.slf4j.LoggerFactory;
 /*
  * Internal class used to check and consume quota if exceed throttle quota is enabled. Exceed
  * throttle quota means, user can over consume user/namespace/table quota if region server has
- * additional available quota because other users don't consume at the same time.
- *
- * There are some limits when enable exceed throttle quota:
- * 1. Must set at least one read and one write region server throttle quota;
- * 2. All region server throttle quotas must be in seconds time unit. Because once previous requests
- * exceed their quota and consume region server quota, quota in other time units may be refilled in
- * a long time, this may affect later requests.
+ * additional available quota because other users don't consume at the same time. There are some
+ * limits when enable exceed throttle quota: 1. Must set at least one read and one write region
+ * server throttle quota; 2. All region server throttle quotas must be in seconds time unit. Because
+ * once previous requests exceed their quota and consume region server quota, quota in other time
+ * units may be refilled in a long time, this may affect later requests.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

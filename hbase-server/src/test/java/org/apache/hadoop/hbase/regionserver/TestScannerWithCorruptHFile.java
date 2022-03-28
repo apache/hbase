@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,10 +57,10 @@ public class TestScannerWithCorruptHFile {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerWithCorruptHFile.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
-
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -80,7 +80,7 @@ public class TestScannerWithCorruptHFile {
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
-      InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+        InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       throw new CorruptHFileException("For test");
     }
   }

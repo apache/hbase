@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,10 +71,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
- * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
- * cluster. See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
+ * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
+ * See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestReplicasClient {
 
   @ClassRule
@@ -108,6 +108,7 @@ public class TestReplicasClient {
         new AtomicReference<>(new CountDownLatch(0));
     private static final AtomicReference<CountDownLatch> secondaryCdl =
         new AtomicReference<>(new CountDownLatch(0));
+
     public SlowMeCopro() {
     }
 
@@ -118,7 +119,7 @@ public class TestReplicasClient {
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+        final List<Cell> results) throws IOException {
       slowdownCode(e);
     }
 
@@ -134,15 +135,15 @@ public class TestReplicasClient {
 
     @Override
     public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan) throws IOException {
+        final Scan scan) throws IOException {
       incrementScanCount(e);
       slowdownCode(e);
     }
 
     @Override
     public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
-      throws IOException {
+        final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
+        throws IOException {
       incrementScanCount(e);
       // this will slow down a certain next operation if the conditions are met. The slowness
       // will allow the call to go to a replica
@@ -203,27 +204,27 @@ public class TestReplicasClient {
   @BeforeClass
   public static void beforeClass() throws Exception {
     // enable store file refreshing
-    HTU.getConfiguration().setInt(
-        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     ConnectionUtils.setupMasterlessConnection(HTU.getConfiguration());
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(1).
-        numAlwaysStandByMasters(1).numMasters(1).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(1)
+        .numAlwaysStandByMasters(1).numMasters(1).build();
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
     TABLE_NAME = TableName.valueOf(TestReplicasClient.class.getSimpleName());
     HTableDescriptor hdt = HTU.createTableDescriptor(TABLE_NAME);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTU.createTable(hdt, new byte[][]{f}, null);
+    HTU.createTable(hdt, new byte[][] { f }, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(TABLE_NAME)) {
       hriPrimary = locator.getRegionLocation(row, false).getRegion();
     }
 
     // mock a secondary region info to open
-    hriSecondary =  RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
+    hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
     // No master
     LOG.info("Master is going to be stopped");
@@ -301,7 +302,7 @@ public class TestReplicasClient {
     }
     // first version is '0'
     AdminProtos.OpenRegionRequest orr =
-      RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null);
+        RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
     assertEquals(1, responseOpen.getOpeningStateCount());
     assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
@@ -310,10 +311,10 @@ public class TestReplicasClient {
   }
 
   private void closeRegion(RegionInfo hri) throws Exception {
-    AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getRegionName());
-    AdminProtos.CloseRegionResponse responseClose = getRS()
-        .getRSRpcServices().closeRegion(null, crr);
+    AdminProtos.CloseRegionRequest crr =
+        ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), hri.getRegionName());
+    AdminProtos.CloseRegionResponse responseClose =
+        getRS().getRSRpcServices().closeRegion(null, crr);
     assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed(hri.getEncodedName());
@@ -549,7 +550,7 @@ public class TestReplicasClient {
     // Wait a little on the main region, just enough to happen once hedged read
     // and hedged read did not returned faster
     int primaryCallTimeoutMicroSecond =
-      connection.getConnectionConfiguration().getPrimaryCallTimeoutMicroSecond();
+        connection.getConnectionConfiguration().getPrimaryCallTimeoutMicroSecond();
     SlowMeCopro.sleepTime.set(TimeUnit.MICROSECONDS.toMillis(primaryCallTimeoutMicroSecond));
     SlowMeCopro.getSecondaryCdl().set(new CountDownLatch(1));
     g = new Get(b1);
@@ -578,19 +579,19 @@ public class TestReplicasClient {
 
   @Test
   public void testScanWithReplicas() throws Exception {
-    //simple scan
+    // simple scan
     runMultipleScansOfOneType(false, false);
   }
 
   @Test
   public void testSmallScanWithReplicas() throws Exception {
-    //small scan
+    // small scan
     runMultipleScansOfOneType(false, true);
   }
 
   @Test
   public void testReverseScanWithReplicas() throws Exception {
-    //reverse scan
+    // reverse scan
     runMultipleScansOfOneType(true, false);
   }
 
@@ -722,8 +723,7 @@ public class TestReplicasClient {
 
   private void scanWithReplicas(boolean reversed, boolean small, Consistency consistency,
       int caching, long maxResultSize, byte[] startRow, int numRows, int numCols,
-      boolean staleExpected, boolean slowNext)
-          throws Exception {
+      boolean staleExpected, boolean slowNext) throws Exception {
     Scan scan = new Scan().withStartRow(startRow);
     scan.setCaching(caching);
     scan.setMaxResultSize(maxResultSize);
@@ -760,8 +760,7 @@ public class TestReplicasClient {
         countOfStale++;
       }
     }
-    assertTrue("Count of rows " + rowCount + " num rows expected " + numRows,
-      rowCount == numRows);
+    assertTrue("Count of rows " + rowCount + " num rows expected " + numRows, rowCount == numRows);
     assertTrue("Count of cells: " + cellCount + " cells expected: " + numRows * numCols,
       cellCount == (numRows * numCols));
 

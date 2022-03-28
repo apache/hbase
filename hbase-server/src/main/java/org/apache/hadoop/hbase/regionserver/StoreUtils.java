@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -124,8 +122,8 @@ public class StoreUtils {
     Cell firstKey = reader.getFirstKey().get();
     Cell lastKey = reader.getLastKey().get();
     // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
-    if (comparator.compareRows(midKey, firstKey) == 0 ||
-        comparator.compareRows(midKey, lastKey) == 0) {
+    if (comparator.compareRows(midKey, firstKey) == 0
+        || comparator.compareRows(midKey, lastKey) == 0) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("cannot split {} because midkey is the same as first or last row", file);
       }
@@ -160,8 +158,7 @@ public class StoreUtils {
    * @return The bytesPerChecksum that is set in the configuration
    */
   public static int getBytesPerChecksum(Configuration conf) {
-    return conf.getInt(HConstants.BYTES_PER_CHECKSUM,
-        HFile.DEFAULT_BYTES_PER_CHECKSUM);
+    return conf.getInt(HConstants.BYTES_PER_CHECKSUM, HFile.DEFAULT_BYTES_PER_CHECKSUM);
   }
 
   public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,

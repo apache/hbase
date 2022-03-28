@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.hbtop.mode;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Utility class for calculating request counts per second.
  */
@@ -34,7 +33,7 @@ public class RequestCountPerSecond {
   private long writeRequestCountPerSecond;
 
   public void refresh(long lastReportTimestamp, long readRequestCount,
-    long filteredReadRequestCount, long writeRequestCount) {
+      long filteredReadRequestCount, long writeRequestCount) {
     if (previousLastReportTimestamp == 0) {
       previousLastReportTimestamp = lastReportTimestamp;
       previousReadRequestCount = readRequestCount;
@@ -47,7 +46,7 @@ public class RequestCountPerSecond {
       }
       readRequestCountPerSecond = (readRequestCount - previousReadRequestCount) / delta;
       filteredReadRequestCountPerSecond =
-        (filteredReadRequestCount - previousFilteredReadRequestCount) / delta;
+          (filteredReadRequestCount - previousFilteredReadRequestCount) / delta;
       writeRequestCountPerSecond = (writeRequestCount - previousWriteRequestCount) / delta;
 
       previousLastReportTimestamp = lastReportTimestamp;

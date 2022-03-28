@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
@@ -26,6 +25,7 @@ import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclCont
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -99,7 +99,7 @@ public class TestSnapshotScannerHDFSAclController {
 
     TEST_UTIL.startMiniCluster();
     SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
+        .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
     TEST_UTIL.waitFor(30000, () -> coprocessor.checkInitialized("check initialized"));
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
 
@@ -141,7 +141,7 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   private void snapshotAndWait(final String snapShotName, final TableName tableName)
-    throws Exception{
+      throws Exception {
     admin.snapshot(snapShotName, tableName);
     LOG.info("Sleep for three seconds, waiting for HDFS Acl setup");
     Threads.sleep(3000);
@@ -524,8 +524,7 @@ public class TestSnapshotScannerHDFSAclController {
     assertFalse(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, false);
     assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table));
-    checkUserAclEntry(FS, helper.getTableRootPaths(table, false),
-      grantUserName, true, true);
+    checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, true, true);
     deleteTable(table);
   }
 
@@ -839,7 +838,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser2, snapshot, -1);
     // check access
     String[] users = new String[] { globalUserName, globalUserName2, nsUserName, tableUserName,
-      tableUserName2, tableUserName3 };
+        tableUserName2, tableUserName3 };
     for (Path path : helper.getTableRootPaths(table, false)) {
       for (String user : users) {
         checkUserAclEntry(FS, path, user, false, false);

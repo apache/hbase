@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestIncreaseMetaReplicaThroughConfig extends MetaWithReplicasTestBa
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncreaseMetaReplicaThroughConfig.class);
+      HBaseClassTestRule.forClass(TestIncreaseMetaReplicaThroughConfig.class);
 
   @BeforeClass
   public static void setUp() throws Exception {

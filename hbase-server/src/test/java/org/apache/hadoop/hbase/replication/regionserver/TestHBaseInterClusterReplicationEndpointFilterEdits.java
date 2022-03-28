@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -80,8 +79,8 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     ReplicationPeerConfig rpc = mock(ReplicationPeerConfig.class);
     when(rpc.isSerial()).thenReturn(false);
     when(replicationPeer.getPeerConfig()).thenReturn(rpc);
-    Context context = new Context(UTIL.getConfiguration(), UTIL.getConfiguration(), null,
-        null, null, replicationPeer, null, null, null);
+    Context context = new Context(UTIL.getConfiguration(), UTIL.getConfiguration(), null, null,
+        null, replicationPeer, null, null, null);
     endpoint = new HBaseInterClusterReplicationEndpoint();
     endpoint.init(context);
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -55,14 +56,13 @@ public interface SnapshotSentinel {
   /**
    * Get the exception that caused the snapshot to fail, if the snapshot has failed.
    * @return {@link ForeignException} that caused the snapshot to fail, or <tt>null</tt> if the
-   *  snapshot is still in progress or has succeeded
+   *         snapshot is still in progress or has succeeded
    */
   ForeignException getExceptionIfFailed();
 
   /**
-   * Rethrow the exception returned by {@link SnapshotSentinel#getExceptionIfFailed}.
-   * If there is no exception this is a no-op.
-   *
+   * Rethrow the exception returned by {@link SnapshotSentinel#getExceptionIfFailed}. If there is no
+   * exception this is a no-op.
    * @throws ForeignException all exceptions from remote sources are procedure exceptions
    */
   void rethrowExceptionIfFailed() throws ForeignException;

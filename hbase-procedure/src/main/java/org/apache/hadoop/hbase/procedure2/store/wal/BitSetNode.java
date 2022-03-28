@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -271,7 +271,7 @@ class BitSetNode {
    */
   public ProcedureProtos.ProcedureStoreTracker.TrackerNode convert() {
     ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder builder =
-      ProcedureProtos.ProcedureStoreTracker.TrackerNode.newBuilder();
+        ProcedureProtos.ProcedureStoreTracker.TrackerNode.newBuilder();
     builder.setStartId(start);
     for (int i = 0; i < modified.length; ++i) {
       builder.addUpdated(modified[i]);

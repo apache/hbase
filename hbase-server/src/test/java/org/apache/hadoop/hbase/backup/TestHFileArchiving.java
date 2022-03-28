@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,7 +79,7 @@ import org.slf4j.LoggerFactory;
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
  * a region
  */
-@Category({LargeTests.class, MiscTests.class})
+@Category({ LargeTests.class, MiscTests.class })
 public class TestHFileArchiving {
 
   @ClassRule
@@ -137,15 +137,13 @@ public class TestHFileArchiving {
   public void testArchiveStoreFilesDifferentFileSystemsWallWithSchemaPlainRoot() throws Exception {
     String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    testArchiveStoreFilesDifferentFileSystems(walDir, baseDir,
-      HFileArchiver::archiveStoreFiles);
+    testArchiveStoreFilesDifferentFileSystems(walDir, baseDir, HFileArchiver::archiveStoreFiles);
   }
 
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallNullPlainRoot() throws Exception {
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    testArchiveStoreFilesDifferentFileSystems(null, baseDir,
-      HFileArchiver::archiveStoreFiles);
+    testArchiveStoreFilesDifferentFileSystems(null, baseDir, HFileArchiver::archiveStoreFiles);
   }
 
   @Test
@@ -156,11 +154,11 @@ public class TestHFileArchiving {
   }
 
   private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
-    ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
-      Collection<HStoreFile>> archivingFunction) throws IOException {
+      ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[], Collection<HStoreFile>> archivingFunction)
+      throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    if(walDir != null) {
+    if (walDir != null) {
       conf.set(CommonFSUtils.HBASE_WAL_DIR, walDir);
     }
     Path filePath = new Path("/mockDir/wals/mockFile");
@@ -177,19 +175,19 @@ public class TestHFileArchiving {
     List<HStoreFile> list = new ArrayList<>();
     list.add(mockedFile);
     when(mockedFile.getPath()).thenReturn(filePath);
-    when(mockedFileSystem.rename(any(),any())).thenReturn(true);
+    when(mockedFileSystem.rename(any(), any())).thenReturn(true);
     archivingFunction.apply(conf, mockedFileSystem, mockedRegion, tableDir, family, list);
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     verify(mockedFileSystem, times(2)).rename(pathCaptor.capture(), any());
-    String expectedDir = expectedBase +
-      "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
+    String expectedDir = expectedBase
+        + "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
     assertTrue(pathCaptor.getAllValues().get(0).toString().equals(expectedDir));
   }
 
   @FunctionalInterface
   private interface ArchivingFunction<Configuration, FS, Region, Dir, Family, Files> {
     void apply(Configuration config, FS fs, Region region, Dir dir, Family family, Files files)
-      throws IOException;
+        throws IOException;
   }
 
   @Test
@@ -207,9 +205,8 @@ public class TestHFileArchiving {
     try {
       String baseDir = "mockFS://mockFSAuthority:9876/hbase/";
       UTIL.getConfiguration().set(HConstants.HBASE_DIR, baseDir);
-      testArchiveStoreFilesDifferentFileSystems(walDir, baseDir,
-        (conf, fs, region, dir, family, list) -> HFileArchiver
-          .archiveRecoveredEdits(conf, fs, region, family, list));
+      testArchiveStoreFilesDifferentFileSystems(walDir, baseDir, (conf, fs, region, dir, family,
+          list) -> HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list));
     } finally {
       UTIL.getConfiguration().set(HConstants.HBASE_DIR, originalRootDir);
     }
@@ -218,20 +215,18 @@ public class TestHFileArchiving {
   @Test(expected = IOException.class)
   public void testArchiveRecoveredEditsWrongFS() throws Exception {
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    //Internally, testArchiveStoreFilesDifferentFileSystems will pass a "mockedFS"
+    // Internally, testArchiveStoreFilesDifferentFileSystems will pass a "mockedFS"
     // to HFileArchiver.archiveRecoveredEdits, but since wal-dir is supposedly on same FS
     // as root dir it would lead to conflicting FSes and an IOException is expected.
-    testArchiveStoreFilesDifferentFileSystems("/wal-dir", baseDir,
-      (conf, fs, region, dir, family, list) -> HFileArchiver
-        .archiveRecoveredEdits(conf, fs, region, family, list));
+    testArchiveStoreFilesDifferentFileSystems("/wal-dir", baseDir, (conf, fs, region, dir, family,
+        list) -> HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list));
   }
 
   @Test
   public void testArchiveRecoveredEditsWalDirDifferentFS() throws Exception {
     String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
-    testArchiveStoreFilesDifferentFileSystems(walDir, walDir,
-      (conf, fs, region, dir, family, list) ->
-        HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list));
+    testArchiveStoreFilesDifferentFileSystems(walDir, walDir, (conf, fs, region, dir, family,
+        list) -> HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list));
   }
 
   @Test
@@ -341,9 +336,8 @@ public class TestHFileArchiving {
   }
 
   private List<HRegion> initTableForArchivingRegions(TableName tableName) throws IOException {
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
-    };
+    final byte[][] splitKeys =
+        new byte[][] { Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d") };
 
     UTIL.createTable(tableName, TEST_FAM, splitKeys);
 
@@ -374,20 +368,20 @@ public class TestHFileArchiving {
     Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = CommonFSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
-      .collect(Collectors.toList());
+        .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
+        .collect(Collectors.toList());
 
     HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
 
     // check for the existence of the archive directory and some files in it
     for (HRegion region : regions) {
-      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
-        region);
+      Path archiveDir =
+          HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
       assertTrue(fs.exists(archiveDir));
 
       // check to make sure the store directory was copied
-      FileStatus[] stores = fs.listStatus(archiveDir,
-        p -> !p.getName().contains(HConstants.RECOVERED_EDITS_DIR));
+      FileStatus[] stores =
+          fs.listStatus(archiveDir, p -> !p.getName().contains(HConstants.RECOVERED_EDITS_DIR));
       assertTrue(stores.length == 1);
 
       // make sure we archived the store files
@@ -396,14 +390,14 @@ public class TestHFileArchiving {
     }
 
     // then ensure the region's directories aren't present
-    for (Path regionDir: regionDirList) {
+    for (Path regionDir : regionDirList) {
       assertFalse(fs.exists(regionDir));
     }
 
     UTIL.deleteTable(tableName);
   }
 
-  @Test(expected=IOException.class)
+  @Test(expected = IOException.class)
   public void testArchiveRegionsWhenPermissionDenied() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     List<HRegion> regions = initTableForArchivingRegions(tableName);
@@ -412,18 +406,17 @@ public class TestHFileArchiving {
     Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = CommonFSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
-      .collect(Collectors.toList());
+        .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
+        .collect(Collectors.toList());
 
     // To create a permission denied error, we do archive regions as a non-current user
-    UserGroupInformation
-      ugi = UserGroupInformation.createUserForTesting("foo1234", new String[]{"group1"});
+    UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting("foo1234", new String[] { "group1" });
 
     try {
       ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
         FileSystem fs = UTIL.getTestFileSystem();
-        HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir,
-          regionDirList);
+        HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
         return null;
       });
     } catch (IOException e) {
@@ -468,7 +461,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    byte[][]columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
+    byte[][] columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
@@ -478,12 +471,14 @@ public class TestHFileArchiving {
     assertArchiveFiles(fs, storeFiles, 30000);
   }
 
-  private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout) throws IOException {
+  private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout)
+      throws IOException {
     long end = System.currentTimeMillis() + timeout;
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
     List<String> archivedFiles = new ArrayList<>();
 
-    // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX() can return before all files
+    // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX() can return
+    // before all files
     // are archived. We should fix HBASE-5487 and fix synchronous operations from admin.
     while (System.currentTimeMillis() < end) {
       archivedFiles = getAllFileNames(fs, archiveDir);
@@ -508,7 +503,6 @@ public class TestHFileArchiving {
       archivedFiles.containsAll(storeFiles));
   }
 
-
   /**
    * Test that the store files are archived when a column family is removed.
    * @throws Exception
@@ -516,7 +510,7 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveOnTableFamilyDelete() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    UTIL.createTable(tableName, new byte[][] {TEST_FAM, Bytes.toBytes("fam2")});
+    UTIL.createTable(tableName, new byte[][] { TEST_FAM, Bytes.toBytes("fam2") });
 
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
@@ -547,7 +541,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    byte[][]columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
+    byte[][] columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
@@ -571,8 +565,9 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-        TableName.valueOf(name.getMethodName())), "abcdef");
+    Path regionDir =
+        new Path(CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())),
+            "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
     Path sourceRegionDir = new Path(rootDir, regionDir);
@@ -588,7 +583,7 @@ public class TestHFileArchiving {
       // Keep creating/archiving new files while the cleaner is running in the other thread
       long startTime = System.currentTimeMillis();
       for (long fid = 0; (System.currentTimeMillis() - startTime) < TEST_TIME; ++fid) {
-        Path file = new Path(familyDir,  String.valueOf(fid));
+        Path file = new Path(familyDir, String.valueOf(fid));
         Path sourceFile = new Path(rootDir, file);
         Path archiveFile = new Path(archiveDir, file);
 
@@ -596,8 +591,7 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(fs, rootDir,
-              sourceRegionDir.getParent(), sourceRegionDir);
+          HFileArchiver.archiveRegion(fs, rootDir, sourceRegionDir.getParent(), sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location
           // but it's in the archive location.
@@ -634,8 +628,9 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveRegionWithTableDirNull() throws IOException {
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-            TableName.valueOf(name.getMethodName())), "xyzabc");
+    Path regionDir =
+        new Path(CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())),
+            "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     Path file = new Path(familyDir, "1");
@@ -651,8 +646,9 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveRegionWithRegionDirNull() throws IOException {
-    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
-            TableName.valueOf(name.getMethodName())), "elgn4nf");
+    Path regionDir =
+        new Path(CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())),
+            "elgn4nf");
     Path familyDir = new Path(regionDir, "rdar");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     Path file = new Path(familyDir, "2");
@@ -662,15 +658,15 @@ public class TestHFileArchiving {
     Path sourceRegionDir = new Path(rootDir, regionDir);
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file but with null regionDir, can't delete sourceFile
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(),
-            null));
+    assertFalse(
+      HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(), null));
     assertTrue(fileSystem.exists(sourceRegionDir));
     fileSystem.delete(sourceRegionDir, true);
   }
 
   private void clearArchiveDirectory() throws IOException {
-    UTIL.getTestFileSystem().delete(
-      new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
+    UTIL.getTestFileSystem()
+        .delete(new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
   }
 
   /**
@@ -695,7 +691,7 @@ public class TestHFileArchiving {
 
   /** Recursively lookup all the file names under the file[] array **/
   private List<String> recurseOnFiles(FileSystem fs, FileStatus[] files, List<String> fileNames)
-    throws IOException {
+      throws IOException {
     if (files == null || files.length == 0) return fileNames;
 
     for (FileStatus file : files) {

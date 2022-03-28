@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.nio.ByteBuffer;
@@ -76,15 +75,14 @@ public class ByteBuffAllocator {
   public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
 
   /**
-   * Set an alternate bytebuffallocator by setting this config,
-   * e.g. we can config {@link DeallocateRewriteByteBuffAllocator} to find out
-   * prematurely release issues
+   * Set an alternate bytebuffallocator by setting this config, e.g. we can config
+   * {@link DeallocateRewriteByteBuffAllocator} to find out prematurely release issues
    */
   public static final String BYTEBUFF_ALLOCATOR_CLASS = "hbase.bytebuff.allocator.class";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
+   *             {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
    */
   @Deprecated
   public static final String DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY =
@@ -92,14 +90,14 @@ public class ByteBuffAllocator {
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
+   *             {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.reservoir.initial.max";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
+   *             {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
@@ -177,7 +175,8 @@ public class ByteBuffAllocator {
   public static ByteBuffAllocator create(Configuration conf, boolean reservoirEnabled) {
     if (conf.get(DEPRECATED_BUFFER_SIZE_KEY) != null
         || conf.get(DEPRECATED_MAX_BUFFER_COUNT_KEY) != null) {
-      LOG.warn("The config keys {} and {} are deprecated now, instead please use {} and {}. In "
+      LOG.warn(
+        "The config keys {} and {} are deprecated now, instead please use {} and {}. In "
             + "future release we will remove the two deprecated configs.",
         DEPRECATED_BUFFER_SIZE_KEY, DEPRECATED_MAX_BUFFER_COUNT_KEY, BUFFER_SIZE_KEY,
         MAX_BUFFER_COUNT_KEY);
@@ -203,8 +202,8 @@ public class ByteBuffAllocator {
             HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
       Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
-      return (ByteBuffAllocator) ReflectionUtils
-        .newInstance(clazz, true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
+      return (ByteBuffAllocator) ReflectionUtils.newInstance(clazz, true, maxBuffCount, poolBufSize,
+        minSizeForReservoirUse);
     } else {
       return HEAP;
     }
@@ -220,7 +219,7 @@ public class ByteBuffAllocator {
   }
 
   protected ByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
-    int minSizeForReservoirUse) {
+      int minSizeForReservoirUse) {
     this.reservoirEnabled = reservoirEnabled;
     this.maxBufCount = maxBufCount;
     this.bufSize = bufSize;

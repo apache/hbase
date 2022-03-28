@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,8 +47,8 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 @InterfaceAudience.Private
 public class TestProtobufRpcServiceImpl implements BlockingInterface {
 
-  public static final BlockingService SERVICE = TestProtobufRpcProto
-      .newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
+  public static final BlockingService SERVICE =
+      TestProtobufRpcProto.newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
 
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
       throws IOException {

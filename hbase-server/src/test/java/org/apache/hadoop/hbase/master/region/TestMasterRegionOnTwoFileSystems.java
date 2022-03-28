@@ -75,7 +75,7 @@ public class TestMasterRegionOnTwoFileSystems {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionOnTwoFileSystems.class);
+      HBaseClassTestRule.forClass(TestMasterRegionOnTwoFileSystems.class);
 
   private static final HBaseCommonTestingUtility HFILE_UTIL = new HBaseCommonTestingUtility();
 
@@ -86,8 +86,8 @@ public class TestMasterRegionOnTwoFileSystems {
   private static byte[] CQ = Bytes.toBytes("q");
 
   private static TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
 
   private static int COMPACT_MIN = 4;
 
@@ -120,11 +120,11 @@ public class TestMasterRegionOnTwoFileSystems {
     when(server.getServerName()).thenReturn(serverName);
     MasterRegionParams params = new MasterRegionParams();
     params.server(server).regionDirName("local").tableDescriptor(TD)
-      .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
-      .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(COMPACT_MIN).maxWals(32)
-      .useHsync(false).ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
-      .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
+        .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
+        .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(COMPACT_MIN).maxWals(32)
+        .useHsync(false).ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
+        .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+        .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
     return MasterRegion.create(params);
   }
 
@@ -153,8 +153,8 @@ public class TestMasterRegionOnTwoFileSystems {
     int compactMinMinusOne = COMPACT_MIN - 1;
     for (int i = 0; i < compactMinMinusOne; i++) {
       final int index = i;
-      region
-        .update(r -> r.put(new Put(Bytes.toBytes(index)).addColumn(CF, CQ, Bytes.toBytes(index))));
+      region.update(
+        r -> r.put(new Put(Bytes.toBytes(index)).addColumn(CF, CQ, Bytes.toBytes(index))));
       region.flush(true);
     }
     byte[] bytes = Bytes.toBytes(compactMinMinusOne);
@@ -176,15 +176,15 @@ public class TestMasterRegionOnTwoFileSystems {
       }
     });
     LOG.info("hfile archive content {}", Arrays.stream(rootFs.listStatus(storeArchiveDir))
-      .map(f -> f.getPath().toString()).collect(Collectors.joining(",")));
+        .map(f -> f.getPath().toString()).collect(Collectors.joining(",")));
 
     // make sure the archived wal files are on the wal fs
     Path walArchiveDir = new Path(CommonFSUtils.getWALRootDir(HFILE_UTIL.getConfiguration()),
-      HConstants.HREGION_OLDLOGDIR_NAME);
+        HConstants.HREGION_OLDLOGDIR_NAME);
     LOG.info("wal archive dir {}", walArchiveDir);
     AbstractFSWAL<?> wal = (AbstractFSWAL<?>) region.region.getWAL();
     Path currentWALFile = wal.getCurrentFileName();
-    for (int i = 0; ; i++) {
+    for (int i = 0;; i++) {
       region.requestRollAll();
       region.waitUntilWalRollFinished();
       Path newWALFile = wal.getCurrentFileName();

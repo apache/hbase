@@ -25,63 +25,35 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.hbase.util.ProcessUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
- * Servlet that runs async-profiler as web-endpoint.
- * Following options from async-profiler can be specified as query paramater.
- * //  -e event          profiling event: cpu|alloc|lock|cache-misses etc.
- * //  -d duration       run profiling for 'duration' seconds (integer)
- * //  -i interval       sampling interval in nanoseconds (long)
- * //  -j jstackdepth    maximum Java stack depth (integer)
- * //  -b bufsize        frame buffer size (long)
- * //  -t                profile different threads separately
- * //  -s                simple class names instead of FQN
- * //  -o fmt[,fmt...]   output format: summary|traces|flat|collapsed|svg|tree|jfr|html
- * //  --width px        SVG width pixels (integer)
- * //  --height px       SVG frame height pixels (integer)
- * //  --minwidth px     skip frames smaller than px (double)
- * //  --reverse         generate stack-reversed FlameGraph / Call tree
- * Example:
- * - To collect 30 second CPU profile of current process (returns FlameGraph svg)
- * curl "http://localhost:10002/prof"
- * - To collect 1 minute CPU profile of current process and output in tree format (html)
- * curl "http://localhost:10002/prof?output=tree&amp;duration=60"
- * - To collect 30 second heap allocation profile of current process (returns FlameGraph svg)
- * curl "http://localhost:10002/prof?event=alloc"
- * - To collect lock contention profile of current process (returns FlameGraph svg)
- * curl "http://localhost:10002/prof?event=lock"
- * Following event types are supported (default is 'cpu') (NOTE: not all OS'es support all events)
- * // Perf events:
- * //    cpu
- * //    page-faults
- * //    context-switches
- * //    cycles
- * //    instructions
- * //    cache-references
- * //    cache-misses
- * //    branches
- * //    branch-misses
- * //    bus-cycles
- * //    L1-dcache-load-misses
- * //    LLC-load-misses
- * //    dTLB-load-misses
- * //    mem:breakpoint
- * //    trace:tracepoint
- * // Java events:
- * //    alloc
- * //    lock
+ * Servlet that runs async-profiler as web-endpoint. Following options from async-profiler can be
+ * specified as query paramater. // -e event profiling event: cpu|alloc|lock|cache-misses etc. // -d
+ * duration run profiling for 'duration' seconds (integer) // -i interval sampling interval in
+ * nanoseconds (long) // -j jstackdepth maximum Java stack depth (integer) // -b bufsize frame
+ * buffer size (long) // -t profile different threads separately // -s simple class names instead of
+ * FQN // -o fmt[,fmt...] output format: summary|traces|flat|collapsed|svg|tree|jfr|html // --width
+ * px SVG width pixels (integer) // --height px SVG frame height pixels (integer) // --minwidth px
+ * skip frames smaller than px (double) // --reverse generate stack-reversed FlameGraph / Call tree
+ * Example: - To collect 30 second CPU profile of current process (returns FlameGraph svg) curl
+ * "http://localhost:10002/prof" - To collect 1 minute CPU profile of current process and output in
+ * tree format (html) curl "http://localhost:10002/prof?output=tree&amp;duration=60" - To collect 30
+ * second heap allocation profile of current process (returns FlameGraph svg) curl
+ * "http://localhost:10002/prof?event=alloc" - To collect lock contention profile of current process
+ * (returns FlameGraph svg) curl "http://localhost:10002/prof?event=lock" Following event types are
+ * supported (default is 'cpu') (NOTE: not all OS'es support all events) // Perf events: // cpu //
+ * page-faults // context-switches // cycles // instructions // cache-references // cache-misses //
+ * branches // branch-misses // bus-cycles // L1-dcache-load-misses // LLC-load-misses //
+ * dTLB-load-misses // mem:breakpoint // trace:tracepoint // Java events: // alloc // lock
  */
 @InterfaceAudience.Private
 public class ProfileServlet extends HttpServlet {
@@ -101,22 +73,12 @@ public class ProfileServlet extends HttpServlet {
   static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hbase";
 
   enum Event {
-    CPU("cpu"),
-    ALLOC("alloc"),
-    LOCK("lock"),
-    PAGE_FAULTS("page-faults"),
-    CONTEXT_SWITCHES("context-switches"),
-    CYCLES("cycles"),
-    INSTRUCTIONS("instructions"),
-    CACHE_REFERENCES("cache-references"),
-    CACHE_MISSES("cache-misses"),
-    BRANCHES("branches"),
-    BRANCH_MISSES("branch-misses"),
-    BUS_CYCLES("bus-cycles"),
-    L1_DCACHE_LOAD_MISSES("L1-dcache-load-misses"),
-    LLC_LOAD_MISSES("LLC-load-misses"),
-    DTLB_LOAD_MISSES("dTLB-load-misses"),
-    MEM_BREAKPOINT("mem:breakpoint"),
+    CPU("cpu"), ALLOC("alloc"), LOCK("lock"), PAGE_FAULTS("page-faults"),
+    CONTEXT_SWITCHES("context-switches"), CYCLES("cycles"), INSTRUCTIONS("instructions"),
+    CACHE_REFERENCES("cache-references"), CACHE_MISSES("cache-misses"), BRANCHES("branches"),
+    BRANCH_MISSES("branch-misses"), BUS_CYCLES("bus-cycles"),
+    L1_DCACHE_LOAD_MISSES("L1-dcache-load-misses"), LLC_LOAD_MISSES("LLC-load-misses"),
+    DTLB_LOAD_MISSES("dTLB-load-misses"), MEM_BREAKPOINT("mem:breakpoint"),
     TRACE_TRACEPOINT("trace:tracepoint"),;
 
     private final String internalName;
@@ -141,20 +103,15 @@ public class ProfileServlet extends HttpServlet {
   }
 
   enum Output {
-    SUMMARY,
-    TRACES,
-    FLAT,
-    COLLAPSED,
+    SUMMARY, TRACES, FLAT, COLLAPSED,
     // No SVG in 2.x asyncprofiler.
-    SVG,
-    TREE,
-    JFR,
+    SVG, TREE, JFR,
     // In 2.x asyncprofiler, this is how you get flamegraphs.
     HTML
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
-    justification = "This class is never serialized nor restored.")
+      justification = "This class is never serialized nor restored.")
   private transient Lock profilerLock = new ReentrantLock();
   private transient volatile Process process;
   private String asyncProfilerHome;
@@ -180,10 +137,10 @@ public class ProfileServlet extends HttpServlet {
     if (asyncProfilerHome == null || asyncProfilerHome.trim().isEmpty()) {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
-      resp.getWriter().write("ASYNC_PROFILER_HOME env is not set.\n\n" +
-        "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n" +
-        "environment is properly configured. For more information please see\n" +
-        "http://hbase.apache.org/book.html#profiler\n");
+      resp.getWriter().write("ASYNC_PROFILER_HOME env is not set.\n\n"
+          + "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n"
+          + "environment is properly configured. For more information please see\n"
+          + "http://hbase.apache.org/book.html#profiler\n");
       return;
     }
 
@@ -217,9 +174,9 @@ public class ProfileServlet extends HttpServlet {
         int lockTimeoutSecs = 3;
         if (profilerLock.tryLock(lockTimeoutSecs, TimeUnit.SECONDS)) {
           try {
-            File outputFile = new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" +
-              event.name().toLowerCase() + "-" + ID_GEN.incrementAndGet() + "." +
-              output.name().toLowerCase());
+            File outputFile =
+                new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" + event.name().toLowerCase()
+                    + "-" + ID_GEN.incrementAndGet() + "." + output.name().toLowerCase());
             List<String> cmd = new ArrayList<>();
             cmd.add(asyncProfilerHome + PROFILER_SCRIPT);
             cmd.add("-e");
@@ -270,11 +227,10 @@ public class ProfileServlet extends HttpServlet {
             setResponseHeader(resp);
             resp.setStatus(HttpServletResponse.SC_ACCEPTED);
             String relativeUrl = "/prof-output-hbase/" + outputFile.getName();
-            resp.getWriter().write(
-              "Started [" + event.getInternalName() +
-              "] profiling. This page will automatically redirect to " +
-              relativeUrl + " after " + duration + " seconds.\n\nCommand:\n" +
-              Joiner.on(" ").join(cmd));
+            resp.getWriter()
+                .write("Started [" + event.getInternalName()
+                    + "] profiling. This page will automatically redirect to " + relativeUrl
+                    + " after " + duration + " seconds.\n\nCommand:\n" + Joiner.on(" ").join(cmd));
 
             // to avoid auto-refresh by ProfileOutputServlet, refreshDelay can be specified
             // via url param
@@ -290,10 +246,10 @@ public class ProfileServlet extends HttpServlet {
         } else {
           setResponseHeader(resp);
           resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-          resp.getWriter().write(
-            "Unable to acquire lock. Another instance of profiler might be running.");
-          LOG.warn("Unable to acquire lock in " + lockTimeoutSecs +
-            " seconds. Another instance of profiler might be running.");
+          resp.getWriter()
+              .write("Unable to acquire lock. Another instance of profiler might be running.");
+          LOG.warn("Unable to acquire lock in " + lockTimeoutSecs
+              + " seconds. Another instance of profiler might be running.");
         }
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while acquiring profile lock.", e);
@@ -389,10 +345,10 @@ public class ProfileServlet extends HttpServlet {
         throws IOException {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
-      resp.getWriter().write("The profiler servlet was disabled at startup.\n\n" +
-        "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n" +
-        "environment is properly configured. For more information please see\n" +
-        "http://hbase.apache.org/book.html#profiler\n");
+      resp.getWriter().write("The profiler servlet was disabled at startup.\n\n"
+          + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
+          + "environment is properly configured. For more information please see\n"
+          + "http://hbase.apache.org/book.html#profiler\n");
       return;
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,10 @@ import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * The screen that provides a dynamic real-time view for the HBase metrics.
- *
- * This shows the metric {@link Summary} and the metric {@link Record}s. The summary and the
- * metrics are updated periodically (3 seconds by default).
+ * The screen that provides a dynamic real-time view for the HBase metrics. This shows the metric
+ * {@link Summary} and the metric {@link Record}s. The summary and the metrics are updated
+ * periodically (3 seconds by default).
  */
 @InterfaceAudience.Private
 public class TopScreenView extends AbstractScreenView {
@@ -55,13 +53,14 @@ public class TopScreenView extends AbstractScreenView {
   private Integer pageSize;
 
   public TopScreenView(Screen screen, Terminal terminal, long initialRefreshDelay, Admin admin,
-    Mode initialMode, @Nullable List<Field> initialFields, @Nullable Field initialSortField,
-    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
-    long numberOfIterations) {
+      Mode initialMode, @Nullable List<Field> initialFields, @Nullable Field initialSortField,
+      @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
+      long numberOfIterations) {
     super(screen, terminal);
-    this.topScreenPresenter = new TopScreenPresenter(this, initialRefreshDelay,
-      new TopScreenModel(admin, initialMode, initialFields, initialSortField,
-        initialAscendingSort, initialFilters), initialFields, numberOfIterations);
+    this.topScreenPresenter = new TopScreenPresenter(
+        this, initialRefreshDelay, new TopScreenModel(admin, initialMode, initialFields,
+            initialSortField, initialAscendingSort, initialFilters),
+        initialFields, numberOfIterations);
   }
 
   @Override
@@ -223,7 +222,7 @@ public class TopScreenView extends AbstractScreenView {
   }
 
   public void showTopScreen(Summary summary, List<Header> headers, List<Record> records,
-    Record selectedRecord) {
+      Record selectedRecord) {
     showSummary(summary);
     clearMessage();
     showHeaders(headers);
@@ -235,23 +234,17 @@ public class TopScreenView extends AbstractScreenView {
     printer.print(String.format("HBase hbtop - %s", summary.getCurrentTime())).endOfLine();
     printer.print(String.format("Version: %s", summary.getVersion())).endOfLine();
     printer.print(String.format("Cluster ID: %s", summary.getClusterId())).endOfLine();
-    printer.print("RegionServer(s): ")
-      .startBold().print(Integer.toString(summary.getServers())).stopBold()
-      .print(" total, ")
-      .startBold().print(Integer.toString(summary.getLiveServers())).stopBold()
-      .print(" live, ")
-      .startBold().print(Integer.toString(summary.getDeadServers())).stopBold()
-      .print(" dead").endOfLine();
-    printer.print("RegionCount: ")
-      .startBold().print(Integer.toString(summary.getRegionCount())).stopBold()
-      .print(" total, ")
-      .startBold().print(Integer.toString(summary.getRitCount())).stopBold()
-      .print(" rit").endOfLine();
-    printer.print("Average Cluster Load: ")
-      .startBold().print(String.format("%.2f", summary.getAverageLoad())).stopBold().endOfLine();
-    printer.print("Aggregate Request/s: ")
-      .startBold().print(Long.toString(summary.getAggregateRequestPerSecond())).stopBold()
-      .endOfLine();
+    printer.print("RegionServer(s): ").startBold().print(Integer.toString(summary.getServers()))
+        .stopBold().print(" total, ").startBold().print(Integer.toString(summary.getLiveServers()))
+        .stopBold().print(" live, ").startBold().print(Integer.toString(summary.getDeadServers()))
+        .stopBold().print(" dead").endOfLine();
+    printer.print("RegionCount: ").startBold().print(Integer.toString(summary.getRegionCount()))
+        .stopBold().print(" total, ").startBold().print(Integer.toString(summary.getRitCount()))
+        .stopBold().print(" rit").endOfLine();
+    printer.print("Average Cluster Load: ").startBold()
+        .print(String.format("%.2f", summary.getAverageLoad())).stopBold().endOfLine();
+    printer.print("Aggregate Request/s: ").startBold()
+        .print(Long.toString(summary.getAggregateRequestPerSecond())).stopBold().endOfLine();
   }
 
   private void showRecords(List<Header> headers, List<Record> records, Record selectedRecord) {
@@ -264,7 +257,7 @@ public class TopScreenView extends AbstractScreenView {
     }
     List<String> buf = new ArrayList<>(headers.size());
     for (int i = 0; i < size; i++) {
-      if(i < records.size()) {
+      if (i < records.size()) {
         Record record = records.get(i);
         buf.clear();
         for (Header header : headers) {
@@ -293,16 +286,15 @@ public class TopScreenView extends AbstractScreenView {
   }
 
   private void showHeaders(List<Header> headers) {
-    String header = headers.stream()
-      .map(h -> String.format(h.format(), h.getField().getHeader()))
-      .collect(Collectors.joining(" "));
+    String header = headers.stream().map(h -> String.format(h.format(), h.getField().getHeader()))
+        .collect(Collectors.joining(" "));
 
     if (!header.isEmpty()) {
       header += " ";
     }
 
     getTerminalPrinter(RECORD_HEADER_ROW).startHighlight().print(header).stopHighlight()
-      .endOfLine();
+        .endOfLine();
   }
 
   private String limitLineLength(String line, int length) {

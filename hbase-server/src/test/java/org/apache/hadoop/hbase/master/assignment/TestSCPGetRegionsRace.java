@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,7 +63,7 @@ public class TestSCPGetRegionsRace {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSCPGetRegionsRace.class);
+      HBaseClassTestRule.forClass(TestSCPGetRegionsRace.class);
 
   private static final List<ServerName> EXCLUDE_SERVERS = new ArrayList<>();
 
@@ -154,7 +154,7 @@ public class TestSCPGetRegionsRace {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
-      .numMasters(1).numRegionServers(3).build());
+        .numMasters(1).numRegionServers(3).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -168,13 +168,13 @@ public class TestSCPGetRegionsRace {
   @Test
   public void test() throws Exception {
     RegionInfo region =
-      Iterables.getOnlyElement(UTIL.getMiniHBaseCluster().getRegions(NAME)).getRegionInfo();
+        Iterables.getOnlyElement(UTIL.getMiniHBaseCluster().getRegions(NAME)).getRegionInfo();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     AssignmentManager am = master.getAssignmentManager();
     RegionStateNode rsn = am.getRegionStates().getRegionStateNode(region);
     ServerName source = rsn.getRegionLocation();
-    ServerName dest =
-      UTIL.getAdmin().getRegionServers().stream().filter(sn -> !sn.equals(source)).findAny().get();
+    ServerName dest = UTIL.getAdmin().getRegionServers().stream().filter(sn -> !sn.equals(source))
+        .findAny().get();
 
     ARRIVE_REPORT = new CountDownLatch(1);
     RESUME_REPORT = new CountDownLatch(1);
@@ -186,7 +186,7 @@ public class TestSCPGetRegionsRace {
     // let's get procedure lock to stop the TRSP
     IdLock procExecutionLock = master.getMasterProcedureExecutor().getProcExecutionLock();
     long procId = master.getProcedures().stream()
-      .filter(p -> p instanceof RegionRemoteProcedureBase).findAny().get().getProcId();
+        .filter(p -> p instanceof RegionRemoteProcedureBase).findAny().get().getProcId();
     IdLock.Entry lockEntry = procExecutionLock.getLockEntry(procId);
     RESUME_REPORT.countDown();
 
@@ -206,8 +206,8 @@ public class TestSCPGetRegionsRace {
     EXCLUDE_SERVERS.add(dest);
     RESUME_GET.countDown();
     // wait until there are no SCPs and TRSPs
-    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished() ||
-      (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
+    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished()
+        || (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
 
     // assert the region is only on the dest server.
     HRegionServer rs = UTIL.getMiniHBaseCluster().getRegionServer(dest);

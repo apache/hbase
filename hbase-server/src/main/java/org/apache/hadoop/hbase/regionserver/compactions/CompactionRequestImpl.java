@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -39,7 +37,11 @@ public class CompactionRequestImpl implements CompactionRequest {
 
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
-  private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
+
+  private enum DisplayCompactionType {
+    MINOR, ALL_FILES, MAJOR
+  }
+
   private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
   private int priority = NO_PRIORITY;
   private Collection<HStoreFile> filesToCompact;
@@ -229,11 +231,11 @@ public class CompactionRequestImpl implements CompactionRequest {
         .map(f -> TraditionalBinaryPrefix.long2String(f.getReader().length(), "", 1))
         .collect(Collectors.joining(", "));
 
-    return "regionName=" + regionName + ", storeName=" + storeName + ", fileCount=" +
-        this.getFiles().size() + ", fileSize=" +
-        TraditionalBinaryPrefix.long2String(totalSize, "", 1) +
-        ((fsList.isEmpty()) ? "" : " (" + fsList + ")") + ", priority=" + priority + ", time=" +
-        selectionTime;
+    return "regionName=" + regionName + ", storeName=" + storeName + ", fileCount="
+        + this.getFiles().size() + ", fileSize="
+        + TraditionalBinaryPrefix.long2String(totalSize, "", 1)
+        + ((fsList.isEmpty()) ? "" : " (" + fsList + ")") + ", priority=" + priority + ", time="
+        + selectionTime;
   }
 
   /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * A wrapper for a runnable for a group of actions for a single regionserver.
@@ -32,10 +31,10 @@ import java.util.Map;
  * </p>
  * <p>
  * This class exists to simulate using a ScheduledExecutorService with just a regular
- * ExecutorService and Runnables. It is used for legacy reasons in the the client; this could
- * only be removed if we change the expectations in HTable around the pool the client is able to
- * pass in and even if we deprecate the current APIs would require keeping this class around
- * for the interim to bridge between the legacy ExecutorServices and the scheduled pool.
+ * ExecutorService and Runnables. It is used for legacy reasons in the the client; this could only
+ * be removed if we change the expectations in HTable around the pool the client is able to pass in
+ * and even if we deprecate the current APIs would require keeping this class around for the interim
+ * to bridge between the legacy ExecutorServices and the scheduled pool.
  * </p>
  */
 @InterfaceAudience.Private
@@ -60,10 +59,9 @@ public class DelayingRunner implements Runnable {
   @Override
   public void run() {
     if (!sleep()) {
-      LOG.warn(
-          "Interrupted while sleeping for expected sleep time " + sleepTime + " ms");
+      LOG.warn("Interrupted while sleeping for expected sleep time " + sleepTime + " ms");
     }
-    //TODO maybe we should consider switching to a listenableFuture for the actual callable and
+    // TODO maybe we should consider switching to a listenableFuture for the actual callable and
     // then handling the results/errors as callbacks. That way we can decrement outstanding tasks
     // even if we get interrupted here, but for now, we still need to run so we decrement the
     // outstanding tasks
@@ -73,12 +71,11 @@ public class DelayingRunner implements Runnable {
   /**
    * Sleep for an expected amount of time.
    * <p>
-   * This is nearly a copy of what the Sleeper does, but with the ability to know if you
-   * got interrupted while sleeping.
+   * This is nearly a copy of what the Sleeper does, but with the ability to know if you got
+   * interrupted while sleeping.
    * </p>
-   *
-   * @return <tt>true</tt> if the sleep completely entirely successfully,
-   * but otherwise <tt>false</tt> if the sleep was interrupted.
+   * @return <tt>true</tt> if the sleep completely entirely successfully, but otherwise
+   *         <tt>false</tt> if the sleep was interrupted.
    */
   private boolean sleep() {
     long now = EnvironmentEdgeManager.currentTime();

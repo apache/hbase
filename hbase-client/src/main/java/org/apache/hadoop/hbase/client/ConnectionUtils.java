@@ -49,6 +49,18 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -56,16 +68,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.DNS;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-import org.apache.hbase.thirdparty.io.netty.util.Timer;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility used by client connections.
@@ -163,7 +165,7 @@ public final class ConnectionUtils {
     public MasterKeepAliveConnection getMaster() throws IOException {
       if (this.localHostClient instanceof MasterService.BlockingInterface) {
         return new ShortCircuitMasterConnection(
-          (MasterService.BlockingInterface) this.localHostClient);
+            (MasterService.BlockingInterface) this.localHostClient);
       }
       return super.getMaster();
     }
@@ -412,7 +414,7 @@ public final class ConnectionUtils {
 
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 
   public static ScanResultCache createScanResultCache(Scan scan) {
@@ -560,8 +562,8 @@ public final class ConnectionUtils {
       (locs, error) -> {
         if (error != null) {
           LOG.warn(
-            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
-              " give up timeline consistent read",
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}"
+                + " give up timeline consistent read",
             tableName, Bytes.toStringBinary(row), locateType, error);
           return;
         }

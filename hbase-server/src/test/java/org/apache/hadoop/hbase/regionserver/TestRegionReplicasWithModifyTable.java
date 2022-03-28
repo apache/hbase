@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestRegionReplicasWithModifyTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicasWithModifyTable.class);
+      HBaseClassTestRule.forClass(TestRegionReplicasWithModifyTable.class);
 
   private static final int NB_SERVERS = 3;
 
@@ -76,7 +76,7 @@ public class TestRegionReplicasWithModifyTable {
   }
 
   private void enableReplicationByModification(boolean withReplica, int initialReplicaCount,
-    int enableReplicaCount, int splitCount) throws IOException, InterruptedException {
+      int enableReplicaCount, int splitCount) throws IOException, InterruptedException {
     TableName tableName = name.getTableName();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     if (withReplica) {
@@ -152,13 +152,13 @@ public class TestRegionReplicasWithModifyTable {
 
   @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsDecreasedWithMultipleRegions()
-    throws Exception {
+      throws Exception {
     enableReplicationByModification(true, 3, 2, 20);
   }
 
   @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreasedWithmultipleRegions()
-    throws Exception {
+      throws Exception {
     enableReplicationByModification(true, 2, 3, 15);
   }
 }

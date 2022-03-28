@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,8 +56,8 @@ import org.junit.experimental.categories.Category;
 public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     extends RSGroupableBalancerTestBase {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(
-      TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
+      .forClass(TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal.class);
   private static RSGroupBasedLoadBalancer loadBalancer;
 
   @BeforeClass
@@ -70,7 +70,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     conf.set("hbase.regions.slop", "0");
     conf.setFloat("hbase.master.balancer.stochastic.readRequestCost", 10000f);
     conf.set("hbase.rsgroup.grouploadbalancer.class",
-        StochasticLoadBalancer.class.getCanonicalName());
+      StochasticLoadBalancer.class.getCanonicalName());
     loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
@@ -82,7 +82,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
       List<RegionInfo> regionsOnServer, long readRequestCount) {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(RegionInfo info : regionsOnServer){
+    for (RegionInfo info : regionsOnServer) {
       RegionMetrics rl = mock(RegionMetrics.class);
       when(rl.getReadRequestCount()).thenReturn(readRequestCount);
       when(rl.getWriteRequestCount()).thenReturn(0L);
@@ -126,8 +126,8 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     // serverC : 0,0,0
     // so should move two regions from serverA to serverB & serverC
     serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(serverA, mockServerMetricsWithReadRequests(serverA,
-        regionsOnServerA, 1000));
+    serverMetricsMap.put(serverA,
+      mockServerMetricsWithReadRequests(serverA, regionsOnServerA, 1000));
     serverMetricsMap.put(serverB, mockServerMetricsWithReadRequests(serverB, regionsOnServerB, 0));
     serverMetricsMap.put(serverC, mockServerMetricsWithReadRequests(serverC, regionsOnServerC, 0));
     clusterStatus = mock(ClusterMetrics.class);
@@ -139,8 +139,8 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     Set<RegionInfo> regionsMoveFromServerA = new HashSet<>();
     Set<ServerName> targetServers = new HashSet<>();
-    for(RegionPlan plan : plans) {
-      if(plan.getSource().equals(serverA)) {
+    for (RegionPlan plan : plans) {
+      if (plan.getSource().equals(serverA)) {
         regionsMoveFromServerA.add(plan.getRegionInfo());
         targetServers.add(plan.getDestination());
       }

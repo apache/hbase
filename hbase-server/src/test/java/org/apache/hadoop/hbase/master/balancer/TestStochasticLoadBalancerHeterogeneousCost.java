@@ -1,22 +1,26 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.balancer;
 
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,7 +31,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -68,8 +71,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
       HeterogeneousRegionCountCostFunction.class.getName());
     // Need to ensure test dir has been created.
     assertTrue(FileSystem.get(HTU.getConfiguration()).mkdirs(HTU.getDataTestDir()));
-    RULES_FILE = HTU.getDataTestDir(
-      TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_FILE_NAME).toString();
+    RULES_FILE =
+        HTU.getDataTestDir(TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_FILE_NAME)
+            .toString();
     BalancerTestBase.conf.set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
@@ -213,8 +217,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
           // as the balancer is stochastic, we cannot check exactly the result of the balancing,
           // hence the allowedWindow parameter
           assertTrue("Host " + sn.getHostname() + " should be below "
-              + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage +
-              ", " + usage + ", " + numberRegions + ", " + limit,
+              + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage
+              + ", " + numberRegions + ", " + limit,
             usage <= cf.overallUsage * ALLOWED_WINDOW);
         }
       }
@@ -280,12 +284,12 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     return new ServerAndLoad(sn, 0);
   }
 
-  static class FairRandomCandidateGenerator extends
-    StochasticLoadBalancer.RandomCandidateGenerator {
+  static class FairRandomCandidateGenerator
+      extends StochasticLoadBalancer.RandomCandidateGenerator {
 
     @Override
     public BaseLoadBalancer.Cluster.Action pickRandomRegions(BaseLoadBalancer.Cluster cluster,
-      int thisServer, int otherServer) {
+        int thisServer, int otherServer) {
       if (thisServer < 0 || otherServer < 0) {
         return BaseLoadBalancer.Cluster.NullAction;
       }
@@ -304,7 +308,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
   static class StochasticLoadTestBalancer extends StochasticLoadBalancer {
     private FairRandomCandidateGenerator fairRandomCandidateGenerator =
-      new FairRandomCandidateGenerator();
+        new FairRandomCandidateGenerator();
 
     @Override
     protected CandidateGenerator getRandomGenerator() {

@@ -22,10 +22,9 @@ import java.net.InetAddress;
 import java.security.Permission;
 
 /*
-* A security manager for policing tests.
-* Note: some tests will override the security manager to use there own
-* TODO: Look at still using this in those tests
-* */
+ * A security manager for policing tests. Note: some tests will override the security manager to use
+ * there own TODO: Look at still using this in those tests
+ */
 public class TestSecurityManager extends SecurityManager {
   @Override
   public void checkExit(int status) {

@@ -135,8 +135,8 @@ class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
 
     if (!Bytes.equals(metaTableRow.getRow(), ri.getRegionName())) {
       LOG.warn(
-        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; " +
-          "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
+        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; "
+            + "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
         Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
       return null;
     }
@@ -183,7 +183,7 @@ class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
     }
     this.previous = ri;
     this.highestEndKeyRegionInfo =
-      MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
+        MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
     return ri;
   }
 
@@ -262,7 +262,7 @@ class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
         continue;
       }
       ServerManager.ServerLiveState state =
-        this.services.getServerManager().isServerKnownAndOnline(sn);
+          this.services.getServerManager().isServerKnownAndOnline(sn);
       switch (state) {
         case UNKNOWN:
           this.report.unknownServers.add(new Pair<>(ri, sn));

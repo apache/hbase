@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,10 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 /*
- * This test verifies that the scenarios illustrated by HBASE-10850 work
- * w.r.t. essential column family optimization
+ * This test verifies that the scenarios illustrated by HBASE-10850 work w.r.t. essential column
+ * family optimization
  */
 public class TestSCVFWithMiniCluster {
 
@@ -123,7 +123,7 @@ public class TestSCVFWithMiniCluster {
      * 'false'. Only row with key '1' should be returned in the scan.
      */
     scanFilter = new SingleColumnValueFilter(FAMILY_A, QUALIFIER_FOO, CompareOp.EQUAL,
-      new BinaryComparator(Bytes.toBytes("false")));
+        new BinaryComparator(Bytes.toBytes("false")));
     ((SingleColumnValueFilter) scanFilter).setFilterIfMissing(true);
   }
 
@@ -148,6 +148,7 @@ public class TestSCVFWithMiniCluster {
     }
     assertEquals(expected, count);
   }
+
   /**
    * Test the filter by adding all columns of family A in the scan. (OK)
    */

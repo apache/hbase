@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Gets or Scans throw this exception if running without in-row scan flag
- * set and row size appears to exceed max configured size (configurable via
- * hbase.table.max.rowsize).
+ * Gets or Scans throw this exception if running without in-row scan flag set and row size appears
+ * to exceed max configured size (configurable via hbase.table.max.rowsize).
  */
 @InterfaceAudience.Public
 public class RowTooBigException extends DoNotRetryRegionException {

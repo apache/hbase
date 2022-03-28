@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   @Override
   protected PeerModificationState nextStateAfterRefresh() {
     return peerConfig.isSerial() ? PeerModificationState.SERIAL_PEER_REOPEN_REGIONS
-      : super.nextStateAfterRefresh();
+        : super.nextStateAfterRefresh();
   }
 
   @Override
@@ -110,7 +110,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(AddPeerStateData.newBuilder()
-      .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig)).setEnabled(enabled).build());
+        .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig)).setEnabled(enabled).build());
   }
 
   @Override

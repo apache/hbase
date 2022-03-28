@@ -1,21 +1,26 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.util.StringUtils;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -35,9 +40,9 @@ public class RpcThrottlingException extends HBaseIOException {
 
   private static final String[] MSG_TYPE =
       new String[] { "number of requests exceeded", "request size limit exceeded",
-        "number of read requests exceeded", "number of write requests exceeded",
-        "write size limit exceeded", "read size limit exceeded", "request capacity unit exceeded",
-        "read capacity unit exceeded", "write capacity unit exceeded" };
+          "number of read requests exceeded", "number of write requests exceeded",
+          "write size limit exceeded", "read size limit exceeded", "request capacity unit exceeded",
+          "read capacity unit exceeded", "write capacity unit exceeded" };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -74,8 +79,8 @@ public class RpcThrottlingException extends HBaseIOException {
     return this.waitInterval;
   }
 
-  public static void throwNumRequestsExceeded(final long waitInterval) throws
-      RpcThrottlingException {
+  public static void throwNumRequestsExceeded(final long waitInterval)
+      throws RpcThrottlingException {
     throwThrottlingException(Type.NumRequestsExceeded, waitInterval);
   }
 
@@ -124,10 +129,9 @@ public class RpcThrottlingException extends HBaseIOException {
   }
 
   private static long timeFromString(String timeDiff) {
-    Pattern[] patterns =
-        new Pattern[] { Pattern.compile("^(\\d+\\.\\d\\d)sec"),
-            Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
-            Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec") };
+    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+\\.\\d\\d)sec"),
+        Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
+        Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec") };
 
     for (int i = 0; i < patterns.length; ++i) {
       Matcher m = patterns[i].matcher(timeDiff);

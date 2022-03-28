@@ -61,10 +61,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
- * This class is only a base for other integration-level replication tests.
- * Do not add tests here.
- * TestReplicationSmallTests is where tests that don't require bring machines up/down should go
- * All other tests should have their own classes and extend this one
+ * This class is only a base for other integration-level replication tests. Do not add tests here.
+ * TestReplicationSmallTests is where tests that don't require bring machines up/down should go All
+ * other tests should have their own classes and extend this one
  */
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
@@ -86,8 +85,7 @@ public class TestReplicationBase {
   protected static int NUM_SLAVES1 = 1;
   protected static int NUM_SLAVES2 = 1;
   protected static final int NB_ROWS_IN_BATCH = 100;
-  protected static final int NB_ROWS_IN_BIG_BATCH =
-      NB_ROWS_IN_BATCH * 10;
+  protected static final int NB_ROWS_IN_BIG_BATCH = NB_ROWS_IN_BATCH * 10;
   protected static final long SLEEP_TIME = 500;
   protected static final int NB_RETRIES = 50;
   protected static AtomicInteger replicateCount = new AtomicInteger();
@@ -106,8 +104,7 @@ public class TestReplicationBase {
   protected final void cleanUp() throws IOException, InterruptedException {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
-        .getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster().getRegionServerThreads()) {
       UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     int rowCount = UTIL1.countRows(tableName);
@@ -149,7 +146,7 @@ public class TestReplicationBase {
     Scan scan;
     for (int i = 0; i < retries; i++) {
       scan = new Scan();
-      if (i== retries -1) {
+      if (i == retries - 1) {
         fail("Waited too much time for normal batch replication");
       }
       ResultScanner scanner = htable2.getScanner(scan);
@@ -201,8 +198,7 @@ public class TestReplicationBase {
     conf.setLong("hbase.serial.replication.waiting.ms", 100);
   }
 
-  static void configureClusters(HBaseTestingUtility util1,
-      HBaseTestingUtility util2) {
+  static void configureClusters(HBaseTestingUtility util1, HBaseTestingUtility util2) {
     setupConfig(util1, "/1");
     setupConfig(util2, "/2");
 
@@ -256,9 +252,7 @@ public class TestReplicationBase {
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
-    try (
-      Admin admin1 = connection1.getAdmin();
-      Admin admin2 = connection2.getAdmin()) {
+    try (Admin admin1 = connection1.getAdmin(); Admin admin2 = connection2.getAdmin()) {
       admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       UTIL1.waitUntilAllRegionsAssigned(tableName);
@@ -283,8 +277,8 @@ public class TestReplicationBase {
   public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).setReplicationEndpointImpl(
-          ReplicationEndpointTest.class.getName());
+          .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
+          .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
       hbaseAdmin.addReplicationPeer(PEER_ID2, builder.build());
     }
   }
@@ -383,7 +377,8 @@ public class TestReplicationBase {
       replicateCount.set(0);
     }
 
-    @Override public boolean replicate(ReplicateContext replicateContext) {
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
       replicateCount.incrementAndGet();
       replicatedEntries.addAll(replicateContext.getEntries());
 

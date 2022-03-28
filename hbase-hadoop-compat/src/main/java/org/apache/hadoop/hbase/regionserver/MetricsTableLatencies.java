@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -59,7 +60,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the Put time histogram
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -67,7 +67,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the batch Put time histogram
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -75,7 +74,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the Delete time histogram
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -83,7 +81,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the batch Delete time histogram
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -91,7 +88,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the Get time histogram .
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -99,7 +95,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the Increment time histogram.
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -107,7 +102,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the Append time histogram.
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */
@@ -115,7 +109,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the scan size.
-   *
    * @param tableName The table the metric is for
    * @param scanSize size of the scan
    */
@@ -123,7 +116,6 @@ public interface MetricsTableLatencies {
 
   /**
    * Update the scan time.
-   *
    * @param tableName The table the metric is for
    * @param t time it took
    */

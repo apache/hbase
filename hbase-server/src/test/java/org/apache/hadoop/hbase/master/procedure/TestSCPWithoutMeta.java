@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ public class TestSCPWithoutMeta extends TestSCPBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSCPWithoutMeta.class);
+      HBaseClassTestRule.forClass(TestSCPWithoutMeta.class);
 
   @Test
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {

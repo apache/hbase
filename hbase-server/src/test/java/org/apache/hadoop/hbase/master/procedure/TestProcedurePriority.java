@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestProcedurePriority {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedurePriority.class);
+      HBaseClassTestRule.forClass(TestProcedurePriority.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -109,13 +109,13 @@ public class TestProcedurePriority {
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MyCP.class.getName());
     UTIL.startMiniCluster(3);
     CORE_POOL_SIZE =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
     TABLE_COUNT = 50 * CORE_POOL_SIZE;
     List<Future<?>> futures = new ArrayList<>();
     for (int i = 0; i < TABLE_COUNT; i++) {
       futures.add(UTIL.getAdmin().createTableAsync(
         TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build()));
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build()));
     }
     for (Future<?> future : futures) {
       future.get(1, TimeUnit.MINUTES);
@@ -132,8 +132,8 @@ public class TestProcedurePriority {
   @Test
   public void test() throws Exception {
     RegionServerThread rsWithMetaThread = UTIL.getMiniHBaseCluster().getRegionServerThreads()
-      .stream().filter(t -> !t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty())
-      .findAny().get();
+        .stream().filter(t -> !t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty())
+        .findAny().get();
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
     // wait for NS table initialization to avoid our error inject affecting master initialization
     UTIL.waitTableAvailable(TableName.NAMESPACE_TABLE_NAME);
@@ -142,7 +142,7 @@ public class TestProcedurePriority {
     // wait until all the worker thread are stuck, which means that the stuck checker will start to
     // add new worker thread.
     ProcedureExecutor<?> executor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.waitFor(60000, new ExplainingPredicate<Exception>() {
 
       @Override

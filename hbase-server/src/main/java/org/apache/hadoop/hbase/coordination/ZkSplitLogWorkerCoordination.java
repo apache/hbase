@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coordination;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
@@ -59,20 +57,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ZooKeeper based implementation of {@link SplitLogWorkerCoordination}
- * It listen for changes in ZooKeeper and
- *
+ * ZooKeeper based implementation of {@link SplitLogWorkerCoordination} It listen for changes in
+ * ZooKeeper and
  */
 @InterfaceAudience.Private
-public class ZkSplitLogWorkerCoordination extends ZKListener implements
-    SplitLogWorkerCoordination {
+public class ZkSplitLogWorkerCoordination extends ZKListener implements SplitLogWorkerCoordination {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZkSplitLogWorkerCoordination.class);
 
   private static final int checkInterval = 5000; // 5 seconds
   private static final int FAILED_TO_OWN_TASK = -1;
 
-  private  SplitLogWorker worker;
+  private SplitLogWorker worker;
 
   private TaskExecutor splitTaskExecutor;
 
@@ -132,17 +128,16 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
    * Override setter from {@link SplitLogWorkerCoordination}
    */
   @Override
-  public void init(RegionServerServices server, Configuration conf,
-      TaskExecutor splitExecutor, SplitLogWorker worker) {
+  public void init(RegionServerServices server, Configuration conf, TaskExecutor splitExecutor,
+      SplitLogWorker worker) {
     this.server = server;
     this.worker = worker;
     this.splitTaskExecutor = splitExecutor;
     maxConcurrentTasks =
         conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER);
-    reportPeriod =
-        conf.getInt("hbase.splitlog.report.period",
-          conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
-            ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT) / 3);
+    reportPeriod = conf.getInt("hbase.splitlog.report.period",
+      conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
+        ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT) / 3);
   }
 
   /* Support functions for ZooKeeper async callback */
@@ -165,8 +160,8 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   }
 
   public void getDataSetWatchAsync() {
-    watcher.getRecoverableZooKeeper().getZooKeeper()
-        .getData(currentTask, watcher, new GetDataAsyncCallback(), null);
+    watcher.getRecoverableZooKeeper().getZooKeeper().getData(currentTask, watcher,
+      new GetDataAsyncCallback(), null);
     SplitLogCounters.tot_wkr_get_data_queued.increment();
   }
 
@@ -299,9 +294,8 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
         long t = EnvironmentEdgeManager.currentTime();
         if ((t - last_report_at) > reportPeriod) {
           last_report_at = t;
-          int latestZKVersion =
-              attemptToOwnTask(false, watcher, server.getServerName(), curTask,
-                zkVersion.intValue());
+          int latestZKVersion = attemptToOwnTask(false, watcher, server.getServerName(), curTask,
+            zkVersion.intValue());
           if (latestZKVersion < 0) {
             LOG.warn("Failed to heartbeat the task" + curTask);
             return false;
@@ -316,9 +310,8 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     splitTaskDetails.setTaskNode(curTask);
     splitTaskDetails.setCurTaskZKVersion(zkVersion);
 
-    WALSplitterHandler hsh =
-        new WALSplitterHandler(server, this, splitTaskDetails, reporter,
-            this.tasksInProgress, splitTaskExecutor);
+    WALSplitterHandler hsh = new WALSplitterHandler(server, this, splitTaskDetails, reporter,
+        this.tasksInProgress, splitTaskExecutor);
     server.getExecutorService().submit(hsh);
   }
 
@@ -342,8 +335,8 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
    * @param taskZKVersion version of the task in zk
    * @return non-negative integer value when task can be owned by current region server otherwise -1
    */
-  protected static int attemptToOwnTask(boolean isFirstTime, ZKWatcher zkw,
-      ServerName server, String task, int taskZKVersion) {
+  protected static int attemptToOwnTask(boolean isFirstTime, ZKWatcher zkw, ServerName server,
+      String task, int taskZKVersion) {
     int latestZKVersion = FAILED_TO_OWN_TASK;
     try {
       SplitLogTask slt = new SplitLogTask.Owned(server);
@@ -413,18 +406,18 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
           if (this.areSplittersAvailable()) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Current region server " + server.getServerName()
-                + " is ready to take more tasks, will get task list and try grab tasks again.");
+                  + " is ready to take more tasks, will get task list and try grab tasks again.");
             }
             int idx = (i + offset) % paths.size();
             // don't call ZKSplitLog.getNodeName() because that will lead to
             // double encoding of the path name
-            taskGrabbed |= grabTask(ZNodePaths.joinZNode(
-                watcher.getZNodePaths().splitLogZNode, paths.get(idx)));
+            taskGrabbed |= grabTask(
+              ZNodePaths.joinZNode(watcher.getZNodePaths().splitLogZNode, paths.get(idx)));
             break;
           } else {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Current region server " + server.getServerName() + " has "
-                + this.tasksInProgress.get() + " tasks in progress and can't take more.");
+                  + this.tasksInProgress.get() + " tasks in progress and can't take more.");
             }
             Thread.sleep(100);
           }
@@ -480,8 +473,9 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       result = ZKUtil.checkExists(watcher, watcher.getZNodePaths().splitLogZNode);
     } catch (KeeperException e) {
       // ignore
-      LOG.warn("Exception when checking for " + watcher.getZNodePaths().splitLogZNode
-          + " ... retrying", e);
+      LOG.warn(
+        "Exception when checking for " + watcher.getZNodePaths().splitLogZNode + " ... retrying",
+        e);
     }
     if (result == -1) {
       LOG.info(watcher.getZNodePaths().splitLogZNode
@@ -505,7 +499,6 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   public void removeListener() {
     watcher.unregisterListener(this);
   }
-
 
   @Override
   public void stopProcessingTasks() {

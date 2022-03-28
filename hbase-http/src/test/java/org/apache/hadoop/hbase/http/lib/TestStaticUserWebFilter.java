@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestStaticUserWebFilter {
 
   @ClassRule
@@ -47,8 +47,8 @@ public class TestStaticUserWebFilter {
 
   private FilterConfig mockConfig(String username) {
     FilterConfig mock = Mockito.mock(FilterConfig.class);
-    Mockito.doReturn(username).when(mock).getInitParameter(
-            ServerConfigurationKeys.HBASE_HTTP_STATIC_USER);
+    Mockito.doReturn(username).when(mock)
+        .getInitParameter(ServerConfigurationKeys.HBASE_HTTP_STATIC_USER);
     return mock;
   }
 
@@ -59,14 +59,13 @@ public class TestStaticUserWebFilter {
     suf.init(config);
 
     ArgumentCaptor<HttpServletRequestWrapper> wrapperArg =
-      ArgumentCaptor.forClass(HttpServletRequestWrapper.class);
+        ArgumentCaptor.forClass(HttpServletRequestWrapper.class);
 
     FilterChain chain = mock(FilterChain.class);
 
-    suf.doFilter(mock(HttpServletRequest.class), mock(ServletResponse.class),
-        chain);
+    suf.doFilter(mock(HttpServletRequest.class), mock(ServletResponse.class), chain);
 
-    Mockito.verify(chain).doFilter(wrapperArg.capture(), Mockito.<ServletResponse>anyObject());
+    Mockito.verify(chain).doFilter(wrapperArg.capture(), Mockito.<ServletResponse> anyObject());
 
     HttpServletRequestWrapper wrapper = wrapperArg.getValue();
     assertEquals("myuser", wrapper.getUserPrincipal().getName());

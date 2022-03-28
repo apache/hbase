@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class FastLongHistogram {
   public static final int DEFAULT_NBINS = 255;
 
   public static final double[] DEFAULT_QUANTILES =
-      new double[]{0.25, 0.5, 0.75, 0.90, 0.95, 0.98, 0.99, 0.999};
+      new double[] { 0.25, 0.5, 0.75, 0.90, 0.95, 0.98, 0.99, 0.999 };
 
   /**
    * Bins is a class containing a list of buckets(or bins) for estimation histogram of some data.
@@ -105,8 +105,8 @@ public class FastLongHistogram {
         return this.counts.length - 2;
       }
       // compute the position
-      return 1 + (int) ((value - this.binsMin) * (this.counts.length - 3) /
-          (this.binsMax - this.binsMin));
+      return 1 + (int) ((value - this.binsMin) * (this.counts.length - 3)
+          / (this.binsMax - this.binsMin));
 
     }
 

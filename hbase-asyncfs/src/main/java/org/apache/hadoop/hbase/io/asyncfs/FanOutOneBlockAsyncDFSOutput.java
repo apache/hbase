@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -146,7 +146,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
         this.unfinishedReplicas = Collections.emptySet();
       } else {
         this.unfinishedReplicas =
-          Collections.newSetFromMap(new ConcurrentHashMap<ChannelId, Boolean>(replicas.size()));
+            Collections.newSetFromMap(new ConcurrentHashMap<ChannelId, Boolean>(replicas.size()));
         replicas.stream().map(c -> c.id()).forEachOrdered(unfinishedReplicas::add);
       }
     }
@@ -270,13 +270,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     protected void channelRead0(ChannelHandlerContext ctx, PipelineAckProto ack) throws Exception {
       Status reply = getStatus(ack);
       if (reply != Status.SUCCESS) {
-        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " + block
+            + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (PipelineAck.isRestartOOBStatus(reply)) {
-        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block "
+            + block + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (ack.getSeqno() == HEART_BEAT_SEQNO) {
@@ -331,8 +331,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
   }
 
-  FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
-      DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
+  FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
+      ClientProtocol namenode, String clientName, String src, long fileId,
       LocatedBlock locatedBlock, Encryptor encryptor, List<Channel> datanodeList,
       DataChecksum summer, ByteBufAllocator alloc) {
     this.conf = conf;

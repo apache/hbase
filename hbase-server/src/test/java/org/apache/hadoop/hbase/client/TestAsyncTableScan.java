@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
     AsyncTable<ScanResultConsumer> table =
-      ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
+        ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
     table.scan(scan, consumer);
     List<Result> results = consumer.getAll();

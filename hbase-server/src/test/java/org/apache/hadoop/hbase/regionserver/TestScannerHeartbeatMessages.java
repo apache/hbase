@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -553,11 +553,9 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap =
-          new HeartbeatKVHeap(scanners, region.getCellComparator());
+      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap =
-            new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
+        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }

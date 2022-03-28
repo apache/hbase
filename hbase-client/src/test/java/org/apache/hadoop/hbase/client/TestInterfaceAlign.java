@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestInterfaceAlign {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInterfaceAlign.class);
+      HBaseClassTestRule.forClass(TestInterfaceAlign.class);
 
   /**
    * Test methods name match up
@@ -76,8 +76,8 @@ public class TestInterfaceAlign {
   private <T> List<String> getMethodNames(Class<T> c) {
     // DON'T use the getDeclaredMethods as we want to check the Public APIs only.
     return Arrays.asList(c.getMethods()).stream().filter(m -> !isDeprecated(m))
-      .filter(m -> !Modifier.isStatic(m.getModifiers())).map(Method::getName).distinct()
-      .collect(Collectors.toList());
+        .filter(m -> !Modifier.isStatic(m.getModifiers())).map(Method::getName).distinct()
+        .collect(Collectors.toList());
   }
 
   private boolean isDeprecated(Method method) {

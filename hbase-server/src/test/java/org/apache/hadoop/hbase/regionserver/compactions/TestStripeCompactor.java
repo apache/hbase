@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -207,10 +207,10 @@ public class TestStripeCompactor {
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));
     when(store.getRegionInfo()).thenReturn(new HRegionInfo(TABLE_NAME));
-    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
-      anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
-    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
-      anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyString())).thenAnswer(writers);
+    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(), anyBoolean(), anyBoolean(),
+      anyBoolean())).thenAnswer(writers);
+    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(), anyBoolean(), anyBoolean(),
+      anyBoolean(), anyLong(), anyString())).thenAnswer(writers);
     when(store.getComparator()).thenReturn(CellComparatorImpl.COMPARATOR);
 
     return new StripeCompactor(conf, store) {

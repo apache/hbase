@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -34,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -50,15 +49,14 @@ class DefaultStoreFileManager implements StoreFileManager {
   private final int blockingFileCount;
   private final Comparator<HStoreFile> storeFileComparator;
   /**
-   * List of store files inside this store. This is an immutable list that
-   * is atomically replaced when its contents change.
+   * List of store files inside this store. This is an immutable list that is atomically replaced
+   * when its contents change.
    */
   private volatile ImmutableList<HStoreFile> storefiles = ImmutableList.of();
   /**
-   * List of compacted files inside this store that needs to be excluded in reads
-   * because further new reads will be using only the newly created files out of compaction.
-   * These compacted files will be deleted/cleared once all the existing readers on these
-   * compacted files are done.
+   * List of compacted files inside this store that needs to be excluded in reads because further
+   * new reads will be using only the newly created files out of compaction. These compacted files
+   * will be deleted/cleared once all the existing readers on these compacted files are done.
    */
   private volatile ImmutableList<HStoreFile> compactedfiles = ImmutableList.of();
 
@@ -181,7 +179,7 @@ class DefaultStoreFileManager implements StoreFileManager {
       long fileTs = sf.getReader().getMaxTimestamp();
       if (fileTs < maxTs && !filesCompacting.contains(sf)) {
         LOG.info("Found an expired store file {} whose maxTimestamp is {}, which is below {}",
-            sf.getPath(), fileTs,  maxTs);
+          sf.getPath(), fileTs, maxTs);
         return true;
       } else {
         return false;
@@ -204,4 +202,3 @@ class DefaultStoreFileManager implements StoreFileManager {
     return storeFileComparator;
   }
 }
-

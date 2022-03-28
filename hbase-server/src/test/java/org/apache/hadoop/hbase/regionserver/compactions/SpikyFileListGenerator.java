@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ class SpikyFileListGenerator extends StoreFileListGenerator {
         Random rand = ThreadLocalRandom.current();
         for (int x = 0; x < NUM_FILES_GEN; x++) {
           int fileSize = rand.nextInt(5) + 1;
-          if ( x % 10 == 0) {
+          if (x % 10 == 0) {
             fileSize = rand.nextInt(5) + 50;
           }
           files.add(createMockStoreFile(fileSize));

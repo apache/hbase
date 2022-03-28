@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public final class RecoverLeaseFSUtils {
   }
 
   public static void recoverFileLease(FileSystem fs, Path p, Configuration conf)
-    throws IOException {
+      throws IOException {
     recoverFileLease(fs, p, conf, null);
   }
 
@@ -51,7 +51,7 @@ public final class RecoverLeaseFSUtils {
    * Recover the lease from HDFS, retrying multiple times.
    */
   public static void recoverFileLease(FileSystem fs, Path p, Configuration conf,
-    CancelableProgressable reporter) throws IOException {
+      CancelableProgressable reporter) throws IOException {
     if (fs instanceof FilterFileSystem) {
       fs = ((FilterFileSystem) fs).getRawFileSystem();
     }
@@ -82,7 +82,7 @@ public final class RecoverLeaseFSUtils {
    * second and we might be able to exit early.
    */
   private static boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
-    final Configuration conf, final CancelableProgressable reporter) throws IOException {
+      final Configuration conf, final CancelableProgressable reporter) throws IOException {
     LOG.info("Recover lease on dfs file " + p);
     long startWaiting = EnvironmentEdgeManager.currentTime();
     // Default is 15 minutes. It's huge, but the idea is that if we have a major issue, HDFS
@@ -120,13 +120,13 @@ public final class RecoverLeaseFSUtils {
           // Cycle here until (subsequentPause * nbAttempt) elapses. While spinning, check
           // isFileClosed if available (should be in hadoop 2.0.5... not in hadoop 1 though.
           long localStartWaiting = EnvironmentEdgeManager.currentTime();
-          while ((EnvironmentEdgeManager.currentTime() - localStartWaiting) < subsequentPauseBase *
-            nbAttempt) {
+          while ((EnvironmentEdgeManager.currentTime() - localStartWaiting) < subsequentPauseBase
+              * nbAttempt) {
             Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
             if (findIsFileClosedMeth) {
               try {
                 isFileClosedMeth =
-                  dfs.getClass().getMethod("isFileClosed", new Class[] { Path.class });
+                    dfs.getClass().getMethod("isFileClosed", new Class[] { Path.class });
               } catch (NoSuchMethodException nsme) {
                 LOG.debug("isFileClosed not available");
               } finally {
@@ -150,12 +150,12 @@ public final class RecoverLeaseFSUtils {
   }
 
   private static boolean checkIfTimedout(final Configuration conf, final long recoveryTimeout,
-    final int nbAttempt, final Path p, final long startWaiting) {
+      final int nbAttempt, final Path p, final long startWaiting) {
     if (recoveryTimeout < EnvironmentEdgeManager.currentTime()) {
-      LOG.warn("Cannot recoverLease after trying for " +
-        conf.getInt("hbase.lease.recovery.timeout", 900000) +
-        "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; " +
-        getLogMessageDetail(nbAttempt, p, startWaiting));
+      LOG.warn("Cannot recoverLease after trying for "
+          + conf.getInt("hbase.lease.recovery.timeout", 900000)
+          + "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; "
+          + getLogMessageDetail(nbAttempt, p, startWaiting));
       return true;
     }
     return false;
@@ -166,12 +166,12 @@ public final class RecoverLeaseFSUtils {
    * @return True if dfs#recoverLease came by true.
    */
   private static boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt,
-    final Path p, final long startWaiting) throws FileNotFoundException {
+      final Path p, final long startWaiting) throws FileNotFoundException {
     boolean recovered = false;
     try {
       recovered = dfs.recoverLease(p);
-      LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ") +
-        getLogMessageDetail(nbAttempt, p, startWaiting));
+      LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ")
+          + getLogMessageDetail(nbAttempt, p, startWaiting));
     } catch (IOException e) {
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
         // This exception comes out instead of FNFE, fix it
@@ -188,9 +188,9 @@ public final class RecoverLeaseFSUtils {
    * @return Detail to append to any log message around lease recovering.
    */
   private static String getLogMessageDetail(final int nbAttempt, final Path p,
-    final long startWaiting) {
-    return "attempt=" + nbAttempt + " on file=" + p + " after " +
-      (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
+      final long startWaiting) {
+    return "attempt=" + nbAttempt + " on file=" + p + " after "
+        + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
   }
 
   /**
@@ -198,7 +198,7 @@ public final class RecoverLeaseFSUtils {
    * @return True if file is closed.
    */
   private static boolean isFileClosed(final DistributedFileSystem dfs, final Method m,
-    final Path p) {
+      final Path p) {
     try {
       return (Boolean) m.invoke(dfs, p);
     } catch (SecurityException e) {
@@ -210,7 +210,7 @@ public final class RecoverLeaseFSUtils {
   }
 
   private static void checkIfCancelled(final CancelableProgressable reporter)
-    throws InterruptedIOException {
+      throws InterruptedIOException {
     if (reporter == null) {
       return;
     }

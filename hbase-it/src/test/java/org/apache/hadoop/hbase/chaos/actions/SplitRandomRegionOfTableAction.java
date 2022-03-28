@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -28,11 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to split a random region of a table.
-*/
+ * Action that tries to split a random region of a table.
+ */
 public class SplitRandomRegionOfTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(SplitRandomRegionOfTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 
@@ -45,7 +43,8 @@ public class SplitRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -65,8 +64,7 @@ public class SplitRandomRegionOfTableAction extends Action {
       return;
     }
 
-    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-        regions.toArray(new RegionInfo[0]));
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(regions.toArray(new RegionInfo[0]));
     getLogger().debug("Splitting region " + region.getRegionNameAsString());
     try {
       admin.splitRegionAsync(region.getRegionName()).get();

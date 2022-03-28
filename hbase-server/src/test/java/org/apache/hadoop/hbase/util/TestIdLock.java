@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,13 +38,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdLock {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIdLock.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestIdLock.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIdLock.class);
 
@@ -77,8 +76,7 @@ public class TestIdLock {
           int sleepMs = 1 + rand.nextInt(4);
           String owner = idOwner.get(id);
           if (owner != null) {
-            LOG.error("Id " + id + " already taken by " + owner + ", "
-                + clientId + " failed");
+            LOG.error("Id " + id + " already taken by " + owner + ", " + clientId + " failed");
             return false;
           }
 
@@ -113,6 +111,4 @@ public class TestIdLock {
     }
   }
 
-
 }
-

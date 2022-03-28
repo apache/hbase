@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -104,10 +105,10 @@ public class MasterAddressRefresher implements Closeable {
   MasterAddressRefresher(Configuration conf, MasterRegistry registry) {
     pool = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
         .setNameFormat("master-registry-refresh-end-points").setDaemon(true).build());
-    periodicRefreshMs = TimeUnit.SECONDS.toMillis(conf.getLong(PERIODIC_REFRESH_INTERVAL_SECS,
-        PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
-    timeBetweenRefreshesMs = TimeUnit.SECONDS.toMillis(conf.getLong(MIN_SECS_BETWEEN_REFRESHES,
-        MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
+    periodicRefreshMs = TimeUnit.SECONDS.toMillis(
+      conf.getLong(PERIODIC_REFRESH_INTERVAL_SECS, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
+    timeBetweenRefreshesMs = TimeUnit.SECONDS
+        .toMillis(conf.getLong(MIN_SECS_BETWEEN_REFRESHES, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
     Preconditions.checkArgument(periodicRefreshMs > 0);
     Preconditions.checkArgument(timeBetweenRefreshesMs < periodicRefreshMs);
     this.registry = registry;

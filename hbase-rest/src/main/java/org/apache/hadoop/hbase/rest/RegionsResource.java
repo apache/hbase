@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -66,8 +64,8 @@ public class RegionsResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+      MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
@@ -82,14 +80,14 @@ public class RegionsResource extends ResourceBase {
 
       List<HRegionLocation> locs;
       try (Connection connection = ConnectionFactory.createConnection(servlet.getConfiguration());
-        RegionLocator locator = connection.getRegionLocator(tableName)) {
+          RegionLocator locator = connection.getRegionLocator(tableName)) {
         locs = locator.getAllRegionLocations();
       }
       for (HRegionLocation loc : locs) {
         RegionInfo hri = loc.getRegion();
         ServerName addr = loc.getServerName();
         model.add(new TableRegionModel(tableName.getNameAsString(), hri.getRegionId(),
-          hri.getStartKey(), hri.getEndKey(), addr.getAddress().toString()));
+            hri.getStartKey(), hri.getEndKey(), addr.getAddress().toString()));
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
@@ -97,14 +95,12 @@ public class RegionsResource extends ResourceBase {
       return response.build();
     } catch (TableNotFoundException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.NOT_FOUND)
-        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-        .build();
+      return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+          .entity("Not found" + CRLF).build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
+          .entity("Unavailable" + CRLF).build();
     }
   }
 }

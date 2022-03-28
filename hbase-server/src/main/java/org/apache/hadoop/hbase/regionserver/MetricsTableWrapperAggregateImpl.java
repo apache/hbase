@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
@@ -27,12 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -43,8 +41,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private Runnable runnable;
   private long period;
   private ScheduledFuture<?> tableMetricsUpdateTask;
-  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap
-    = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap =
+      new ConcurrentHashMap<>();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -52,8 +50,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
-    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
-      period, TimeUnit.MILLISECONDS);
+    this.tableMetricsUpdateTask =
+        this.executor.scheduleWithFixedDelay(this.runnable, period, period, TimeUnit.MILLISECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -122,8 +120,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         TableName tbl = entry.getKey();
         if (metricsTableMap.get(tbl) == null) {
           // this will add the Wrapper to the list of TableMetrics
-          CompatibilitySingletonFactory
-              .getInstance(MetricsRegionServerSourceFactory.class)
+          CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
               .getTableAggregate()
               .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
         }
@@ -290,8 +287,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     }
 
-    return metricsTable.storeFileCount == 0
-        ? 0
+    return metricsTable.storeFileCount == 0 ? 0
         : (metricsTable.totalStoreFileAge / metricsTable.storeFileCount);
   }
 
@@ -310,8 +306,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     if (metricsTable == null) {
       return 0;
     }
-    return metricsTable.regionCount == 0
-        ? 0
+    return metricsTable.regionCount == 0 ? 0
         : (metricsTable.memstoreSize + metricsTable.storeFileSize) / metricsTable.regionCount;
   }
 

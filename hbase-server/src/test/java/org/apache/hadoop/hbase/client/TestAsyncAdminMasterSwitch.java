@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,18 +41,18 @@ public class TestAsyncAdminMasterSwitch extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminMasterSwitch.class);
+      HBaseClassTestRule.forClass(TestAsyncAdminMasterSwitch.class);
 
   @Test
   public void testSwitch() throws IOException, InterruptedException {
     assertEquals(TEST_UTIL.getHBaseCluster().getRegionServerThreads().size(),
       admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME)).join()
-        .getServersName().size());
+          .getServersName().size());
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0).join();
     assertTrue(TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(30000));
     // make sure that we could still call master
     assertEquals(TEST_UTIL.getHBaseCluster().getRegionServerThreads().size(),
       admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME)).join()
-        .getServersName().size());
+          .getServersName().size());
   }
 }

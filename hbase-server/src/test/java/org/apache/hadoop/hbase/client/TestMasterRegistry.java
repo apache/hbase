@@ -113,7 +113,7 @@ public class TestMasterRegistry {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
     final int size =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
+        activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
     for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
       conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
       try (MasterRegistry registry = new MasterRegistry(conf)) {
@@ -123,9 +123,9 @@ public class TestMasterRegistry {
         assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
-          Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
+            Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
         List<HRegionLocation> actualMetaLocations =
-          activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
+            activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
         Collections.sort(metaLocations);
         Collections.sort(actualMetaLocations);
         assertEquals(actualMetaLocations, metaLocations);
@@ -157,7 +157,7 @@ public class TestMasterRegistry {
       assertEquals(registry.getClusterId().get(), clusterId);
       // Wait for new set of masters to be populated.
       TEST_UTIL.waitFor(5000,
-          (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
+        (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
       // new set of masters should not include the bad server
       final Set<ServerName> newMasters = registry.getParsedMasterServers();
       // Bad one should be out.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,10 +64,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests for conditions that should trigger RegionServer aborts when
- * rolling the current WAL fails.
+ * Tests for conditions that should trigger RegionServer aborts when rolling the current WAL fails.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestLogRollAbort {
 
   @ClassRule
@@ -90,8 +89,7 @@ public class TestLogRollAbort {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Tweak default timeout values down for faster recovery
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.logroll.errors.tolerated", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
     // Increase the amount of time between client retries
@@ -132,8 +130,8 @@ public class TestLogRollAbort {
   }
 
   /**
-   * Tests that RegionServer aborts if we hit an error closing the WAL when
-   * there are unsynced WAL edits.  See HBASE-4282.
+   * Tests that RegionServer aborts if we hit an error closing the WAL when there are unsynced WAL
+   * edits. See HBASE-4282.
    */
   @Test
   public void testRSAbortWithUnflushedEdits() throws Exception {
@@ -169,8 +167,8 @@ public class TestLogRollAbort {
       try {
         log.rollWriter(true);
       } catch (FailedLogCloseException flce) {
-        // Expected exception.  We used to expect that there would be unsynced appends but this
-        // not reliable now that sync plays a roll in wall rolling.  The above puts also now call
+        // Expected exception. We used to expect that there would be unsynced appends but this
+        // not reliable now that sync plays a roll in wall rolling. The above puts also now call
         // sync.
       } catch (Throwable t) {
         LOG.error(HBaseMarkers.FATAL, "FAILED TEST: Got wrong exception", t);
@@ -181,22 +179,21 @@ public class TestLogRollAbort {
   }
 
   /**
-   * Tests the case where a RegionServer enters a GC pause,
-   * comes back online after the master declared it dead and started to split.
-   * Want log rolling after a master split to fail. See HBASE-2312.
+   * Tests the case where a RegionServer enters a GC pause, comes back online after the master
+   * declared it dead and started to split. Want log rolling after a master split to fail. See
+   * HBASE-2312.
    */
   @Test
   public void testLogRollAfterSplitStart() throws IOException {
     LOG.info("Verify wal roll after split starts will fail.");
-    String logName = ServerName.valueOf("testLogRollAfterSplitStart",
-        16010, System.currentTimeMillis()).toString();
+    String logName = ServerName
+        .valueOf("testLogRollAfterSplitStart", 16010, System.currentTimeMillis()).toString();
     Path thisTestsDir = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(logName));
     final WALFactory wals = new WALFactory(conf, logName);
 
     try {
       // put some entries in an WAL
-      TableName tableName =
-          TableName.valueOf(this.getClass().getName());
+      TableName tableName = TableName.valueOf(this.getClass().getName());
       RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
       WAL log = wals.getWAL(regionInfo);
       MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
@@ -208,11 +205,12 @@ public class TestLogRollAbort {
         NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         scopes.put(Bytes.toBytes("column"), 0);
         log.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+            System.currentTimeMillis(), mvcc, scopes),
+          kvs);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();
-      ((AbstractFSWAL<?>) log).replaceWriter(((FSHLog)log).getOldPath(), null, null);
+      ((AbstractFSWAL<?>) log).replaceWriter(((FSHLog) log).getOldPath(), null, null);
 
       // code taken from MasterFileSystem.getLogDirs(), which is called from
       // MasterFileSystem.splitLog() handles RS shutdowns (as observed by the splitting process)

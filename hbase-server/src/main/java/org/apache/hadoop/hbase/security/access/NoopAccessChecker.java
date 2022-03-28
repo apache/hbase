@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -28,8 +27,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * NoopAccessChecker is returned when hbase.security.authorization is not enabled.
- * Always allow authorization if any user require any permission.
+ * NoopAccessChecker is returned when hbase.security.authorization is not enabled. Always allow
+ * authorization if any user require any permission.
  */
 @InterfaceAudience.Private
 public final class NoopAccessChecker extends AccessChecker {

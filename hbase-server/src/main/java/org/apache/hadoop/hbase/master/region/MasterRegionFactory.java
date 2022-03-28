@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,18 +80,18 @@ public final class MasterRegionFactory {
   public static final byte[] PROC_FAMILY = Bytes.toBytes("proc");
 
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
 
   public static MasterRegion create(Server server) throws IOException {
     MasterRegionParams params = new MasterRegionParams().server(server)
-      .regionDirName(MASTER_STORE_DIR).tableDescriptor(TABLE_DESC);
+        .regionDirName(MASTER_STORE_DIR).tableDescriptor(TABLE_DESC);
     Configuration conf = server.getConfiguration();
     long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
     long flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
     long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
     int compactMin = conf.getInt(COMPACT_MIN_KEY, DEFAULT_COMPACT_MIN);
     params.flushSize(flushSize).flushPerChanges(flushPerChanges).flushIntervalMs(flushIntervalMs)
-      .compactMin(compactMin);
+        .compactMin(compactMin);
     int maxWals = conf.getInt(MAX_WALS_KEY, DEFAULT_MAX_WALS);
     params.maxWals(maxWals);
     if (conf.get(USE_HSYNC_KEY) != null) {
@@ -100,7 +100,7 @@ public final class MasterRegionFactory {
     params.ringBufferSlotCount(conf.getInt(RING_BUFFER_SLOT_COUNT, DEFAULT_RING_BUFFER_SLOT_COUNT));
     long rollPeriodMs = conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS);
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
+        .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
     return MasterRegion.create(params);
   }
 }

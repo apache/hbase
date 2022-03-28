@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,14 +48,14 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminWithRegionReplicas.class);
+      HBaseClassTestRule.forClass(TestAsyncAdminWithRegionReplicas.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestAsyncAdminBase.setUpBeforeClass();
     HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     try (ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
+        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
     }
   }
@@ -87,7 +87,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
       throws InterruptedException, ExecutionException, IOException {
     createTableWithDefaultConf(tableName, 3);
     List<HRegionLocation> locs =
-      ASYNC_CONN.getRegionLocator(tableName).getAllRegionLocations().get();
+        ASYNC_CONN.getRegionLocator(tableName).getAllRegionLocations().get();
     try {
       admin.splitRegion(locs.get(1).getRegion().getRegionName()).get();
     } catch (ExecutionException e) {
@@ -106,23 +106,21 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     byte[][] splitRows = new byte[][] { Bytes.toBytes(0) };
     createTableWithDefaultConf(tableName, 3, splitRows);
     List<HRegionLocation> locs =
-      ASYNC_CONN.getRegionLocator(tableName).getAllRegionLocations().get();
+        ASYNC_CONN.getRegionLocator(tableName).getAllRegionLocations().get();
     assertEquals(6, locs.size());
     Map<Integer, List<RegionInfo>> replicaId2RegionInfo = locs.stream()
-      .map(HRegionLocation::getRegion).collect(Collectors.groupingBy(RegionInfo::getReplicaId));
+        .map(HRegionLocation::getRegion).collect(Collectors.groupingBy(RegionInfo::getReplicaId));
     List<RegionInfo> replicaOnes = replicaId2RegionInfo.get(1);
     try {
-      admin
-        .mergeRegions(replicaOnes.get(0).getRegionName(), replicaOnes.get(1).getRegionName(), false)
-        .get();
+      admin.mergeRegions(replicaOnes.get(0).getRegionName(), replicaOnes.get(1).getRegionName(),
+        false).get();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
     }
     List<RegionInfo> replicaTwos = replicaId2RegionInfo.get(2);
     try {
-      admin
-        .mergeRegions(replicaTwos.get(0).getRegionName(), replicaTwos.get(1).getRegionName(), false)
-        .get();
+      admin.mergeRegions(replicaTwos.get(0).getRegionName(), replicaTwos.get(1).getRegionName(),
+        false).get();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
     }
@@ -132,7 +130,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   public void testCloneTableSchema() throws IOException, InterruptedException, ExecutionException {
     createTableWithDefaultConf(tableName, 3);
     admin.cloneTableSchema(tableName, TableName.valueOf(tableName.getNameAsString() + "_new"), true)
-      .get();
+        .get();
   }
 
   @Test

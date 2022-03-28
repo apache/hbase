@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestServerCrashProcedureStuck {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerCrashProcedureStuck.class);
+      HBaseClassTestRule.forClass(TestServerCrashProcedureStuck.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -86,16 +86,16 @@ public class TestServerCrashProcedureStuck {
     long procId = master.getMasterProcedureExecutor().submitProcedure(proc);
     proc.waitUntilArrive();
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
       AsyncAdmin admin = conn.getAdmin();
       CompletableFuture<Void> future = admin.move(hri.getRegionName());
       rs.abort("For testing!");
 
       UTIL.waitFor(30000,
         () -> executor.getProcedures().stream()
-          .filter(p -> p instanceof TransitRegionStateProcedure)
-          .map(p -> (TransitRegionStateProcedure) p)
-          .anyMatch(p -> Bytes.equals(hri.getRegionName(), p.getRegion().getRegionName())));
+            .filter(p -> p instanceof TransitRegionStateProcedure)
+            .map(p -> (TransitRegionStateProcedure) p)
+            .anyMatch(p -> Bytes.equals(hri.getRegionName(), p.getRegion().getRegionName())));
       proc.resume();
       UTIL.waitFor(30000, () -> executor.isFinished(procId));
       // see whether the move region procedure can finish properly

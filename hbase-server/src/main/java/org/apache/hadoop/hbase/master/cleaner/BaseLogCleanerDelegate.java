@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,24 +17,22 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for the log cleaning function inside the master. By default, three
- * cleaners: <code>TimeToLiveLogCleaner</code>,
- * <code>TimeToLiveProcedureWALCleaner</code> and
- * <code>ReplicationLogCleaner</code> are called in order. So if other effects
- * are needed, implement your own LogCleanerDelegate and add it to the
- * configuration "hbase.master.logcleaner.plugins", which is a comma-separated
- * list of fully qualified class names. LogsCleaner will add it to the chain.
+ * Base class for the log cleaning function inside the master. By default, three cleaners:
+ * <code>TimeToLiveLogCleaner</code>, <code>TimeToLiveProcedureWALCleaner</code> and
+ * <code>ReplicationLogCleaner</code> are called in order. So if other effects are needed, implement
+ * your own LogCleanerDelegate and add it to the configuration "hbase.master.logcleaner.plugins",
+ * which is a comma-separated list of fully qualified class names. LogsCleaner will add it to the
+ * chain.
  * <p>
  * HBase ships with LogsCleaner as the default implementation.
  * <p>
- * This interface extends Configurable, so setConf needs to be called once
- * before using the cleaner. Since LogCleanerDelegates are created in
- * LogsCleaner by reflection. Classes that implements this interface should
- * provide a default constructor.
+ * This interface extends Configurable, so setConf needs to be called once before using the cleaner.
+ * Since LogCleanerDelegates are created in LogsCleaner by reflection. Classes that implements this
+ * interface should provide a default constructor.
  */
 @InterfaceAudience.Private
 public abstract class BaseLogCleanerDelegate extends BaseFileCleanerDelegate {

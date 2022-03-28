@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -41,9 +42,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Encapsulates a data block compressed using a particular encoding algorithm.
- * Useful for testing and benchmarking.
- * This is used only in testing.
+ * Encapsulates a data block compressed using a particular encoding algorithm. Useful for testing
+ * and benchmarking. This is used only in testing.
  */
 @InterfaceAudience.Private
 public class EncodedDataBlock {
@@ -75,12 +75,11 @@ public class EncodedDataBlock {
    */
   public EncodedDataBlock(DataBlockEncoder dataBlockEncoder, DataBlockEncoding encoding,
       byte[] rawKVs, HFileContext meta) {
-    Preconditions.checkNotNull(encoding,
-        "Cannot create encoded data block with null encoder");
+    Preconditions.checkNotNull(encoding, "Cannot create encoded data block with null encoder");
     this.dataBlockEncoder = dataBlockEncoder;
     this.encoding = encoding;
     encodingCtx = dataBlockEncoder.newDataBlockEncodingContext(encoding,
-        HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
     this.rawKVs = rawKVs;
     this.meta = meta;
   }
@@ -94,8 +93,8 @@ public class EncodedDataBlock {
     final int rawSize = rawKVs.length;
     byte[] encodedDataWithHeader = getEncodedData();
     int bytesToSkip = headerSize + Bytes.SIZEOF_SHORT;
-    ByteArrayInputStream bais = new ByteArrayInputStream(encodedDataWithHeader,
-        bytesToSkip, encodedDataWithHeader.length - bytesToSkip);
+    ByteArrayInputStream bais = new ByteArrayInputStream(encodedDataWithHeader, bytesToSkip,
+        encodedDataWithHeader.length - bytesToSkip);
     final DataInputStream dis = new DataInputStream(bais);
 
     return new Iterator<Cell>() {
@@ -114,11 +113,11 @@ public class EncodedDataBlock {
       public Cell next() {
         if (decompressedData == null) {
           try {
-            decompressedData = dataBlockEncoder.decodeKeyValues(dis, dataBlockEncoder
-                .newDataBlockDecodingContext(meta));
+            decompressedData = dataBlockEncoder.decodeKeyValues(dis,
+              dataBlockEncoder.newDataBlockDecodingContext(meta));
           } catch (IOException e) {
-            throw new RuntimeException("Problem with data block encoder, " +
-                "most likely it requested more bytes than are available.", e);
+            throw new RuntimeException("Problem with data block encoder, "
+                + "most likely it requested more bytes than are available.", e);
           }
           decompressedData.rewind();
         }
@@ -171,8 +170,7 @@ public class EncodedDataBlock {
   }
 
   /**
-   * Find the size of compressed data assuming that buffer will be compressed
-   * using given algorithm.
+   * Find the size of compressed data assuming that buffer will be compressed using given algorithm.
    * @param algo compression algorithm
    * @param compressor compressor already requested from codec
    * @param inputBuffer Array to be compressed.
@@ -181,17 +179,16 @@ public class EncodedDataBlock {
    * @return Size of compressed data in bytes.
    * @throws IOException
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
-       justification="No sure what findbugs wants but looks to me like no NPE")
-  public static int getCompressedSize(Algorithm algo, Compressor compressor,
-      byte[] inputBuffer, int offset, int length) throws IOException {
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
+      justification = "No sure what findbugs wants but looks to me like no NPE")
+  public static int getCompressedSize(Algorithm algo, Compressor compressor, byte[] inputBuffer,
+      int offset, int length) throws IOException {
 
     // Create streams
     // Storing them so we can close them
     final IOUtils.NullOutputStream nullOutputStream = new IOUtils.NullOutputStream();
     final DataOutputStream compressedStream = new DataOutputStream(nullOutputStream);
     OutputStream compressingStream = null;
-
 
     try {
       if (compressor != null) {
@@ -214,15 +211,13 @@ public class EncodedDataBlock {
   /**
    * Estimate size after second stage of compression (e.g. LZO).
    * @param comprAlgo compression algorithm to be used for compression
-   * @param compressor compressor corresponding to the given compression
-   *          algorithm
+   * @param compressor compressor corresponding to the given compression algorithm
    * @return Size after second stage of compression.
    */
-  public int getEncodedCompressedSize(Algorithm comprAlgo,
-      Compressor compressor) throws IOException {
+  public int getEncodedCompressedSize(Algorithm comprAlgo, Compressor compressor)
+      throws IOException {
     byte[] compressedBytes = getEncodedData();
-    return getCompressedSize(comprAlgo, compressor, compressedBytes, 0,
-        compressedBytes.length);
+    return getCompressedSize(comprAlgo, compressor, compressedBytes, 0, compressedBytes.length);
   }
 
   /** @return encoded data with header */
@@ -247,7 +242,7 @@ public class EncodedDataBlock {
    */
   public byte[] encodeData() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    byte [] baosBytes = null;
+    byte[] baosBytes = null;
     try {
       baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
       DataOutputStream out = new DataOutputStream(baos);
@@ -271,8 +266,8 @@ public class EncodedDataBlock {
         if (this.meta.isIncludesMvcc()) {
           memstoreTS = ByteBufferUtils.readVLong(in);
         }
-        kv = new KeyValue(in.array(), kvOffset, (int) KeyValue.getKeyValueDataStructureSize(
-            klength, vlength, tagsLength));
+        kv = new KeyValue(in.array(), kvOffset,
+            (int) KeyValue.getKeyValueDataStructureSize(klength, vlength, tagsLength));
         kv.setSequenceId(memstoreTS);
         this.dataBlockEncoder.encode(kv, encodingCtx, out);
       }
@@ -291,10 +286,9 @@ public class EncodedDataBlock {
         baosBytes = baos.toByteArray();
       }
     } catch (IOException e) {
-      throw new RuntimeException(String.format(
-          "Bug in encoding part of algorithm %s. " +
-          "Probably it requested more bytes than are available.",
-          toString()), e);
+      throw new RuntimeException(String.format("Bug in encoding part of algorithm %s. "
+          + "Probably it requested more bytes than are available.",
+        toString()), e);
     }
     return baosBytes;
   }

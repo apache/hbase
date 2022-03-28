@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
@@ -50,12 +51,11 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
  * <p>
  * We record all the open sequence number for a region in a special family in meta, which is called
  * 'rep_barrier', so there will be a sequence of open sequence number (b1, b2, b3, ...). We call
- * [bn, bn+1) a range, and it is obvious that a region will always be on the same RS within a
- * range.
+ * [bn, bn+1) a range, and it is obvious that a region will always be on the same RS within a range.
  * <p>
  * When split and merge, we will also record the parent for the generated region(s) in the special
- * family in meta. And also, we will write an extra 'open sequence number' for the parent
- * region(s), which is the max sequence id of the region plus one.
+ * family in meta. And also, we will write an extra 'open sequence number' for the parent region(s),
+ * which is the max sequence id of the region plus one.
  * </p>
  * </p>
  * <p>
@@ -113,7 +113,7 @@ class SerialReplicationChecker {
   private static final Logger LOG = LoggerFactory.getLogger(SerialReplicationChecker.class);
 
   public static final String REPLICATION_SERIALLY_WAITING_KEY =
-    "hbase.serial.replication.waiting.ms";
+      "hbase.serial.replication.waiting.ms";
   public static final long REPLICATION_SERIALLY_WAITING_DEFAULT = 10000;
 
   private final String peerId;
@@ -125,24 +125,24 @@ class SerialReplicationChecker {
   private final long waitTimeMs;
 
   private final LoadingCache<String, MutableLong> pushed = CacheBuilder.newBuilder()
-    .expireAfterAccess(1, TimeUnit.DAYS).build(new CacheLoader<String, MutableLong>() {
+      .expireAfterAccess(1, TimeUnit.DAYS).build(new CacheLoader<String, MutableLong>() {
 
-      @Override
-      public MutableLong load(String key) throws Exception {
-        return new MutableLong(HConstants.NO_SEQNUM);
-      }
-    });
+        @Override
+        public MutableLong load(String key) throws Exception {
+          return new MutableLong(HConstants.NO_SEQNUM);
+        }
+      });
 
   // Use guava cache to set ttl for each key
   private final Cache<String, Long> canPushUnder =
-    CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS).build();
+      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS).build();
 
   public SerialReplicationChecker(Configuration conf, ReplicationSource source) {
     this.peerId = source.getPeerId();
     this.storage = source.getReplicationQueueStorage();
     this.conn = source.getServer().getConnection();
     this.waitTimeMs =
-      conf.getLong(REPLICATION_SERIALLY_WAITING_KEY, REPLICATION_SERIALLY_WAITING_DEFAULT);
+        conf.getLong(REPLICATION_SERIALLY_WAITING_KEY, REPLICATION_SERIALLY_WAITING_DEFAULT);
   }
 
   private boolean isRangeFinished(long endBarrier, String encodedRegionName) throws IOException {
@@ -151,7 +151,7 @@ class SerialReplicationChecker {
       pushedSeqId = storage.getLastSequenceId(encodedRegionName, peerId);
     } catch (ReplicationException e) {
       throw new IOException(
-        "Failed to get pushed sequence id for " + encodedRegionName + ", peer " + peerId, e);
+          "Failed to get pushed sequence id for " + encodedRegionName + ", peer " + peerId, e);
     }
     // endBarrier is the open sequence number. When opening a region, the open sequence number will
     // be set to the old max sequence id plus one, so here we need to minus one.
@@ -170,8 +170,8 @@ class SerialReplicationChecker {
   // if a region is in OPENING state and we are in the last range, it is not safe to say we can push
   // even if the previous range is finished.
   private boolean isLastRangeAndOpening(ReplicationBarrierResult barrierResult, int index) {
-    return index == barrierResult.getBarriers().length &&
-      barrierResult.getState() == RegionState.State.OPENING;
+    return index == barrierResult.getBarriers().length
+        && barrierResult.getState() == RegionState.State.OPENING;
   }
 
   private void recordCanPush(String encodedNameAsString, long seqId, long[] barriers, int index) {

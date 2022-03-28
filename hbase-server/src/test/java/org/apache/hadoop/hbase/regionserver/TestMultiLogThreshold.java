@@ -69,7 +69,7 @@ public class TestMultiLogThreshold {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiLogThreshold.class);
+      HBaseClassTestRule.forClass(TestMultiLogThreshold.class);
 
   private static final TableName NAME = TableName.valueOf("tableName");
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
@@ -95,7 +95,7 @@ public class TestMultiLogThreshold {
     util = new HBaseTestingUtility();
     conf = util.getConfiguration();
     threshold =
-      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+        conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     conf.setBoolean("hbase.rpc.rows.size.threshold.reject", rejectLargeBatchOp);
     util.startMiniCluster();
     util.createTable(NAME, TEST_FAM);
@@ -120,7 +120,7 @@ public class TestMultiLogThreshold {
    * Actions
    */
   private void sendMultiRequest(int rows, ActionType actionType)
-    throws ServiceException, IOException {
+      throws ServiceException, IOException {
     RpcController rpcc = Mockito.mock(HBaseRpcController.class);
     MultiRequest.Builder builder = MultiRequest.newBuilder();
     int numRAs = 1;
@@ -153,8 +153,8 @@ public class TestMultiLogThreshold {
     verify(appender, atLeastOnce()).doAppend(captor.capture());
     boolean actual = false;
     for (LoggingEvent event : captor.getAllValues()) {
-      if (event.getLevel() == Level.WARN &&
-        event.getRenderedMessage().contains("Large batch operation detected")) {
+      if (event.getLevel() == Level.WARN
+          && event.getRenderedMessage().contains("Large batch operation detected")) {
         actual = true;
         break;
       }

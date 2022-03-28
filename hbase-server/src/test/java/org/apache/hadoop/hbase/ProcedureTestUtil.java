@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,8 +58,8 @@ public final class ProcedureTestUtil {
     JsonParser parser = new JsonParser();
     util.waitFor(timeout,
       () -> getProcedure(util, clazz, parser)
-        .filter(o -> ProcedureState.WAITING_TIMEOUT.name().equals(o.get("state").getAsString()))
-        .isPresent());
+          .filter(o -> ProcedureState.WAITING_TIMEOUT.name().equals(o.get("state").getAsString()))
+          .isPresent());
   }
 
   public static void waitUntilProcedureTimeoutIncrease(HBaseTestingUtility util,
@@ -69,7 +69,7 @@ public final class ProcedureTestUtil {
     int timeoutIncrements = 0;
     for (;;) {
       long timeout = getProcedure(util, clazz, parser).filter(o -> o.has("timeout"))
-        .map(o -> o.get("timeout").getAsLong()).orElse(-1L);
+          .map(o -> o.get("timeout").getAsLong()).orElse(-1L);
       if (timeout > oldTimeout) {
         LOG.info("Timeout incremented, was {}, now is {}, increments={}", timeout, oldTimeout,
           timeoutIncrements);

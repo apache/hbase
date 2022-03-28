@@ -89,9 +89,10 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    TableDescriptor peerTable = TableDescriptorBuilder.newBuilder(peerTableName).setColumnFamily(
-                    ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100)
-                            .build()).build();
+    TableDescriptor peerTable = TableDescriptorBuilder.newBuilder(peerTableName)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100).build())
+        .build();
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(peerTable, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
@@ -302,10 +303,10 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     String temPath2 = "/tmp" + System.currentTimeMillis();
 
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
-      "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
-      "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
-      tableName.getNameAsString() };
+        "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
+        "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
+        "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
+        tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 1);
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 1);
@@ -332,10 +333,10 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
       Bytes.toString(famName), peerSnapshotName, peerRootDir, peerFs, true);
 
     args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
-      "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
-      "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
-      tableName.getNameAsString() };
+        "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
+        "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
+        "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
+        tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 2);
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 2);

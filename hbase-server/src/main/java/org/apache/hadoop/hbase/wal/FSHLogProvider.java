@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +45,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     /**
      * @throws IOException if something goes wrong initializing an output stream
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
-     *         meet the needs of the given Writer implementation.
+     *           meet the needs of the given Writer implementation.
      */
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
         throws IOException, CommonFSUtils.StreamLacksCapabilityException;
@@ -67,24 +66,23 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
    * Public because of FSHLog. Should be package-private
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-    final boolean overwritable, long blocksize) throws IOException {
+      final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
-        conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
-            Writer.class);
+        conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
       FileSystem rootFs = FileSystem.get(path.toUri(), conf);
       writer.init(rootFs, path, conf, overwritable, blocksize);
       return writer;
-    } catch (Exception e) { 
+    } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
-        LOG.error("The RegionServer write ahead log provider for FileSystem implementations " +
-            "relies on the ability to call " + e.getMessage() + " for proper operation during " +
-            "component failures, but the current FileSystem does not support doing so. Please " +
-            "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure " +
-            "it points to a FileSystem mount that has suitable capabilities for output streams.");
+        LOG.error("The RegionServer write ahead log provider for FileSystem implementations "
+            + "relies on the ability to call " + e.getMessage() + " for proper operation during "
+            + "component failures, but the current FileSystem does not support doing so. Please "
+            + "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure "
+            + "it points to a FileSystem mount that has suitable capabilities for output streams.");
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }

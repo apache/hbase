@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +37,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   private volatile String status;
   private volatile String description;
-  
+
   protected volatile State state = State.RUNNING;
 
   private boolean journalEnabled = false;
@@ -95,7 +94,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStartTime() {
     return startTime;
   }
-  
+
   @Override
   public String getDescription() {
     return description;
@@ -110,12 +109,12 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStatusTime() {
     return statusTime;
   }
-  
+
   @Override
   public State getState() {
     return state;
   }
-  
+
   @Override
   public long getStateTime() {
     return stateTime;
@@ -157,7 +156,7 @@ class MonitoredTaskImpl implements MonitoredTask {
     setStatus(msg);
     setState(State.ABORTED);
   }
-  
+
   @Override
   public void setStatus(String status) {
     this.status = status;
@@ -190,8 +189,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   }
 
   /**
-   * Force the completion timestamp backwards so that
-   * it expires now.
+   * Force the completion timestamp backwards so that it expires now.
    */
   @Override
   public void expireNow() {
@@ -278,7 +276,7 @@ class MonitoredTaskImpl implements MonitoredTask {
       StatusJournalEntry je = journal.get(i);
       sb.append(je.toString());
       if (i != 0) {
-        StatusJournalEntry jep = journal.get(i-1);
+        StatusJournalEntry jep = journal.get(i - 1);
         long delta = je.getTimeStamp() - jep.getTimeStamp();
         if (delta != 0) {
           sb.append(" (+" + delta + " ms)");

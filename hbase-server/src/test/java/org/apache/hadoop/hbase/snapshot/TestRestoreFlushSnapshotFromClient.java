@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test clone/restore snapshots from the client
- *
- * TODO This is essentially a clone of TestRestoreSnapshotFromClient.  This is worth refactoring
- * this because there will be a few more flavors of snapshots that need to run these tests.
+ * Test clone/restore snapshots from the client TODO This is essentially a clone of
+ * TestRestoreSnapshotFromClient. This is worth refactoring this because there will be a few more
+ * flavors of snapshots that need to run these tests.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRestoreFlushSnapshotFromClient {
 
   @ClassRule
@@ -79,8 +78,7 @@ public class TestRestoreFlushSnapshotFromClient {
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    UTIL.getConfiguration().setBoolean(
-        "hbase.master.enabletable.roundrobin", true);
+    UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
 
     // Enable snapshot
     UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
@@ -98,9 +96,9 @@ public class TestRestoreFlushSnapshotFromClient {
   }
 
   /**
-   * Initialize the tests with a table filled with some data
-   * and two snapshots (snapshotName0, snapshotName1) of different states.
-   * The tableName, snapshotNames and the number of rows in the snapshot are initialized.
+   * Initialize the tests with a table filled with some data and two snapshots (snapshotName0,
+   * snapshotName1) of different states. The tableName, snapshotNames and the number of rows in the
+   * snapshot are initialized.
    */
   @Before
   public void setup() throws Exception {
@@ -170,7 +168,7 @@ public class TestRestoreFlushSnapshotFromClient {
     verifyRowCount(UTIL, tableName, snapshot1Rows);
   }
 
-  @Test(expected=SnapshotDoesNotExistException.class)
+  @Test(expected = SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
     String snapshotName = "random-snapshot-" + System.currentTimeMillis();
     TableName tableName = TableName.valueOf("random-table-" + System.currentTimeMillis());
@@ -207,7 +205,7 @@ public class TestRestoreFlushSnapshotFromClient {
   }
 
   // ==========================================================================
-  //  Helpers
+  // Helpers
   // ==========================================================================
   private void logFSTree() throws IOException {
     UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);

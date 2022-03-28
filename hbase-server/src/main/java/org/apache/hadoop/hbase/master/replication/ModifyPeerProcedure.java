@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -116,8 +116,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   private void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
     addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
-      .map(sn -> new RefreshPeerProcedure(peerId, type, sn))
-      .toArray(RefreshPeerProcedure[]::new));
+        .map(sn -> new RefreshPeerProcedure(peerId, type, sn))
+        .toArray(RefreshPeerProcedure[]::new));
   }
 
   protected ReplicationPeerConfig getOldPeerConfig() {
@@ -167,8 +167,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
       if (!peerConfig.needToReplicate(tn)) {
         continue;
       }
-      if (oldPeerConfig != null && oldPeerConfig.isSerial() &&
-        oldPeerConfig.needToReplicate(tn)) {
+      if (oldPeerConfig != null && oldPeerConfig.isSerial() && oldPeerConfig.needToReplicate(tn)) {
         continue;
       }
       if (needReopen(tsm, tn)) {
@@ -245,7 +244,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
       return;
     }
     for (Pair<String, Long> name2Barrier : MetaTableAccessor
-      .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
+        .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
       LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
         queueStorage);
@@ -259,8 +258,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     return false;
   }
 
-  private ProcedureSuspendedException suspend(Configuration conf,
-      LongConsumer backoffConsumer) throws ProcedureSuspendedException {
+  private ProcedureSuspendedException suspend(Configuration conf, LongConsumer backoffConsumer)
+      throws ProcedureSuspendedException {
     if (retryCounter == null) {
       retryCounter = ProcedureUtil.createRetryCounter(conf);
     }
@@ -280,8 +279,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
-            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
+              + "mark the procedure as failure and give up",
+            getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
           releaseLatch();
           return Flow.NO_MORE_STATE;
@@ -329,7 +329,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         }
         retryCounter = null;
         setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
-          : PeerModificationState.POST_PEER_MODIFICATION);
+            : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_SET_PEER_ENABLED:
         try {
@@ -355,8 +355,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               "{} failed to call postPeerModification for peer {},  sleep {} secs",
               getClass().getName(), peerId, backoff / 1000, e));
         } catch (IOException e) {
-          LOG.warn("{} failed to call post CP hook for peer {}, " +
-            "ignore since the procedure has already done", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call post CP hook for peer {}, "
+              + "ignore since the procedure has already done",
+            getClass().getName(), peerId, e);
         }
         releaseLatch();
         return Flow.NO_MORE_STATE;

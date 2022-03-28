@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +21,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by
- * {@link Table#batch} to associate the action with it's region and maintain
- * the index from the original request.
+ * A Get, Put, Increment, Append, or Delete associated with it's region. Used internally by
+ * {@link Table#batch} to associate the action with it's region and maintain the index from the
+ * original request.
  */
 @InterfaceAudience.Private
 public class Action implements Comparable<Action> {
@@ -76,7 +75,9 @@ public class Action implements Comparable<Action> {
     return replicaId;
   }
 
-  public int getPriority() { return priority; }
+  public int getPriority() {
+    return priority;
+  }
 
   @Override
   public int compareTo(Action other) {

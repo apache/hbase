@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestOpenRegionProcedureHang {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionProcedureHang.class);
+      HBaseClassTestRule.forClass(TestOpenRegionProcedureHang.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionProcedureHang.class);
 
@@ -82,9 +82,9 @@ public class TestOpenRegionProcedureHang {
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
         ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition transition = req.getTransition(0);
-      if (transition.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME) &&
-        ARRIVE != null) {
+      if (transition.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME)
+          && ARRIVE != null) {
         ARRIVE.countDown();
         try {
           RESUME.await();
@@ -144,8 +144,8 @@ public class TestOpenRegionProcedureHang {
     // make sure we do not timeout when caling reportRegionStateTransition
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 10 * 60 * 1000);
     conf.setInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, 10 * 60 * 1000);
-    UTIL
-      .startMiniCluster(StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).build());
+    UTIL.startMiniCluster(
+      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -183,20 +183,20 @@ public class TestOpenRegionProcedureHang {
       return false;
     });
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.waitFor(30000,
       () -> procExec.getProcedures().stream().filter(p -> p instanceof OpenRegionProcedure)
-        .map(p -> (OpenRegionProcedure) p).anyMatch(p -> p.region.getTable().equals(NAME)));
+          .map(p -> (OpenRegionProcedure) p).anyMatch(p -> p.region.getTable().equals(NAME)));
     OpenRegionProcedure proc = procExec.getProcedures().stream()
-      .filter(p -> p instanceof OpenRegionProcedure).map(p -> (OpenRegionProcedure) p)
-      .filter(p -> p.region.getTable().equals(NAME)).findFirst().get();
+        .filter(p -> p instanceof OpenRegionProcedure).map(p -> (OpenRegionProcedure) p)
+        .filter(p -> p.region.getTable().equals(NAME)).findFirst().get();
     // wait a bit to let the OpenRegionProcedure send out the request
     Thread.sleep(2000);
     RESUME.countDown();
     if (!FINISH.await(15, TimeUnit.SECONDS)) {
-      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if" +
-        " we update the procedure store, as the WALProcedureStore" +
-        " will retry forever to roll the writer if it is not closed");
+      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if"
+          + " we update the procedure store, as the WALProcedureStore"
+          + " will retry forever to roll the writer if it is not closed");
     }
     FINISH = null;
     // if the reportRegionTransition is finished, wait a bit to let it return the data to RS

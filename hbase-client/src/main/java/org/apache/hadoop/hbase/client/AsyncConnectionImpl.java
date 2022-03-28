@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,9 +72,9 @@ class AsyncConnectionImpl implements AsyncConnection {
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    10, TimeUnit.MILLISECONDS);
+      new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      10, TimeUnit.MILLISECONDS);
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
@@ -106,7 +106,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<MasterService.Interface>> masterStubMakeFuture =
-    new AtomicReference<>();
+      new AtomicReference<>();
 
   private final Optional<ServerStatisticTracker> stats;
   private final ClientBackoffPolicy backoffPolicy;
@@ -137,8 +137,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
-    this.rpcTimeout =
-      (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
+    this.rpcTimeout = (int) Math.min(Integer.MAX_VALUE,
+      TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
@@ -158,14 +158,13 @@ class AsyncConnectionImpl implements AsyncConnection {
         LOG.warn("{} is true, but {} is not set", STATUS_PUBLISHED, STATUS_LISTENER_CLASS);
       } else {
         try {
-          listener = new ClusterStatusListener(
-            new ClusterStatusListener.DeadServerHandler() {
-              @Override
-              public void newDead(ServerName sn) {
-                locator.clearCache(sn);
-                rpcClient.cancelConnections(sn);
-              }
-            }, conf, listenerClass);
+          listener = new ClusterStatusListener(new ClusterStatusListener.DeadServerHandler() {
+            @Override
+            public void newDead(ServerName sn) {
+              locator.clearCache(sn);
+              rpcClient.cancelConnections(sn);
+            }
+          }, conf, listenerClass);
         } catch (IOException e) {
           LOG.warn("Failed create of ClusterStatusListener, not a critical, ignoring...", e);
         }
@@ -206,7 +205,7 @@ class AsyncConnectionImpl implements AsyncConnection {
       return;
     }
     LOG.info("Connection has been closed by {}.", Thread.currentThread().getName());
-    if(LOG.isDebugEnabled()){
+    if (LOG.isDebugEnabled()) {
       logCallStack(Thread.currentThread().getStackTrace());
     }
     IOUtils.closeQuietly(clusterStatusListener,
@@ -285,7 +284,7 @@ class AsyncConnectionImpl implements AsyncConnection {
           future.completeExceptionally(error);
         } else if (addr == null) {
           future.completeExceptionally(new MasterNotRunningException(
-            "ZooKeeper available but no active master location found"));
+              "ZooKeeper available but no active master location found"));
         } else {
           LOG.debug("The fetched master address is {}", addr);
           try {
@@ -331,7 +330,7 @@ class AsyncConnectionImpl implements AsyncConnection {
       @Override
       public AsyncTable<ScanResultConsumer> build() {
         RawAsyncTableImpl rawTable =
-          new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
+            new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
       }
     };
@@ -353,7 +352,7 @@ class AsyncConnectionImpl implements AsyncConnection {
       @Override
       public AsyncAdmin build() {
         RawAsyncHBaseAdmin rawAdmin =
-          new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
+            new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncHBaseAdmin(rawAdmin, pool);
       }
     };
@@ -368,7 +367,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
       ExecutorService pool) {
     return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool),
-      RETRY_TIMER);
+        RETRY_TIMER);
   }
 
   @Override
@@ -393,8 +392,10 @@ class AsyncConnectionImpl implements AsyncConnection {
     // we will not create a new connection when creating a new protobuf stub, and for hbck there
     // will be no performance consideration, so for simplification we will create a new stub every
     // time instead of caching the stub here.
-    return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
-      rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
+    return new HBaseHbck(
+        MasterProtos.HbckService
+            .newBlockingStub(rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)),
+        rpcControllerFactory);
   }
 
   @Override

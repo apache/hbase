@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf)
+      throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
@@ -78,16 +79,16 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // not make it in first place. Turn off block caching for bootstrap.
     // Enable after.
     TableDescriptor metaDescriptor =
-      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
+        FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
     HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
-      .close();
+        .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
+        .close();
     return metaDescriptor;
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, InitMetaState state)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.debug("Execute {}", this);
     try {
       switch (state) {
@@ -101,7 +102,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
           addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+              .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -127,7 +128,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, InitMetaState state)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 

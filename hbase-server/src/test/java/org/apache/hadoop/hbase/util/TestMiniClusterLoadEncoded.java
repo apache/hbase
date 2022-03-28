@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,11 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Runs a load test on a mini HBase cluster with data block encoding turned on.
- * Compared to other load-test-style unit tests, this one writes a smaller
- * amount of data, but goes through all available data block encoding
- * algorithms.
+ * Runs a load test on a mini HBase cluster with data block encoding turned on. Compared to other
+ * load-test-style unit tests, this one writes a smaller amount of data, but goes through all
+ * available data block encoding algorithms.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
 
   @ClassRule
@@ -47,8 +46,8 @@ public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
   @Parameters
   public static Collection<Object[]> parameters() {
     List<Object[]> parameters = new ArrayList<>();
-    for (DataBlockEncoding dataBlockEncoding : DataBlockEncoding.values() ) {
-      parameters.add(new Object[]{dataBlockEncoding});
+    for (DataBlockEncoding dataBlockEncoding : DataBlockEncoding.values()) {
+      parameters.add(new Object[] { dataBlockEncoding });
     }
     return parameters;
   }

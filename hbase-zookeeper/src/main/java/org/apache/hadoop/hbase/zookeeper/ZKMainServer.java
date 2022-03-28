@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -27,10 +25,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.ZooKeeperMain;
 import org.apache.zookeeper.cli.CliException;
 
-
 /**
- * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server
- * from HBase XML configuration.
+ * Tool for running ZookeeperMain from HBase by reading a ZooKeeper server from HBase XML
+ * configuration.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ZKMainServer {
@@ -41,12 +38,12 @@ public class ZKMainServer {
   }
 
   /**
-   * ZooKeeper 3.4.6 broke being able to pass commands on command line.
-   * See ZOOKEEPER-1897.  This class is a hack to restore this faclity.
+   * ZooKeeper 3.4.6 broke being able to pass commands on command line. See ZOOKEEPER-1897. This
+   * class is a hack to restore this faclity.
    */
   private static class HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain extends ZooKeeperMain {
     public HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(String[] args)
-      throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       super(args);
       // Make sure we are connected before we proceed. Can take a while on some systems. If we
       // run the command without being connected, we get ConnectionLoss KeeperErrorConnection...
@@ -56,7 +53,7 @@ public class ZKMainServer {
     }
 
     /**
-     * Run the command-line args passed.  Calls System.exit when done.
+     * Run the command-line args passed. Calls System.exit when done.
      * @throws IOException in case of a network failure
      * @throws InterruptedException if the ZooKeeper client closes
      * @throws CliException if the ZooKeeper exception happens in cli command
@@ -96,7 +93,7 @@ public class ZKMainServer {
    * @param args Command line arguments. First arg is path to zookeepers file.
    */
   public static void main(String[] args) throws Exception {
-    String [] newArgs = args;
+    String[] newArgs = args;
     if (!hasServer(args)) {
       // Add the zk ensemble from configuration if none passed on command-line.
       Configuration conf = HBaseConfiguration.create();
@@ -113,7 +110,7 @@ public class ZKMainServer {
     // 3.4.6 breaks command-processing; TODO.
     if (hasCommandLineArguments(args)) {
       HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain zkm =
-        new HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(newArgs);
+          new HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(newArgs);
       zkm.runCmdLine();
     } else {
       ZooKeeperMain.main(newArgs);

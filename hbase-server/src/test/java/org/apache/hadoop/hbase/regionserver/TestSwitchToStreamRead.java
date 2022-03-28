@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,7 @@ public class TestSwitchToStreamRead {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSwitchToStreamRead.class);
+      HBaseClassTestRule.forClass(TestSwitchToStreamRead.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -77,18 +78,18 @@ public class TestSwitchToStreamRead {
     VALUE_PREFIX = sb.append("-").toString();
     REGION = UTIL.createLocalHRegion(
       TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(1024).build())
-        .build(),
+          .setColumnFamily(
+            ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(1024).build())
+          .build(),
       null, null);
     for (int i = 0; i < 900; i++) {
       REGION
-        .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
+          .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
     }
     REGION.flush(true);
     for (int i = 900; i < 1000; i++) {
       REGION
-        .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
+          .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
     }
   }
 
@@ -102,13 +103,12 @@ public class TestSwitchToStreamRead {
   public void test() throws IOException {
     try (RegionScannerImpl scanner = REGION.getScanner(new Scan())) {
       StoreScanner storeScanner =
-        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
+          (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // starting from pread so we use shared reader here.
-          assertTrue(sfScanner.getReader().getReaderContext()
-            .getReaderType() == ReaderType.PREAD);
+          assertTrue(sfScanner.getReader().getReaderContext().getReaderType() == ReaderType.PREAD);
         }
       }
       List<Cell> cells = new ArrayList<>();
@@ -123,8 +123,7 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // we should have convert to use stream read now.
-          assertFalse(sfScanner.getReader().getReaderContext()
-            .getReaderType() == ReaderType.PREAD);
+          assertFalse(sfScanner.getReader().getReaderContext().getReaderType() == ReaderType.PREAD);
         }
       }
       for (int i = 500; i < 1000; i++) {
@@ -152,13 +151,12 @@ public class TestSwitchToStreamRead {
   private void testFilter(Filter filter) throws IOException {
     try (RegionScannerImpl scanner = REGION.getScanner(new Scan().setFilter(filter))) {
       StoreScanner storeScanner =
-        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
+          (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // starting from pread so we use shared reader here.
-          assertTrue(sfScanner.getReader().getReaderContext()
-            .getReaderType() == ReaderType.PREAD);
+          assertTrue(sfScanner.getReader().getReaderContext().getReaderType() == ReaderType.PREAD);
         }
       }
       List<Cell> cells = new ArrayList<>();
@@ -172,8 +170,7 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // we should have convert to use stream read now.
-          assertFalse(sfScanner.getReader().getReaderContext()
-            .getReaderType() == ReaderType.PREAD);
+          assertFalse(sfScanner.getReader().getReaderContext().getReaderType() == ReaderType.PREAD);
         }
       }
       assertFalse(scanner.next(cells,

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -49,22 +47,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Used internally for reading meta and constructing datastructures that are
- * then queried, for things like regions to regionservers, table to regions, etc.
- * It also records the favored nodes mapping for regions.
- *
+ * Used internally for reading meta and constructing datastructures that are then queried, for
+ * things like regions to regionservers, table to regions, etc. It also records the favored nodes
+ * mapping for regions.
  */
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
-  private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class
-      .getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class.getName());
 
   private final Connection connection;
 
   /** the table name to region map */
   private final Map<TableName, List<RegionInfo>> tableToRegionMap;
   /** the region to region server map */
-  //private final Map<RegionInfo, ServerName> regionToRegionServerMap;
+  // private final Map<RegionInfo, ServerName> regionToRegionServerMap;
   private Map<RegionInfo, ServerName> regionToRegionServerMap;
   /** the region name to region info map */
   private final Map<String, RegionInfo> regionNameToRegionInfoMap;
@@ -103,14 +100,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * @throws IOException
    */
   public void initialize() throws IOException {
-    LOG.info("Start to scan the hbase:meta for the current region assignment " +
-      "snappshot");
+    LOG.info("Start to scan the hbase:meta for the current region assignment " + "snappshot");
     // TODO: at some point this code could live in the MetaTableAccessor
     Visitor v = new Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {
-          if (result ==  null || result.isEmpty()) return true;
+          if (result == null || result.isEmpty()) return true;
           RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
           if (rl == null) return true;
           RegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
@@ -135,22 +131,21 @@ public class SnapshotOfRegionAssignmentFromMeta {
           hri = rl.getRegionLocation(0).getRegionInfo();
           // the code below is to handle favored nodes
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
-              FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
+            FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
           if (favoredNodes == null) return true;
           // Add the favored nodes into assignment plan
           ServerName[] favoredServerList =
               FavoredNodeAssignmentHelper.getFavoredNodesList(favoredNodes);
           // Add the favored nodes into assignment plan
-          existingAssignmentPlan.updateFavoredNodesMap(hri,
-              Arrays.asList(favoredServerList));
+          existingAssignmentPlan.updateFavoredNodesMap(hri, Arrays.asList(favoredServerList));
 
           /*
            * Typically there should be FAVORED_NODES_NUM favored nodes for a region in meta. If
            * there is less than FAVORED_NODES_NUM, lets use as much as we can but log a warning.
            */
           if (favoredServerList.length != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
-            LOG.warn("Insufficient favored nodes for region " + hri + " fn: " + Arrays
-                .toString(favoredServerList));
+            LOG.warn("Insufficient favored nodes for region " + hri + " fn: "
+                + Arrays.toString(favoredServerList));
           }
           for (int i = 0; i < favoredServerList.length; i++) {
             if (i == PRIMARY.ordinal()) addPrimaryAssignment(hri, favoredServerList[i]);
@@ -159,17 +154,15 @@ public class SnapshotOfRegionAssignmentFromMeta {
           }
           return true;
         } catch (RuntimeException e) {
-          LOG.error("Catche remote exception " + e.getMessage() +
-              " when processing" + result);
+          LOG.error("Catche remote exception " + e.getMessage() + " when processing" + result);
           throw e;
         }
       }
     };
     // Scan hbase:meta to pick up user regions
     MetaTableAccessor.fullScanRegions(connection, v);
-    //regionToRegionServerMap = regions;
-    LOG.info("Finished to scan the hbase:meta for the current region assignment" +
-      "snapshot");
+    // regionToRegionServerMap = regions;
+    LOG.info("Finished to scan the hbase:meta for the current region assignment" + "snapshot");
   }
 
   private void addRegion(RegionInfo regionInfo) {

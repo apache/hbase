@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
@@ -28,6 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * Convert protobuf objects in AccessControl.proto under hbase-protocol-shaded to user-oriented
  * objects and vice versa. <br>
- *
  * In HBASE-15638, we create a hbase-protocol-shaded module for upgrading protobuf version to 3.x,
  * but there are still some coprocessor endpoints(such as AccessControl, Authentication,
  * MulitRowMutation) which depend on hbase-protocol module for CPEP compatibility. In fact, we use
@@ -73,16 +72,16 @@ public class ShadedAccessControlUtil {
    */
   public static Permission.Action toPermissionAction(AccessControlProtos.Permission.Action action) {
     switch (action) {
-    case READ:
-      return Permission.Action.READ;
-    case WRITE:
-      return Permission.Action.WRITE;
-    case EXEC:
-      return Permission.Action.EXEC;
-    case CREATE:
-      return Permission.Action.CREATE;
-    case ADMIN:
-      return Permission.Action.ADMIN;
+      case READ:
+        return Permission.Action.READ;
+      case WRITE:
+        return Permission.Action.WRITE;
+      case EXEC:
+        return Permission.Action.EXEC;
+      case CREATE:
+        return Permission.Action.CREATE;
+      case ADMIN:
+        return Permission.Action.ADMIN;
     }
     throw new IllegalArgumentException("Unknown action value " + action.name());
   }
@@ -218,8 +217,8 @@ public class ShadedAccessControlUtil {
    * @param proto the protobuf UserPermission
    * @return the converted UserPermission
    */
-  public static ListMultimap<String, Permission> toUserTablePermissions(
-      AccessControlProtos.UsersAndPermissions proto) {
+  public static ListMultimap<String, Permission>
+      toUserTablePermissions(AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, Permission> perms = ArrayListMultimap.create();
     AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
     for (int i = 0; i < proto.getUserPermissionsCount(); i++) {

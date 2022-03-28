@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,14 +65,14 @@ public class TestMasterRegistryHedgedReads {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegistryHedgedReads.class);
+      HBaseClassTestRule.forClass(TestMasterRegistryHedgedReads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegistryHedgedReads.class);
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
   private static final ExecutorService EXECUTOR =
-    Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());
+      Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());
 
   private static AtomicInteger CALLED = new AtomicInteger(0);
 
@@ -81,23 +81,23 @@ public class TestMasterRegistryHedgedReads {
   private static volatile Set<Integer> GOOD_RESP_INDEXS;
 
   private static GetClusterIdResponse RESP =
-    GetClusterIdResponse.newBuilder().setClusterId("id").build();
+      GetClusterIdResponse.newBuilder().setClusterId("id").build();
 
   public static final class RpcClientImpl implements RpcClient {
 
     public RpcClientImpl(Configuration configuration, String clusterId, SocketAddress localAddress,
-      MetricsConnection metrics) {
+        MetricsConnection metrics) {
     }
 
     @Override
     public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout)
-      throws IOException {
+        throws IOException {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
-      throws IOException {
+        throws IOException {
       return new RpcChannelImpl();
     }
 
@@ -123,7 +123,7 @@ public class TestMasterRegistryHedgedReads {
 
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+        Message responsePrototype, RpcCallback<Message> done) {
       if (!method.getName().equals("GetClusterId")) {
         // On RPC failures, MasterRegistry internally runs getMasters() RPC to keep the master list
         // fresh. We do not want to intercept those RPCs here and double count.
@@ -150,7 +150,7 @@ public class TestMasterRegistryHedgedReads {
     conf.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RpcClientImpl.class,
       RpcClient.class);
     String masters = IntStream.range(0, 10).mapToObj(i -> "localhost:" + (10000 + 100 * i))
-      .collect(Collectors.joining(","));
+        .collect(Collectors.joining(","));
     conf.set(HConstants.MASTER_ADDRS_KEY, masters);
   }
 
@@ -202,7 +202,7 @@ public class TestMasterRegistryHedgedReads {
     // will be set to 1
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 0);
     GOOD_RESP_INDEXS =
-      IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
+        IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
     try (MasterRegistry registry = new MasterRegistry(conf)) {
       String clusterId = logIfError(registry.getClusterId());
       assertEquals(RESP.getClusterId(), clusterId);

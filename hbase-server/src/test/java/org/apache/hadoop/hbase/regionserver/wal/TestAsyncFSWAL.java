@@ -55,13 +55,13 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
@@ -83,9 +83,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    GROUP =
-      new NioEventLoopGroup(1, new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    GROUP = new NioEventLoopGroup(1,
+        new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestFSWAL.setUpBeforeClass();
   }
@@ -100,8 +100,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
-    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf,
-      listeners, failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
+    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
+        failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
     asyncFSWAL.init();
     return asyncFSWAL;
   }
@@ -112,7 +112,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
     AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
-      failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
+        failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
       @Override
       protected void atHeadOfRingBufferEventHandlerAppend() {
         action.run();

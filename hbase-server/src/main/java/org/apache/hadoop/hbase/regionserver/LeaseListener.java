@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * LeaseListener is an interface meant to be implemented by users of the Leases
- * class.
- *
- * It receives events from the Leases class about the status of its accompanying
- * lease.  Users of the Leases class can use a LeaseListener subclass to, for
- * example, clean up resources after a lease has expired.
+ * LeaseListener is an interface meant to be implemented by users of the Leases class. It receives
+ * events from the Leases class about the status of its accompanying lease. Users of the Leases
+ * class can use a LeaseListener subclass to, for example, clean up resources after a lease has
+ * expired.
  */
 @InterfaceAudience.Private
 public interface LeaseListener {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,14 +6,15 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import java.io.IOException;
@@ -121,8 +122,8 @@ public class MajorCompactor extends Configured implements Tool {
           clusterCompactionQueues.releaseCompaction(serverName);
         } else {
           LOG.info("Firing off compaction request for server: " + serverName + ", " + request
-              + " total queue size left: " + clusterCompactionQueues
-              .getCompactionRequestsLeftToFinish());
+              + " total queue size left: "
+              + clusterCompactionQueues.getCompactionRequestsLeftToFinish());
           futures.add(executor.submit(new Compact(serverName, request)));
         }
       } else {
@@ -142,11 +143,10 @@ public class MajorCompactor extends Configured implements Tool {
     executor.shutdown();
     executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     if (!ERRORS.isEmpty()) {
-      StringBuilder builder =
-          new StringBuilder().append("Major compaction failed, there were: ").append(ERRORS.size())
-              .append(" regions / stores that failed compacting\n")
-              .append("Failed compaction requests\n").append("--------------------------\n")
-              .append(Joiner.on("\n").join(ERRORS));
+      StringBuilder builder = new StringBuilder().append("Major compaction failed, there were: ")
+          .append(ERRORS.size()).append(" regions / stores that failed compacting\n")
+          .append("Failed compaction requests\n").append("--------------------------\n")
+          .append(Joiner.on("\n").join(ERRORS));
       LOG.error(builder.toString());
     }
     if (connection != null) {
@@ -163,21 +163,21 @@ public class MajorCompactor extends Configured implements Tool {
       LOG.info("No family specified, will execute for all families");
     }
     LOG.info(
-        "Initializing compaction queues for table:  " + tableName + " with cf: " + storesToCompact);
+      "Initializing compaction queues for table:  " + tableName + " with cf: " + storesToCompact);
 
     Map<ServerName, List<RegionInfo>> snRegionMap = getServerRegionsMap();
     /*
-     * If numservers is specified, stop inspecting regions beyond the numservers, it will serve
-     * to throttle and won't end up scanning all the regions in the event there are not many
-     * regions to compact based on the criteria.
+     * If numservers is specified, stop inspecting regions beyond the numservers, it will serve to
+     * throttle and won't end up scanning all the regions in the event there are not many regions to
+     * compact based on the criteria.
      */
     for (ServerName sn : getServersToCompact(snRegionMap.keySet())) {
       List<RegionInfo> regions = snRegionMap.get(sn);
       LOG.debug("Table: " + tableName + " Server: " + sn + " No of regions: " + regions.size());
 
       /*
-       * If the tool is run periodically, then we could shuffle the regions and provide
-       * some random order to select regions. Helps if numregions is specified.
+       * If the tool is run periodically, then we could shuffle the regions and provide some random
+       * order to select regions. Helps if numregions is specified.
        */
       Collections.shuffle(regions);
       int regionsToCompact = numRegions;
@@ -205,7 +205,7 @@ public class MajorCompactor extends Configured implements Tool {
   }
 
   private Collection<ServerName> getServersToCompact(Set<ServerName> snSet) {
-    if(numServers < 0 || snSet.size() <= numServers) {
+    if (numServers < 0 || snSet.size() <= numServers) {
       return snSet;
 
     } else {
@@ -252,7 +252,8 @@ public class MajorCompactor extends Configured implements Tool {
       this.request = request;
     }
 
-    @Override public void run() {
+    @Override
+    public void run() {
       try {
         compactAndWait(request);
       } catch (NotServingRegionException e) {
@@ -289,8 +290,8 @@ public class MajorCompactor extends Configured implements Tool {
         if (!skipWait) {
           while (isCompacting(request)) {
             Thread.sleep(sleepForMs);
-            LOG.debug("Waiting for compaction to complete for region: " + request.getRegion()
-                .getEncodedName());
+            LOG.debug("Waiting for compaction to complete for region: "
+                + request.getRegion().getEncodedName());
           }
         }
       } finally {
@@ -311,9 +312,8 @@ public class MajorCompactor extends Configured implements Tool {
                 .equals(serverName);
             if (regionHasNotMoved) {
               LOG.error(
-                  "Not all store files were compacted, this may be due to the regionserver not "
-                      + "being aware of all store files.  Will not reattempt compacting, "
-                      + request);
+                "Not all store files were compacted, this may be due to the regionserver not "
+                    + "being aware of all store files.  Will not reattempt compacting, " + request);
               ERRORS.add(request);
             } else {
               request.setStores(storesRequiringCompaction);
@@ -331,16 +331,15 @@ public class MajorCompactor extends Configured implements Tool {
 
     private void compactRegionOnServer(MajorCompactionRequest request, Admin admin, String store)
         throws IOException {
-      admin.majorCompactRegion(request.getRegion().getEncodedNameAsBytes(),
-          Bytes.toBytes(store));
+      admin.majorCompactRegion(request.getRegion().getEncodedNameAsBytes(), Bytes.toBytes(store));
     }
   }
 
   private boolean isCompacting(MajorCompactionRequest request) throws Exception {
     CompactionState compactionState = connection.getAdmin()
         .getCompactionStateForRegion(request.getRegion().getEncodedNameAsBytes());
-    return compactionState.equals(CompactionState.MAJOR) || compactionState
-        .equals(CompactionState.MAJOR_AND_MINOR);
+    return compactionState.equals(CompactionState.MAJOR)
+        || compactionState.equals(CompactionState.MAJOR_AND_MINOR);
   }
 
   private void addNewRegions() {
@@ -369,104 +368,48 @@ public class MajorCompactor extends Configured implements Tool {
     Options options = new Options();
 
     options.addOption(
-        Option.builder("servers")
-            .required()
-            .desc("Concurrent servers compacting")
-            .hasArg()
-            .build()
-    );
+      Option.builder("servers").required().desc("Concurrent servers compacting").hasArg().build());
+    options.addOption(Option.builder("minModTime")
+        .desc("Compact if store files have modification time < minModTime").hasArg().build());
+    options.addOption(Option.builder("zk").optionalArg(true).desc("zk quorum").hasArg().build());
     options.addOption(
-        Option.builder("minModTime").
-            desc("Compact if store files have modification time < minModTime")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("zk")
-            .optionalArg(true)
-            .desc("zk quorum")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("rootDir")
-            .optionalArg(true)
-            .desc("hbase.rootDir")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("sleep")
-            .desc("Time to sleepForMs (ms) for checking compaction status per region and available "
-                + "work queues: default 30s")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("retries")
-        .desc("Max # of retries for a compaction request," + " defaults to 3")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("dryRun")
-            .desc("Dry run, will just output a list of regions that require compaction based on "
+      Option.builder("rootDir").optionalArg(true).desc("hbase.rootDir").hasArg().build());
+    options.addOption(Option.builder("sleep")
+        .desc("Time to sleepForMs (ms) for checking compaction status per region and available "
+            + "work queues: default 30s")
+        .hasArg().build());
+    options.addOption(Option.builder("retries")
+        .desc("Max # of retries for a compaction request," + " defaults to 3").hasArg().build());
+    options.addOption(Option.builder("dryRun")
+        .desc("Dry run, will just output a list of regions that require compaction based on "
             + "parameters passed")
-            .hasArg(false)
-            .build()
-    );
+        .hasArg(false).build());
 
-    options.addOption(
-        Option.builder("skipWait")
-            .desc("Skip waiting after triggering compaction.")
-            .hasArg(false)
-            .build()
-    );
+    options.addOption(Option.builder("skipWait").desc("Skip waiting after triggering compaction.")
+        .hasArg(false).build());
 
-    options.addOption(
-        Option.builder("numservers")
-            .optionalArg(true)
-            .desc("Number of servers to compact in this run, defaults to all")
-            .hasArg()
-            .build()
-    );
+    options.addOption(Option.builder("numservers").optionalArg(true)
+        .desc("Number of servers to compact in this run, defaults to all").hasArg().build());
 
-    options.addOption(
-        Option.builder("numregions")
-            .optionalArg(true)
-            .desc("Number of regions to compact per server, defaults to all")
-            .hasArg()
-            .build()
-    );
+    options.addOption(Option.builder("numregions").optionalArg(true)
+        .desc("Number of regions to compact per server, defaults to all").hasArg().build());
     return options;
   }
 
   @Override
   public int run(String[] args) throws Exception {
     Options options = getCommonOptions();
-    options.addOption(
-        Option.builder("table")
-            .required()
-            .desc("table name")
-            .hasArg()
-            .build()
-    );
-    options.addOption(
-        Option.builder("cf")
-            .optionalArg(true)
-            .desc("column families: comma separated eg: a,b,c")
-            .hasArg()
-            .build()
-    );
+    options.addOption(Option.builder("table").required().desc("table name").hasArg().build());
+    options.addOption(Option.builder("cf").optionalArg(true)
+        .desc("column families: comma separated eg: a,b,c").hasArg().build());
 
     final CommandLineParser cmdLineParser = new DefaultParser();
     CommandLine commandLine = null;
     try {
       commandLine = cmdLineParser.parse(options, args);
     } catch (ParseException parseException) {
-      System.out.println(
-          "ERROR: Unable to parse command-line arguments " + Arrays.toString(args) + " due to: "
-              + parseException);
+      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args)
+          + " due to: " + parseException);
       printUsage(options);
       return -1;
     }
@@ -485,7 +428,7 @@ public class MajorCompactor extends Configured implements Tool {
     Configuration configuration = getConf();
     int concurrency = Integer.parseInt(commandLine.getOptionValue("servers"));
     long minModTime = Long.parseLong(
-        commandLine.getOptionValue("minModTime", String.valueOf(System.currentTimeMillis())));
+      commandLine.getOptionValue("minModTime", String.valueOf(System.currentTimeMillis())));
     String quorum =
         commandLine.getOptionValue("zk", configuration.get(HConstants.ZOOKEEPER_QUORUM));
     String rootDir = commandLine.getOptionValue("rootDir", configuration.get(HConstants.HBASE_DIR));
@@ -497,9 +440,8 @@ public class MajorCompactor extends Configured implements Tool {
     configuration.set(HConstants.HBASE_DIR, rootDir);
     configuration.set(HConstants.ZOOKEEPER_QUORUM, quorum);
 
-    MajorCompactor compactor =
-        new MajorCompactor(configuration, TableName.valueOf(tableName), families, concurrency,
-            minModTime, sleep);
+    MajorCompactor compactor = new MajorCompactor(configuration, TableName.valueOf(tableName),
+        families, concurrency, minModTime, sleep);
     compactor.setNumServers(numServers);
     compactor.setNumRegions(numRegions);
     compactor.setSkipWait(commandLine.hasOption("skipWait"));

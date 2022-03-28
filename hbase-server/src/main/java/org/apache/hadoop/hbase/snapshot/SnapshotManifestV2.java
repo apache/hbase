@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
@@ -49,12 +48,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
- * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}.
- *
- * Snapshot v2 layout format
- *  - Single Manifest file containing all the information of regions
- *  - In the online-snapshot case each region will write a "region manifest"
- *      /snapshotName/manifest.regionName
+ * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}. Snapshot v2 layout format - Single Manifest
+ * file containing all the information of regions - In the online-snapshot case each region will
+ * write a "region manifest" /snapshotName/manifest.regionName
  */
 @InterfaceAudience.Private
 public final class SnapshotManifestV2 {
@@ -64,10 +60,11 @@ public final class SnapshotManifestV2 {
 
   public static final String SNAPSHOT_MANIFEST_PREFIX = "region-manifest.";
 
-  private SnapshotManifestV2() {}
+  private SnapshotManifestV2() {
+  }
 
-  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<
-                    SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {
+  static class ManifestBuilder implements
+      SnapshotManifest.RegionVisitor<SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {
     private final Configuration conf;
     private final Path snapshotDir;
     private final FileSystem rootFs;
@@ -93,8 +90,8 @@ public final class SnapshotManifestV2 {
       FileSystem workingDirFs = snapshotDir.getFileSystem(this.conf);
       if (workingDirFs.exists(snapshotDir)) {
         SnapshotRegionManifest manifest = region.build();
-        try (FSDataOutputStream stream = workingDirFs.create(
-            getRegionManifestPath(snapshotDir, manifest))) {
+        try (FSDataOutputStream stream =
+            workingDirFs.create(getRegionManifestPath(snapshotDir, manifest))) {
           manifest.writeTo(stream);
         }
       } else {
@@ -103,8 +100,8 @@ public final class SnapshotManifestV2 {
     }
 
     @Override
-    public SnapshotRegionManifest.FamilyFiles.Builder familyOpen(
-        final SnapshotRegionManifest.Builder region, final byte[] familyName) {
+    public SnapshotRegionManifest.FamilyFiles.Builder
+        familyOpen(final SnapshotRegionManifest.Builder region, final byte[] familyName) {
       SnapshotRegionManifest.FamilyFiles.Builder family =
           SnapshotRegionManifest.FamilyFiles.newBuilder();
       family.setFamilyName(UnsafeByteOperations.unsafeWrap(familyName));
@@ -122,7 +119,7 @@ public final class SnapshotManifestV2 {
         final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile)
         throws IOException {
       SnapshotRegionManifest.StoreFile.Builder sfManifest =
-            SnapshotRegionManifest.StoreFile.newBuilder();
+          SnapshotRegionManifest.StoreFile.newBuilder();
       sfManifest.setName(storeFile.getPath().getName());
       if (storeFile.isReference()) {
         sfManifest.setReference(storeFile.getReference().convert());
@@ -149,8 +146,8 @@ public final class SnapshotManifestV2 {
     if (manifestFiles == null || manifestFiles.length == 0) return null;
 
     final ExecutorCompletionService<SnapshotRegionManifest> completionService =
-      new ExecutorCompletionService<>(executor);
-    for (final FileStatus st: manifestFiles) {
+        new ExecutorCompletionService<>(executor);
+    for (final FileStatus st : manifestFiles) {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
@@ -173,8 +170,8 @@ public final class SnapshotManifestV2 {
     } catch (ExecutionException e) {
       Throwable t = e.getCause();
 
-      if(t instanceof InvalidProtocolBufferException) {
-        throw (InvalidProtocolBufferException)t;
+      if (t instanceof InvalidProtocolBufferException) {
+        throw (InvalidProtocolBufferException) t;
       } else {
         throw new IOException("ExecutionException", e.getCause());
       }

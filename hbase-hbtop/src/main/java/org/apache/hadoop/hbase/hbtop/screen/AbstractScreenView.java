@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * An abstract class for {@link ScreenView} that has the common useful methods and the default

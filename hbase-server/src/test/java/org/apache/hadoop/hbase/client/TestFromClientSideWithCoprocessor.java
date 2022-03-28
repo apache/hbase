@@ -33,8 +33,8 @@ import org.junit.runners.Parameterized;
 /**
  * Test all client operations with a coprocessor that just implements the default flush/compact/scan
  * policy.
- *
- * <p>Base class was split into three so this class got split into three. See below for other parts.
+ * <p>
+ * Base class was split into three so this class got split into three. See below for other parts.
  * @see TestFromClientSide4
  * @see TestFromClientSide5
  */
@@ -42,16 +42,14 @@ import org.junit.runners.Parameterized;
 public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
+      HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
 
   // Override the parameters from the parent class. We just want to run it for the default
   // param combination.
   @Parameterized.Parameters
   public static Collection parameters() {
-    return Arrays.asList(new Object[][] {
-        { MasterRegistry.class, 1},
-        { ZKConnectionRegistry.class, 1}
-    });
+    return Arrays
+        .asList(new Object[][] { { MasterRegistry.class, 1 }, { ZKConnectionRegistry.class, 1 } });
   }
 
   @AfterClass
@@ -61,6 +59,6 @@ public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
 
   public TestFromClientSideWithCoprocessor(Class registry, int numHedgedReqs) throws Exception {
     initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
-        MultiRowMutationEndpoint.class);
+      MultiRowMutationEndpoint.class);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,7 +49,7 @@ public class TestMasterRegionWALRecovery extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionWALRecovery.class);
+      HBaseClassTestRule.forClass(TestMasterRegionWALRecovery.class);
 
   private Path masterRegionDir;
 
@@ -65,7 +64,7 @@ public class TestMasterRegionWALRecovery extends MasterRegionTestBase {
   @Test
   public void test() throws IOException, InterruptedException {
     region
-      .update(r -> r.put(new Put(Bytes.toBytes(1)).addColumn(CF1, QUALIFIER, Bytes.toBytes(1))));
+        .update(r -> r.put(new Put(Bytes.toBytes(1)).addColumn(CF1, QUALIFIER, Bytes.toBytes(1))));
     region.flush(true);
 
     Path testDir = htu.getDataTestDir();

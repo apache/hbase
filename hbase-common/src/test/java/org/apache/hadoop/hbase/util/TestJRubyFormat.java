@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,8 +48,8 @@ public class TestJRubyFormat {
 
     String jrubyString = JRubyFormat.print(map);
     assertEquals("{ null => '', boolean => 'true', number => '1', "
-        + "string => 'str', binary => '010203', "
-        + "list => [ '1', '2', 'true' ] }", jrubyString);
+        + "string => 'str', binary => '010203', " + "list => [ '1', '2', 'true' ] }",
+      jrubyString);
   }
 
   @Test

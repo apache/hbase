@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,17 +38,17 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFSHLogCorruptionDueToDanglingByteBuffer
-  extends WALCorruptionDueToDanglingByteBufferTestBase {
+    extends WALCorruptionDueToDanglingByteBufferTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSHLogCorruptionDueToDanglingByteBuffer.class);
+      HBaseClassTestRule.forClass(TestFSHLogCorruptionDueToDanglingByteBuffer.class);
 
   public static final class PauseWAL extends FSHLog {
 
     public PauseWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix) throws IOException {
+        Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
+        String prefix, String suffix) throws IOException {
       super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
     }
 
@@ -69,9 +69,9 @@ public class TestFSHLogCorruptionDueToDanglingByteBuffer
     @Override
     protected PauseWAL createWAL() throws IOException {
       return new PauseWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
-        conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+          getWALDirectoryName(factory.factoryId),
+          getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+          META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
     }
 
     @Override

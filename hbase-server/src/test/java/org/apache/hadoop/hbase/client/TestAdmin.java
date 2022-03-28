@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestAdmin extends TestAdminBase {
     tables = ADMIN.listTableDescriptors();
     assertEquals(numTables + 1, tables.size());
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
+        .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
@@ -161,8 +161,8 @@ public class TestAdmin extends TestAdminBase {
     TableName table = TableName.valueOf(name.getMethodName());
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY);
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
+        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
     int expectedRegions = splitKeys.length + 1;
 
     ADMIN.createTable(TableDescriptorBuilder.newBuilder(table).setColumnFamily(cfd).build(),
@@ -298,7 +298,7 @@ public class TestAdmin extends TestAdminBase {
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
-      new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
+        new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
 
     TableName table4 = TableName.valueOf(table.getNameAsString() + "_4");
     try {
@@ -317,7 +317,7 @@ public class TestAdmin extends TestAdminBase {
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
     try {
       ADMIN.createTable(desc, splitKeys);
       fail("Test case should fail as empty split key is passed.");
@@ -333,7 +333,7 @@ public class TestAdmin extends TestAdminBase {
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
     splitKeys[2] = Bytes.toBytes("region2");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
     try {
       ADMIN.createTable(desc, splitKeys);
       fail("Test case should fail as empty split key is passed.");
@@ -367,8 +367,8 @@ public class TestAdmin extends TestAdminBase {
     int max = (int) Math.ceil(average);
     for (List<RegionInfo> regionList : server2Regions.values()) {
       assertTrue(
-        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size() +
-          ", tablesOnMaster=" + tablesOnMaster,
+        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size()
+            + ", tablesOnMaster=" + tablesOnMaster,
         regionList.size() == min || regionList.size() == max);
     }
   }
@@ -402,10 +402,10 @@ public class TestAdmin extends TestAdminBase {
 
     // Create the table
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(BLOCK_SIZE)
-        .setBlockCacheEnabled(BLOCK_CACHE).setTimeToLive(TTL).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(BLOCK_SIZE)
+            .setBlockCacheEnabled(BLOCK_CACHE).setTimeToLive(TTL).build())
+        .build();
     ADMIN.createTable(tableDesc, splitKeys);
 
     assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
@@ -464,14 +464,14 @@ public class TestAdmin extends TestAdminBase {
   public void testModifyTableOnTableWithRegionReplicas() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
-      .setRegionReplication(5).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
+        .setRegionReplication(5).build();
 
     ADMIN.createTable(desc);
 
     int maxFileSize = 10000000;
     TableDescriptor newDesc =
-      TableDescriptorBuilder.newBuilder(desc).setMaxFileSize(maxFileSize).build();
+        TableDescriptorBuilder.newBuilder(desc).setMaxFileSize(maxFileSize).build();
 
     ADMIN.modifyTable(newDesc);
     TableDescriptor newTableDesc = ADMIN.getDescriptor(tableName);
@@ -502,7 +502,7 @@ public class TestAdmin extends TestAdminBase {
       newFlushSize = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
     }
     copy = TableDescriptorBuilder.newBuilder(copy).setMemStoreFlushSize(newFlushSize)
-      .setValue(key, key).build();
+        .setValue(key, key).build();
     ADMIN.modifyTable(copy);
     TableDescriptor modifiedHtd = ADMIN.getDescriptor(tableName);
     assertNotEquals(htd, modifiedHtd);
@@ -527,7 +527,7 @@ public class TestAdmin extends TestAdminBase {
     assertFalse(ADMIN.isTableDisabled(tableName));
     String xtracolName = "xtracol";
     ColumnFamilyDescriptor xtracol = ColumnFamilyDescriptorBuilder
-      .newBuilder(Bytes.toBytes(xtracolName)).setValue(xtracolName, xtracolName).build();
+        .newBuilder(Bytes.toBytes(xtracolName)).setValue(xtracolName, xtracolName).build();
     ADMIN.addColumnFamily(tableName, xtracol);
     modifiedHtd = ADMIN.getDescriptor(tableName);
     hcd = modifiedHtd.getColumnFamily(xtracol.getName());

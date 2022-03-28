@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,7 +40,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestRegionSizeReportingChore {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -51,14 +51,13 @@ public class TestRegionSizeReportingChore {
     final Configuration conf = getDefaultHBaseConfiguration();
     final HRegionServer rs = mockRegionServer(conf);
     RegionSizeReportingChore chore = new RegionSizeReportingChore(rs);
+    assertEquals(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_DELAY_DEFAULT,
+      chore.getInitialDelay());
+    assertEquals(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_PERIOD_DEFAULT,
+      chore.getPeriod());
     assertEquals(
-        RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_DELAY_DEFAULT,
-        chore.getInitialDelay());
-    assertEquals(
-        RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_PERIOD_DEFAULT, chore.getPeriod());
-    assertEquals(
-        TimeUnit.valueOf(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_TIMEUNIT_DEFAULT),
-        chore.getTimeUnit());
+      TimeUnit.valueOf(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_TIMEUNIT_DEFAULT),
+      chore.getTimeUnit());
   }
 
   @Test

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -41,7 +39,6 @@ public final class ImmutableScan extends Scan {
 
   /**
    * Create Immutable instance of Scan from given Scan object
-   *
    * @param scan Copy all values from Scan
    */
   public ImmutableScan(Scan scan) {
@@ -77,7 +74,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setColumnFamilyTimeRange");
+        "ImmutableScan does not allow access to setColumnFamilyTimeRange");
   }
 
   @Override
@@ -103,13 +100,13 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setRowPrefixFilter");
+        "ImmutableScan does not allow access to setRowPrefixFilter");
   }
 
   @Override
   public Scan readAllVersions() {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to readAllVersions");
+        "ImmutableScan does not allow access to readAllVersions");
   }
 
   @Override
@@ -125,13 +122,13 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setMaxResultsPerColumnFamily(int limit) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setMaxResultsPerColumnFamily");
+        "ImmutableScan does not allow access to setMaxResultsPerColumnFamily");
   }
 
   @Override
   public Scan setRowOffsetPerColumnFamily(int offset) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setRowOffsetPerColumnFamily");
+        "ImmutableScan does not allow access to setRowOffsetPerColumnFamily");
   }
 
   @Override
@@ -142,7 +139,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setMaxResultSize(long maxResultSize) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setMaxResultSize");
+        "ImmutableScan does not allow access to setMaxResultSize");
   }
 
   @Override
@@ -158,7 +155,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setCacheBlocks(boolean cacheBlocks) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setCacheBlocks");
+        "ImmutableScan does not allow access to setCacheBlocks");
   }
 
   @Override
@@ -169,13 +166,13 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setAllowPartialResults");
+        "ImmutableScan does not allow access to setAllowPartialResults");
   }
 
   @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand");
+        "ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand");
   }
 
   @Override
@@ -202,7 +199,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setAuthorizations(Authorizations authorizations) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setAuthorizations");
+        "ImmutableScan does not allow access to setAuthorizations");
   }
 
   @Override
@@ -218,7 +215,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setConsistency(Consistency consistency) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setConsistency");
+        "ImmutableScan does not allow access to setConsistency");
   }
 
   @Override
@@ -229,7 +226,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setIsolationLevel");
+        "ImmutableScan does not allow access to setIsolationLevel");
   }
 
   @Override
@@ -240,14 +237,14 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setScanMetricsEnabled(final boolean enabled) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setScanMetricsEnabled");
+        "ImmutableScan does not allow access to setScanMetricsEnabled");
   }
 
   @Override
   @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setAsyncPrefetch");
+        "ImmutableScan does not allow access to setAsyncPrefetch");
   }
 
   @Override
@@ -258,7 +255,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setOneRowLimit() {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setOneRowLimit");
+        "ImmutableScan does not allow access to setOneRowLimit");
   }
 
   @Override
@@ -269,19 +266,19 @@ public final class ImmutableScan extends Scan {
   @Override
   Scan setMvccReadPoint(long mvccReadPoint) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setMvccReadPoint");
+        "ImmutableScan does not allow access to setMvccReadPoint");
   }
 
   @Override
   Scan resetMvccReadPoint() {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to resetMvccReadPoint");
+        "ImmutableScan does not allow access to resetMvccReadPoint");
   }
 
   @Override
   public Scan setNeedCursorResult(boolean needCursorResult) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setNeedCursorResult");
+        "ImmutableScan does not allow access to setNeedCursorResult");
   }
 
   @Override

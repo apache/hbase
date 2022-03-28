@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Get, remove and modify table descriptors.

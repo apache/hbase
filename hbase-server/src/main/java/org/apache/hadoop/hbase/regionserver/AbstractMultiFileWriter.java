@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,6 +43,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   public interface WriterFactory {
     public StoreFileWriter createWriter() throws IOException;
+
     default StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
         throws IOException {
       return createWriter();
@@ -75,9 +76,8 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
     preCommitWriters();
     Collection<StoreFileWriter> writers = this.writers();
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction=" +
-              majorCompaction);
+      LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction="
+          + majorCompaction);
     }
     List<Path> paths = new ArrayList<>();
     for (StoreFileWriter writer : writers) {

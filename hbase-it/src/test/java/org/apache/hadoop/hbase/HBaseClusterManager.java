@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.File;
@@ -37,19 +36,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A default cluster manager for HBase. Uses SSH, and hbase shell scripts
- * to manage the cluster. Assumes Unix-like commands are available like 'ps',
- * 'kill', etc. Also assumes the user running the test has enough "power" to start & stop
- * servers on the remote machines (for example, the test user could be the same user as the
- * user the daemon is running as)
+ * A default cluster manager for HBase. Uses SSH, and hbase shell scripts to manage the cluster.
+ * Assumes Unix-like commands are available like 'ps', 'kill', etc. Also assumes the user running
+ * the test has enough "power" to start & stop servers on the remote machines (for example, the test
+ * user could be the same user as the user the daemon is running as)
  */
 @InterfaceAudience.Private
 public class HBaseClusterManager extends Configured implements ClusterManager {
 
   protected enum Signal {
-    SIGKILL,
-    SIGSTOP,
-    SIGCONT,
+    SIGKILL, SIGSTOP, SIGCONT,
   }
 
   protected static final Logger LOG = LoggerFactory.getLogger(HBaseClusterManager.class);
@@ -57,18 +53,16 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   private String sshOptions;
 
   /**
-   * The command format that is used to execute the remote command. Arguments:
-   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host,
-   * 5 original command, 6 service user.
+   * The command format that is used to execute the remote command. Arguments: 1 SSH options, 2 user
+   * name , 3 "@" if username is set, 4 host, 5 original command, 6 service user.
    */
   private static final String DEFAULT_TUNNEL_CMD =
       "timeout 30 /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
   private String tunnelCmd;
 
   /**
-   * The command format that is used to execute the remote command with sudo. Arguments:
-   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host,
-   * 5 original command, 6 timeout.
+   * The command format that is used to execute the remote command with sudo. Arguments: 1 SSH
+   * options, 2 user name , 3 "@" if username is set, 4 host, 5 original command, 6 timeout.
    */
   private static final String DEFAULT_TUNNEL_SUDO_CMD =
       "timeout %6$s /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo %5$s\"";
@@ -100,8 +94,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
     tunnelSudoCmd = conf.get("hbase.it.clustermanager.ssh.sudo.cmd", DEFAULT_TUNNEL_SUDO_CMD);
     // Print out ssh special config if any.
-    if ((sshUserName != null && sshUserName.length() > 0) ||
-        (sshOptions != null && sshOptions.length() > 0)) {
+    if ((sshUserName != null && sshUserName.length() > 0)
+        || (sshOptions != null && sshOptions.length() > 0)) {
       LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
     }
 
@@ -188,16 +182,16 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       String at = sshUserName.isEmpty() ? "" : "@";
       String remoteCmd = StringUtils.join(super.getExecString(), " ");
       String cmd = String.format(tunnelSudoCmd, sshOptions, sshUserName, at, hostname, remoteCmd,
-          timeOutInterval/1000f);
+        timeOutInterval / 1000f);
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
   }
 
   /**
-   * Provides command strings for services to be executed by Shell. CommandProviders are
-   * pluggable, and different deployments(windows, bigtop, etc) can be managed by
-   * plugging-in custom CommandProvider's or ClusterManager's.
+   * Provides command strings for services to be executed by Shell. CommandProviders are pluggable,
+   * and different deployments(windows, bigtop, etc) can be managed by plugging-in custom
+   * CommandProvider's or ClusterManager's.
    */
   static abstract class CommandProvider {
 
@@ -213,7 +207,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
     protected String findPidCommand(ServiceType service) {
       return String.format("ps ux | grep proc_%s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
-          service);
+        service);
     }
 
     public String signalCommand(ServiceType service, String signal) {
@@ -229,10 +223,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     private final String confDir;
 
     HBaseShellCommandProvider(Configuration conf) {
-      hbaseHome = conf.get("hbase.it.clustermanager.hbase.home",
-        System.getenv("HBASE_HOME"));
-      String tmp = conf.get("hbase.it.clustermanager.hbase.conf.dir",
-        System.getenv("HBASE_CONF_DIR"));
+      hbaseHome = conf.get("hbase.it.clustermanager.hbase.home", System.getenv("HBASE_HOME"));
+      String tmp =
+          conf.get("hbase.it.clustermanager.hbase.conf.dir", System.getenv("HBASE_CONF_DIR"));
       if (tmp != null) {
         confDir = String.format("--config %s", tmp);
       } else {
@@ -243,7 +236,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     @Override
     public String getCommand(ServiceType service, Operation op) {
       return String.format("%s/bin/hbase-daemon.sh %s %s %s", hbaseHome, confDir,
-          op.toString().toLowerCase(Locale.ROOT), service);
+        op.toString().toLowerCase(Locale.ROOT), service);
     }
   }
 
@@ -255,13 +248,12 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     private final String confDir;
 
     HadoopShellCommandProvider(Configuration conf) throws IOException {
-      hadoopHome = conf.get("hbase.it.clustermanager.hadoop.home",
-          System.getenv("HADOOP_HOME"));
-      String tmp = conf.get("hbase.it.clustermanager.hadoop.conf.dir",
-          System.getenv("HADOOP_CONF_DIR"));
+      hadoopHome = conf.get("hbase.it.clustermanager.hadoop.home", System.getenv("HADOOP_HOME"));
+      String tmp =
+          conf.get("hbase.it.clustermanager.hadoop.conf.dir", System.getenv("HADOOP_CONF_DIR"));
       if (hadoopHome == null) {
-        throw new IOException("Hadoop home configuration parameter i.e. " +
-          "'hbase.it.clustermanager.hadoop.home' is not configured properly.");
+        throw new IOException("Hadoop home configuration parameter i.e. "
+            + "'hbase.it.clustermanager.hadoop.home' is not configured properly.");
       }
       if (tmp != null) {
         confDir = String.format("--config %s", tmp);
@@ -273,7 +265,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     @Override
     public String getCommand(ServiceType service, Operation op) {
       return String.format("%s/sbin/hadoop-daemon.sh %s %s %s", hadoopHome, confDir,
-          op.toString().toLowerCase(Locale.ROOT), service);
+        op.toString().toLowerCase(Locale.ROOT), service);
     }
   }
 
@@ -285,13 +277,13 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     private final String confDir;
 
     ZookeeperShellCommandProvider(Configuration conf) throws IOException {
-      zookeeperHome = conf.get("hbase.it.clustermanager.zookeeper.home",
-          System.getenv("ZOOBINDIR"));
-      String tmp = conf.get("hbase.it.clustermanager.zookeeper.conf.dir",
-          System.getenv("ZOOCFGDIR"));
+      zookeeperHome =
+          conf.get("hbase.it.clustermanager.zookeeper.home", System.getenv("ZOOBINDIR"));
+      String tmp =
+          conf.get("hbase.it.clustermanager.zookeeper.conf.dir", System.getenv("ZOOCFGDIR"));
       if (zookeeperHome == null) {
-        throw new IOException("ZooKeeper home configuration parameter i.e. " +
-          "'hbase.it.clustermanager.zookeeper.home' is not configured properly.");
+        throw new IOException("ZooKeeper home configuration parameter i.e. "
+            + "'hbase.it.clustermanager.zookeeper.home' is not configured properly.");
       }
       if (tmp != null) {
         confDir = String.format("--config %s", tmp);
@@ -302,13 +294,13 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
     @Override
     public String getCommand(ServiceType service, Operation op) {
-      return String.format("%s/bin/zkServer.sh %s", zookeeperHome, op.toString().toLowerCase(Locale.ROOT));
+      return String.format("%s/bin/zkServer.sh %s", zookeeperHome,
+        op.toString().toLowerCase(Locale.ROOT));
     }
 
     @Override
     protected String findPidCommand(ServiceType service) {
-      return String.format("ps ux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
-        service);
+      return String.format("ps ux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2", service);
     }
   }
 
@@ -323,9 +315,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       case ZOOKEEPER_SERVER:
         return new ZookeeperShellCommandProvider(getConf());
       default:
-        Class<? extends CommandProvider> provider = getConf()
-          .getClass("hbase.it.clustermanager.hbase.command.provider",
-            HBaseShellCommandProvider.class, CommandProvider.class);
+        Class<? extends CommandProvider> provider =
+            getConf().getClass("hbase.it.clustermanager.hbase.command.provider",
+              HBaseShellCommandProvider.class, CommandProvider.class);
         return ReflectionUtils.newInstance(provider, getConf());
     }
   }
@@ -336,9 +328,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    * @throws IOException if something goes wrong.
    */
   protected Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
-    throws IOException {
-    LOG.info("Executing remote command: {}, hostname:{}", StringUtils.join(cmd, " "),
-        hostname);
+      throws IOException {
+    LOG.info("Executing remote command: {}, hostname:{}", StringUtils.join(cmd, " "), hostname);
 
     RemoteShell shell = new RemoteShell(hostname, getServiceUser(service), cmd);
     try {
@@ -347,12 +338,12 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       // capture the stdout of the process as well.
       String output = shell.getOutput();
       // add output for the ExitCodeException.
-      throw new Shell.ExitCodeException(ex.getExitCode(), "stderr: " + ex.getMessage()
-        + ", stdout: " + output);
+      throw new Shell.ExitCodeException(ex.getExitCode(),
+          "stderr: " + ex.getMessage() + ", stdout: " + output);
     }
 
     LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
-        shell.getOutput());
+      shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -382,8 +373,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    */
   public Pair<Integer, String> execSudo(String hostname, long timeout, String... cmd)
       throws IOException {
-    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "),
-        hostname);
+    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "), hostname);
 
     RemoteSudoShell shell = new RemoteSudoShell(hostname, cmd, timeout);
     try {
@@ -392,12 +382,12 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       // capture the stdout of the process as well.
       String output = shell.getOutput();
       // add output for the ExitCodeException.
-      throw new Shell.ExitCodeException(ex.getExitCode(), "stderr: " + ex.getMessage()
-          + ", stdout: " + output);
+      throw new Shell.ExitCodeException(ex.getExitCode(),
+          "stderr: " + ex.getMessage() + ", stdout: " + output);
     }
 
     LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
-        shell.getOutput());
+      shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -420,12 +410,13 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
   }
 
-  private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex,
-      String hostname, String[] cmd) throws E {
+  private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex, String hostname,
+      String[] cmd) throws E {
     if (retryCounter.shouldRetry()) {
       LOG.warn("Remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname
-        + " failed at attempt " + retryCounter.getAttemptTimes() + ". Retrying until maxAttempts: "
-          + retryCounter.getMaxAttempts() + ". Exception: " + ex.getMessage());
+          + " failed at attempt " + retryCounter.getAttemptTimes()
+          + ". Retrying until maxAttempts: " + retryCounter.getMaxAttempts() + ". Exception: "
+          + ex.getMessage());
       return;
     }
     throw ex;
@@ -457,8 +448,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
   @Override
   public boolean isRunning(ServiceType service, String hostname, int port) throws IOException {
-    String ret = execWithRetries(hostname, service,
-      getCommandProvider(service).isRunningCommand(service)).getSecond();
+    String ret =
+        execWithRetries(hostname, service, getCommandProvider(service).isRunningCommand(service))
+            .getSecond();
     return ret.length() > 0;
   }
 

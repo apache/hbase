@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,10 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
@@ -32,6 +30,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Query matcher for user scan.
@@ -74,9 +73,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     this.hasNullColumn = hasNullColumn;
     this.filter = scan.getFilter();
     if (this.filter != null) {
-      this.versionsAfterFilter =
-          scan.isRaw() ? scan.getMaxVersions() : Math.min(scan.getMaxVersions(),
-            scanInfo.getMaxVersions());
+      this.versionsAfterFilter = scan.isRaw() ? scan.getMaxVersions()
+          : Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
     } else {
       this.versionsAfterFilter = 0;
     }
@@ -152,8 +150,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         break;
     }
 
-    return filter == null ? matchCode : mergeFilterResponse(cell, matchCode,
-      filter.filterCell(cell));
+    return filter == null ? matchCode
+        : mergeFilterResponse(cell, matchCode, filter.filterCell(cell));
   }
 
   /**
@@ -280,8 +278,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     boolean hasNullColumn =
         !(columns != null && columns.size() != 0 && columns.first().length != 0);
-    Pair<DeleteTracker, ColumnTracker> trackers = getTrackers(regionCoprocessorHost, columns,
-        scanInfo, oldestUnexpiredTS, scan);
+    Pair<DeleteTracker, ColumnTracker> trackers =
+        getTrackers(regionCoprocessorHost, columns, scanInfo, oldestUnexpiredTS, scan);
     DeleteTracker deleteTracker = trackers.getFirst();
     ColumnTracker columnTracker = trackers.getSecond();
     if (scan.isRaw()) {
@@ -289,7 +287,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         oldestUnexpiredTS, now);
     } else {
       return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, deleteTracker,
-          hasNullColumn, oldestUnexpiredTS, now);
+        hasNullColumn, oldestUnexpiredTS, now);
     }
   }
 }

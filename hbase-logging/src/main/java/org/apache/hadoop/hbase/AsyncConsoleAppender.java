@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ public class AsyncConsoleAppender extends org.apache.log4j.AsyncAppender {
   public AsyncConsoleAppender() {
     super();
     consoleAppender = new org.apache.log4j.ConsoleAppender(
-      new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p [%t] %c{2}: %m%n"));
+        new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p [%t] %c{2}: %m%n"));
     this.addAppender(consoleAppender);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ public interface Counter extends Metric {
 
   /**
    * Increment {@code this} by {@code n}.
-   *
    * @param n The amount to increment.
    */
   void increment(long n);
@@ -47,7 +46,6 @@ public interface Counter extends Metric {
 
   /**
    * Decrement {@code this} by {@code n}.
-   *
    * @param n The amount to decrement.
    */
   void decrement(long n);

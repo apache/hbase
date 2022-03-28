@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -40,7 +41,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import sun.security.x509.AlgorithmId;
 
-@Category({ RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestRESTServerSSL {
 
   @ClassRule
@@ -64,8 +65,8 @@ public class TestRESTServerSSL {
     AlgorithmId.get("PBEWithSHA1AndDESede");
     keyDir = initKeystoreDir();
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    X509Certificate serverCertificate = KeyStoreTestUtil.generateCertificate(
-      "CN=localhost, O=server", keyPair, 30, "SHA1withRSA");
+    X509Certificate serverCertificate =
+        KeyStoreTestUtil.generateCertificate("CN=localhost, O=server", keyPair, 30, "SHA1withRSA");
 
     generateTrustStore("jks", serverCertificate);
     generateTrustStore("jceks", serverCertificate);
@@ -147,8 +148,6 @@ public class TestRESTServerSSL {
     assertEquals(200, response.getCode());
   }
 
-
-
   private static File initKeystoreDir() {
     String dataTestDir = TEST_UTIL.getDataTestDir().toString();
     File keystoreDir = new File(dataTestDir, TestRESTServerSSL.class.getSimpleName() + "_keys");
@@ -157,14 +156,14 @@ public class TestRESTServerSSL {
   }
 
   private static void generateKeyStore(String keyStoreType, KeyPair keyPair,
-    X509Certificate serverCertificate) throws Exception {
+      X509Certificate serverCertificate) throws Exception {
     String keyStorePath = getKeystoreFilePath(keyStoreType);
     KeyStoreTestUtil.createKeyStore(keyStorePath, KEY_STORE_PASSWORD, KEY_STORE_PASSWORD,
       "serverKS", keyPair.getPrivate(), serverCertificate, keyStoreType);
   }
 
   private static void generateTrustStore(String trustStoreType, X509Certificate serverCertificate)
-    throws Exception {
+      throws Exception {
     String trustStorePath = getTruststoreFilePath(trustStoreType);
     KeyStoreTestUtil.createTrustStore(trustStorePath, TRUST_STORE_PASSWORD, "serverTS",
       serverCertificate, trustStoreType);
@@ -185,7 +184,7 @@ public class TestRESTServerSSL {
     REST_TEST_UTIL.startServletContainer(conf);
     Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
     sslClient = new Client(localCluster, getTruststoreFilePath("jks"),
-      Optional.of(TRUST_STORE_PASSWORD), Optional.empty());
+        Optional.of(TRUST_STORE_PASSWORD), Optional.empty());
   }
 
   private void startRESTServer(String storeType) throws Exception {
@@ -198,7 +197,7 @@ public class TestRESTServerSSL {
     REST_TEST_UTIL.startServletContainer(conf);
     Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
     sslClient = new Client(localCluster, getTruststoreFilePath(storeType),
-                           Optional.of(TRUST_STORE_PASSWORD), Optional.of(storeType));
+        Optional.of(TRUST_STORE_PASSWORD), Optional.of(storeType));
   }
 
 }

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableMap;
@@ -81,7 +82,7 @@ public class TestWALRecordReader {
   private static Path walRootDir;
   // visible for TestHLogRecordReader
   static final TableName tableName = TableName.valueOf(getName());
-  private static final byte [] rowName = tableName.getName();
+  private static final byte[] rowName = tableName.getName();
   // visible for TestHLogRecordReader
   static final RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
   private static final byte[] family = Bytes.toBytes("column");
@@ -144,8 +145,8 @@ public class TestWALRecordReader {
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
     log.appendData(info, getWalKeyImpl(ts, scopes), edit);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
-    log.appendData(info, getWalKeyImpl(ts+1, scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts + 1, value));
+    log.appendData(info, getWalKeyImpl(ts + 1, scopes), edit);
     log.sync();
     Threads.sleep(10);
     LOG.info("Before 1st WAL roll " + log.toString());
@@ -156,16 +157,15 @@ public class TestWALRecordReader {
     long ts1 = System.currentTimeMillis();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
-    log.appendData(info, getWalKeyImpl(ts1+1, scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1 + 1, value));
+    log.appendData(info, getWalKeyImpl(ts1 + 1, scopes), edit);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
-    log.appendData(info, getWalKeyImpl(ts1+2, scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1 + 2, value));
+    log.appendData(info, getWalKeyImpl(ts1 + 2, scopes), edit);
     log.sync();
     log.shutdown();
     walfactory.shutdown();
     LOG.info("Closed WAL " + log.toString());
-
 
     WALInputFormat input = new WALInputFormat();
     Configuration jobConf = new Configuration(conf);
@@ -177,7 +177,7 @@ public class TestWALRecordReader {
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 
-    jobConf.setLong(WALInputFormat.END_TIME_KEY, ts1+1);
+    jobConf.setLong(WALInputFormat.END_TIME_KEY, ts1 + 1);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertEquals(2, splits.size());
     // Both entries from first file are in-range.
@@ -200,10 +200,9 @@ public class TestWALRecordReader {
   public void testWALRecordReader() throws Exception {
     final WALFactory walfactory = new WALFactory(conf, getName());
     WAL log = walfactory.getWAL(info);
-    byte [] value = Bytes.toBytes("value");
+    byte[] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        System.currentTimeMillis(), value));
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), System.currentTimeMillis(), value));
     long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
 
@@ -236,7 +235,7 @@ public class TestWALRecordReader {
     // now test basic time ranges:
 
     // set an endtime, the 2nd log file can be ignored completely.
-    jobConf.setLong(WALInputFormat.END_TIME_KEY, secondTs-1);
+    jobConf.setLong(WALInputFormat.END_TIME_KEY, secondTs - 1);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
@@ -279,8 +278,8 @@ public class TestWALRecordReader {
   }
 
   /**
-   * Create a new reader from the split, match the edits against the passed columns,
-   * moving WAL to archive in between readings
+   * Create a new reader from the split, match the edits against the passed columns, moving WAL to
+   * archive in between readings
    */
   private void testSplitWithMovingWAL(InputSplit split, byte[] col1, byte[] col2) throws Exception {
     WALRecordReader<WALKey> reader = getReader();

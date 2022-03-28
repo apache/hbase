@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.testclassification;
 
 /**
  * Tag a test as region tests which takes longer than 5 minutes to run on public build
  * infrastructure.
- *
  * @see org.apache.hadoop.hbase.testclassification.ClientTests
  * @see org.apache.hadoop.hbase.testclassification.CoprocessorTests
  * @see org.apache.hadoop.hbase.testclassification.FilterTests

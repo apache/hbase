@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,16 +23,14 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForSca
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ClientSimpleScanner implements a sync scanner behaviour.
- * The cache is a simple list.
- * The prefetch is invoked only when the application finished processing the entire cache.
+ * ClientSimpleScanner implements a sync scanner behaviour. The cache is a simple list. The prefetch
+ * is invoked only when the application finished processing the entire cache.
  */
 @InterfaceAudience.Private
 public class ClientSimpleScanner extends ClientScanner {
@@ -61,6 +59,6 @@ public class ClientSimpleScanner extends ClientScanner {
       scan.withStartRow(createClosestRowAfter(scan.getStartRow()), true);
     }
     return new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-      this.rpcControllerFactory, getScanReplicaId());
+        this.rpcControllerFactory, getScanReplicaId());
   }
 }

@@ -111,8 +111,8 @@ public class TestQuotaObserverChoreRegionReports {
 
     // Create a table
     final TableName tn = TableName.valueOf("reportExpiration");
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(FAM1)).build();
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 
     // No reports right after we created this table.
@@ -163,8 +163,8 @@ public class TestQuotaObserverChoreRegionReports {
 
     // Create a table
     final TableName tn = TableName.valueOf("quotaAcceptanceWithoutReports");
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(FAM1)).build();
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 
     // Set a quota
@@ -224,11 +224,10 @@ public class TestQuotaObserverChoreRegionReports {
     assertFalse("Quota should not be in violation", snapshot.getQuotaStatus().isInViolation());
   }
 
-  private SpaceQuotaSnapshot getSnapshotForTable(
-      Connection conn, TableName tn) throws IOException {
+  private SpaceQuotaSnapshot getSnapshotForTable(Connection conn, TableName tn) throws IOException {
     try (Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME);
         ResultScanner scanner = quotaTable.getScanner(QuotaTableUtil.makeQuotaSnapshotScan())) {
-      Map<TableName,SpaceQuotaSnapshot> activeViolations = new HashMap<>();
+      Map<TableName, SpaceQuotaSnapshot> activeViolations = new HashMap<>();
       for (Result result : scanner) {
         try {
           QuotaTableUtil.extractQuotaSnapshot(result, activeViolations);
@@ -242,9 +241,9 @@ public class TestQuotaObserverChoreRegionReports {
     }
   }
 
-  private int getRegionReportsForTable(Map<RegionInfo,Long> reports, TableName tn) {
+  private int getRegionReportsForTable(Map<RegionInfo, Long> reports, TableName tn) {
     int numReports = 0;
-    for (Entry<RegionInfo,Long> entry : reports.entrySet()) {
+    for (Entry<RegionInfo, Long> entry : reports.entrySet()) {
       if (tn.equals(entry.getKey().getTable())) {
         numReports++;
       }

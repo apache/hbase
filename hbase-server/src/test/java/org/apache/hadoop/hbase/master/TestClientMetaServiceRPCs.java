@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,6 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCluster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 
-@Category({MediumTests.class, MasterTests.class})
+@Category({ MediumTests.class, MasterTests.class })
 public class TestClientMetaServiceRPCs {
 
   @ClassRule
@@ -75,10 +76,10 @@ public class TestClientMetaServiceRPCs {
     builder.numMasters(MASTER_COUNT).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     conf = TEST_UTIL.getConfiguration();
-    rpcTimeout = (int) Math.min(Integer.MAX_VALUE, TimeUnit.MILLISECONDS.toNanos(
-        conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT)));
+    rpcTimeout = (int) Math.min(Integer.MAX_VALUE, TimeUnit.MILLISECONDS
+        .toNanos(conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT)));
     rpcClient = RpcClientFactory.createClient(conf,
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId());
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId());
   }
 
   @AfterClass
@@ -91,8 +92,8 @@ public class TestClientMetaServiceRPCs {
 
   private static ClientMetaService.BlockingInterface getMasterStub(ServerName server)
       throws IOException {
-    return ClientMetaService.newBlockingStub(
-        rpcClient.createBlockingRpcChannel(server, User.getCurrent(), rpcTimeout));
+    return ClientMetaService
+        .newBlockingStub(rpcClient.createBlockingRpcChannel(server, User.getCurrent(), rpcTimeout));
   }
 
   private static HBaseRpcController getRpcController() {
@@ -102,12 +103,13 @@ public class TestClientMetaServiceRPCs {
   /**
    * Verifies the cluster ID from all running masters.
    */
-  @Test public void TestClusterID() throws Exception {
+  @Test
+  public void TestClusterID() throws Exception {
     HBaseRpcController rpcController = getRpcController();
     String clusterID = TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId();
     int rpcCount = 0;
-    for (JVMClusterUtil.MasterThread masterThread:
-        TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
+    for (JVMClusterUtil.MasterThread masterThread : TEST_UTIL.getMiniHBaseCluster()
+        .getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
           getMasterStub(masterThread.getMaster().getServerName());
       GetClusterIdResponse resp =
@@ -121,12 +123,13 @@ public class TestClientMetaServiceRPCs {
   /**
    * Verifies the active master ServerName as seen by all masters.
    */
-  @Test public void TestActiveMaster() throws Exception {
+  @Test
+  public void TestActiveMaster() throws Exception {
     HBaseRpcController rpcController = getRpcController();
     ServerName activeMaster = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
     int rpcCount = 0;
-    for (JVMClusterUtil.MasterThread masterThread:
-        TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
+    for (JVMClusterUtil.MasterThread masterThread : TEST_UTIL.getMiniHBaseCluster()
+        .getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
           getMasterStub(masterThread.getMaster().getServerName());
       GetActiveMasterResponse resp =
@@ -140,21 +143,22 @@ public class TestClientMetaServiceRPCs {
   /**
    * Verifies that the meta region locations RPC returns consistent results across all masters.
    */
-  @Test public void TestMetaLocations() throws Exception {
+  @Test
+  public void TestMetaLocations() throws Exception {
     HBaseRpcController rpcController = getRpcController();
     List<HRegionLocation> metaLocations = TEST_UTIL.getMiniHBaseCluster().getMaster()
         .getMetaRegionLocationCache().getMetaRegionLocations().get();
     Collections.sort(metaLocations);
     int rpcCount = 0;
-    for (JVMClusterUtil.MasterThread masterThread:
-      TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
+    for (JVMClusterUtil.MasterThread masterThread : TEST_UTIL.getMiniHBaseCluster()
+        .getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
           getMasterStub(masterThread.getMaster().getServerName());
-      GetMetaRegionLocationsResponse resp = stub.getMetaRegionLocations(
-          rpcController, GetMetaRegionLocationsRequest.getDefaultInstance());
+      GetMetaRegionLocationsResponse resp = stub.getMetaRegionLocations(rpcController,
+        GetMetaRegionLocationsRequest.getDefaultInstance());
       List<HRegionLocation> result = new ArrayList<>();
-      resp.getMetaLocationsList().forEach(
-        location -> result.add(ProtobufUtil.toRegionLocation(location)));
+      resp.getMetaLocationsList()
+          .forEach(location -> result.add(ProtobufUtil.toRegionLocation(location)));
       Collections.sort(result);
       assertEquals(metaLocations, result);
       rpcCount++;

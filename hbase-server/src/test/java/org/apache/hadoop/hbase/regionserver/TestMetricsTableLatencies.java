@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,7 +31,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMetricsTableLatencies {
 
   @ClassRule
@@ -46,30 +45,30 @@ public class TestMetricsTableLatencies {
   public void testTableWrapperAggregateMetrics() throws IOException {
     TableName tn1 = TableName.valueOf("table1");
     TableName tn2 = TableName.valueOf("table2");
-    MetricsTableLatencies latencies = CompatibilitySingletonFactory.getInstance(
-        MetricsTableLatencies.class);
+    MetricsTableLatencies latencies =
+        CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
     assertTrue("'latencies' is actually " + latencies.getClass(),
-        latencies instanceof MetricsTableLatenciesImpl);
+      latencies instanceof MetricsTableLatenciesImpl);
     MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
     RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics();
 
     // Metrics to each table should be disjoint
     // N.B. each call to assertGauge removes all previously acquired metrics so we have to
-    //   make the metrics call and then immediately verify it. Trying to do multiple metrics
-    //   updates followed by multiple verifications will fail on the 2nd verification (as the
-    //   first verification cleaned the data structures in MetricsAssertHelperImpl).
+    // make the metrics call and then immediately verify it. Trying to do multiple metrics
+    // updates followed by multiple verifications will fail on the 2nd verification (as the
+    // first verification cleaned the data structures in MetricsAssertHelperImpl).
     tableMetrics.updateGet(tn1, 500L);
-    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
-        tn1, MetricsTableLatencies.GET_TIME + "_" + "999th_percentile"), 500L, latenciesImpl);
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(tn1,
+      MetricsTableLatencies.GET_TIME + "_" + "999th_percentile"), 500L, latenciesImpl);
     tableMetrics.updatePut(tn1, 50L);
-    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
-        tn1, MetricsTableLatencies.PUT_TIME + "_" + "99th_percentile"), 50L, latenciesImpl);
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(tn1,
+      MetricsTableLatencies.PUT_TIME + "_" + "99th_percentile"), 50L, latenciesImpl);
 
     tableMetrics.updateGet(tn2, 300L);
-    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
-        tn2, MetricsTableLatencies.GET_TIME + "_" + "999th_percentile"), 300L, latenciesImpl);
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(tn2,
+      MetricsTableLatencies.GET_TIME + "_" + "999th_percentile"), 300L, latenciesImpl);
     tableMetrics.updatePut(tn2, 75L);
-    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
-        tn2, MetricsTableLatencies.PUT_TIME + "_" + "99th_percentile"), 75L, latenciesImpl);
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(tn2,
+      MetricsTableLatencies.PUT_TIME + "_" + "99th_percentile"), 75L, latenciesImpl);
   }
 }

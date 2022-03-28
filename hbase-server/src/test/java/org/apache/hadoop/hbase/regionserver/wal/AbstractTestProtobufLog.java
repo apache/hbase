@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,14 +92,11 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
     TEST_UTIL.getConfiguration().setInt("dfs.client.socket-timeout", 5000);
 
     // faster failover with cluster.shutdown();fs.close() idiom
-    TEST_UTIL.getConfiguration()
-        .setInt("hbase.ipc.client.connect.max.retries", 1);
-    TEST_UTIL.getConfiguration().setInt(
-        "dfs.client.block.recovery.retries", 1);
-    TEST_UTIL.getConfiguration().setInt(
-      "hbase.ipc.client.connection.maxidletime", 500);
+    TEST_UTIL.getConfiguration().setInt("hbase.ipc.client.connect.max.retries", 1);
+    TEST_UTIL.getConfiguration().setInt("dfs.client.block.recovery.retries", 1);
+    TEST_UTIL.getConfiguration().setInt("hbase.ipc.client.connection.maxidletime", 500);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-        SampleRegionWALCoprocessor.class.getName());
+      SampleRegionWALCoprocessor.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
@@ -133,8 +129,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   private void doRead(boolean withTrailer) throws IOException {
     final int columnCount = 5;
     final int recordCount = 5;
-    final TableName tableName =
-        TableName.valueOf("tablename");
+    final TableName tableName = TableName.valueOf("tablename");
     final byte[] row = Bytes.toBytes("row");
     long timestamp = System.currentTimeMillis();
     Path path = new Path(dir, "tempwal");
@@ -143,15 +138,15 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
     W writer = null;
     ProtobufLogReader reader = null;
     try {
-      HRegionInfo hri = new HRegionInfo(tableName,
-          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      HRegionInfo hri =
+          new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       HTableDescriptor htd = new HTableDescriptor(tableName);
       fs.mkdirs(dir);
       // Write log in pb format.
       writer = createWriter(path);
       for (int i = 0; i < recordCount; ++i) {
-        WALKeyImpl key = new WALKeyImpl(
-            hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
+        WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, i, timestamp,
+            HConstants.DEFAULT_CLUSTER_ID);
         WALEdit edit = new WALEdit();
         for (int j = 0; j < columnCount; ++j) {
           if (i == 0) {

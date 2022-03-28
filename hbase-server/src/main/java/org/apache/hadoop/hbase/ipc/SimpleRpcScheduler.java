@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,19 +21,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterAnnotationReadingPriorityFunction;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
  * high-priority ('priority'), and replication ('replication') requests. Default behavior is to
- * balance the requests across handlers. Add configs to enable balancing by read vs writes, etc.
- * See below article for explanation of options.
- * @see <a href="http://blog.cloudera.com/blog/2014/12/new-in-cdh-5-2-improvements-for-running-multiple-workloads-on-a-single-hbase-cluster/">Overview on Request Queuing</a>
+ * balance the requests across handlers. Add configs to enable balancing by read vs writes, etc. See
+ * below article for explanation of options.
+ * @see <a href=
+ *      "http://blog.cloudera.com/blog/2014/12/new-in-cdh-5-2-improvements-for-running-multiple-workloads-on-a-single-hbase-cluster/">Overview
+ *      on Request Queuing</a>
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObserver {
   private int port;
@@ -60,18 +62,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
    * @param highPriorityLevel
    * @param priority Function to extract request priority.
    */
-  public SimpleRpcScheduler(
-      Configuration conf,
-      int handlerCount,
-      int priorityHandlerCount,
-      int replicationHandlerCount,
-      int metaTransitionHandler,
-      PriorityFunction priority,
-      Abortable server,
-      int highPriorityLevel) {
+  public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
+      int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
+      Abortable server, int highPriorityLevel) {
 
     int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
-        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
     int maxPriorityQueueLength =
         conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, maxQueueLength);
 
@@ -79,18 +75,17 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.highPriorityLevel = highPriorityLevel;
     this.abortable = server;
 
-    String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
-      RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
+    String callQueueType =
+        conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
     float callqReadShare = conf.getFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
 
     if (callqReadShare > 0) {
       // at least 1 read handler and 1 write handler
       callExecutor = new RWQueueRpcExecutor("default.RWQ", Math.max(2, handlerCount),
-        maxQueueLength, priority, conf, server);
+          maxQueueLength, priority, conf, server);
     } else {
-      if (RpcExecutor.isFifoQueueType(callQueueType) ||
-        RpcExecutor.isCodelQueueType(callQueueType) ||
-        RpcExecutor.isPluggableQueueWithFastPath(callQueueType, conf)) {
+      if (RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)
+          || RpcExecutor.isPluggableQueueWithFastPath(callQueueType, conf)) {
         callExecutor = new FastPathBalancedQueueRpcExecutor("default.FPBQ", handlerCount,
             maxQueueLength, priority, conf, server);
       } else {
@@ -101,29 +96,29 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     float metaCallqReadShare =
         conf.getFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY,
-            MetaRWQueueRpcExecutor.DEFAULT_META_CALL_QUEUE_READ_SHARE);
+          MetaRWQueueRpcExecutor.DEFAULT_META_CALL_QUEUE_READ_SHARE);
     if (metaCallqReadShare > 0) {
       // different read/write handler for meta, at least 1 read handler and 1 write handler
-      this.priorityExecutor =
-          new MetaRWQueueRpcExecutor("priority.RWQ", Math.max(2, priorityHandlerCount),
-              maxPriorityQueueLength, priority, conf, server);
+      this.priorityExecutor = new MetaRWQueueRpcExecutor("priority.RWQ",
+          Math.max(2, priorityHandlerCount), maxPriorityQueueLength, priority, conf, server);
     } else {
       // Create 2 queues to help priorityExecutor be more scalable.
-      this.priorityExecutor = priorityHandlerCount > 0 ?
-          new FastPathBalancedQueueRpcExecutor("priority.FPBQ", priorityHandlerCount,
+      this.priorityExecutor = priorityHandlerCount > 0
+          ? new FastPathBalancedQueueRpcExecutor("priority.FPBQ", priorityHandlerCount,
               RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
-              abortable) :
-          null;
+              abortable)
+          : null;
     }
-    this.replicationExecutor = replicationHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
-        "replication.FPBQ", replicationHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        maxQueueLength, priority, conf, abortable) : null;
+    this.replicationExecutor = replicationHandlerCount > 0
+        ? new FastPathBalancedQueueRpcExecutor("replication.FPBQ", replicationHandlerCount,
+            RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxQueueLength, priority, conf, abortable)
+        : null;
 
-    this.metaTransitionExecutor = metaTransitionHandler > 0 ?
-        new FastPathBalancedQueueRpcExecutor("metaPriority.FPBQ", metaTransitionHandler,
+    this.metaTransitionExecutor = metaTransitionHandler > 0
+        ? new FastPathBalancedQueueRpcExecutor("metaPriority.FPBQ", metaTransitionHandler,
             RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
-            abortable) :
-        null;
+            abortable)
+        : null;
   }
 
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
@@ -149,10 +144,10 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       metaTransitionExecutor.resizeQueues(conf);
     }
 
-    String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
-      RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
-    if (RpcExecutor.isCodelQueueType(callQueueType) ||
-      RpcExecutor.isPluggableQueueType(callQueueType)) {
+    String callQueueType =
+        conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
+    if (RpcExecutor.isCodelQueueType(callQueueType)
+        || RpcExecutor.isPluggableQueueType(callQueueType)) {
       callExecutor.onConfigurationChange(conf);
     }
   }
@@ -195,13 +190,13 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   @Override
   public boolean dispatch(CallRunner callTask) throws InterruptedException {
     RpcCall call = callTask.getRpcCall();
-    int level = priority.getPriority(call.getHeader(), call.getParam(),
-        call.getRequestUser().orElse(null));
+    int level =
+        priority.getPriority(call.getHeader(), call.getParam(), call.getRequestUser().orElse(null));
     if (level == HConstants.PRIORITY_UNSET) {
       level = HConstants.NORMAL_QOS;
     }
-    if (metaTransitionExecutor != null &&
-      level == MasterAnnotationReadingPriorityFunction.META_TRANSITION_QOS) {
+    if (metaTransitionExecutor != null
+        && level == MasterAnnotationReadingPriorityFunction.META_TRANSITION_QOS) {
       return metaTransitionExecutor.dispatch(callTask);
     } else if (priorityExecutor != null && level > highPriorityLevel) {
       return priorityExecutor.dispatch(callTask);
@@ -325,7 +320,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (null != metaTransitionExecutor) {
       queueName = "Meta Transition Queue";
       callQueueInfo.setCallMethodCount(queueName,
-          metaTransitionExecutor.getCallQueueCountsSummary());
+        metaTransitionExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, metaTransitionExecutor.getCallQueueSizeSummary());
     }
 
@@ -333,4 +328,3 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   }
 
 }
-

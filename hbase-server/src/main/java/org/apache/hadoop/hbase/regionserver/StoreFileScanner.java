@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
@@ -28,23 +26,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * KeyValueScanner adaptor over the Reader.  It also provides hooks into
- * bloom filter things.
+ * KeyValueScanner adaptor over the Reader. It also provides hooks into bloom filter things.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
 @InterfaceStability.Evolving
@@ -135,7 +131,7 @@ public class StoreFileScanner implements KeyValueScanner {
           scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
         } else {
           scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
-              canOptimizeForNonNullColumn);
+            canOptimizeForNonNullColumn);
         }
         scanners.add(scanner);
       }
@@ -201,7 +197,7 @@ public class StoreFileScanner implements KeyValueScanner {
       }
     } catch (FileNotFoundException e) {
       throw e;
-    } catch(IOException e) {
+    } catch (IOException e) {
       throw new IOException("Could not iterate " + this, e);
     }
     return retKey;
@@ -213,7 +209,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
     try {
       try {
-        if(!seekAtOrAfter(hfs, key)) {
+        if (!seekAtOrAfter(hfs, key)) {
           this.cur = null;
           return false;
         }
@@ -258,8 +254,7 @@ public class StoreFileScanner implements KeyValueScanner {
     } catch (FileNotFoundException e) {
       throw e;
     } catch (IOException ioe) {
-      throw new IOException("Could not reseek " + this + " to key " + key,
-          ioe);
+      throw new IOException("Could not reseek " + this + " to key " + key, ioe);
     }
   }
 
@@ -274,9 +269,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // We want to ignore all key-values that are newer than our current
     // readPoint
     Cell startKV = cur;
-    while(enforceMVCC
-        && cur != null
-        && (cur.getSequenceId() > readPt)) {
+    while (enforceMVCC && cur != null && (cur.getSequenceId() > readPt)) {
       boolean hasNext = hfs.next();
       setCurrentCell(hfs.getCell());
       if (hasNext && this.stopSkippingKVsIfNextRow
@@ -304,23 +297,21 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   *
    * @param s
    * @param k
    * @return false if not found or if k is after the end.
    * @throws IOException
    */
-  public static boolean seekAtOrAfter(HFileScanner s, Cell k)
-  throws IOException {
+  public static boolean seekAtOrAfter(HFileScanner s, Cell k) throws IOException {
     int result = s.seekTo(k);
-    if(result < 0) {
+    if (result < 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
         // using faked key
         return true;
       }
       // Passed KV is smaller than first KV in file, work from start of file
       return s.seekTo();
-    } else if(result > 0) {
+    } else if (result > 0) {
       // Passed KV is larger than current KV in file, if there is a next
       // it is the "after", if not then this scanner is done.
       return s.next();
@@ -329,9 +320,8 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  static boolean reseekAtOrAfter(HFileScanner s, Cell k)
-  throws IOException {
-    //This function is similar to seekAtOrAfter function
+  static boolean reseekAtOrAfter(HFileScanner s, Cell k) throws IOException {
+    // This function is similar to seekAtOrAfter function
     int result = s.reseekTo(k);
     if (result <= 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
@@ -342,7 +332,7 @@ public class StoreFileScanner implements KeyValueScanner {
       // than first KV in file, and it is the first time we seek on this file.
       // So we also need to work from the start of file.
       if (!s.isSeeked()) {
-        return  s.seekTo();
+        return s.seekTo();
       }
       return true;
     }
@@ -360,22 +350,19 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * Pretend we have done a seek but don't do it yet, if possible. The hope is
-   * that we find requested columns in more recent files and won't have to seek
-   * in older files. Creates a fake key/value with the given row/column and the
-   * highest (most recent) possible timestamp we might get from this file. When
-   * users of such "lazy scanner" need to know the next KV precisely (e.g. when
-   * this scanner is at the top of the heap), they run {@link #enforceSeek()}.
+   * Pretend we have done a seek but don't do it yet, if possible. The hope is that we find
+   * requested columns in more recent files and won't have to seek in older files. Creates a fake
+   * key/value with the given row/column and the highest (most recent) possible timestamp we might
+   * get from this file. When users of such "lazy scanner" need to know the next KV precisely (e.g.
+   * when this scanner is at the top of the heap), they run {@link #enforceSeek()}.
    * <p>
-   * Note that this function does guarantee that the current KV of this scanner
-   * will be advanced to at least the given KV. Because of this, it does have
-   * to do a real seek in cases when the seek timestamp is older than the
-   * highest timestamp of the file, e.g. when we are trying to seek to the next
-   * row/column and use OLDEST_TIMESTAMP in the seek key.
+   * Note that this function does guarantee that the current KV of this scanner will be advanced to
+   * at least the given KV. Because of this, it does have to do a real seek in cases when the seek
+   * timestamp is older than the highest timestamp of the file, e.g. when we are trying to seek to
+   * the next row/column and use OLDEST_TIMESTAMP in the seek key.
    */
   @Override
-  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
-      throws IOException {
+  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
     if (kv.getFamilyLength() == 0) {
       useBloom = false;
     }
@@ -386,13 +373,12 @@ public class StoreFileScanner implements KeyValueScanner {
       if (reader.getBloomFilterType() == BloomType.ROWCOL) {
         haveToSeek = reader.passesGeneralRowColBloomFilter(kv);
       } else if (canOptimizeForNonNullColumn
-          && ((PrivateCellUtil.isDeleteFamily(kv)
-              || PrivateCellUtil.isDeleteFamilyVersion(kv)))) {
-        // if there is no such delete family kv in the store file,
-        // then no need to seek.
-        haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(), kv.getRowOffset(),
-          kv.getRowLength());
-      }
+          && ((PrivateCellUtil.isDeleteFamily(kv) || PrivateCellUtil.isDeleteFamilyVersion(kv)))) {
+            // if there is no such delete family kv in the store file,
+            // then no need to seek.
+            haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(), kv.getRowOffset(),
+              kv.getRowLength());
+          }
     }
 
     delayedReseek = forward;
@@ -450,8 +436,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public void enforceSeek() throws IOException {
-    if (realSeekDone)
-      return;
+    if (realSeekDone) return;
 
     if (delayedReseek) {
       reseek(delayedSeekKV);
@@ -487,8 +472,9 @@ public class StoreFileScanner implements KeyValueScanner {
     if (timeRange == null) {
       timeRange = scan.getTimeRange();
     }
-    return reader.passesTimerangeFilter(timeRange, oldestUnexpiredTS) && reader
-        .passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, scan.getFamilyMap().get(cf));
+    return reader.passesTimerangeFilter(timeRange, oldestUnexpiredTS)
+        && reader.passesKeyRangeFilter(scan)
+        && reader.passesBloomFilter(scan, scan.getFamilyMap().get(cf));
   }
 
   @Override
@@ -521,8 +507,7 @@ public class StoreFileScanner implements KeyValueScanner {
           } finally {
             this.stopSkippingKVsIfNextRow = false;
           }
-          if (!resultOfSkipKVs
-              || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
+          if (!resultOfSkipKVs || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
             keepSeeking = true;
             key = firstKeyOfPreviousRow;
             continue;
@@ -537,8 +522,7 @@ public class StoreFileScanner implements KeyValueScanner {
     } catch (FileNotFoundException e) {
       throw e;
     } catch (IOException ioe) {
-      throw new IOException("Could not seekToPreviousRow " + this + " to key "
-          + originalKey, ioe);
+      throw new IOException("Could not seekToPreviousRow " + this + " to key " + originalKey, ioe);
     }
   }
 
@@ -559,8 +543,7 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean backwardSeek(Cell key) throws IOException {
     seek(key);
-    if (cur == null
-        || getComparator().compareRows(cur, key) > 0) {
+    if (cur == null || getComparator().compareRows(cur, key) > 0) {
       return seekToPreviousRow(key);
     }
     return true;

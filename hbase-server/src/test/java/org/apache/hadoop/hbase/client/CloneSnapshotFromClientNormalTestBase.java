@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
     TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
@@ -53,7 +53,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
     String nsName = getValidMethodName() + "_ns_" + System.currentTimeMillis();
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     final TableName clonedTableName =
-      TableName.valueOf(nsName, getValidMethodName() + "-" + System.currentTimeMillis());
+        TableName.valueOf(nsName, getValidMethodName() + "-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
@@ -48,11 +47,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -91,14 +90,14 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static final Logger LOG = LoggerFactory.getLogger(AbstractRpcClient.class);
 
   protected static final HashedWheelTimer WHEEL_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    10, TimeUnit.MILLISECONDS);
+      new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      10, TimeUnit.MILLISECONDS);
 
   private static final ScheduledExecutorService IDLE_CONN_SWEEPER =
-    Executors.newScheduledThreadPool(1,
-      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      Executors.newScheduledThreadPool(1,
+        new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private boolean running = true; // if client runs
 
@@ -135,9 +134,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private int maxConcurrentCallsPerServer;
 
   private static final LoadingCache<InetSocketAddress, AtomicInteger> concurrentCounterCache =
-      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS).
-          build(new CacheLoader<InetSocketAddress, AtomicInteger>() {
-            @Override public AtomicInteger load(InetSocketAddress key) throws Exception {
+      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS)
+          .build(new CacheLoader<InetSocketAddress, AtomicInteger>() {
+            @Override
+            public AtomicInteger load(InetSocketAddress key) throws Exception {
               return new AtomicInteger(0);
             }
           });
@@ -155,8 +155,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     this.localAddr = localAddr;
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
-    this.failureSleep = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-      HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    this.failureSleep =
+        conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", true);
     this.cellBlockBuilder = new CellBlockBuilder(conf);
@@ -172,9 +172,9 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     this.readTO = conf.getInt(SOCKET_TIMEOUT_READ, DEFAULT_SOCKET_TIMEOUT_READ);
     this.writeTO = conf.getInt(SOCKET_TIMEOUT_WRITE, DEFAULT_SOCKET_TIMEOUT_WRITE);
     this.metrics = metrics;
-    this.maxConcurrentCallsPerServer = conf.getInt(
-        HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
-        HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);
+    this.maxConcurrentCallsPerServer =
+        conf.getInt(HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
+          HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);
 
     this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
 
@@ -294,7 +294,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     int poolSize = config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
 
     if (poolSize <= 0) {
-      LOG.warn("{} must be positive. Using default value: 1", HConstants.HBASE_CLIENT_IPC_POOL_SIZE);
+      LOG.warn("{} must be positive. Using default value: 1",
+        HConstants.HBASE_CLIENT_IPC_POOL_SIZE);
       return 1;
     } else {
       return poolSize;
@@ -460,14 +461,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       }
     }
   }
+
   /**
    * Configure an hbase rpccontroller
    * @param controller to configure
    * @param channelOperationTimeout timeout for operation
    * @return configured controller
    */
-  static HBaseRpcController configureHBaseRpcController(
-      RpcController controller, int channelOperationTimeout) {
+  static HBaseRpcController configureHBaseRpcController(RpcController controller,
+      int channelOperationTimeout) {
     HBaseRpcController hrc;
     if (controller != null && controller instanceof HBaseRpcController) {
       hrc = (HBaseRpcController) controller;
@@ -573,16 +575,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType) throws ServiceException {
-      return rpcClient.callBlockingMethod(md, configureRpcController(controller),
-        param, returnType, ticket, addr);
+      return rpcClient.callBlockingMethod(md, configureRpcController(controller), param, returnType,
+        ticket, addr);
     }
   }
 
   /**
    * Async rpc channel that goes via hbase rpc.
    */
-  public static class RpcChannelImplementation extends AbstractRpcChannel implements
-      RpcChannel {
+  public static class RpcChannelImplementation extends AbstractRpcChannel implements RpcChannel {
 
     protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
         User ticket, int rpcTimeout) throws UnknownHostException {
@@ -590,8 +591,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
 
     @Override
-    public void callMethod(Descriptors.MethodDescriptor md, RpcController controller,
-        Message param, Message returnType, RpcCallback<Message> done) {
+    public void callMethod(Descriptors.MethodDescriptor md, RpcController controller, Message param,
+        Message returnType, RpcCallback<Message> done) {
       // This method does not throw any exceptions, so the caller must provide a
       // HBaseRpcController which is used to pass the exceptions.
       this.rpcClient.callMethod(md,

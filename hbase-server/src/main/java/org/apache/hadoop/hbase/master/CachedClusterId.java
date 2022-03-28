@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
@@ -35,11 +34,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Caches the cluster ID of the cluster. For standby masters, this is used to serve the client
- * RPCs that fetch the cluster ID. ClusterID is only created by an active master if one does not
- * already exist. Standby masters just read the information from the file system. This class is
- * thread-safe.
- *
+ * Caches the cluster ID of the cluster. For standby masters, this is used to serve the client RPCs
+ * that fetch the cluster ID. ClusterID is only created by an active master if one does not already
+ * exist. Standby masters just read the information from the file system. This class is thread-safe.
  * TODO: Make it a singleton without affecting concurrent junit tests.
  */
 @InterfaceAudience.Private
@@ -95,8 +92,8 @@ public class CachedClusterId {
 
   /**
    * Attempts to fetch the cluster ID from the file system. If no attempt is already in progress,
-   * synchronously fetches the cluster ID and sets it. If an attempt is already in progress,
-   * returns right away and the caller is expected to wait for the fetch to finish.
+   * synchronously fetches the cluster ID and sets it. If an attempt is already in progress, returns
+   * right away and the caller is expected to wait for the fetch to finish.
    * @return true if the attempt is done, false if another thread is already fetching it.
    */
   private boolean attemptFetch() {
@@ -130,12 +127,11 @@ public class CachedClusterId {
   }
 
   /**
-   * Fetches the ClusterId from FS if it is not cached locally. Atomically updates the cached
-   * copy and is thread-safe. Optimized to do a single fetch when there are multiple threads are
-   * trying get from a clean cache.
-   *
-   * @return ClusterId by reading from FileSystem or null in any error case or cluster ID does
-   *     not exist on the file system or if the server initiated a tear down.
+   * Fetches the ClusterId from FS if it is not cached locally. Atomically updates the cached copy
+   * and is thread-safe. Optimized to do a single fetch when there are multiple threads are trying
+   * get from a clean cache.
+   * @return ClusterId by reading from FileSystem or null in any error case or cluster ID does not
+   *         exist on the file system or if the server initiated a tear down.
    */
   public String getFromCacheOrFetch() {
     if (server.isStopping() || server.isStopped()) {

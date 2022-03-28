@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +56,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationEmptyWALRecovery.class);
+      HBaseClassTestRule.forClass(TestReplicationEmptyWALRecovery.class);
 
   @Before
   public void setUp() throws IOException, InterruptedException {
@@ -66,7 +68,6 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
 
   /**
    * Waits until there is only one log(the current writing one) in the replication queue
-   *
    * @param numRs number of region servers
    */
   private void waitForLogAdvance(int numRs) {
@@ -76,20 +77,20 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
         for (int i = 0; i < numRs; i++) {
           HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(i);
           RegionInfo regionInfo =
-            UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+              UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
           WAL wal = hrs.getWAL(regionInfo);
           Path currentFile = ((AbstractFSWAL<?>) wal).getCurrentFileName();
-          Replication replicationService =
-            (Replication) UTIL1.getHBaseCluster().getRegionServer(i).getReplicationSourceService();
+          Replication replicationService = (Replication) UTIL1.getHBaseCluster().getRegionServer(i)
+              .getReplicationSourceService();
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
-            .getSources()) {
+              .getSources()) {
             ReplicationSource source = (ReplicationSource) rsi;
             // We are making sure that there is only one log queue and that is for the
             // current WAL of region server
             String logPrefix = source.getQueues().keySet().stream().findFirst().get();
             if (!currentFile.equals(source.getCurrentPath())
-              || source.getQueues().keySet().size() != 1
-              || source.getQueues().get(logPrefix).size() != 1) {
+                || source.getQueues().keySet().size() != 1
+                || source.getQueues().get(logPrefix).size() != 1) {
               return false;
             }
           }
@@ -104,10 +105,10 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       @Override
       public boolean evaluate() {
         for (int i = 0; i < numRs; i++) {
-          Replication replicationService =
-            (Replication) UTIL1.getHBaseCluster().getRegionServer(i).getReplicationSourceService();
+          Replication replicationService = (Replication) UTIL1.getHBaseCluster().getRegionServer(i)
+              .getReplicationSourceService();
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
-            .getSources()) {
+              .getSources()) {
             ReplicationSource source = (ReplicationSource) rsi;
             String logPrefix = source.getQueues().keySet().stream().findFirst().get();
             if (source.getQueues().get(logPrefix).size() != numQueues) {
@@ -128,7 +129,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     long ts = System.currentTimeMillis();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
-        UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+          UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
       String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
@@ -167,7 +168,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     long ts = System.currentTimeMillis();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
-        UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
+          UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
       WAL wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
 
@@ -225,7 +226,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
-        UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
+          UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
       wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
       appendEntriesToWal(numOfEntriesToReplicate, wal);
@@ -280,7 +281,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
-        UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
+          UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
       wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
       appendEntriesToWal(numOfEntriesToReplicate, wal);
@@ -330,7 +331,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       replicationService.getReplicationManager().preLogRoll(emptyWalPaths.get(i));
       replicationService.getReplicationManager().postLogRoll(emptyWalPaths.get(i));
       RegionInfo regionInfo =
-        UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+          UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = hrs.getWAL(regionInfo);
       wal.rollWriter(true);
     }
@@ -343,7 +344,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
   // Roll the WAL and wait for it to get deque from the log queue
   private void rollWalsAndWaitForDeque(int numRs) throws IOException {
     RegionInfo regionInfo =
-      UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
+        UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
     for (int i = 0; i < numRs; i++) {
       WAL wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       wal.rollWriter();

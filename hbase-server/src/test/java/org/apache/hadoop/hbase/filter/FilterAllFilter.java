@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
@@ -54,10 +53,8 @@ public class FilterAllFilter extends FilterBase {
 
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this)
-      return true;
-    if (!(o instanceof FilterAllFilter))
-      return false;
+    if (o == this) return true;
+    if (!(o instanceof FilterAllFilter)) return false;
 
     return true;
   }

@@ -52,13 +52,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
 public class Replication implements ReplicationSourceService, ReplicationSinkService {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(Replication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
@@ -89,18 +89,17 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
-      ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
+        ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
     this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
-        .setNameFormat(server.getServerName().toShortString() + "Replication Statistics #%d")
-        .setDaemon(true)
-        .build());
+          .setNameFormat(server.getServerName().toShortString() + "Replication Statistics #%d")
+          .setDaemon(true).build());
     if (this.isReplicationForBulkLoadDataEnabled) {
       if (conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
           || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()) {
-        throw new IllegalArgumentException(HConstants.REPLICATION_CLUSTER_ID
-            + " cannot be null/empty when " + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
-            + " is set to true.");
+        throw new IllegalArgumentException(
+            HConstants.REPLICATION_CLUSTER_ID + " cannot be null/empty when "
+                + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is set to true.");
       }
     }
 
@@ -123,18 +122,17 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     }
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
-      globalMetricsSource);
+    this.replicationManager =
+        new ReplicationSourceManager(queueStorage, replicationPeers, replicationTracker, conf,
+            this.server, fs, logDir, oldLogDir, clusterId, walFactory, globalMetricsSource);
     // Get the user-space WAL provider
-    WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
+    WALProvider walProvider = walFactory != null ? walFactory.getWALProvider() : null;
     if (walProvider != null) {
       walProvider
-        .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
+          .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
     }
-    this.statsThreadPeriod =
-        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-    LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
+    this.statsThreadPeriod = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    LOG.debug("Replication stats-in-log period={} seconds", this.statsThreadPeriod);
     this.replicationLoad = new ReplicationLoad();
 
     this.peerProcedureHandler = new PeerProcedureHandlerImpl(replicationManager);
@@ -186,8 +184,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   }
 
   /**
-   * If replication is enabled and this cluster is a master,
-   * it starts
+   * If replication is enabled and this cluster is a master, it starts
    */
   @Override
   public void startReplicationService() throws IOException {

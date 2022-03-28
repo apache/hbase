@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -126,8 +126,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   @SuppressWarnings("deprecation")
   private static final ImmutableSet<Class<?>> UNSUPPORTED_PROCEDURES =
-    ImmutableSet.of(RecoverMetaProcedure.class, AssignProcedure.class, UnassignProcedure.class,
-      MoveRegionProcedure.class);
+      ImmutableSet.of(RecoverMetaProcedure.class, AssignProcedure.class, UnassignProcedure.class,
+        MoveRegionProcedure.class);
 
   /**
    * In HBASE-20811, we have introduced a new TRSP to assign/unassign/move regions, and it is
@@ -136,7 +136,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
    * quit, you need to go back to the old version to finish these procedures first before upgrading.
    */
   private void checkUnsupportedProcedure(Map<Class<?>, List<Procedure<?>>> procsByType)
-    throws HBaseIOException {
+      throws HBaseIOException {
     // Confirm that we do not have unfinished assign/unassign related procedures. It is not easy to
     // support both the old assign/unassign procedures and the new TransitRegionStateProcedure as
     // there will be conflict in the code for AM. We should finish all these procedures before
@@ -144,10 +144,11 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     for (Class<?> clazz : UNSUPPORTED_PROCEDURES) {
       List<Procedure<?>> procs = procsByType.get(clazz);
       if (procs != null) {
-        LOG.error("Unsupported procedure type {} found, please rollback your master to the old" +
-          " version to finish them, and then try to upgrade again." +
-          " See https://hbase.apache.org/book.html#upgrade2.2 for more details." +
-          " The full procedure list: {}", clazz, procs);
+        LOG.error("Unsupported procedure type {} found, please rollback your master to the old"
+            + " version to finish them, and then try to upgrade again."
+            + " See https://hbase.apache.org/book.html#upgrade2.2 for more details."
+            + " The full procedure list: {}",
+          clazz, procs);
         throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
       }
     }
@@ -155,11 +156,11 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     // make sure that no one will try to schedule it but SCP does have a state which will schedule
     // it.
     if (procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-      .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
-      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure," +
-        " which is not supported any more. Please rollback your master to the old version to" +
-        " finish them, and then try to upgrade again." +
-        " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
+        .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
+      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure,"
+          + " which is not supported any more. Please rollback your master to the old version to"
+          + " finish them, and then try to upgrade again."
+          + " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
       throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
     }
   }
@@ -168,7 +169,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   private void tryMigrate(FileSystem fs) throws IOException {
     Configuration conf = server.getConfiguration();
     Path procWALDir =
-      new Path(CommonFSUtils.getWALRootDir(conf), WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
+        new Path(CommonFSUtils.getWALRootDir(conf), WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
     if (!fs.exists(procWALDir)) {
       return;
     }
@@ -205,9 +206,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
           corruptedCount++;
         }
         if (corruptedCount > 0) {
-          throw new IOException("There are " + corruptedCount + " corrupted procedures when" +
-            " migrating from the old WAL based store to the new region based store, please" +
-            " fix them before upgrading again.");
+          throw new IOException("There are " + corruptedCount + " corrupted procedures when"
+              + " migrating from the old WAL based store to the new region based store, please"
+              + " fix them before upgrading again.");
         }
       }
     });
@@ -235,7 +236,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       if (maxProcIdSet.longValue() > 0) {
         // let's add a fake row to retain the max proc id
         region.update(r -> r.put(new Put(Bytes.toBytes(maxProcIdSet.longValue()))
-          .addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
+            .addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
       }
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
       LOG.warn("The WALProcedureStore max pid is less than the max pid of all loaded procedures");
@@ -243,7 +244,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     store.stop(false);
     if (!fs.delete(procWALDir, true)) {
       throw new IOException(
-        "Failed to delete the WALProcedureStore migrated proc wal directory " + procWALDir);
+          "Failed to delete the WALProcedureStore migrated proc wal directory " + procWALDir);
     }
     LOG.info("Migration of WALProcedureStore finished");
   }
@@ -261,7 +262,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     long maxProcId = 0;
 
     try (RegionScanner scanner =
-      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
+        region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows;
       do {
@@ -275,7 +276,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
           Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
         if (cell.getValueLength() > 0) {
           ProcedureProtos.Procedure proto = ProcedureProtos.Procedure.parser()
-            .parseFrom(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+              .parseFrom(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
           procs.add(proto);
         }
       } while (moreRows);
@@ -287,7 +288,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   }
 
   private void serializePut(Procedure<?> proc, List<Mutation> mutations, List<byte[]> rowsToLock)
-    throws IOException {
+      throws IOException {
     ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
     byte[] row = Bytes.toBytes(proc.getProcId());
     mutations.add(new Put(row).addColumn(PROC_FAMILY, PROC_QUALIFIER, proto.toByteArray()));
@@ -427,7 +428,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     // actually delete the procedures if it is not the one with the max procedure id.
     List<Cell> cells = new ArrayList<Cell>();
     try (RegionScanner scanner =
-      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
+        region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
       // skip the row with max procedure id
       boolean moreRows = scanner.next(cells);
       if (cells.isEmpty()) {
@@ -443,7 +444,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         cells.clear();
         if (cell.getValueLength() == 0) {
           region.update(r -> r
-            .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
+              .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
         }
       }
     } catch (IOException e) {

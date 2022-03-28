@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -54,7 +55,7 @@ public class TestAsyncBufferMutator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncBufferMutator.class);
+      HBaseClassTestRule.forClass(TestAsyncBufferMutator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -100,10 +101,10 @@ public class TestAsyncBufferMutator {
   private void test(TableName tableName) throws InterruptedException {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     try (AsyncBufferedMutator mutator =
-      CONN.getBufferedMutatorBuilder(tableName).setWriteBufferSize(16 * 1024).build()) {
+        CONN.getBufferedMutatorBuilder(tableName).setWriteBufferSize(16 * 1024).build()) {
       List<CompletableFuture<Void>> fs = mutator.mutate(IntStream.range(0, COUNT / 2)
-        .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
-        .collect(Collectors.toList()));
+          .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
+          .collect(Collectors.toList()));
       // exceeded the write buffer size, a flush will be called directly
       fs.forEach(f -> f.join());
       IntStream.range(COUNT / 2, COUNT).forEach(i -> {
@@ -119,9 +120,9 @@ public class TestAsyncBufferMutator {
     futures.forEach(f -> f.join());
     AsyncTable<?> table = CONN.getTable(tableName);
     IntStream.range(0, COUNT).mapToObj(i -> new Get(Bytes.toBytes(i))).map(g -> table.get(g).join())
-      .forEach(r -> {
-        assertArrayEquals(VALUE, r.getValue(CF, CQ));
-      });
+        .forEach(r -> {
+          assertArrayEquals(VALUE, r.getValue(CF, CQ));
+        });
   }
 
   @Test
@@ -150,7 +151,7 @@ public class TestAsyncBufferMutator {
   @Test
   public void testNoPeriodicFlush() throws InterruptedException, ExecutionException {
     try (AsyncBufferedMutator mutator =
-      CONN.getBufferedMutatorBuilder(TABLE_NAME).disableWriteBufferPeriodicFlush().build()) {
+        CONN.getBufferedMutatorBuilder(TABLE_NAME).disableWriteBufferPeriodicFlush().build()) {
       Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
       CompletableFuture<?> future = mutator.mutate(put);
       Thread.sleep(2000);
@@ -166,7 +167,7 @@ public class TestAsyncBufferMutator {
   @Test
   public void testPeriodicFlush() throws InterruptedException, ExecutionException {
     AsyncBufferedMutator mutator = CONN.getBufferedMutatorBuilder(TABLE_NAME)
-      .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build();
+        .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build();
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     CompletableFuture<?> future = mutator.mutate(put);
     future.get();
@@ -179,8 +180,8 @@ public class TestAsyncBufferMutator {
   public void testCancelPeriodicFlush() throws InterruptedException, ExecutionException {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferedMutatorImpl mutator = (AsyncBufferedMutatorImpl) CONN
-      .getBufferedMutatorBuilder(TABLE_NAME).setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS)
-      .setWriteBufferSize(10 * put.heapSize()).build()) {
+        .getBufferedMutatorBuilder(TABLE_NAME).setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS)
+        .setWriteBufferSize(10 * put.heapSize()).build()) {
       List<CompletableFuture<?>> futures = new ArrayList<>();
       futures.add(mutator.mutate(put));
       Timeout task = mutator.periodicFlushTask;
@@ -205,10 +206,10 @@ public class TestAsyncBufferMutator {
   public void testCancelPeriodicFlushByManuallyFlush()
       throws InterruptedException, ExecutionException {
     try (AsyncBufferedMutatorImpl mutator =
-      (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
-        .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
+        (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
+            .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
       CompletableFuture<?> future =
-        mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
+          mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
       assertNotNull(task);
@@ -225,8 +226,8 @@ public class TestAsyncBufferMutator {
     CompletableFuture<?> future;
     Timeout task;
     try (AsyncBufferedMutatorImpl mutator =
-      (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
-        .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
+        (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
+            .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
       future = mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
       task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
@@ -259,8 +260,8 @@ public class TestAsyncBufferMutator {
       throws InterruptedException, ExecutionException {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferMutatorForTest mutator =
-      new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),
-        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024)) {
+        new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),
+            10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024)) {
       CompletableFuture<?> future = mutator.mutate(put);
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class TestReportRegionStateTransitionFromDeadServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReportRegionStateTransitionFromDeadServer.class);
+      HBaseClassTestRule.forClass(TestReportRegionStateTransitionFromDeadServer.class);
 
   private static final List<ServerName> EXCLUDE_SERVERS = new ArrayList<>();
 
@@ -103,7 +103,7 @@ public class TestReportRegionStateTransitionFromDeadServer {
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
         ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       if (ARRIVE_REPORT != null && req.getTransitionList().stream()
-        .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())) {
+          .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())) {
         ARRIVE_REPORT.countDown();
         try {
           RESUME_REPORT.await();
@@ -164,12 +164,12 @@ public class TestReportRegionStateTransitionFromDeadServer {
     HRegionServer rs0 = UTIL.getMiniHBaseCluster().getRegionServer(rsn.getRegionLocation());
     HRegionServer rs1 = UTIL.getOtherRegionServer(rs0);
     HRegionServer rs2 = UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer()).filter(rs -> rs != rs0 && rs != rs1).findAny().get();
+        .map(t -> t.getRegionServer()).filter(rs -> rs != rs0 && rs != rs1).findAny().get();
 
     RESUME_REPORT = new CountDownLatch(1);
     ARRIVE_REPORT = new CountDownLatch(1);
     Future<?> future =
-      am.moveAsync(new RegionPlan(region, rs0.getServerName(), rs1.getServerName()));
+        am.moveAsync(new RegionPlan(region, rs0.getServerName(), rs1.getServerName()));
     ARRIVE_REPORT.await();
 
     RESUME_GET_REGIONS = new CountDownLatch(1);
@@ -190,7 +190,7 @@ public class TestReportRegionStateTransitionFromDeadServer {
     RESUME_GET_REGIONS.countDown();
     // wait until there are no running procedures, no SCP and no TRSP
     UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-      .getActiveProcIds().isEmpty());
+        .getActiveProcIds().isEmpty());
     boolean onRS1 = !rs1.getRegions(NAME).isEmpty();
     boolean onRS2 = !rs2.getRegions(NAME).isEmpty();
     assertNotEquals(

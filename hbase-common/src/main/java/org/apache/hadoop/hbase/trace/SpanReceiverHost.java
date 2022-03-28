@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.trace;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.htrace.core.SpanReceiver;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,9 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class provides functions for reading the names of SpanReceivers from
- * hbase-site.xml, adding those SpanReceivers to the Tracer, and closing those
- * SpanReceivers when appropriate.
+ * This class provides functions for reading the names of SpanReceivers from hbase-site.xml, adding
+ * those SpanReceivers to the Tracer, and closing those SpanReceivers when appropriate.
  */
 @InterfaceAudience.Private
 public class SpanReceiverHost {
@@ -42,6 +40,7 @@ public class SpanReceiverHost {
 
   private enum SingletonHolder {
     INSTANCE;
+
     final transient Object lock = new Object();
     transient SpanReceiverHost host = null;
   }
@@ -60,7 +59,7 @@ public class SpanReceiverHost {
 
   }
 
-  public static Configuration getConfiguration(){
+  public static Configuration getConfiguration() {
     synchronized (SingletonHolder.INSTANCE.lock) {
       if (SingletonHolder.INSTANCE.host == null || SingletonHolder.INSTANCE.host.conf == null) {
         return null;

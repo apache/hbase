@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -25,47 +24,37 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A package protected interface for a store flushing.
- * A store flush context carries the state required to prepare/flush/commit the store's cache.
+ * A package protected interface for a store flushing. A store flush context carries the state
+ * required to prepare/flush/commit the store's cache.
  */
 @InterfaceAudience.Private
 interface StoreFlushContext {
 
   /**
-   * Prepare for a store flush (create snapshot)
-   * Requires pausing writes.
-   * A very short operation.
+   * Prepare for a store flush (create snapshot) Requires pausing writes. A very short operation.
    * @return The size of snapshot to flush
    */
   MemStoreSize prepare();
 
   /**
-   * Flush the cache (create the new store file)
-   *
-   * A length operation which doesn't require locking out any function
-   * of the store.
-   *
+   * Flush the cache (create the new store file) A length operation which doesn't require locking
+   * out any function of the store.
    * @throws IOException in case the flush fails
    */
   void flushCache(MonitoredTask status) throws IOException;
 
   /**
-   * Commit the flush - add the store file to the store and clear the
-   * memstore snapshot.
-   *
-   * Requires pausing scans.
-   *
-   * A very short operation
-   *
+   * Commit the flush - add the store file to the store and clear the memstore snapshot. Requires
+   * pausing scans. A very short operation
    * @return whether compaction is required
    * @throws IOException
    */
   boolean commit(MonitoredTask status) throws IOException;
 
   /**
-   * Similar to commit, but called in secondary region replicas for replaying the
-   * flush cache from primary region. Adds the new files to the store, and drops the
-   * snapshot depending on dropMemstoreSnapshot argument.
+   * Similar to commit, but called in secondary region replicas for replaying the flush cache from
+   * primary region. Adds the new files to the store, and drops the snapshot depending on
+   * dropMemstoreSnapshot argument.
    * @param fileNames names of the flushed files
    * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
    * @throws IOException

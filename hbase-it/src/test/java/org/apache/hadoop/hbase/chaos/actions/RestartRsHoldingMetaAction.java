@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -24,17 +23,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to restart the HRegionServer holding Meta.
-*/
+ * Action that tries to restart the HRegionServer holding Meta.
+ */
 public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
 
   public RestartRsHoldingMetaAction(long sleepTime) {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,8 +89,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     }
     RequestHeader requestHeader = IPCUtil.buildRequestHeader(call, cellBlockMeta);
     int sizeWithoutCellBlock = IPCUtil.getTotalSizeWhenWrittenDelimited(requestHeader, call.param);
-    int totalSize = cellBlock != null ? sizeWithoutCellBlock + cellBlock.writerIndex()
-        : sizeWithoutCellBlock;
+    int totalSize =
+        cellBlock != null ? sizeWithoutCellBlock + cellBlock.writerIndex() : sizeWithoutCellBlock;
     ByteBuf buf = ctx.alloc().buffer(sizeWithoutCellBlock + 4);
     buf.writeInt(totalSize);
     try (ByteBufOutputStream bbos = new ByteBufOutputStream(buf)) {

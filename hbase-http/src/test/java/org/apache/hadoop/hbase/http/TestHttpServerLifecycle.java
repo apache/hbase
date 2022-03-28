@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   @ClassRule
@@ -33,8 +33,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
       HBaseClassTestRule.forClass(TestHttpServerLifecycle.class);
 
   /**
-   * Check that a server is alive by probing the {@link HttpServer#isAlive()} method
-   * and the text of its toString() description
+   * Check that a server is alive by probing the {@link HttpServer#isAlive()} method and the text of
+   * its toString() description
    * @param server server
    */
   private void assertAlive(HttpServer server) {
@@ -49,16 +49,17 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
    * Test that the server is alive once started
-   *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testCreatedServerIsNotAlive() throws Throwable {
     HttpServer server = createTestServer();
     assertNotLive(server);
   }
 
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testStopUnstartedServer() throws Throwable {
     HttpServer server = createTestServer();
     stop(server);
@@ -66,10 +67,10 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
    * Test that the server is alive once started
-   *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testStartedServerIsAlive() throws Throwable {
     HttpServer server = null;
     server = createTestServer();
@@ -87,15 +88,15 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
   private void assertToStringContains(HttpServer server, String text) {
     String description = server.toString();
     assertTrue("Did not find \"" + text + "\" in \"" + description + "\"",
-               description.contains(text));
+      description.contains(text));
   }
 
   /**
    * Test that the server is not alive once stopped
-   *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testStoppedServerIsNotAlive() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
@@ -105,10 +106,10 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
    * Test that the server is not alive once stopped
-   *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testStoppingTwiceServerIsAllowed() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
@@ -120,11 +121,10 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
    * Test that the server is alive once started
-   *
-   * @throws Throwable
-   *           on failure
+   * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
+  @Ignore("Hangs on occasion; see HBASE-14430")
+  @Test
   public void testWepAppContextAfterServerStop() throws Throwable {
     HttpServer server = null;
     String key = "test.attribute.key";

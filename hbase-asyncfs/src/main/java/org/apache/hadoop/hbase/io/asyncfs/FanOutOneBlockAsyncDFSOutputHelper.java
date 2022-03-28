@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -224,13 +224,13 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static FileCreator createFileCreator3_3() throws NoSuchMethodException {
     Method createMethod = ClientProtocol.class.getMethod("create", String.class, FsPermission.class,
-        String.class, EnumSetWritable.class, boolean.class, short.class, long.class,
-        CryptoProtocolVersion[].class, String.class, String.class);
+      String.class, EnumSetWritable.class, boolean.class, short.class, long.class,
+      CryptoProtocolVersion[].class, String.class, String.class);
 
     return (instance, src, masked, clientName, flag, createParent, replication, blockSize,
         supportedVersions) -> {
       return (HdfsFileStatus) createMethod.invoke(instance, src, masked, clientName, flag,
-          createParent, replication, blockSize, supportedVersions, null, null);
+        createParent, replication, blockSize, supportedVersions, null, null);
     };
   }
 
@@ -304,9 +304,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       FILE_CREATOR = createFileCreator();
       SHOULD_REPLICATE_FLAG = loadShouldReplicateFlag();
     } catch (Exception e) {
-      String msg = "Couldn't properly initialize access to HDFS internals. Please " +
-          "update your WAL Provider to not make use of the 'asyncfs' provider. See " +
-          "HBASE-16110 for more information.";
+      String msg = "Couldn't properly initialize access to HDFS internals. Please "
+          + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
+          + "HBASE-16110 for more information.";
       LOG.error(msg, e);
       throw new Error(msg, e);
     }
@@ -353,11 +353,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           String logInfo = "ack with firstBadLink as " + resp.getFirstBadLink();
           if (resp.getStatus() != Status.SUCCESS) {
             if (resp.getStatus() == Status.ERROR_ACCESS_TOKEN) {
-              throw new InvalidBlockTokenException("Got access token error" + ", status message " +
-                  resp.getMessage() + ", " + logInfo);
+              throw new InvalidBlockTokenException("Got access token error" + ", status message "
+                  + resp.getMessage() + ", " + logInfo);
             } else {
-              throw new IOException("Got error" + ", status=" + resp.getStatus().name() +
-                  ", status message " + resp.getMessage() + ", " + logInfo);
+              throw new IOException("Got error" + ", status=" + resp.getStatus().name()
+                  + ", status message " + resp.getMessage() + ", " + logInfo);
             }
           }
           // success
@@ -399,11 +399,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static void requestWriteBlock(Channel channel, StorageType storageType,
       OpWriteBlockProto.Builder writeBlockProtoBuilder) throws IOException {
-    OpWriteBlockProto proto =
-      writeBlockProtoBuilder.setStorageType(PBHelperClient.convertStorageType(storageType)).build();
+    OpWriteBlockProto proto = writeBlockProtoBuilder
+        .setStorageType(PBHelperClient.convertStorageType(storageType)).build();
     int protoLen = proto.getSerializedSize();
     ByteBuf buffer =
-      channel.alloc().buffer(3 + CodedOutputStream.computeRawVarint32Size(protoLen) + protoLen);
+        channel.alloc().buffer(3 + CodedOutputStream.computeRawVarint32Size(protoLen) + protoLen);
     buffer.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
     buffer.writeByte(Op.WRITE_BLOCK.code);
     proto.writeDelimitedTo(new ByteBufOutputStream(buffer));
@@ -443,9 +443,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     ExtendedBlock blockCopy = new ExtendedBlock(locatedBlock.getBlock());
     blockCopy.setNumBytes(locatedBlock.getBlockSize());
     ClientOperationHeaderProto header = ClientOperationHeaderProto.newBuilder()
-      .setBaseHeader(BaseHeaderProto.newBuilder().setBlock(PBHelperClient.convert(blockCopy))
-        .setToken(PBHelperClient.convert(locatedBlock.getBlockToken())))
-      .setClientName(clientName).build();
+        .setBaseHeader(BaseHeaderProto.newBuilder().setBlock(PBHelperClient.convert(blockCopy))
+            .setToken(PBHelperClient.convert(locatedBlock.getBlockToken())))
+        .setClientName(clientName).build();
     ChecksumProto checksumProto = DataTransferProtoUtil.toProto(summer);
     OpWriteBlockProto.Builder writeBlockProtoBuilder = OpWriteBlockProto.newBuilder()
         .setHeader(header).setStage(OpWriteBlockProto.BlockConstructionStage.valueOf(stage.name()))
@@ -555,8 +555,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
-            stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
+            new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
+                stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
         succ = true;
         return output;
       } catch (RemoteException e) {

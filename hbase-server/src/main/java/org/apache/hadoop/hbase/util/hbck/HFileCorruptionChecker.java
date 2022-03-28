@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,14 +50,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
- * This class marches through all of the region's hfiles and verifies that
- * they are all valid files. One just needs to instantiate the class, use
- * checkTables(List&lt;Path&gt;) and then retrieve the corrupted hfiles (and
- * quarantined files if in quarantining mode)
- *
- * The implementation currently parallelizes at the regionDir level.
+ * This class marches through all of the region's hfiles and verifies that they are all valid files.
+ * One just needs to instantiate the class, use checkTables(List&lt;Path&gt;) and then retrieve the
+ * corrupted hfiles (and quarantined files if in quarantining mode) The implementation currently
+ * parallelizes at the regionDir level.
  */
 @InterfaceAudience.Private
 public class HFileCorruptionChecker {
@@ -79,8 +76,8 @@ public class HFileCorruptionChecker {
   final AtomicInteger hfilesChecked = new AtomicInteger();
   final AtomicInteger mobFilesChecked = new AtomicInteger();
 
-  public HFileCorruptionChecker(Configuration conf, ExecutorService executor,
-      boolean quarantine) throws IOException {
+  public HFileCorruptionChecker(Configuration conf, ExecutorService executor, boolean quarantine)
+      throws IOException {
     this.conf = conf;
     this.fs = FileSystem.get(conf);
     this.cacheConf = CacheConfig.DISABLED;
@@ -90,11 +87,8 @@ public class HFileCorruptionChecker {
 
   /**
    * Checks a path to see if it is a valid hfile.
-   *
-   * @param p
-   *          full Path to an HFile
-   * @throws IOException
-   *           This is a connectivity related exception
+   * @param p full Path to an HFile
+   * @throws IOException This is a connectivity related exception
    */
   protected void checkHFile(Path p) throws IOException {
     HFile.Reader r = null;
@@ -107,7 +101,7 @@ public class HFileCorruptionChecker {
         Path dest = createQuarantinePath(p);
         LOG.warn("Quarantining corrupt HFile " + p + " into " + dest);
         boolean success = fs.mkdirs(dest.getParent());
-        success = success ? fs.rename(p, dest): false;
+        success = success ? fs.rename(p, dest) : false;
         if (!success) {
           failures.add(p);
         } else {
@@ -127,12 +121,9 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Given a path, generates a new path to where we move a corrupted hfile (bad
-   * trailer, no trailer).
-   *
-   * @param hFile
-   *          Path to a corrupt hfile (assumes that it is HBASE_DIR/ table
-   *          /region/cf/file)
+   * Given a path, generates a new path to where we move a corrupted hfile (bad trailer, no
+   * trailer).
+   * @param hFile Path to a corrupt hfile (assumes that it is HBASE_DIR/ table /region/cf/file)
    * @return path to where corrupted files are stored. This should be
    *         HBASE_DIR/.corrupt/table/region/cf/file.
    */
@@ -156,9 +147,7 @@ public class HFileCorruptionChecker {
 
   /**
    * Check all files in a column family dir.
-   *
-   * @param cfDir
-   *          column family directory
+   * @param cfDir column family directory
    * @throws IOException
    */
   protected void checkColFamDir(Path cfDir) throws IOException {
@@ -167,8 +156,8 @@ public class HFileCorruptionChecker {
       statuses = fs.listStatus(cfDir); // use same filter as scanner.
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
-      LOG.warn("Colfam Directory " + cfDir +
-          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      LOG.warn("Colfam Directory " + cfDir
+          + " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(cfDir);
       return;
     }
@@ -176,8 +165,8 @@ public class HFileCorruptionChecker {
     List<FileStatus> hfs = FSUtils.filterFileStatuses(statuses, new HFileFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (hfs.isEmpty() && !fs.exists(cfDir)) {
-      LOG.warn("Colfam Directory " + cfDir +
-          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      LOG.warn("Colfam Directory " + cfDir
+          + " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(cfDir);
       return;
     }
@@ -192,9 +181,7 @@ public class HFileCorruptionChecker {
 
   /**
    * Check all files in a mob column family dir.
-   *
-   * @param cfDir
-   *          mob column family directory
+   * @param cfDir mob column family directory
    * @throws IOException
    */
   protected void checkMobColFamDir(Path cfDir) throws IOException {
@@ -203,8 +190,8 @@ public class HFileCorruptionChecker {
       statuses = fs.listStatus(cfDir); // use same filter as scanner.
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
-      LOG.warn("Mob colfam Directory " + cfDir +
-          " does not exist.  Likely the table is deleted. Skipping.");
+      LOG.warn("Mob colfam Directory " + cfDir
+          + " does not exist.  Likely the table is deleted. Skipping.");
       missedMobFiles.add(cfDir);
       return;
     }
@@ -212,8 +199,8 @@ public class HFileCorruptionChecker {
     List<FileStatus> hfs = FSUtils.filterFileStatuses(statuses, new HFileFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (hfs.isEmpty() && !fs.exists(cfDir)) {
-      LOG.warn("Mob colfam Directory " + cfDir +
-          " does not exist.  Likely the table is deleted. Skipping.");
+      LOG.warn("Mob colfam Directory " + cfDir
+          + " does not exist.  Likely the table is deleted. Skipping.");
       missedMobFiles.add(cfDir);
       return;
     }
@@ -228,11 +215,8 @@ public class HFileCorruptionChecker {
 
   /**
    * Checks a path to see if it is a valid mob file.
-   *
-   * @param p
-   *          full Path to a mob file.
-   * @throws IOException
-   *           This is a connectivity related exception
+   * @param p full Path to a mob file.
+   * @throws IOException This is a connectivity related exception
    */
   protected void checkMobFile(Path p) throws IOException {
     HFile.Reader r = null;
@@ -245,7 +229,7 @@ public class HFileCorruptionChecker {
         Path dest = createQuarantinePath(p);
         LOG.warn("Quarantining corrupt mob file " + p + " into " + dest);
         boolean success = fs.mkdirs(dest.getParent());
-        success = success ? fs.rename(p, dest): false;
+        success = success ? fs.rename(p, dest) : false;
         if (!success) {
           failureMobFiles.add(p);
         } else {
@@ -278,16 +262,16 @@ public class HFileCorruptionChecker {
       hfs = fs.listStatus(regionDir, new FamilyDirFilter(fs));
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
-      LOG.warn("Mob directory " + regionDir
-        + " does not exist.  Likely the table is deleted. Skipping.");
+      LOG.warn(
+        "Mob directory " + regionDir + " does not exist.  Likely the table is deleted. Skipping.");
       missedMobFiles.add(regionDir);
       return;
     }
 
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (hfs.length == 0 && !fs.exists(regionDir)) {
-      LOG.warn("Mob directory " + regionDir
-        + " does not exist.  Likely the table is deleted. Skipping.");
+      LOG.warn(
+        "Mob directory " + regionDir + " does not exist.  Likely the table is deleted. Skipping.");
       missedMobFiles.add(regionDir);
       return;
     }
@@ -302,9 +286,7 @@ public class HFileCorruptionChecker {
 
   /**
    * Check all column families in a region dir.
-   *
-   * @param regionDir
-   *          region directory
+   * @param regionDir region directory
    * @throws IOException
    */
   protected void checkRegionDir(Path regionDir) throws IOException {
@@ -313,8 +295,8 @@ public class HFileCorruptionChecker {
       statuses = fs.listStatus(regionDir);
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
-      LOG.warn("Region Directory " + regionDir +
-          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      LOG.warn("Region Directory " + regionDir
+          + " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);
       return;
     }
@@ -322,8 +304,8 @@ public class HFileCorruptionChecker {
     List<FileStatus> cfs = FSUtils.filterFileStatuses(statuses, new FamilyDirFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (cfs.isEmpty() && !fs.exists(regionDir)) {
-      LOG.warn("Region Directory " + regionDir +
-          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      LOG.warn("Region Directory " + regionDir
+          + " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);
       return;
     }
@@ -338,23 +320,23 @@ public class HFileCorruptionChecker {
 
   /**
    * Check all the regiondirs in the specified tableDir
-   *
-   * @param tableDir
-   *          path to a table
+   * @param tableDir path to a table
    * @throws IOException
    */
   void checkTableDir(Path tableDir) throws IOException {
-    List<FileStatus> rds = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
+    List<FileStatus> rds =
+        FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
     if (rds == null) {
       if (!fs.exists(tableDir)) {
-        LOG.warn("Table Directory " + tableDir +
-            " does not exist.  Likely due to concurrent delete. Skipping.");
+        LOG.warn("Table Directory " + tableDir
+            + " does not exist.  Likely due to concurrent delete. Skipping.");
         missing.add(tableDir);
       }
       return;
     }
 
-    LOG.info("Checking Table Directory {}. Number of entries (including mob) = {}", tableDir, rds.size() + 1);
+    LOG.info("Checking Table Directory {}. Number of entries (including mob) = {}", tableDir,
+      rds.size() + 1);
 
     // Parallelize check at the region dir level
     List<RegionDirChecker> rdcs = new ArrayList<>(rds.size() + 1);
@@ -382,8 +364,8 @@ public class HFileCorruptionChecker {
       try {
         f.get();
       } catch (ExecutionException e) {
-        LOG.warn("Failed to quarantine an HFile in regiondir "
-            + rdcs.get(i).regionDir, e.getCause());
+        LOG.warn("Failed to quarantine an HFile in regiondir " + rdcs.get(i).regionDir,
+          e.getCause());
         // rethrow IOExceptions
         if (e.getCause() instanceof IOException) {
           throw (IOException) e.getCause();
@@ -407,8 +389,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * An individual work item for parallelized regiondir processing. This is
-   * intentionally an inner class so it can use the shared error sets and fs.
+   * An individual work item for parallelized regiondir processing. This is intentionally an inner
+   * class so it can use the shared error sets and fs.
    */
   private class RegionDirChecker implements Callable<Void> {
     final Path regionDir;
@@ -425,8 +407,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * An individual work item for parallelized mob dir processing. This is
-   * intentionally an inner class so it can use the shared error sets and fs.
+   * An individual work item for parallelized mob dir processing. This is intentionally an inner
+   * class so it can use the shared error sets and fs.
    */
   private class MobRegionDirChecker extends RegionDirChecker {
 
@@ -490,8 +472,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * @return the set of paths that were missing.  Likely due to deletion/moves from
-   *  compaction or flushes.
+   * @return the set of paths that were missing. Likely due to deletion/moves from compaction or
+   *         flushes.
    */
   public Collection<Path> getMissing() {
     return new HashSet<>(missing);
@@ -526,8 +508,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * @return the set of paths that were missing.  Likely due to table deletion or
-   *  deletion/moves from compaction.
+   * @return the set of paths that were missing. Likely due to table deletion or deletion/moves from
+   *         compaction.
    */
   public Collection<Path> getMissedMobFiles() {
     return new HashSet<>(missedMobFiles);
@@ -556,8 +538,7 @@ public class HFileCorruptionChecker {
     }
 
     String initialState = (corrupted.isEmpty()) ? "OK" : "CORRUPTED";
-    String fixedState = (corrupted.size() == quarantined.size()) ? "OK"
-        : "CORRUPTED";
+    String fixedState = (corrupted.size() == quarantined.size()) ? "OK" : "CORRUPTED";
 
     // print mob-related report
     out.print("Checked " + mobFilesChecked.get() + " Mob files for corruption");
@@ -577,8 +558,8 @@ public class HFileCorruptionChecker {
       out.print("      " + mq);
     }
     String initialMobState = (corruptedMobFiles.isEmpty()) ? "OK" : "CORRUPTED";
-    String fixedMobState = (corruptedMobFiles.size() == quarantinedMobFiles.size()) ? "OK"
-        : "CORRUPTED";
+    String fixedMobState =
+        (corruptedMobFiles.size() == quarantinedMobFiles.size()) ? "OK" : "CORRUPTED";
 
     if (inQuarantineMode) {
       out.print("Summary: " + initialState + " => " + fixedState);

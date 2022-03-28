@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,10 +53,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
- * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig},
- * and {@link LruBlockCache}.
+ * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig}, and
+ * {@link LruBlockCache}.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
 public class TestLazyDataBlockDecompression {
 
@@ -74,10 +74,7 @@ public class TestLazyDataBlockDecompression {
 
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] {
-      { false },
-      { true }
-    });
+    return Arrays.asList(new Object[][] { { false }, { true } });
   }
 
   @Before
@@ -91,15 +88,13 @@ public class TestLazyDataBlockDecompression {
   }
 
   /**
-   * Write {@code entryCount} random keyvalues to a new HFile at {@code path}. Returns the row
-   * bytes of the KeyValues written, in the order they were written.
+   * Write {@code entryCount} random keyvalues to a new HFile at {@code path}. Returns the row bytes
+   * of the KeyValues written, in the order they were written.
    */
   private static void writeHFile(Configuration conf, CacheConfig cc, FileSystem fs, Path path,
       HFileContext cxt, int entryCount) throws IOException {
-    HFile.Writer writer = new HFile.WriterFactory(conf, cc)
-        .withPath(fs, path)
-        .withFileContext(cxt)
-        .create();
+    HFile.Writer writer =
+        new HFile.WriterFactory(conf, cc).withPath(fs, path).withFileContext(cxt).create();
 
     // write a bunch of random kvs
     final byte[] family = Bytes.toBytes("f");
@@ -120,24 +115,18 @@ public class TestLazyDataBlockDecompression {
       Path path, HFileContext cxt) throws IOException {
     FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, path);
     long fileSize = fs.getFileStatus(path).getLen();
-    FixedFileTrailer trailer =
-      FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-    ReaderContext context = new ReaderContextBuilder()
-        .withFilePath(path)
-        .withFileSize(fileSize)
-        .withFileSystem(fsdis.getHfs())
-        .withInputStreamWrapper(fsdis)
-        .build();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    ReaderContext context = new ReaderContextBuilder().withFilePath(path).withFileSize(fileSize)
+        .withFileSystem(fsdis.getHfs()).withInputStreamWrapper(fsdis).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     HFile.Reader reader = new HFilePreadReader(context, fileInfo, cacheConfig, conf);
     fileInfo.initMetaAndIndex(reader);
-    long offset = trailer.getFirstDataBlockOffset(),
-      max = trailer.getLastDataBlockOffset();
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
     List<HFileBlock> blocks = new ArrayList<>(4);
     HFileBlock block;
     while (offset <= max) {
       block = reader.readBlock(offset, -1, /* cacheBlock */ true, /* pread */ false,
-      /* isCompaction */ false, /* updateCacheMetrics */ true, null, null);
+        /* isCompaction */ false, /* updateCacheMetrics */ true, null, null);
       offset += block.getOnDiskSizeWithHeader();
       blocks.add(block);
     }
@@ -149,11 +138,10 @@ public class TestLazyDataBlockDecompression {
   public void testCompressionIncreasesEffectiveBlockCacheSize() throws Exception {
     // enough room for 2 uncompressed block
     int maxSize = (int) (HConstants.DEFAULT_BLOCKSIZE * 2.1);
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
-      "testCompressionIncreasesEffectiveBlockcacheSize");
-    HFileContext context = new HFileContextBuilder()
-      .withCompression(Compression.Algorithm.GZ)
-      .build();
+    Path hfilePath =
+        new Path(TEST_UTIL.getDataTestDir(), "testCompressionIncreasesEffectiveBlockcacheSize");
+    HFileContext context =
+        new HFileContextBuilder().withCompression(Compression.Algorithm.GZ).build();
     LOG.info("context=" + context);
 
     // setup cache with lazy-decompression disabled.
@@ -171,8 +159,8 @@ public class TestLazyDataBlockDecompression {
     assertEquals("test inconsistency detected.", maxSize, disabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",
       disabledBlockCache.getEvictionThread() == null);
-    assertEquals("freshly created blockcache contains blocks.",
-      0, disabledBlockCache.getBlockCount());
+    assertEquals("freshly created blockcache contains blocks.", 0,
+      disabledBlockCache.getBlockCount());
 
     // 2000 kv's is ~3.6 full unencoded data blocks.
     // Requires a conf and CacheConfig but should not be specific to this instance's cache settings
@@ -184,8 +172,8 @@ public class TestLazyDataBlockDecompression {
     assertTrue("blockcache should contain blocks. disabledBlockCount=" + disabledBlockCount,
       disabledBlockCount > 0);
     long disabledEvictedCount = disabledBlockCache.getStats().getEvictedCount();
-    for (Map.Entry<BlockCacheKey, LruCachedBlock> e :
-      disabledBlockCache.getMapForTests().entrySet()) {
+    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : disabledBlockCache.getMapForTests()
+        .entrySet()) {
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();
       assertTrue("found a packed block, block=" + block, block.isUnpacked());
     }
@@ -205,8 +193,8 @@ public class TestLazyDataBlockDecompression {
     assertEquals("test inconsistency detected", maxSize, enabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",
       enabledBlockCache.getEvictionThread() == null);
-    assertEquals("freshly created blockcache contains blocks.",
-      0, enabledBlockCache.getBlockCount());
+    assertEquals("freshly created blockcache contains blocks.", 0,
+      enabledBlockCache.getBlockCount());
 
     cacheBlocks(lazyCompressEnabled, cc, fs, hfilePath, context);
     long enabledBlockCount = enabledBlockCache.getBlockCount();
@@ -214,28 +202,31 @@ public class TestLazyDataBlockDecompression {
       enabledBlockCount > 0);
     long enabledEvictedCount = enabledBlockCache.getStats().getEvictedCount();
     int candidatesFound = 0;
-    for (Map.Entry<BlockCacheKey, LruCachedBlock> e :
-        enabledBlockCache.getMapForTests().entrySet()) {
+    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : enabledBlockCache.getMapForTests()
+        .entrySet()) {
       candidatesFound++;
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();
       if (cc.shouldCacheCompressed(block.getBlockType().getCategory())) {
-        assertFalse("found an unpacked block, block=" + block + ", block buffer capacity=" +
-          block.getBufferWithoutHeader().capacity(), block.isUnpacked());
+        assertFalse("found an unpacked block, block=" + block + ", block buffer capacity="
+            + block.getBufferWithoutHeader().capacity(),
+          block.isUnpacked());
       }
     }
     assertTrue("did not find any candidates for compressed caching. Invalid test.",
       candidatesFound > 0);
 
-    LOG.info("disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" +
-      enabledBlockCount);
-    assertTrue("enabling compressed data blocks should increase the effective cache size. " +
-      "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" +
-      enabledBlockCount, disabledBlockCount < enabledBlockCount);
+    LOG.info(
+      "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" + enabledBlockCount);
+    assertTrue(
+      "enabling compressed data blocks should increase the effective cache size. "
+          + "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" + enabledBlockCount,
+      disabledBlockCount < enabledBlockCount);
 
-    LOG.info("disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount=" +
-      enabledEvictedCount);
-    assertTrue("enabling compressed data blocks should reduce the number of evictions. " +
-      "disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount=" +
-      enabledEvictedCount, enabledEvictedCount < disabledEvictedCount);
+    LOG.info("disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount="
+        + enabledEvictedCount);
+    assertTrue("enabling compressed data blocks should reduce the number of evictions. "
+        + "disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount="
+        + enabledEvictedCount,
+      enabledEvictedCount < disabledEvictedCount);
   }
 }

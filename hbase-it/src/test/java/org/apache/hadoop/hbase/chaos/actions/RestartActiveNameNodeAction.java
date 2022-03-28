@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -36,8 +35,7 @@ import org.slf4j.LoggerFactory;
  * Action that tries to restart the active namenode.
  */
 public class RestartActiveNameNodeAction extends RestartActionBaseAction {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
 
   // Value taken from org.apache.hadoop.ha.ActiveStandbyElector.java, variable :- LOCK_FILENAME
   private static final String ACTIVE_NN_LOCK_NAME = "ActiveStandbyElectorLock";
@@ -51,7 +49,8 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -74,9 +73,8 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
       List<String> subChildern = ZKUtil.listChildrenNoWatch(zkw, hadoopHAZkNodePath);
       for (String eachEntry : subChildern) {
         if (eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
-          byte[] data =
-              rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME), false,
-                null);
+          byte[] data = rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME),
+            false, null);
           ActiveNodeInfo proto = ActiveNodeInfo.parseFrom(data);
           activeNamenode = proto.getHostname();
         }

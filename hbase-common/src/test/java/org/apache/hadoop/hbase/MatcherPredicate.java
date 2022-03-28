@@ -26,7 +26,6 @@ import org.hamcrest.StringDescription;
 /**
  * An implementation of {@link Waiter.ExplainingPredicate} that uses Hamcrest {@link Matcher} for
  * both predicate evaluation and explanation.
- *
  * @param <T> The type of value to be evaluated via {@link Matcher}.
  */
 @InterfaceAudience.Private
@@ -42,23 +41,23 @@ public class MatcherPredicate<T> implements Waiter.ExplainingPredicate<RuntimeEx
   }
 
   public MatcherPredicate(final String reason, final Supplier<T> supplier,
-    final Matcher<? super T> matcher) {
+      final Matcher<? super T> matcher) {
     this.reason = reason;
     this.supplier = supplier;
     this.matcher = matcher;
     this.currentValue = null;
   }
 
-  @Override public boolean evaluate() {
+  @Override
+  public boolean evaluate() {
     currentValue = supplier.get();
     return matcher.matches(currentValue);
   }
 
-  @Override public String explainFailure() {
-    final Description description = new StringDescription()
-      .appendText(reason)
-      .appendText("\nExpected: ").appendDescriptionOf(matcher)
-      .appendText("\n     but: ");
+  @Override
+  public String explainFailure() {
+    final Description description = new StringDescription().appendText(reason)
+        .appendText("\nExpected: ").appendDescriptionOf(matcher).appendText("\n     but: ");
     matcher.describeMismatch(currentValue, description);
     return description.toString();
   }

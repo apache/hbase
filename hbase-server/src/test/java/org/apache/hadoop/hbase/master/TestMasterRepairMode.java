@@ -58,7 +58,7 @@ public class TestMasterRepairMode {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRepairMode.class);
+      HBaseClassTestRule.forClass(TestMasterRepairMode.class);
 
   @Rule
   public TestName name = new TestName();
@@ -96,7 +96,7 @@ public class TestMasterRepairMode {
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(new Scan())) {
+        ResultScanner scanner = table.getScanner(new Scan())) {
       assertNotNull("Could not read meta.", scanner.next());
     }
   }
@@ -123,16 +123,16 @@ public class TestMasterRepairMode {
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
 
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
-      Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
+        ResultScanner scanner = table.getScanner(HConstants.TABLE_FAMILY);
+        Stream<Result> results = StreamSupport.stream(scanner.spliterator(), false)) {
       assertTrue("Did not find user table records while reading hbase:meta",
         results.anyMatch(r -> Arrays.equals(r.getRow(), testRepairMode.getName())));
     }
     try (AsyncConnection asyncConn =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       // use async table so we can set the timeout and retry value to let the operation fail fast
       AsyncTable<?> table = asyncConn.getTableBuilder(testRepairMode)
-        .setScanTimeout(5, TimeUnit.SECONDS).setMaxRetries(2).build();
+          .setScanTimeout(5, TimeUnit.SECONDS).setMaxRetries(2).build();
       assertThrows("Should not be able to access user-space tables in repair mode.",
         Exception.class, () -> {
           try (ResultScanner scanner = table.getScanner(new Scan())) {

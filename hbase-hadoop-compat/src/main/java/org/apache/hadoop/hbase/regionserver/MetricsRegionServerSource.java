@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -50,7 +49,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   /**
    * Update the Put time histogram
-   *
    * @param t time it took
    */
   void updatePut(long t);
@@ -63,7 +61,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   /**
    * Update the Delete time histogram
-   *
    * @param t time it took
    */
   void updateDelete(long t);
@@ -94,42 +91,37 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   /**
    * Update the Get time histogram .
-   *
    * @param t time it took
    */
   void updateGet(long t);
 
   /**
    * Update the Increment time histogram.
-   *
    * @param t time it took
    */
   void updateIncrement(long t);
 
   /**
    * Update the Append time histogram.
-   *
    * @param t time it took
    */
   void updateAppend(long t);
 
   /**
    * Update the Replay time histogram.
-   *
    * @param t time it took
    */
   void updateReplay(long t);
 
   /**
    * Update the scan size.
-   *
    * @param scanSize size of the scan
    */
   void updateScanSize(long scanSize);
 
   /**
    * Update the scan time.
-   * */
+   */
   void updateScanTime(long t);
 
   /**
@@ -254,14 +246,14 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
-      "Total number of requests this RegionServer has answered; increments the count once for " +
-          "EVERY access whether an admin operation, a Scan, a Put or Put of 1M rows, or a Get " +
-          "of a non-existent row";
+      "Total number of requests this RegionServer has answered; increments the count once for "
+          + "EVERY access whether an admin operation, a Scan, a Put or Put of 1M rows, or a Get "
+          + "of a non-existent row";
   String TOTAL_ROW_ACTION_REQUEST_COUNT = "totalRowActionRequestCount";
   String TOTAL_ROW_ACTION_REQUEST_COUNT_DESC =
-      "Total number of region requests this RegionServer has answered; counts by row-level " +
-          "action at the RPC Server (Sums 'readRequestsCount' and 'writeRequestsCount'); counts" +
-          "once per access whether a Put of 1M rows or a Get that returns 1M Results";
+      "Total number of region requests this RegionServer has answered; counts by row-level "
+          + "action at the RPC Server (Sums 'readRequestsCount' and 'writeRequestsCount'); counts"
+          + "once per access whether a Put of 1M rows or a Get that returns 1M Results";
   String READ_REQUEST_COUNT = "readRequestCount";
   String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
   String FILTERED_READ_REQUEST_COUNT_DESC =
@@ -272,8 +264,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String READ_REQUEST_RATE_DESC =
       "Rate of answering the read requests by this region server per second.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
-  String WRITE_REQUEST_COUNT_DESC =
-      "Number of mutation requests this RegionServer has answered.";
+  String WRITE_REQUEST_COUNT_DESC = "Number of mutation requests this RegionServer has answered.";
   String WRITE_REQUEST_RATE_PER_SECOND = "writeRequestRatePerSecond";
   String WRITE_REQUEST_RATE_DESC =
       "Rate of answering the mutation requests by this region server per second.";
@@ -288,8 +279,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STATIC_INDEX_SIZE = "staticIndexSize";
   String STATIC_INDEX_SIZE_DESC = "Uncompressed size of the static indexes.";
   String STATIC_BLOOM_SIZE = "staticBloomSize";
-  String STATIC_BLOOM_SIZE_DESC =
-      "Uncompressed size of the static bloom filters.";
+  String STATIC_BLOOM_SIZE_DESC = "Uncompressed size of the static bloom filters.";
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
       "Number of mutations that have been sent by clients with the write ahead logging turned off.";
@@ -301,7 +291,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
       "The percent of HFiles that are stored on the local hdfs data node.";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS = "percentFilesLocalSecondaryRegions";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC =
-    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
+      "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
   String SPLIT_QUEUE_LENGTH = "splitQueueLength";
   String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
@@ -315,8 +305,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String FLUSH_QUEUE_LENGTH = "flushQueueLength";
   String FLUSH_QUEUE_LENGTH_DESC = "Length of the queue for region flushes";
   String BLOCK_CACHE_FREE_SIZE = "blockCacheFreeSize";
-  String BLOCK_CACHE_FREE_DESC =
-      "Size of the block cache that is not occupied.";
+  String BLOCK_CACHE_FREE_DESC = "Size of the block cache that is not occupied.";
   String BLOCK_CACHE_COUNT = "blockCacheCount";
   String BLOCK_CACHE_COUNT_DESC = "Number of block in the block cache.";
   String BLOCK_CACHE_SIZE = "blockCacheSize";
@@ -334,19 +323,18 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
   String BLOCK_CACHE_EVICTION_COUNT_DESC =
       "Count of the number of blocks evicted from the block cache."
-      + "(Not including blocks evicted because of HFile removal)";
+          + "(Not including blocks evicted because of HFile removal)";
   String BLOCK_CACHE_PRIMARY_EVICTION_COUNT = "blockCacheEvictionCountPrimary";
   String BLOCK_CACHE_PRIMARY_EVICTION_COUNT_DESC =
       "Count of the number of blocks evicted from primary replica in the block cache.";
   String BLOCK_CACHE_HIT_PERCENT = "blockCacheCountHitPercent";
-  String BLOCK_CACHE_HIT_PERCENT_DESC =
-      "Percent of block cache requests that are hits";
+  String BLOCK_CACHE_HIT_PERCENT_DESC = "Percent of block cache requests that are hits";
   String BLOCK_CACHE_EXPRESS_HIT_PERCENT = "blockCacheExpressHitPercent";
   String BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC =
       "The percent of the time that requests with the cache turned on hit the cache.";
   String BLOCK_CACHE_FAILED_INSERTION_COUNT = "blockCacheFailedInsertionCount";
-  String BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC = "Number of times that a block cache " +
-      "insertion failed. Usually due to size restrictions.";
+  String BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC =
+      "Number of times that a block cache " + "insertion failed. Usually due to size restrictions.";
   String BLOCK_CACHE_DATA_MISS_COUNT = "blockCacheDataMissCount";
   String BLOCK_CACHE_ENCODED_DATA_MISS_COUNT = "blockCacheEncodedDataMissCount";
   String BLOCK_CACHE_LEAF_INDEX_MISS_COUNT = "blockCacheLeafIndexMissCount";
@@ -417,15 +405,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String SLOW_DELETE_KEY = "slowDeleteCount";
   String SLOW_INCREMENT_KEY = "slowIncrementCount";
   String SLOW_APPEND_KEY = "slowAppendCount";
-  String SLOW_PUT_DESC =
-      "The number of batches containing puts that took over 1000ms to complete";
+  String SLOW_PUT_DESC = "The number of batches containing puts that took over 1000ms to complete";
   String SLOW_DELETE_DESC =
       "The number of batches containing delete(s) that took over 1000ms to complete";
   String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
-  String SLOW_INCREMENT_DESC =
-      "The number of Increments that took over 1000ms to complete";
-  String SLOW_APPEND_DESC =
-      "The number of Appends that took over 1000ms to complete";
+  String SLOW_INCREMENT_DESC = "The number of Increments that took over 1000ms to complete";
+  String SLOW_APPEND_DESC = "The number of Appends that took over 1000ms to complete";
 
   String FLUSHED_CELLS = "flushedCellsCount";
   String FLUSHED_CELLS_DESC = "The number of cells flushed to disk";
@@ -437,14 +422,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during minor compactions, in bytes";
   String MAJOR_COMPACTED_CELLS = "majorCompactedCellsCount";
-  String MAJOR_COMPACTED_CELLS_DESC =
-      "The number of cells processed during major compactions";
+  String MAJOR_COMPACTED_CELLS_DESC = "The number of cells processed during major compactions";
   String MAJOR_COMPACTED_CELLS_SIZE = "majorCompactedCellsSize";
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
   String CELLS_COUNT_COMPACTED_TO_MOB = "cellsCountCompactedToMob";
-  String CELLS_COUNT_COMPACTED_TO_MOB_DESC =
-      "The number of cells moved to mob during compaction";
+  String CELLS_COUNT_COMPACTED_TO_MOB_DESC = "The number of cells moved to mob during compaction";
   String CELLS_COUNT_COMPACTED_FROM_MOB = "cellsCountCompactedFromMob";
   String CELLS_COUNT_COMPACTED_FROM_MOB_DESC =
       "The number of cells moved from mob during compaction";
@@ -482,18 +465,16 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
       "The number of times we started a hedged read and a hedged read won";
   String HEDGED_READ_IN_CUR_THREAD = "hedgedReadOpsInCurThread";
   String HEDGED_READ_IN_CUR_THREAD_DESC =
-    "The number of times we execute a hedged read in current thread as a fallback for task rejection";
+      "The number of times we execute a hedged read in current thread as a fallback for task rejection";
 
   String TOTAL_BYTES_READ = "totalBytesRead";
   String TOTAL_BYTES_READ_DESC = "The total number of bytes read from HDFS";
   String LOCAL_BYTES_READ = "localBytesRead";
-  String LOCAL_BYTES_READ_DESC =
-      "The number of bytes read from the local HDFS DataNode";
+  String LOCAL_BYTES_READ_DESC = "The number of bytes read from the local HDFS DataNode";
   String SHORTCIRCUIT_BYTES_READ = "shortCircuitBytesRead";
   String SHORTCIRCUIT_BYTES_READ_DESC = "The number of bytes read through HDFS short circuit read";
   String ZEROCOPY_BYTES_READ = "zeroCopyBytesRead";
-  String ZEROCOPY_BYTES_READ_DESC =
-      "The number of bytes read through HDFS zero copy";
+  String ZEROCOPY_BYTES_READ_DESC = "The number of bytes read through HDFS zero copy";
 
   String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
@@ -517,48 +498,47 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String FLUSHED_MEMSTORE_BYTES_DESC = "Total number of bytes of cells in memstore from flush";
 
   String COMPACTION_TIME = "compactionTime";
-  String COMPACTION_TIME_DESC
-    = "Histogram for the time in millis for compaction, both major and minor";
+  String COMPACTION_TIME_DESC =
+      "Histogram for the time in millis for compaction, both major and minor";
   String COMPACTION_INPUT_FILE_COUNT = "compactionInputFileCount";
-  String COMPACTION_INPUT_FILE_COUNT_DESC
-    = "Histogram for the compaction input number of files, both major and minor";
+  String COMPACTION_INPUT_FILE_COUNT_DESC =
+      "Histogram for the compaction input number of files, both major and minor";
   String COMPACTION_INPUT_SIZE = "compactionInputSize";
-  String COMPACTION_INPUT_SIZE_DESC
-    = "Histogram for the compaction total input file sizes, both major and minor";
+  String COMPACTION_INPUT_SIZE_DESC =
+      "Histogram for the compaction total input file sizes, both major and minor";
   String COMPACTION_OUTPUT_FILE_COUNT = "compactionOutputFileCount";
-  String COMPACTION_OUTPUT_FILE_COUNT_DESC
-    = "Histogram for the compaction output number of files, both major and minor";
+  String COMPACTION_OUTPUT_FILE_COUNT_DESC =
+      "Histogram for the compaction output number of files, both major and minor";
   String COMPACTION_OUTPUT_SIZE = "compactionOutputSize";
-  String COMPACTION_OUTPUT_SIZE_DESC
-    = "Histogram for the compaction total output file sizes, both major and minor";
+  String COMPACTION_OUTPUT_SIZE_DESC =
+      "Histogram for the compaction total output file sizes, both major and minor";
   String COMPACTED_INPUT_BYTES = "compactedInputBytes";
-  String COMPACTED_INPUT_BYTES_DESC
-    = "Total number of bytes that is read for compaction, both major and minor";
+  String COMPACTED_INPUT_BYTES_DESC =
+      "Total number of bytes that is read for compaction, both major and minor";
   String COMPACTED_OUTPUT_BYTES = "compactedOutputBytes";
-  String COMPACTED_OUTPUT_BYTES_DESC
-    = "Total number of bytes that is output from compaction, both major and minor";
+  String COMPACTED_OUTPUT_BYTES_DESC =
+      "Total number of bytes that is output from compaction, both major and minor";
 
   String MAJOR_COMPACTION_TIME = "majorCompactionTime";
-  String MAJOR_COMPACTION_TIME_DESC
-    = "Histogram for the time in millis for compaction, major only";
+  String MAJOR_COMPACTION_TIME_DESC = "Histogram for the time in millis for compaction, major only";
   String MAJOR_COMPACTION_INPUT_FILE_COUNT = "majorCompactionInputFileCount";
-  String MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC
-    = "Histogram for the compaction input number of files, major only";
+  String MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC =
+      "Histogram for the compaction input number of files, major only";
   String MAJOR_COMPACTION_INPUT_SIZE = "majorCompactionInputSize";
-  String MAJOR_COMPACTION_INPUT_SIZE_DESC
-    = "Histogram for the compaction total input file sizes, major only";
+  String MAJOR_COMPACTION_INPUT_SIZE_DESC =
+      "Histogram for the compaction total input file sizes, major only";
   String MAJOR_COMPACTION_OUTPUT_FILE_COUNT = "majorCompactionOutputFileCount";
-  String MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC
-    = "Histogram for the compaction output number of files, major only";
+  String MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC =
+      "Histogram for the compaction output number of files, major only";
   String MAJOR_COMPACTION_OUTPUT_SIZE = "majorCompactionOutputSize";
-  String MAJOR_COMPACTION_OUTPUT_SIZE_DESC
-    = "Histogram for the compaction total output file sizes, major only";
+  String MAJOR_COMPACTION_OUTPUT_SIZE_DESC =
+      "Histogram for the compaction total output file sizes, major only";
   String MAJOR_COMPACTED_INPUT_BYTES = "majorCompactedInputBytes";
-  String MAJOR_COMPACTED_INPUT_BYTES_DESC
-    = "Total number of bytes that is read for compaction, major only";
+  String MAJOR_COMPACTED_INPUT_BYTES_DESC =
+      "Total number of bytes that is read for compaction, major only";
   String MAJOR_COMPACTED_OUTPUT_BYTES = "majorCompactedOutputBytes";
-  String MAJOR_COMPACTED_OUTPUT_BYTES_DESC
-    = "Total number of bytes that is output from compaction, major only";
+  String MAJOR_COMPACTED_OUTPUT_BYTES_DESC =
+      "Total number of bytes that is output from compaction, major only";
 
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
   String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this RegionServer has answered.";

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,12 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
-// imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -42,18 +39,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A WAL Provider that returns a WAL per group of regions.
- *
- * This provider follows the decorator pattern and mainly holds the logic for WAL grouping.
- * WAL creation/roll/close is delegated to {@link #DELEGATE_PROVIDER}
- *
- * Region grouping is handled via {@link RegionGroupingStrategy} and can be configured via the
- * property "hbase.wal.regiongrouping.strategy". Current strategy choices are
+ * A WAL Provider that returns a WAL per group of regions. This provider follows the decorator
+ * pattern and mainly holds the logic for WAL grouping. WAL creation/roll/close is delegated to
+ * {@link #DELEGATE_PROVIDER} Region grouping is handled via {@link RegionGroupingStrategy} and can
+ * be configured via the property "hbase.wal.regiongrouping.strategy". Current strategy choices are
  * <ul>
- *   <li><em>defaultStrategy</em> : Whatever strategy this version of HBase picks. currently
- *                                  "bounded".</li>
- *   <li><em>identity</em> : each region belongs to its own group.</li>
- *   <li><em>bounded</em> : bounded number of groups and region evenly assigned to each group.</li>
+ * <li><em>defaultStrategy</em> : Whatever strategy this version of HBase picks. currently
+ * "bounded".</li>
+ * <li><em>identity</em> : each region belongs to its own group.</li>
+ * <li><em>bounded</em> : bounded number of groups and region evenly assigned to each group.</li>
  * </ul>
  * Optionally, a FQCN to a custom implementation may be given.
  */
@@ -71,6 +65,7 @@ public class RegionGroupingProvider implements WALProvider {
      * Given an identifier and a namespace, pick a group.
      */
     String group(final byte[] identifier, byte[] namespace);
+
     void init(Configuration config, String providerId);
   }
 
@@ -78,20 +73,19 @@ public class RegionGroupingProvider implements WALProvider {
    * Maps between configuration names for strategies and implementation classes.
    */
   static enum Strategies {
-    defaultStrategy(BoundedGroupingStrategy.class),
-    identity(IdentityGroupingStrategy.class),
-    bounded(BoundedGroupingStrategy.class),
-    namespace(NamespaceGroupingStrategy.class);
+    defaultStrategy(BoundedGroupingStrategy.class), identity(IdentityGroupingStrategy.class),
+    bounded(BoundedGroupingStrategy.class), namespace(NamespaceGroupingStrategy.class);
 
     final Class<? extends RegionGroupingStrategy> clazz;
+
     Strategies(Class<? extends RegionGroupingStrategy> clazz) {
       this.clazz = clazz;
     }
   }
 
   /**
-   * instantiate a strategy from a config property.
-   * requires conf to have already been set (as well as anything the provider might need to read).
+   * instantiate a strategy from a config property. requires conf to have already been set (as well
+   * as anything the provider might need to read).
    */
   RegionGroupingStrategy getStrategy(final Configuration conf, final String key,
       final String defaultValue) throws IOException {
@@ -110,8 +104,8 @@ public class RegionGroupingProvider implements WALProvider {
       result.init(conf, providerId);
       return result;
     } catch (Exception e) {
-      LOG.error("couldn't set up region grouping strategy, check config key " +
-          REGION_GROUPING_STRATEGY);
+      LOG.error(
+        "couldn't set up region grouping strategy, check config key " + REGION_GROUPING_STRATEGY);
       LOG.debug("Exception details for failure to load region grouping strategy.", e);
       throw new IOException("couldn't set up region grouping strategy", e);
     }
@@ -122,8 +116,8 @@ public class RegionGroupingProvider implements WALProvider {
 
   /** delegate provider for WAL creation/roll/close, but not support multiwal */
   public static final String DELEGATE_PROVIDER = "hbase.wal.regiongrouping.delegate.provider";
-  public static final String DEFAULT_DELEGATE_PROVIDER = WALFactory.Providers.defaultProvider
-      .name();
+  public static final String DEFAULT_DELEGATE_PROVIDER =
+      WALFactory.Providers.defaultProvider.name();
 
   private static final String META_WAL_GROUP_NAME = "meta";
 
@@ -223,7 +217,7 @@ public class RegionGroupingProvider implements WALProvider {
   public void shutdown() throws IOException {
     // save the last exception and rethrow
     IOException failure = null;
-    for (WALProvider provider: cached.values()) {
+    for (WALProvider provider : cached.values()) {
       try {
         provider.shutdown();
       } catch (IOException e) {
@@ -261,7 +255,9 @@ public class RegionGroupingProvider implements WALProvider {
 
   static class IdentityGroupingStrategy implements RegionGroupingStrategy {
     @Override
-    public void init(Configuration config, String providerId) {}
+    public void init(Configuration config, String providerId) {
+    }
+
     @Override
     public String group(final byte[] identifier, final byte[] namespace) {
       return Bytes.toString(identifier);

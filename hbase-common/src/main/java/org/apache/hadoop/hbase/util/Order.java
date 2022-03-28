@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,9 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used to describe or modify the lexicographical sort order of a
- * {@code byte[]}. Default ordering is considered {@code ASCENDING}. The order
- * of a {@code byte[]} can be inverted, resulting in {@code DESCENDING} order,
- * by replacing each byte with its 1's compliment.
+ * Used to describe or modify the lexicographical sort order of a {@code byte[]}. Default ordering
+ * is considered {@code ASCENDING}. The order of a {@code byte[]} can be inverted, resulting in
+ * {@code DESCENDING} order, by replacing each byte with its 1's compliment.
  */
 @InterfaceAudience.Public
 public enum Order {
@@ -56,8 +55,8 @@ public enum Order {
 
   DESCENDING {
     /**
-     * A {@code byte} value is inverted by taking its 1's Complement, achieved
-     * via {@code xor} with {@code 0xff}.
+     * A {@code byte} value is inverted by taking its 1's Complement, achieved via {@code xor} with
+     * {@code 0xff}.
      */
     private static final byte MASK = (byte) 0xff;
 

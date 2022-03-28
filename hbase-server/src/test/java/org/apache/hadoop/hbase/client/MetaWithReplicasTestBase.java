@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,21 +57,21 @@ public class MetaWithReplicasTestBase {
   protected static void startCluster() throws Exception {
     TEST_UTIL.getConfiguration().setInt("zookeeper.session.timeout", 30000);
     TEST_UTIL.getConfiguration()
-      .setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
+        .setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
     StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
+        .numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
     TEST_UTIL.startMiniCluster(option);
     Admin admin = TEST_UTIL.getAdmin();
     HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
     ServerName hbaseMetaServerName =
-      MetaTableLocator.getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
+        MetaTableLocator.getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {
       RegionInfo h = RegionReplicaUtil
-        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
+          .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
       AssignmentTestingUtil.waitForAssignment(am, h);
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
       assertNotNull(sn);
@@ -91,28 +91,28 @@ public class MetaWithReplicasTestBase {
       }
       assertNotEquals(metaServerIndex, newServerIndex);
       ServerName destinationServerName =
-        TEST_UTIL.getHBaseCluster().getRegionServer(newServerIndex).getServerName();
+          TEST_UTIL.getHBaseCluster().getRegionServer(newServerIndex).getServerName();
       ServerName metaServerName =
-        TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
+          TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
       assertNotEquals(destinationServerName, metaServerName);
       TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         destinationServerName);
     }
     // Disable the balancer
     LoadBalancerTracker l =
-      new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(), new Abortable() {
-        AtomicBoolean aborted = new AtomicBoolean(false);
+        new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(), new Abortable() {
+          AtomicBoolean aborted = new AtomicBoolean(false);
 
-        @Override
-        public boolean isAborted() {
-          return aborted.get();
-        }
+          @Override
+          public boolean isAborted() {
+            return aborted.get();
+          }
 
-        @Override
-        public void abort(String why, Throwable e) {
-          aborted.set(true);
-        }
-      });
+          @Override
+          public void abort(String why, Throwable e) {
+            aborted.set(true);
+          }
+        });
     l.setBalancerOn(false);
     LOG.debug("All meta replicas assigned");
   }

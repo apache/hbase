@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +25,8 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Get notification of WAL events. The invocations are inline
- * so make sure your implementation is fast else you'll slow hbase.
+ * Get notification of WAL events. The invocations are inline so make sure your implementation is
+ * fast else you'll slow hbase.
  */
 @InterfaceAudience.Private
 public interface WALActionsListener {
@@ -45,49 +44,56 @@ public interface WALActionsListener {
   };
 
   /**
-   * The WAL is going to be rolled. The oldPath can be null if this is
-   * the first log file from the regionserver.
+   * The WAL is going to be rolled. The oldPath can be null if this is the first log file from the
+   * regionserver.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  default void preLogRoll(Path oldPath, Path newPath) throws IOException {}
+  default void preLogRoll(Path oldPath, Path newPath) throws IOException {
+  }
 
   /**
-   * The WAL has been rolled. The oldPath can be null if this is
-   * the first log file from the regionserver.
+   * The WAL has been rolled. The oldPath can be null if this is the first log file from the
+   * regionserver.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  default void postLogRoll(Path oldPath, Path newPath) throws IOException {}
+  default void postLogRoll(Path oldPath, Path newPath) throws IOException {
+  }
 
   /**
    * The WAL is going to be archived.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  default void preLogArchive(Path oldPath, Path newPath) throws IOException {}
+  default void preLogArchive(Path oldPath, Path newPath) throws IOException {
+  }
 
   /**
    * The WAL has been archived.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  default void postLogArchive(Path oldPath, Path newPath) throws IOException {}
+  default void postLogArchive(Path oldPath, Path newPath) throws IOException {
+  }
 
   /**
    * A request was made that the WAL be rolled.
    */
-  default void logRollRequested(RollRequestReason reason) {}
+  default void logRollRequested(RollRequestReason reason) {
+  }
 
   /**
    * The WAL is about to close.
    */
-  default void logCloseRequested() {}
+  default void logCloseRequested() {
+  }
 
   /**
-  * Called before each write.
-  */
-  default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
+   * Called before each write.
+   */
+  default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
+  }
 
   /**
    * @param logKey
@@ -97,11 +103,12 @@ public interface WALActionsListener {
    *          <code>htd</code>.
    * @throws IOException If failed to parse the WALEdit
    */
-  default void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {}
+  default void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
+  }
 
   /**
-   * For notification post append to the writer.  Used by metrics system at least.
-   * TODO: Combine this with above.
+   * For notification post append to the writer. Used by metrics system at least. TODO: Combine this
+   * with above.
    * @param entryLen approx length of cells in this append.
    * @param elapsedTimeMillis elapsed time in milliseconds.
    * @param logKey A WAL key
@@ -109,13 +116,14 @@ public interface WALActionsListener {
    * @throws IOException if any network or I/O error occurred
    */
   default void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
-      final WALEdit logEdit) throws IOException {}
+      final WALEdit logEdit) throws IOException {
+  }
 
   /**
-   * For notification post writer sync.  Used by metrics system at least.
+   * For notification post writer sync. Used by metrics system at least.
    * @param timeInNanos How long the filesystem sync took in nanoseconds.
-   * @param handlerSyncs How many sync handler calls were released by this call to filesystem
-   * sync.
+   * @param handlerSyncs How many sync handler calls were released by this call to filesystem sync.
    */
-  default void postSync(final long timeInNanos, final int handlerSyncs) {}
+  default void postSync(final long timeInNanos, final int handlerSyncs) {
+  }
 }

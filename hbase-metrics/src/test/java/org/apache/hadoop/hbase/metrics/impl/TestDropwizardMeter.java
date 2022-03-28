@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,11 +38,13 @@ public class TestDropwizardMeter {
 
   private Meter meter;
 
-  @Before public void setup() {
+  @Before
+  public void setup() {
     this.meter = Mockito.mock(Meter.class);
   }
 
-  @Test public void test() {
+  @Test
+  public void test() {
     DropwizardMeter dwMeter = new DropwizardMeter(this.meter);
 
     dwMeter.mark();

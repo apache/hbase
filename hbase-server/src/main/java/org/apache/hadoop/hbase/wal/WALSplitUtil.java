@@ -130,8 +130,8 @@ public final class WALSplitUtil {
   }
 
   /**
-   * Move WAL. Used to move processed WALs to archive or bad WALs to corrupt WAL dir.
-   * WAL may have already been moved; makes allowance.
+   * Move WAL. Used to move processed WALs to archive or bad WALs to corrupt WAL dir. WAL may have
+   * already been moved; makes allowance.
    */
   public static void moveWAL(FileSystem fs, Path p, Path targetDir) throws IOException {
     if (fs.exists(p)) {
@@ -147,8 +147,8 @@ public final class WALSplitUtil {
    * Path to a file under RECOVERED_EDITS_DIR directory of the region found in <code>logEntry</code>
    * named for the sequenceid in the passed <code>logEntry</code>: e.g.
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
-   * RECOVERED_EDITS_DIR under the region creating it if necessary.
-   * And also set storage policy for RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
+   * RECOVERED_EDITS_DIR under the region creating it if necessary. And also set storage policy for
+   * RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
    * @param tableName the table name
    * @param encodedRegionName the encoded region name
    * @param seqId the sequence id which used to generate file name
@@ -185,7 +185,7 @@ public final class WALSplitUtil {
       LOG.warn("mkdir failed on {}", dir);
     } else {
       String storagePolicy =
-        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+          conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
       CommonFSUtils.setStoragePolicy(walFS, dir, storagePolicy);
     }
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
@@ -238,10 +238,10 @@ public final class WALSplitUtil {
     // Only default replica region can reach here, so we can use regioninfo
     // directly without converting it to default replica's regioninfo.
     Path regionWALDir =
-      CommonFSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+        CommonFSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
     Path regionDir = FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), regionInfo);
-    Path wrongRegionWALDir =
-      CommonFSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+    Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(),
+      regionInfo.getEncodedName());
     FileSystem walFs = CommonFSUtils.getWALFileSystem(conf);
     FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
     NavigableSet<Path> files = getSplitEditFilesSorted(walFs, regionWALDir);
@@ -267,17 +267,17 @@ public final class WALSplitUtil {
    */
   @Deprecated
   public static long getMaxRegionSequenceId(Configuration conf, RegionInfo region,
-    IOExceptionSupplier<FileSystem> rootFsSupplier, IOExceptionSupplier<FileSystem> walFsSupplier)
-    throws IOException {
+      IOExceptionSupplier<FileSystem> rootFsSupplier, IOExceptionSupplier<FileSystem> walFsSupplier)
+      throws IOException {
     FileSystem rootFs = rootFsSupplier.get();
     FileSystem walFs = walFsSupplier.get();
     Path regionWALDir =
-      CommonFSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
+        CommonFSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
     // This is the old place where we store max sequence id file
     Path regionDir = FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), region);
     // This is for HBASE-20734, where we use a wrong directory, see HBASE-22617 for more details.
     Path wrongRegionWALDir =
-      CommonFSUtils.getWrongWALRegionDir(conf, region.getTable(), region.getEncodedName());
+        CommonFSUtils.getWrongWALRegionDir(conf, region.getTable(), region.getEncodedName());
     long maxSeqId = getMaxRegionSequenceId(walFs, regionWALDir);
     maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(rootFs, regionDir));
     maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(walFs, wrongRegionWALDir));
@@ -435,9 +435,12 @@ public final class WALSplitUtil {
     }
 
     private final ClientProtos.MutationProto.MutationType type;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final Mutation mutation;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final long nonceGroup;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final long nonce;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final Mutation mutation;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final long nonceGroup;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final long nonce;
 
     @Override
     public int compareTo(final MutationReplay d) {
@@ -573,7 +576,7 @@ public final class WALSplitUtil {
   }
 
   /**
-   * @param regionDir  This regions directory in the filesystem
+   * @param regionDir This regions directory in the filesystem
    * @param familyName The column family name
    * @return The directory that holds recovered hfiles for the region's column family
    */
@@ -581,8 +584,8 @@ public final class WALSplitUtil {
     return new Path(new Path(regionDir, familyName), HConstants.RECOVERED_HFILES_DIR);
   }
 
-  public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS,
-      final Path regionDir, String familyName) throws IOException {
+  public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS, final Path regionDir,
+      String familyName) throws IOException {
     Path dir = getRecoveredHFilesDir(regionDir, familyName);
     return CommonFSUtils.listStatus(rootFS, dir);
   }

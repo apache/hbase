@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This is a very fast, non-cryptographic hash suitable for general hash-based
- * lookup.  See http://murmurhash.googlepages.com/ for more details.
- *
- * <p>The C version of MurmurHash 2.0 found at that site was ported
- * to Java by Andrzej Bialecki (ab at getopt org).</p>
+ * This is a very fast, non-cryptographic hash suitable for general hash-based lookup. See
+ * http://murmurhash.googlepages.com/ for more details.
+ * <p>
+ * The C version of MurmurHash 2.0 found at that site was ported to Java by Andrzej Bialecki (ab at
+ * getopt org).
+ * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable

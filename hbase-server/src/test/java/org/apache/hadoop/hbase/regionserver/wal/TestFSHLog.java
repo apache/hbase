@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,8 +70,7 @@ import org.junit.rules.TestName;
 public class TestFSHLog extends AbstractTestFSWAL {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSHLog.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestFSHLog.class);
 
   private static final long TEST_TIMEOUT_MS = 10000;
 
@@ -82,8 +81,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String walDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
-    FSHLog fshLog = new FSHLog(fs, rootDir, walDir, archiveDir,
-      conf, listeners, failIfWALExists, prefix, suffix);
+    FSHLog fshLog = new FSHLog(fs, rootDir, walDir, archiveDir, conf, listeners, failIfWALExists,
+        prefix, suffix);
     fshLog.init();
     return fshLog;
   }
@@ -93,8 +92,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
       String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
-    FSHLog fshLog = new FSHLog(fs, rootDir, walDir, archiveDir,
-      conf, listeners, failIfWALExists, prefix, suffix) {
+    FSHLog fshLog = new FSHLog(fs, rootDir, walDir, archiveDir, conf, listeners, failIfWALExists,
+        prefix, suffix) {
 
       @Override
       protected void atHeadOfRingBufferEventHandlerAppend() {
@@ -111,7 +110,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       SecurityException, IllegalArgumentException, IllegalAccessException {
     final String name = this.name.getMethodName();
     FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
-      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     log.init();
     try {
       Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
@@ -124,7 +123,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
       TableDescriptor htd =
           TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
@@ -147,14 +146,17 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch blockBeforeSafePoint = new CountDownLatch(1);
 
     class FailingWriter implements WALProvider.Writer {
-      @Override public void sync(boolean forceSync) throws IOException {
+      @Override
+      public void sync(boolean forceSync) throws IOException {
         throw new IOException("Injected failure..");
       }
 
-      @Override public void append(WAL.Entry entry) throws IOException {
+      @Override
+      public void append(WAL.Entry entry) throws IOException {
       }
 
-      @Override public long getLength() {
+      @Override
+      public long getLength() {
         return 0;
       }
 
@@ -163,7 +165,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
         return 0;
       }
 
-      @Override public void close() throws IOException {
+      @Override
+      public void close() throws IOException {
       }
     }
 
@@ -172,8 +175,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
      */
     class CustomFSHLog extends FSHLog {
       public CustomFSHLog(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-                          Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-                          String prefix, String suffix) throws IOException {
+          Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
+          String prefix, String suffix) throws IOException {
         super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
       }
 
@@ -196,8 +199,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
     try (CustomFSHLog log = new CustomFSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
         HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.setWriter(new FailingWriter());
-      Field ringBufferEventHandlerField =
-          FSHLog.class.getDeclaredField("ringBufferEventHandler");
+      Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
       ringBufferEventHandlerField.setAccessible(true);
       FSHLog.RingBufferEventHandler ringBufferEventHandler =
           (FSHLog.RingBufferEventHandler) ringBufferEventHandlerField.get(log);
@@ -213,7 +215,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
         // Unblock the safe point trigger..
         blockBeforeSafePoint.countDown();
         // Wait for the safe point to be reached.
-        // With the deadlock in HBASE-25984, this is never possible, thus blocking the sync pipeline.
+        // With the deadlock in HBASE-25984, this is never possible, thus blocking the sync
+        // pipeline.
         Waiter.waitFor(CONF, TEST_TIMEOUT_MS, latch::isSafePointAttained);
       } finally {
         // Force release the safe point, for the clean up.
@@ -236,12 +239,11 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch putFinished = new CountDownLatch(1);
 
     try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
-      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
+        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {
         @Override
-        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
-            throws IOException {
+        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
           if (startHoldingForAppend.get()) {
             try {
               holdAppend.await();
@@ -255,22 +257,22 @@ public class TestFSHLog extends AbstractTestFSWAL {
       // open a new region which uses this WAL
       TableDescriptor htd =
           TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-        0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+        MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       final HRegion region = TEST_UTIL.createLocalHRegion(hri, CONF, htd, log);
       ExecutorService exec = Executors.newFixedThreadPool(2);
 
       // do a regular write first because of memstore size calculation.
-      region.put(new Put(b).addColumn(b, b,b));
+      region.put(new Put(b).addColumn(b, b, b));
 
       startHoldingForAppend.set(true);
       exec.submit(new Runnable() {
         @Override
         public void run() {
           try {
-            region.put(new Put(b).addColumn(b, b,b));
+            region.put(new Put(b).addColumn(b, b, b));
             putFinished.countDown();
           } catch (IOException e) {
             LOG.error(e.toString(), e);
@@ -286,8 +288,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
         public void run() {
           try {
             HRegion.FlushResult flushResult = region.flush(true);
-            LOG.info("Flush result:" +  flushResult.getResult());
-            LOG.info("Flush succeeded:" +  flushResult.isFlushSucceeded());
+            LOG.info("Flush result:" + flushResult.getResult());
+            LOG.info("Flush succeeded:" + flushResult.isFlushSucceeded());
             flushFinished.countDown();
           } catch (IOException e) {
             LOG.error(e.toString(), e);
@@ -305,12 +307,12 @@ public class TestFSHLog extends AbstractTestFSWAL {
       flushFinished.await();
 
       // check whether flush went through
-      assertEquals("Region did not flush?", 1, region.getStoreFileList(new byte[][]{b}).size());
+      assertEquals("Region did not flush?", 1, region.getStoreFileList(new byte[][] { b }).size());
 
       // now check the region's unflushed seqIds.
       long seqId = log.getEarliestMemStoreSeqNum(hri.getEncodedNameAsBytes());
-      assertEquals("Found seqId for the region which is already flushed",
-          HConstants.NO_SEQNUM, seqId);
+      assertEquals("Found seqId for the region which is already flushed", HConstants.NO_SEQNUM,
+        seqId);
 
       region.close();
     }

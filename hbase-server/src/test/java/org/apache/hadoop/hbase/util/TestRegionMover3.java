@@ -15,9 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -43,18 +46,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-
-@Category({ MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class TestRegionMover3 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover3.class);
+      HBaseClassTestRule.forClass(TestRegionMover3.class);
 
   @Rule
   public TestName name = new TestName();
@@ -83,7 +81,7 @@ public class TestRegionMover3 {
   public void setUp() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
     int endKey = 80000;
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
@@ -95,10 +93,11 @@ public class TestRegionMover3 {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    List<Put> puts = IntStream.range(10, 50000)
-      .mapToObj(i -> new Put(Bytes.toBytes(i))
-      .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)))
-      .collect(Collectors.toList());
+    List<Put> puts =
+        IntStream
+            .range(10, 50000).mapToObj(i -> new Put(Bytes.toBytes(i))
+                .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)))
+            .collect(Collectors.toList());
     table.put(puts);
     admin.flush(tableName);
     admin.compact(tableName);
@@ -132,9 +131,8 @@ public class TestRegionMover3 {
     // with default rackManager, which resolves "/default-rack" for each server, no region
     // is moved while using unloadFromRack() as all rs belong to same rack.
     RegionMover.RegionMoverBuilder rmBuilder =
-      new RegionMover.RegionMoverBuilder(sourceRSName, TEST_UTIL.getConfiguration())
-        .ack(true)
-        .maxthreads(8);
+        new RegionMover.RegionMoverBuilder(sourceRSName, TEST_UTIL.getConfiguration()).ack(true)
+            .maxthreads(8);
     try (RegionMover regionMover = rmBuilder.build()) {
       regionMover.unloadFromRack();
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();

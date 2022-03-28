@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionCompaction.class);
+      HBaseClassTestRule.forClass(TestMasterRegionCompaction.class);
 
   private int compactMin = 4;
 
@@ -85,7 +85,7 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
   }
 
   private void assertFileCount(FileSystem fs, Path storeArchiveDir, int expected)
-    throws IOException {
+      throws IOException {
     FileStatus[] compactedHFiles = fs.listStatus(storeArchiveDir);
     assertEquals(expected, compactedHFiles.length);
   }
@@ -96,7 +96,7 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
       final int index = i;
       region.update(
         r -> r.put(new Put(Bytes.toBytes(index)).addColumn(CF1, QUALIFIER, Bytes.toBytes(index))
-          .addColumn(CF2, QUALIFIER, Bytes.toBytes(index))));
+            .addColumn(CF2, QUALIFIER, Bytes.toBytes(index))));
       region.flush(true);
     }
     assertEquals(2 * (compactMin - 1), getStorefilesCount());
@@ -114,8 +114,8 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
       try {
         FileStatus[] fses1 = fs.listStatus(store1ArchiveDir);
         FileStatus[] fses2 = fs.listStatus(store2ArchiveDir);
-        return fses1 != null && fses1.length == compactMin && fses2 != null &&
-          fses2.length == compactMin - 1;
+        return fses1 != null && fses1.length == compactMin && fses2 != null
+            && fses2.length == compactMin - 1;
       } catch (FileNotFoundException e) {
         return false;
       }

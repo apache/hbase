@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,17 +19,15 @@ package org.apache.hadoop.hbase.codec;
 
 import java.io.IOException;
 import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * TODO javadoc
  */
 
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 public abstract class BaseEncoder implements Codec.Encoder {
   protected final OutputStream out;
   // This encoder is 'done' once flush has been called.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,8 +69,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
    */
   private volatile long finalSyncedLength = -1;
 
-  private static final class OutputStreamWrapper extends OutputStream
-      implements ByteBufferWriter {
+  private static final class OutputStreamWrapper extends OutputStream implements ByteBufferWriter {
 
     private final AsyncFSOutput out;
 
@@ -129,7 +128,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   /*
    * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
-   *   IOException: Got unknown writer class: AsyncProtobufLogWriter
+   * IOException: Got unknown writer class: AsyncProtobufLogWriter
    */
   @Override
   protected String getWriterClassName() {
@@ -140,8 +139,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   public void append(Entry entry) {
     int buffered = output.buffered();
     try {
-      entry.getKey().
-        getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
+      entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
           .writeDelimitedTo(asyncOutputWrapper);
     } catch (IOException e) {
       throw new AssertionError("should not happen", e);
@@ -174,9 +172,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       output.recoverAndClose(null);
     }
     /**
-     * We have to call {@link AsyncFSOutput#getSyncedLength()}
-     * after {@link AsyncFSOutput#close()} to get the final length
-     * synced to underlying filesystem because {@link AsyncFSOutput#close()}
+     * We have to call {@link AsyncFSOutput#getSyncedLength()} after {@link AsyncFSOutput#close()}
+     * to get the final length synced to underlying filesystem because {@link AsyncFSOutput#close()}
      * may also flush some data to underlying filesystem.
      */
     this.finalSyncedLength = this.output.getSyncedLength();
@@ -191,7 +188,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-        blockSize, eventLoopGroup, channelClass);
+      blockSize, eventLoopGroup, channelClass);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
@@ -205,7 +202,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       }
     }
   }
-  
+
   private long writeWALMetadata(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
@@ -269,16 +266,16 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-   /**
-    * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close}
-    * is a sync point, if output is null, then finalSyncedLength must set,
-    * so we can return finalSyncedLength, else we return output.getSyncedLength
-    */
+    /**
+     * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close} is a sync point,
+     * if output is null, then finalSyncedLength must set, so we can return finalSyncedLength, else
+     * we return output.getSyncedLength
+     */
     AsyncFSOutput outputToUse = this.output;
-    if(outputToUse == null) {
-        long finalSyncedLengthToUse = this.finalSyncedLength;
-        assert finalSyncedLengthToUse >= 0;
-        return finalSyncedLengthToUse;
+    if (outputToUse == null) {
+      long finalSyncedLengthToUse = this.finalSyncedLength;
+      assert finalSyncedLengthToUse >= 0;
+      return finalSyncedLengthToUse;
     }
     return outputToUse.getSyncedLength();
   }

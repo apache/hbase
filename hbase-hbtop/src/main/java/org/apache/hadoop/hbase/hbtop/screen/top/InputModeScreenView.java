@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The input mode in the top screen.
  */
@@ -37,11 +36,11 @@ public class InputModeScreenView extends AbstractScreenView {
   private final InputModeScreenPresenter inputModeScreenPresenter;
 
   public InputModeScreenView(Screen screen, Terminal terminal, int row, String message,
-    List<String> histories, Function<String, ScreenView> resultListener) {
+      List<String> histories, Function<String, ScreenView> resultListener) {
     super(screen, terminal);
     this.row = row;
-    this.inputModeScreenPresenter = new InputModeScreenPresenter(this, message, histories,
-      resultListener);
+    this.inputModeScreenPresenter =
+        new InputModeScreenPresenter(this, message, histories, resultListener);
   }
 
   @Override
@@ -100,7 +99,7 @@ public class InputModeScreenView extends AbstractScreenView {
 
   public void showInput(String message, String inputString, int cursorPosition) {
     getTerminalPrinter(row).startBold().print(message).stopBold().print(" ").print(inputString)
-      .endOfLine();
+        .endOfLine();
     setCursorPosition(message.length() + 1 + cursorPosition, row);
     refreshTerminal();
   }

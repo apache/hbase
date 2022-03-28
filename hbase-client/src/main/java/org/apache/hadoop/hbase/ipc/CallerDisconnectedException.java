@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,17 +18,16 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Exception indicating that the remote host making this IPC lost its
- * IPC connection. This will never be returned back to a client,
- * but is only used for logging on the server side, etc.
+ * Exception indicating that the remote host making this IPC lost its IPC connection. This will
+ * never be returned back to a client, but is only used for logging on the server side, etc.
  */
 @InterfaceAudience.Public
 public class CallerDisconnectedException extends IOException {
   private static final long serialVersionUID = 1L;
+
   public CallerDisconnectedException(String msg) {
     super(msg);
   }

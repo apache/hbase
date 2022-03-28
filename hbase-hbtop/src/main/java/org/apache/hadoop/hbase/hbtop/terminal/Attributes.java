@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.hbtop.terminal;
 
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The attributes of text in the terminal.
@@ -117,8 +116,8 @@ public class Attributes {
     }
     Attributes that = (Attributes) o;
     return bold == that.bold && blink == that.blink && reverse == that.reverse
-      && underline == that.underline && foregroundColor == that.foregroundColor
-      && backgroundColor == that.backgroundColor;
+        && underline == that.underline && foregroundColor == that.foregroundColor
+        && backgroundColor == that.backgroundColor;
   }
 
   @Override

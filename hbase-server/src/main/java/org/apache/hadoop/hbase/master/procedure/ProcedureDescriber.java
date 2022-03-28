@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -24,15 +23,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufMessageConverter;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.util.JRubyFormat;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -43,14 +43,13 @@ public class ProcedureDescriber {
   private static Object parametersToObject(Procedure<?> proc) {
     try {
       ProcedureProtos.Procedure protoProc = ProcedureUtil.convertToProtoProcedure(proc);
-      List<Object> parameters = protoProc.getStateMessageList().stream()
-        .map((any) -> {
-          try {
-            return ProtobufMessageConverter.toJavaObject(any);
-          } catch (InvalidProtocolBufferException e) {
-            return e.toString();
-          }
-        }).collect(Collectors.toList());
+      List<Object> parameters = protoProc.getStateMessageList().stream().map((any) -> {
+        try {
+          return ProtobufMessageConverter.toJavaObject(any);
+        } catch (InvalidProtocolBufferException e) {
+          return e.toString();
+        }
+      }).collect(Collectors.toList());
       return parameters;
     } catch (IOException e) {
       return e.toString();
@@ -69,8 +68,7 @@ public class ProcedureDescriber {
     description.put("LAST_UPDATE", new Date(proc.getLastUpdate()));
 
     if (proc.isFailed()) {
-      description.put("ERRORS",
-          MasterProcedureUtil.unwrapRemoteIOException(proc).getMessage());
+      description.put("ERRORS", MasterProcedureUtil.unwrapRemoteIOException(proc).getMessage());
     }
     description.put("PARAMETERS", parametersToObject(proc));
 

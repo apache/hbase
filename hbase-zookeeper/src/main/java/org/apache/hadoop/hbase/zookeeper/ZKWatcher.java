@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,24 +48,25 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
- * for each Master, RegionServer, and client process.
- *
- * <p>This is the only class that implements {@link Watcher}.  Other internal
- * classes which need to be notified of ZooKeeper events must register with
- * the local instance of this watcher via {@link #registerListener}.
- *
- * <p>This class also holds and manages the connection to ZooKeeper.  Code to
- * deal with connection related events and exceptions are handled here.
+ * Acts as the single ZooKeeper Watcher. One instance of this is instantiated for each Master,
+ * RegionServer, and client process.
+ * <p>
+ * This is the only class that implements {@link Watcher}. Other internal classes which need to be
+ * notified of ZooKeeper events must register with the local instance of this watcher via
+ * {@link #registerListener}.
+ * <p>
+ * This class also holds and manages the connection to ZooKeeper. Code to deal with connection
+ * related events and exceptions are handled here.
  */
 @InterfaceAudience.Private
 public class ZKWatcher implements Watcher, Abortable, Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(ZKWatcher.class);
 
-  // Identifier for this watcher (for logging only).  It is made of the prefix
+  // Identifier for this watcher (for logging only). It is made of the prefix
   // passed on construction and the zookeeper sessionid.
   private final String prefix;
   private String identifier;
@@ -98,7 +98,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // requests using a single while loop and hence there is no performance degradation.
   private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
     new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final Configuration conf;
 
@@ -109,13 +109,13 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param identifier string that is passed to RecoverableZookeeper to be used as
-   *                   identifier for this instance. Use null for default.
+   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
+   *          this instance. Use null for default.
    * @throws IOException if the connection to ZooKeeper fails
    * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
    */
-  public ZKWatcher(Configuration conf, String identifier,
-                   Abortable abortable) throws ZooKeeperConnectionException, IOException {
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable)
+      throws ZooKeeperConnectionException, IOException {
     this(conf, identifier, abortable, false);
   }
 
@@ -130,9 +130,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @throws IOException if the connection to ZooKeeper fails
    * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
    */
-  public ZKWatcher(Configuration conf, String identifier,
-                   Abortable abortable, boolean canCreateBaseZNode)
-    throws IOException, ZooKeeperConnectionException {
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
+      boolean canCreateBaseZNode) throws IOException, ZooKeeperConnectionException {
     this(conf, identifier, abortable, canCreateBaseZNode, false);
   }
 
@@ -193,7 +192,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       }
     }
     this.zkSyncTimeout = conf.getLong(HConstants.ZK_SYNC_BLOCKING_TIMEOUT_MS,
-        HConstants.ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS);
+      HConstants.ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS);
   }
 
   public List<ACL> createACL(String node) {
@@ -221,14 +220,15 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
             // TODO: Set node ACL for groups when ZK supports this feature
             groups.add(user);
           } else {
-            if(!user.equals(hbaseUser)) {
+            if (!user.equals(hbaseUser)) {
               acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
             }
           }
         }
         if (!groups.isEmpty()) {
-          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this " +
-            "feature presently.", groups);
+          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this "
+              + "feature presently.",
+            groups);
         }
       }
       // Certain znodes are accessed directly by the client,
@@ -262,10 +262,9 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   }
 
   /**
-   * On master start, we check the znode ACLs under the root directory and set the ACLs properly
-   * if needed. If the cluster goes from an unsecure setup to a secure setup, this step is needed
-   * so that the existing znodes created with open permissions are now changed with restrictive
-   * perms.
+   * On master start, we check the znode ACLs under the root directory and set the ACLs properly if
+   * needed. If the cluster goes from an unsecure setup to a secure setup, this step is needed so
+   * that the existing znodes created with open permissions are now changed with restrictive perms.
    */
   public void checkAndSetZNodeAcls() {
     if (!ZKAuthentication.isSecureZooKeeper(getConfiguration())) {
@@ -282,18 +281,18 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         LOG.info("setting znode ACLs");
         setZnodeAclsRecursive(znodePaths.baseZNode);
       }
-    } catch(KeeperException.NoNodeException nne) {
+    } catch (KeeperException.NoNodeException nne) {
       return;
-    } catch(InterruptedException ie) {
+    } catch (InterruptedException ie) {
       interruptedExceptionNoThrow(ie, false);
-    } catch (IOException|KeeperException e) {
+    } catch (IOException | KeeperException e) {
       LOG.warn("Received exception while checking and setting zookeeper ACLs", e);
     }
   }
 
   /**
-   * Set the znode perms recursively. This will do post-order recursion, so that baseZnode ACLs
-   * will be set last in case the master fails in between.
+   * Set the znode perms recursively. This will do post-order recursion, so that baseZnode ACLs will
+   * be set last in case the master fails in between.
    * @param znode the ZNode to set the permissions for
    */
   private void setZnodeAclsRecursive(String znode) throws KeeperException, InterruptedException {
@@ -437,8 +436,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Adds this instance's identifier as a prefix to the passed <code>str</code>
    * @param str String to amend.
-   * @return A new string with this instance's identifier as prefix: e.g.
-   *         if passed 'hello world', the returned string could be
+   * @return A new string with this instance's identifier as prefix: e.g. if passed 'hello world',
+   *         the returned string could be
    */
   public String prefix(final String str) {
     return this.toString() + " " + str;
@@ -491,8 +490,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   }
 
   /**
-   * Register the specified listener to receive ZooKeeper events and add it as
-   * the first in the list of current listeners.
+   * Register the specified listener to receive ZooKeeper events and add it as the first in the list
+   * of current listeners.
    * @param listener the listener to register
    */
   public void registerListenerFirst(ZKListener listener) {
@@ -554,7 +553,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   }
 
   private void processEvent(WatchedEvent event) {
-    switch(event.getType()) {
+    switch (event.getType()) {
       // If event type is NONE, this is a connection status change
       case None: {
         connectionEvent(event);
@@ -563,50 +562,47 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
       // Otherwise pass along to the listeners
       case NodeCreated: {
-        for(ZKListener listener : listeners) {
+        for (ZKListener listener : listeners) {
           listener.nodeCreated(event.getPath());
         }
         break;
       }
 
       case NodeDeleted: {
-        for(ZKListener listener : listeners) {
+        for (ZKListener listener : listeners) {
           listener.nodeDeleted(event.getPath());
         }
         break;
       }
 
       case NodeDataChanged: {
-        for(ZKListener listener : listeners) {
+        for (ZKListener listener : listeners) {
           listener.nodeDataChanged(event.getPath());
         }
         break;
       }
 
       case NodeChildrenChanged: {
-        for(ZKListener listener : listeners) {
+        for (ZKListener listener : listeners) {
           listener.nodeChildrenChanged(event.getPath());
         }
         break;
       }
       default:
-        LOG.error("Invalid event of type {} received for path {}. Ignoring.",
-            event.getState(), event.getPath());
+        LOG.error("Invalid event of type {} received for path {}. Ignoring.", event.getState(),
+          event.getPath());
     }
   }
 
   /**
    * Method called from ZooKeeper for events and connection status.
    * <p>
-   * Valid events are passed along to listeners.  Connection status changes
-   * are dealt with locally.
+   * Valid events are passed along to listeners. Connection status changes are dealt with locally.
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug(prefix("Received ZooKeeper Event, " +
-        "type=" + event.getType() + ", " +
-        "state=" + event.getState() + ", " +
-        "path=" + event.getPath()));
+    LOG.debug(prefix("Received ZooKeeper Event, " + "type=" + event.getType() + ", " + "state="
+        + event.getState() + ", " + "path=" + event.getPath()));
     zkEventProcessor.submit(() -> processEvent(event));
   }
 
@@ -615,19 +611,19 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Called when there is a connection-related event via the Watcher callback.
    * <p>
-   * If Disconnected or Expired, this should shutdown the cluster. But, since
-   * we send a KeeperException.SessionExpiredException along with the abort
-   * call, it's possible for the Abortable to catch it and try to create a new
-   * session with ZooKeeper. This is what the client does in HCM.
+   * If Disconnected or Expired, this should shutdown the cluster. But, since we send a
+   * KeeperException.SessionExpiredException along with the abort call, it's possible for the
+   * Abortable to catch it and try to create a new session with ZooKeeper. This is what the client
+   * does in HCM.
    * <p>
    * @param event the connection-related event
    */
   private void connectionEvent(WatchedEvent event) {
-    switch(event.getState()) {
+    switch (event.getState()) {
       case SyncConnected:
-        this.identifier = this.prefix + "-0x" +
-          Long.toHexString(this.recoverableZooKeeper.getSessionId());
-        // Update our identifier.  Otherwise ignore.
+        this.identifier =
+            this.prefix + "-0x" + Long.toHexString(this.recoverableZooKeeper.getSessionId());
+        // Update our identifier. Otherwise ignore.
         LOG.debug("{} connected", this.identifier);
         break;
 
@@ -641,8 +637,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         break;
 
       case Expired:
-        String msg = prefix(this.identifier + " received expired from " +
-          "ZooKeeper, aborting");
+        String msg = prefix(this.identifier + " received expired from " + "ZooKeeper, aborting");
         // TODO: One thought is to add call to ZKListener so say,
         // ZKNodeTracker can zero out its data values.
         if (this.abortable != null) {
@@ -664,14 +659,12 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * Forces a synchronization of this ZooKeeper client connection within a timeout. Enforcing a
    * timeout lets the callers fail-fast rather than wait forever for the sync to finish.
    * <p>
-   * Executing this method before running other methods will ensure that the
-   * subsequent operations are up-to-date and consistent as of the time that
-   * the sync is complete.
+   * Executing this method before running other methods will ensure that the subsequent operations
+   * are up-to-date and consistent as of the time that the sync is complete.
    * <p>
-   * This is used for compareAndSwap type operations where we need to read the
-   * data of an existing node and delete or transition that node, utilizing the
-   * previously read version and data.  We want to ensure that the version read
-   * is up-to-date from when we begin the operation.
+   * This is used for compareAndSwap type operations where we need to read the data of an existing
+   * node and delete or transition that node, utilizing the previously read version and data. We
+   * want to ensure that the version read is up-to-date from when we begin the operation.
    * <p>
    */
   public void syncOrTimeout(String path) throws KeeperException {
@@ -681,7 +674,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     try {
       if (!latch.await(zkSyncTimeout, TimeUnit.MILLISECONDS)) {
         LOG.warn("sync() operation to ZK timed out. Configured timeout: {}ms. This usually points "
-            + "to a ZK side issue. Check ZK server logs and metrics.", zkSyncTimeout);
+            + "to a ZK side issue. Check ZK server logs and metrics.",
+          zkSyncTimeout);
         throw new KeeperException.RequestTimeoutException();
       }
     } catch (InterruptedException e) {
@@ -739,7 +733,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Close the connection to ZooKeeper.
-   *
    */
   @Override
   public void close() {
@@ -767,6 +760,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   @Override
   public boolean isAborted() {
-    return this.abortable == null? this.aborted: this.abortable.isAborted();
+    return this.abortable == null ? this.aborted : this.abortable.isAborted();
   }
 }

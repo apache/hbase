@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWALDurability.class);
+      HBaseClassTestRule.forClass(TestAsyncFSWALDurability.class);
 
   private static NioEventLoopGroup GROUP;
 
@@ -58,9 +58,9 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
 
   @Override
   protected CustomAsyncFSWAL getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
-    throws IOException {
+      throws IOException {
     CustomAsyncFSWAL wal =
-      new CustomAsyncFSWAL(fs, root, logDir, conf, GROUP, NioSocketChannel.class);
+        new CustomAsyncFSWAL(fs, root, logDir, conf, GROUP, NioSocketChannel.class);
     wal.init();
     return wal;
   }
@@ -88,10 +88,10 @@ class CustomAsyncFSWAL extends AsyncFSWAL {
   private Boolean writerSyncFlag;
 
   public CustomAsyncFSWAL(FileSystem fs, Path rootDir, String logDir, Configuration conf,
-    EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
-    throws FailedLogCloseException, IOException {
+      EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
+      throws FailedLogCloseException, IOException {
     super(fs, rootDir, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null,
-      eventLoopGroup, channelClass);
+        eventLoopGroup, channelClass);
   }
 
   @Override

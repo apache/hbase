@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase 
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALProcedurePrettyPrinter.class);
+      HBaseClassTestRule.forClass(TestWALProcedurePrettyPrinter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedurePrettyPrinter.class);
 
@@ -64,7 +64,7 @@ public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase 
     }
     store.cleanup();
     Path walParentDir = new Path(htu.getDataTestDir(),
-      MasterRegionFactory.MASTER_STORE_DIR + "/" + HConstants.HREGION_LOGDIR_NAME);
+        MasterRegionFactory.MASTER_STORE_DIR + "/" + HConstants.HREGION_LOGDIR_NAME);
     FileSystem fs = walParentDir.getFileSystem(htu.getConfiguration());
     Path walDir = fs.listStatus(walParentDir)[0].getPath();
     Path walFile = fs.listStatus(walDir)[0].getPath();
@@ -75,8 +75,9 @@ public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase 
     WALProcedurePrettyPrinter printer = new WALProcedurePrettyPrinter(out);
     assertEquals(0, ToolRunner.run(htu.getConfiguration(), printer,
       new String[] { fs.makeQualified(walFile).toString() }));
-    try (BufferedReader reader = new BufferedReader(
-      new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()), StandardCharsets.UTF_8))) {
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()),
+            StandardCharsets.UTF_8))) {
       long inserted = 0;
       long markedDeleted = 0;
       long deleted = 0;

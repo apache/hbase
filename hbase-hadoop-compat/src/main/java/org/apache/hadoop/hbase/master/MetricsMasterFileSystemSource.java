@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -53,7 +52,6 @@ public interface MetricsMasterFileSystemSource extends BaseSource {
   String META_SPLIT_SIZE_DESC = "Size of hbase:meta WAL files being split";
   String SPLIT_TIME_DESC = "Time it takes to finish WAL.splitLog()";
   String SPLIT_SIZE_DESC = "Size of WAL files being split";
-
 
   void updateMetaWALSplitTime(long time);
 

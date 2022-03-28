@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.TableState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -78,7 +77,7 @@ public class MirroringTableStateManager extends TableStateManager {
       }
       // Now set newState
       ZooKeeperProtos.DeprecatedTableState.Builder builder =
-        ZooKeeperProtos.DeprecatedTableState.newBuilder();
+          ZooKeeperProtos.DeprecatedTableState.newBuilder();
       builder.setState(
         ZooKeeperProtos.DeprecatedTableState.State.valueOf(tableState.getState().toString()));
       byte[] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());

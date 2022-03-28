@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,11 +27,8 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * The filter display mode in the top screen.
- *
- * Exit if Enter key is pressed.
+ * The filter display mode in the top screen. Exit if Enter key is pressed.
  */
 @InterfaceAudience.Private
 public class FilterDisplayModeScreenView extends AbstractScreenView {
@@ -40,11 +37,11 @@ public class FilterDisplayModeScreenView extends AbstractScreenView {
   private final FilterDisplayModeScreenPresenter filterDisplayModeScreenPresenter;
 
   public FilterDisplayModeScreenView(Screen screen, Terminal terminal, int row,
-    List<RecordFilter> filters, ScreenView nextScreenView) {
+      List<RecordFilter> filters, ScreenView nextScreenView) {
     super(screen, terminal);
     this.row = row;
     this.filterDisplayModeScreenPresenter =
-      new FilterDisplayModeScreenPresenter(this, filters, nextScreenView);
+        new FilterDisplayModeScreenPresenter(this, filters, nextScreenView);
   }
 
   @Override
@@ -68,6 +65,6 @@ public class FilterDisplayModeScreenView extends AbstractScreenView {
     }
 
     getTerminalPrinter(row).startBold().print("<Enter> to resume, filters: " + filtersString)
-      .stopBold().endOfLine();
+        .stopBold().endOfLine();
   }
 }

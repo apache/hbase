@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,12 +55,12 @@ public class TestMetaTableLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableLocator.class);
+      HBaseClassTestRule.forClass(TestMetaTableLocator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
-    ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
+      ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
   private ZKWatcher watcher;
   private Abortable abortable;
 
@@ -89,8 +89,8 @@ public class TestMetaTableLocator {
         return false;
       }
     };
-    this.watcher =
-      new ZKWatcher(UTIL.getConfiguration(), this.getClass().getSimpleName(), this.abortable, true);
+    this.watcher = new ZKWatcher(UTIL.getConfiguration(), this.getClass().getSimpleName(),
+        this.abortable, true);
   }
 
   @After
@@ -113,10 +113,10 @@ public class TestMetaTableLocator {
   public void testMetaLookup()
       throws IOException, InterruptedException, ServiceException, KeeperException {
     final ClientProtos.ClientService.BlockingInterface client =
-      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
 
     Mockito.when(client.get((RpcController) Mockito.any(), (GetRequest) Mockito.any()))
-      .thenReturn(GetResponse.newBuilder().build());
+        .thenReturn(GetResponse.newBuilder().build());
 
     assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
     for (RegionState.State state : RegionState.State.values()) {

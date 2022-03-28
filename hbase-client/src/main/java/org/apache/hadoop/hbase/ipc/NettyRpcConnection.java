@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,11 +35,11 @@ import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -78,8 +78,8 @@ class NettyRpcConnection extends RpcConnection {
   private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
   private static final ScheduledExecutorService RELOGIN_EXECUTOR = Executors
-    .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d")
-      .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d")
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final NettyRpcClient rpcClient;
 
@@ -97,12 +97,12 @@ class NettyRpcConnection extends RpcConnection {
 
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
     this.rpcClient = rpcClient;
     this.eventLoop = rpcClient.group.next();
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
     this.connectionHeaderPreamble =
-      Unpooled.directBuffer(connectionHeaderPreamble.length).writeBytes(connectionHeaderPreamble);
+        Unpooled.directBuffer(connectionHeaderPreamble.length).writeBytes(connectionHeaderPreamble);
     ConnectionHeader header = getConnectionHeader();
     this.connectionHeaderWithLength = Unpooled.directBuffer(4 + header.getSerializedSize());
     this.connectionHeaderWithLength.writeInt(header.getSerializedSize());
@@ -207,7 +207,7 @@ class NettyRpcConnection extends RpcConnection {
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
-        serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
+          serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;
@@ -227,7 +227,7 @@ class NettyRpcConnection extends RpcConnection {
             Promise<Boolean> connectionHeaderPromise = ch.eventLoop().newPromise();
             // create the handler to handle the connection header
             ChannelHandler chHandler = new NettyHBaseRpcConnectionHeaderHandler(
-              connectionHeaderPromise, conf, connectionHeaderWithLength);
+                connectionHeaderPromise, conf, connectionHeaderWithLength);
 
             // add ReadTimeoutHandler to deal with server doesn't response connection header
             // because of the different configuration in client side and server side
@@ -270,30 +270,30 @@ class NettyRpcConnection extends RpcConnection {
     LOG.trace("Connecting to {}", remoteId.address);
 
     this.channel = new Bootstrap().group(eventLoop).channel(rpcClient.channelClass)
-      .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
-      .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
-      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
-      .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
-      .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
+        .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
+        .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
+        .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
+        .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
 
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-          Channel ch = future.channel();
-          if (!future.isSuccess()) {
-            failInit(ch, toIOE(future.cause()));
-            rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
-            return;
+          @Override
+          public void operationComplete(ChannelFuture future) throws Exception {
+            Channel ch = future.channel();
+            if (!future.isSuccess()) {
+              failInit(ch, toIOE(future.cause()));
+              rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
+              return;
+            }
+            ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
+            if (useSasl) {
+              saslNegotiate(ch);
+            } else {
+              // send the connection header to server
+              ch.write(connectionHeaderWithLength.retainedDuplicate());
+              established(ch);
+            }
           }
-          ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
-          if (useSasl) {
-            saslNegotiate(ch);
-          } else {
-            // send the connection header to server
-            ch.write(connectionHeaderWithLength.retainedDuplicate());
-            established(ch);
-          }
-        }
-      }).channel();
+        }).channel();
   }
 
   private void sendRequest0(Call call, HBaseRpcController hrc) throws IOException {

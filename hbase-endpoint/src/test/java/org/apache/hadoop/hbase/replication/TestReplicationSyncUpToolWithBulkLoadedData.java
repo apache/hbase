@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,10 +54,10 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSyncUpToolWithBulkLoadedData.class);
+      HBaseClassTestRule.forClass(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
+      LoggerFactory.getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
   @Override
   protected void customizeClusterConf(Configuration conf) {
@@ -163,9 +163,9 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
         LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i +
-          ", with rowCount_ht1TargetPeer1 =" + rowCountHt1TargetAtPeer1 +
-          " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
+        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
+            + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
+            + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }
@@ -177,25 +177,25 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
 
     // Load 100 + 3 hfiles to t1_syncup.
     byte[][][] hfileRanges =
-      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source, hfileRanges, 100);
 
     hfileRanges =
-      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadAndValidateHFileReplication("HFileReplication_1", row, NO_REP_FAMILY, ht1Source,
       hfileRanges, 3);
 
     // Load 200 + 3 hfiles to t2_syncup.
     hfileRanges =
-      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source, hfileRanges, 200);
 
     hfileRanges =
-      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadAndValidateHFileReplication("HFileReplication_1", row, NO_REP_FAMILY, ht2Source,
       hfileRanges, 3);
 

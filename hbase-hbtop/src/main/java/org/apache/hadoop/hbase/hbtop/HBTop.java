@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-
 
 /**
  * A real-time monitoring tool for HBase like Unix top command.
@@ -154,7 +153,7 @@ public class HBTop extends Configured implements Tool {
         }
 
         Optional<FieldInfo> fieldInfo = initialMode.getFieldInfos().stream()
-          .filter(f -> f.getField().getHeader().equals(field)).findFirst();
+            .filter(f -> f.getField().getHeader().equals(field)).findFirst();
         if (fieldInfo.isPresent()) {
           initialSortField = fieldInfo.get().getField();
           initialAscendingSort = ascendingSort;
@@ -168,7 +167,7 @@ public class HBTop extends Configured implements Tool {
         initialFields = new ArrayList<>();
         for (String field : fields) {
           Optional<FieldInfo> fieldInfo = initialMode.getFieldInfos().stream()
-            .filter(f -> f.getField().getHeader().equals(field)).findFirst();
+              .filter(f -> f.getField().getHeader().equals(field)).findFirst();
           if (fieldInfo.isPresent()) {
             initialFields.add(fieldInfo.get().getField());
           } else {
@@ -180,7 +179,7 @@ public class HBTop extends Configured implements Tool {
       if (commandLine.hasOption("filters")) {
         String[] filters = commandLine.getOptionValue("filters").split(",");
         List<Field> fields = initialMode.getFieldInfos().stream().map(FieldInfo::getField)
-          .collect(Collectors.toList());
+            .collect(Collectors.toList());
         for (String filter : filters) {
           RecordFilter f = RecordFilter.parse(filter, fields, false);
           if (f != null) {
@@ -203,7 +202,7 @@ public class HBTop extends Configured implements Tool {
     }
 
     try (Screen screen = new Screen(getConf(), initialRefreshDelay, initialMode, initialFields,
-      initialSortField, initialAscendingSort, initialFilters, numberOfIterations, batchMode)) {
+        initialSortField, initialAscendingSort, initialFilters, numberOfIterations, batchMode)) {
       screen.run();
     }
 
@@ -212,19 +211,16 @@ public class HBTop extends Configured implements Tool {
 
   private Options getOptions() {
     Options opts = new Options();
-    opts.addOption("h", "help", false,
-      "Print usage; for help while the tool is running press 'h'");
-    opts.addOption("d", "delay", true,
-      "The refresh delay (in seconds); default is 3 seconds");
+    opts.addOption("h", "help", false, "Print usage; for help while the tool is running press 'h'");
+    opts.addOption("d", "delay", true, "The refresh delay (in seconds); default is 3 seconds");
     opts.addOption("m", "mode", true,
       "The mode; n (Namespace)|t (Table)|r (Region)|s (RegionServer)|u (User)"
-        + "|c (Client), default is r");
-    opts.addOption("n", "numberOfIterations", true,
-      "The number of iterations");
+          + "|c (Client), default is r");
+    opts.addOption("n", "numberOfIterations", true, "The number of iterations");
     opts.addOption("s", "sortField", true,
       "The initial sort field. You can prepend a `+' or `-' to the field name to also override"
-        + " the sort direction. A leading `+' will force sorting high to low, whereas a `-' will"
-        + " ensure a low to high ordering");
+          + " the sort direction. A leading `+' will force sorting high to low, whereas a `-' will"
+          + " ensure a low to high ordering");
     opts.addOption("O", "outputFieldNames", false,
       "Print each of the available field names on a separate line, then quit");
     opts.addOption("f", "fields", true,
@@ -233,8 +229,8 @@ public class HBTop extends Configured implements Tool {
       "The initial filters. Specify comma separated filters to set multiple filters");
     opts.addOption("b", "batchMode", false,
       "Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other"
-        + " programs or to a file. In this mode, hbtop will not accept input and runs until the"
-        + " iterations limit you've set with the `-n' command-line option or until killed");
+          + " programs or to a file. In this mode, hbtop will not accept input and runs until the"
+          + " iterations limit you've set with the `-n' command-line option or until killed");
     return opts;
   }
 

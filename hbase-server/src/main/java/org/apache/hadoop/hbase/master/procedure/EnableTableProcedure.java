@@ -39,8 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
 
 @InterfaceAudience.Private
-public class EnableTableProcedure
-    extends AbstractStateMachineTableProcedure<EnableTableState> {
+public class EnableTableProcedure extends AbstractStateMachineTableProcedure<EnableTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(EnableTableProcedure.class);
 
   private TableName tableName;
@@ -105,14 +104,14 @@ public class EnableTableProcedure
           // in-memory state.
           int currentMaxReplica = getMaxReplicaId(regionsOfTable);
           if (currentMaxReplica == configuredReplicaCount - 1) {
-            LOG.debug("No change in number of region replicas (configuredReplicaCount={});"
-              + " assigning.", configuredReplicaCount);
+            LOG.debug(
+              "No change in number of region replicas (configuredReplicaCount={});" + " assigning.",
+              configuredReplicaCount);
           } else if (currentMaxReplica > (configuredReplicaCount - 1)) {
             // We have additional regions as the replica count has been decreased. Delete
             // those regions because already the table is in the unassigned state
-            LOG.warn(
-              "The number of replicas {} is more than the region replica count {}" +
-                ", usually this should not happen as we will delete them in ModifyTableProcedure",
+            LOG.warn("The number of replicas {} is more than the region replica count {}"
+                + ", usually this should not happen as we will delete them in ModifyTableProcedure",
               currentMaxReplica + 1, configuredReplicaCount);
             List<RegionInfo> copyOfRegions = new ArrayList<RegionInfo>(regionsOfTable);
             for (RegionInfo regionInfo : copyOfRegions) {
@@ -126,11 +125,12 @@ public class EnableTableProcedure
             }
           } else if (currentMaxReplica < configuredReplicaCount - 1) {
             // the replicasFound is less than the regionReplication
-            LOG.info("Number of replicas has increased for {}. Assigning new region replicas." +
-                "The previous replica count was {}. The current replica count is {}.",
+            LOG.info(
+              "Number of replicas has increased for {}. Assigning new region replicas."
+                  + "The previous replica count was {}. The current replica count is {}.",
               this.tableName, currentMaxReplica + 1, configuredReplicaCount);
-            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
-              currentMaxReplica + 1, configuredReplicaCount);
+            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable, currentMaxReplica + 1,
+              configuredReplicaCount);
           }
           // Assign all the table regions. (including region replicas if added).
           // createAssignProcedure will try to retain old assignments if possible.
@@ -210,9 +210,9 @@ public class EnableTableProcedure
     // the skipTableStateCheck is false so we still need to set it...
     @SuppressWarnings("deprecation")
     MasterProcedureProtos.EnableTableStateData.Builder enableTableMsg =
-      MasterProcedureProtos.EnableTableStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setTableName(ProtobufUtil.toProtoTableName(tableName)).setSkipTableStateCheck(false);
+        MasterProcedureProtos.EnableTableStateData.newBuilder()
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
+            .setTableName(ProtobufUtil.toProtoTableName(tableName)).setSkipTableStateCheck(false);
 
     serializer.serialize(enableTableMsg.build());
   }
@@ -222,7 +222,7 @@ public class EnableTableProcedure
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.EnableTableStateData enableTableMsg =
-      serializer.deserialize(MasterProcedureProtos.EnableTableStateData.class);
+        serializer.deserialize(MasterProcedureProtos.EnableTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(enableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(enableTableMsg.getTableName());
   }
@@ -237,10 +237,9 @@ public class EnableTableProcedure
     return TableOperationType.ENABLE;
   }
 
-
   /**
-   * Action before any real action of enabling table. Set the exception in the procedure instead
-   * of throwing it.  This approach is to deal with backward compatible with 1.0.
+   * Action before any real action of enabling table. Set the exception in the procedure instead of
+   * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
    * @return whether the table passes the necessary checks
    * @throws IOException
@@ -263,7 +262,7 @@ public class EnableTableProcedure
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState ts = tsm.getTableState(tableName);
-      if(!ts.isDisabled()){
+      if (!ts.isDisabled()) {
         LOG.info("Not DISABLED tableState={}; skipping enable; {}", ts.getState(), this);
         setFailure("master-enable-table", new TableNotDisabledException(ts.toString()));
         canTableBeEnabled = false;
@@ -294,13 +293,11 @@ public class EnableTableProcedure
    * @param tableName the target table
    * @throws IOException
    */
-  protected static void setTableStateToEnabling(
-      final MasterProcedureEnv env,
+  protected static void setTableStateToEnabling(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
     LOG.info("Attempting to enable the table " + tableName);
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.ENABLING);
   }
 
@@ -309,12 +306,10 @@ public class EnableTableProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  protected static void setTableStateToEnabled(
-      final MasterProcedureEnv env,
+  protected static void setTableStateToEnabled(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Flip the table to Enabled
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.ENABLED);
     LOG.info("Table '" + tableName + "' was successfully enabled.");
   }
@@ -360,7 +355,7 @@ public class EnableTableProcedure
    */
   private static int getMaxReplicaId(List<RegionInfo> regions) {
     int max = 0;
-    for (RegionInfo regionInfo: regions) {
+    for (RegionInfo regionInfo : regions) {
       if (regionInfo.getReplicaId() > max) {
         // Iterating through all the list to identify the highest replicaID region.
         // We can stop after checking with the first set of regions??

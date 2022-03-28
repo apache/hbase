@@ -30,9 +30,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test for MetricsTableSourceImpl
+ * Test for MetricsTableSourceImpl
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsTableSourceImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -44,13 +44,12 @@ public class TestMetricsTableSourceImpl {
     MetricsRegionServerSourceFactory metricsFact =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
-    MetricsTableSource one = metricsFact.createTable(
-        "ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
-    MetricsTableSource oneClone = metricsFact.createTable(
-        "ONETABLE",
-            new MetricsTableWrapperStub("ONETABLE"));
-    MetricsTableSource two = metricsFact.createTable(
-        "TWOTABLE", new MetricsTableWrapperStub("TWOTABLE"));
+    MetricsTableSource one =
+        metricsFact.createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource oneClone =
+        metricsFact.createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource two =
+        metricsFact.createTable("TWOTABLE", new MetricsTableWrapperStub("TWOTABLE"));
 
     assertEquals(0, one.compareTo(oneClone));
     assertEquals(one.hashCode(), oneClone.hashCode());
@@ -73,7 +72,7 @@ public class TestMetricsTableSourceImpl {
   public void testGetTableMetrics() {
     MetricsTableSource oneTbl =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
+            .createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
     assertEquals("ONETABLE", oneTbl.getTableName());
   }
 

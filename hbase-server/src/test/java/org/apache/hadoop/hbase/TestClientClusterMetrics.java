@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -79,14 +78,13 @@ public class TestClientClusterMetrics {
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF = Bytes.toBytes("cf");
 
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(MASTERS)
+        .numRegionServers(SLAVES).numDataNodes(SLAVES).build();
     UTIL.startMiniCluster(option);
     CLUSTER = UTIL.getHBaseCluster();
     CLUSTER.waitForActiveAndReadyMaster();
@@ -109,11 +107,11 @@ public class TestClientClusterMetrics {
     Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
     Assert.assertEquals(origin.getAverageLoad(), defaults.getAverageLoad(), 0);
     Assert.assertEquals(origin.getBackupMasterNames().size(),
-        defaults.getBackupMasterNames().size());
+      defaults.getBackupMasterNames().size());
     Assert.assertEquals(origin.getDeadServerNames().size(), defaults.getDeadServerNames().size());
     Assert.assertEquals(origin.getRegionCount(), defaults.getRegionCount());
     Assert.assertEquals(origin.getLiveServerMetrics().size(),
-        defaults.getLiveServerMetrics().size());
+      defaults.getLiveServerMetrics().size());
     Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
     Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
     Assert.assertEquals(ADMIN.getRegionServers().size(), defaults.getServersName().size());
@@ -121,13 +119,12 @@ public class TestClientClusterMetrics {
 
   @Test
   public void testAsyncClient() throws Exception {
-    try (AsyncConnection asyncConnect = ConnectionFactory.createAsyncConnection(
-      UTIL.getConfiguration()).get()) {
+    try (AsyncConnection asyncConnect =
+        ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
       AsyncAdmin asyncAdmin = asyncConnect.getAdmin();
-      CompletableFuture<ClusterMetrics> originFuture =
-        asyncAdmin.getClusterMetrics();
+      CompletableFuture<ClusterMetrics> originFuture = asyncAdmin.getClusterMetrics();
       CompletableFuture<ClusterMetrics> defaultsFuture =
-        asyncAdmin.getClusterMetrics(EnumSet.allOf(Option.class));
+          asyncAdmin.getClusterMetrics(EnumSet.allOf(Option.class));
       ClusterMetrics origin = originFuture.get();
       ClusterMetrics defaults = defaultsFuture.get();
       Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
@@ -144,8 +141,8 @@ public class TestClientClusterMetrics {
       Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
       Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
       origin.getTableRegionStatesCount().forEach(((tableName, regionStatesCount) -> {
-        RegionStatesCount defaultRegionStatesCount = defaults.getTableRegionStatesCount()
-          .get(tableName);
+        RegionStatesCount defaultRegionStatesCount =
+            defaults.getTableRegionStatesCount().get(tableName);
         Assert.assertEquals(defaultRegionStatesCount, regionStatesCount);
       }));
     }
@@ -178,7 +175,7 @@ public class TestClientClusterMetrics {
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
     Assert.assertNotNull(metrics);
     // exclude a dead region server
-    Assert.assertEquals(SLAVES -1, numRs);
+    Assert.assertEquals(SLAVES - 1, numRs);
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
@@ -195,31 +192,27 @@ public class TestClientClusterMetrics {
   @Test
   public void testRegionStatesCount() throws Exception {
     Table table = UTIL.createTable(TABLE_NAME, CF);
-    table.put(new Put(Bytes.toBytes("k1"))
-      .addColumn(CF, Bytes.toBytes("q1"), Bytes.toBytes("v1")));
-    table.put(new Put(Bytes.toBytes("k2"))
-      .addColumn(CF, Bytes.toBytes("q2"), Bytes.toBytes("v2")));
-    table.put(new Put(Bytes.toBytes("k3"))
-      .addColumn(CF, Bytes.toBytes("q3"), Bytes.toBytes("v3")));
+    table.put(new Put(Bytes.toBytes("k1")).addColumn(CF, Bytes.toBytes("q1"), Bytes.toBytes("v1")));
+    table.put(new Put(Bytes.toBytes("k2")).addColumn(CF, Bytes.toBytes("q2"), Bytes.toBytes("v2")));
+    table.put(new Put(Bytes.toBytes("k3")).addColumn(CF, Bytes.toBytes("q3"), Bytes.toBytes("v3")));
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
     Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 3);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
-      .getRegionsInTransition(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
-      .getOpenRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
-      .getTotalRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
-      .getClosedRegions(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
-      .getSplitRegions(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
-      .getRegionsInTransition(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
-      .getOpenRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
-      .getTotalRegions(), 1);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getRegionsInTransition(),
+      0);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getOpenRegions(), 1);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getTotalRegions(), 1);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getClosedRegions(), 0);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getSplitRegions(), 0);
+    Assert.assertEquals(
+      metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 1);
 
     UTIL.deleteTable(TABLE_NAME);
   }
@@ -250,11 +243,12 @@ public class TestClientClusterMetrics {
     Assert.assertEquals(MASTERS - 1, metrics.getBackupMasterNames().size());
   }
 
-  @Test public void testUserMetrics() throws Exception {
+  @Test
+  public void testUserMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    // If metrics for users is not enabled, this test doesn't  make sense.
+    // If metrics for users is not enabled, this test doesn't make sense.
     if (!conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
-        MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)) {
+      MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)) {
       return;
     }
     User userFoo = User.createUserForTesting(conf, "FOO_USER_METRIC_TEST", new String[0]);
@@ -264,7 +258,8 @@ public class TestClientClusterMetrics {
     waitForUsersMetrics(0);
     long writeMetaMetricBeforeNextuser = getMetaMetrics().getWriteRequestCount();
     userFoo.runAs(new PrivilegedAction<Void>() {
-      @Override public Void run() {
+      @Override
+      public Void run() {
         try {
           doPut();
         } catch (IOException e) {
@@ -278,7 +273,8 @@ public class TestClientClusterMetrics {
         getMetaMetrics().getWriteRequestCount() - writeMetaMetricBeforeNextuser;
     long readMetaMetricBeforeNextuser = getMetaMetrics().getReadRequestCount();
     userBar.runAs(new PrivilegedAction<Void>() {
-      @Override public Void run() {
+      @Override
+      public Void run() {
         try {
           doGet();
         } catch (IOException e) {
@@ -292,7 +288,8 @@ public class TestClientClusterMetrics {
         getMetaMetrics().getReadRequestCount() - readMetaMetricBeforeNextuser;
     long filteredMetaReqeust = getMetaMetrics().getFilteredReadRequestCount();
     userTest.runAs(new PrivilegedAction<Void>() {
-      @Override public Void run() {
+      @Override
+      public Void run() {
         try {
           Table table = createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
           for (Result result : table.getScanner(new Scan().setFilter(new FilterAllFilter()))) {
@@ -307,30 +304,29 @@ public class TestClientClusterMetrics {
     waitForUsersMetrics(3);
     long filteredMetaReqeustForTestUser =
         getMetaMetrics().getFilteredReadRequestCount() - filteredMetaReqeust;
-    Map<byte[], UserMetrics> userMap =
-        ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values()
-            .iterator().next().getUserMetrics();
+    Map<byte[], UserMetrics> userMap = ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+        .getLiveServerMetrics().values().iterator().next().getUserMetrics();
     for (byte[] user : userMap.keySet()) {
       switch (Bytes.toString(user)) {
         case "FOO_USER_METRIC_TEST":
           Assert.assertEquals(1,
-              userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
+            userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
           break;
         case "BAR_USER_METRIC_TEST":
-          Assert
-              .assertEquals(1, userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
+          Assert.assertEquals(1,
+            userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
           Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
         case "TEST_USER_METRIC_TEST":
           Assert.assertEquals(1,
-              userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
+            userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
           Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
         default:
-          //current user
+          // current user
           Assert.assertEquals(UserProvider.instantiate(conf).getCurrent().getName(),
-              Bytes.toString(user));
-          //Read/write count because of Meta operations
+            Bytes.toString(user));
+          // Read/write count because of Meta operations
           Assert.assertTrue(userMap.get(user).getReadRequestCount() > 1);
           break;
       }
@@ -352,15 +348,15 @@ public class TestClientClusterMetrics {
   }
 
   private void waitForUsersMetrics(int noOfUsers) throws Exception {
-    //Sleep for metrics to get updated on master
+    // Sleep for metrics to get updated on master
     Thread.sleep(5000);
     Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
-        Map<byte[], UserMetrics> metrics =
-            ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values()
-                .iterator().next().getUserMetrics();
+      @Override
+      public boolean evaluate() throws Exception {
+        Map<byte[], UserMetrics> metrics = ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+            .getLiveServerMetrics().values().iterator().next().getUserMetrics();
         Assert.assertNotNull(metrics);
-        //including current user + noOfUsers
+        // including current user + noOfUsers
         return metrics.keySet().size() > noOfUsers;
       }
     });
@@ -369,8 +365,8 @@ public class TestClientClusterMetrics {
   private void doPut() throws IOException {
     try (Connection conn = createConnection(UTIL.getConfiguration())) {
       Table table = conn.getTable(TABLE_NAME);
-      table
-        .put(new Put(Bytes.toBytes("a")).addColumn(CF, Bytes.toBytes("col1"), Bytes.toBytes("1")));
+      table.put(
+        new Put(Bytes.toBytes("a")).addColumn(CF, Bytes.toBytes("col1"), Bytes.toBytes("1")));
     }
   }
 
@@ -388,9 +384,8 @@ public class TestClientClusterMetrics {
 
   @Test
   public void testOtherStatusInfos() throws Exception {
-    EnumSet<Option> options =
-        EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
-                   Option.CLUSTER_ID, Option.BALANCER_ON);
+    EnumSet<Option> options = EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
+      Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
     Assert.assertEquals(1, metrics.getMasterCoprocessorNames().size());
     Assert.assertNotNull(metrics.getHBaseVersion());
@@ -432,16 +427,19 @@ public class TestClientClusterMetrics {
     private static final AtomicInteger PRE_COUNT = new AtomicInteger(0);
     private static final AtomicInteger POST_COUNT = new AtomicInteger(0);
 
-    @Override public Optional<MasterObserver> getMasterObserver() {
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
       return Optional.of(this);
     }
 
-    @Override public void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    @Override
+    public void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
       PRE_COUNT.incrementAndGet();
     }
 
-    @Override public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    @Override
+    public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
         ClusterMetrics metrics) throws IOException {
       POST_COUNT.incrementAndGet();
     }

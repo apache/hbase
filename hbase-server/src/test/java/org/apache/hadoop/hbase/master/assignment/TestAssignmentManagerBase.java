@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -107,7 +107,7 @@ public abstract class TestAssignmentManagerBase {
   protected MockMasterServices master;
   protected AssignmentManager am;
   protected NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers =
-    new ConcurrentSkipListMap<ServerName, SortedSet<byte[]>>();
+      new ConcurrentSkipListMap<ServerName, SortedSet<byte[]>>();
   // Simple executor to run some simple tasks.
   protected ScheduledExecutorService executor;
 
@@ -154,7 +154,7 @@ public abstract class TestAssignmentManagerBase {
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
+        .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
     rsDispatcher = new MockRSProcedureDispatcher(master);
@@ -269,7 +269,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected RegionInfo createRegionInfo(final TableName tableName, final long regionId) {
     return RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(regionId))
-      .setEndKey(Bytes.toBytes(regionId + 1)).setSplit(false).setRegionId(0).build();
+        .setEndKey(Bytes.toBytes(regionId + 1)).setSplit(false).setRegionId(0).build();
   }
 
   protected TransitRegionStateProcedure createAssignProcedure(RegionInfo hri) {
@@ -283,7 +283,7 @@ public abstract class TestAssignmentManagerBase {
     try {
       assertFalse(regionNode.isInTransition());
       proc = TransitRegionStateProcedure
-        .unassign(master.getMasterProcedureExecutor().getEnvironment(), hri);
+          .unassign(master.getMasterProcedureExecutor().getEnvironment(), hri);
       regionNode.setProcedure(proc);
     } finally {
       regionNode.unlock();
@@ -295,10 +295,10 @@ public abstract class TestAssignmentManagerBase {
       final org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo regionInfo,
       final TransitionCode state, long seqId) throws IOException {
     ReportRegionStateTransitionRequest.Builder req =
-      ReportRegionStateTransitionRequest.newBuilder();
+        ReportRegionStateTransitionRequest.newBuilder();
     req.setServer(ProtobufUtil.toServerName(serverName));
     req.addTransition(RegionStateTransition.newBuilder().addRegionInfo(regionInfo)
-      .setTransitionCode(state).setOpenSeqNum(seqId).build());
+        .setTransitionCode(state).setOpenSeqNum(seqId).build());
     am.reportRegionStateTransition(req.build());
   }
 
@@ -330,7 +330,7 @@ public abstract class TestAssignmentManagerBase {
         throws IOException {
       RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       long previousOpenSeqNum =
-        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+          am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
       sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
         previousOpenSeqNum + 2);
       // Concurrency?
@@ -601,7 +601,7 @@ public abstract class TestAssignmentManagerBase {
         throws IOException {
       RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       long previousOpenSeqNum =
-        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+          am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
       switch (ThreadLocalRandom.current().nextInt(3)) {
         case 0:
           LOG.info("Return OPENED response");
@@ -617,8 +617,8 @@ public abstract class TestAssignmentManagerBase {
       }
       // The procedure on master will just hang forever because nothing comes back
       // from the RS in this case.
-      LOG.info("Return null as response; means proc stuck so we send in a crash report after" +
-        " a few seconds...");
+      LOG.info("Return null as response; means proc stuck so we send in a crash report after"
+          + " a few seconds...");
       executor.schedule(new Runnable() {
         @Override
         public void run() {

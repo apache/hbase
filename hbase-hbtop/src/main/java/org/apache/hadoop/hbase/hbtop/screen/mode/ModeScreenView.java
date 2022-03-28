@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The screen where we can choose the {@link Mode} in the top screen.
  */
@@ -41,10 +40,10 @@ public class ModeScreenView extends AbstractScreenView {
   private final ModeScreenPresenter modeScreenPresenter;
 
   public ModeScreenView(Screen screen, Terminal terminal, Mode currentMode,
-    Consumer<Mode> resultListener, ScreenView nextScreenView) {
+      Consumer<Mode> resultListener, ScreenView nextScreenView) {
     super(screen, terminal);
-    this.modeScreenPresenter = new ModeScreenPresenter(this, currentMode, resultListener,
-      nextScreenView);
+    this.modeScreenPresenter =
+        new ModeScreenPresenter(this, currentMode, resultListener, nextScreenView);
   }
 
   @Override
@@ -102,35 +101,35 @@ public class ModeScreenView extends AbstractScreenView {
   }
 
   public void showModeScreen(Mode currentMode, List<Mode> modes, int currentPosition,
-    int modeHeaderMaxLength, int modeDescriptionMaxLength) {
+      int modeHeaderMaxLength, int modeDescriptionMaxLength) {
     showScreenDescription(currentMode);
 
     for (int i = 0; i < modes.size(); i++) {
-      showMode(i, modes.get(i), i == currentPosition,
-        modeHeaderMaxLength, modeDescriptionMaxLength);
+      showMode(i, modes.get(i), i == currentPosition, modeHeaderMaxLength,
+        modeDescriptionMaxLength);
     }
   }
 
   private void showScreenDescription(Mode currentMode) {
     TerminalPrinter printer = getTerminalPrinter(SCREEN_DESCRIPTION_START_ROW);
     printer.startBold().print("Mode Management").stopBold().endOfLine();
-    printer.print("Current mode: ")
-      .startBold().print(currentMode.getHeader()).stopBold().endOfLine();
+    printer.print("Current mode: ").startBold().print(currentMode.getHeader()).stopBold()
+        .endOfLine();
     printer.print("Select mode followed by <Enter>").endOfLine();
   }
 
   public void showMode(int pos, Mode mode, boolean selected, int modeHeaderMaxLength,
-    int modeDescriptionMaxLength) {
+      int modeDescriptionMaxLength) {
 
     String modeHeader = String.format("%-" + modeHeaderMaxLength + "s", mode.getHeader());
-    String modeDescription = String.format("%-" + modeDescriptionMaxLength + "s",
-      mode.getDescription());
+    String modeDescription =
+        String.format("%-" + modeDescriptionMaxLength + "s", mode.getDescription());
 
     int row = MODE_START_ROW + pos;
     TerminalPrinter printer = getTerminalPrinter(row);
     if (selected) {
       printer.startHighlight().print(modeHeader).stopHighlight()
-        .printFormat(" = %s", modeDescription).endOfLine();
+          .printFormat(" = %s", modeDescription).endOfLine();
     } else {
       printer.printFormat("%s = %s", modeHeader, modeDescription).endOfLine();
     }

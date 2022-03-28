@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,8 @@ public class TestBlockingIPC extends AbstractTestIPC {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBlockingIPC.class);
 
-  @Override protected RpcServer createRpcServer(Server server, String name,
+  @Override
+  protected RpcServer createRpcServer(Server server, String name,
       List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
       Configuration conf, RpcScheduler scheduler) throws IOException {
     return RpcServerFactory.createRpcServer(server, name, services, bindAddress, conf, scheduler);

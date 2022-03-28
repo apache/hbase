@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,23 +51,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Create {@link SplitWALProcedure} for each WAL which need to split. Manage the workers for each
- * {@link SplitWALProcedure}.
- * Total number of workers is (number of online servers) * (HBASE_SPLIT_WAL_MAX_SPLITTER).
- * Helps assign and release workers for split tasks.
- * Provide helper method to delete split WAL file and directory.
- *
- * The user can get the SplitWALProcedures via splitWALs(crashedServer, splitMeta)
- * can get the files that need to split via getWALsToSplit(crashedServer, splitMeta)
- * can delete the splitting WAL and directory via deleteSplitWAL(wal)
- * and deleteSplitWAL(crashedServer)
- * can check if splitting WALs of a crashed server is success via isSplitWALFinished(walPath)
- * can acquire and release a worker for splitting WAL via acquireSplitWALWorker(procedure)
- * and releaseSplitWALWorker(worker, scheduler)
- *
- * This class is to replace the zk-based WAL splitting related code, {@link MasterWalManager},
+ * {@link SplitWALProcedure}. Total number of workers is (number of online servers) *
+ * (HBASE_SPLIT_WAL_MAX_SPLITTER). Helps assign and release workers for split tasks. Provide helper
+ * method to delete split WAL file and directory. The user can get the SplitWALProcedures via
+ * splitWALs(crashedServer, splitMeta) can get the files that need to split via
+ * getWALsToSplit(crashedServer, splitMeta) can delete the splitting WAL and directory via
+ * deleteSplitWAL(wal) and deleteSplitWAL(crashedServer) can check if splitting WALs of a crashed
+ * server is success via isSplitWALFinished(walPath) can acquire and release a worker for splitting
+ * WAL via acquireSplitWALWorker(procedure) and releaseSplitWALWorker(worker, scheduler) This class
+ * is to replace the zk-based WAL splitting related code, {@link MasterWalManager},
  * {@link SplitLogManager}, {@link org.apache.hadoop.hbase.zookeeper.ZKSplitLog} and
- * {@link org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination} can be removed
- * after we switch to procedure-based WAL splitting.
+ * {@link org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination} can be removed after
+ * we switch to procedure-based WAL splitting.
  * @see SplitLogManager for the original distributed split WAL manager.
  */
 @InterfaceAudience.Private
@@ -89,8 +86,7 @@ public class SplitWALManager {
     this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
-  public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta)
-      throws IOException {
+  public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta) throws IOException {
     try {
       // 1. list all splitting files
       List<FileStatus> splittingFiles = getWALsToSplit(crashedServer, splitMeta);
@@ -106,7 +102,7 @@ public class SplitWALManager {
       throws IOException {
     List<Path> logDirs = master.getMasterWalManager().getLogDirs(Collections.singleton(serverName));
     List<FileStatus> fileStatuses =
-      SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
+        SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
     LOG.info("{} WAL count={}, meta={}", serverName, fileStatuses.size(), splitMeta);
     return fileStatuses;
   }
@@ -131,7 +127,7 @@ public class SplitWALManager {
         LOG.warn("Failed delete {}, contains {}", splitDir, fs.listFiles(splitDir, true));
       }
     } catch (PathIsNotEmptyDirectoryException e) {
-      FileStatus [] files = CommonFSUtils.listStatus(fs, splitDir);
+      FileStatus[] files = CommonFSUtils.listStatus(fs, splitDir);
       LOG.warn("PathIsNotEmptyDirectoryException {}",
         Arrays.stream(files).map(f -> f.getPath()).collect(Collectors.toList()));
       throw e;
@@ -153,8 +149,8 @@ public class SplitWALManager {
    * Acquire a split WAL worker
    * @param procedure split WAL task
    * @return an available region server which could execute this task
-   * @throws ProcedureSuspendedException if there is no available worker,
-   *         it will throw this exception to WAIT the procedure.
+   * @throws ProcedureSuspendedException if there is no available worker, it will throw this
+   *           exception to WAIT the procedure.
    */
   public ServerName acquireSplitWALWorker(Procedure<?> procedure)
       throws ProcedureSuspendedException {
@@ -186,15 +182,14 @@ public class SplitWALManager {
    * from MasterProcWALs.
    * @param worker region server which is executing a split WAL task
    */
-  public void addUsedSplitWALWorker(ServerName worker){
+  public void addUsedSplitWALWorker(ServerName worker) {
     splitWorkerAssigner.addUsedWorker(worker);
   }
 
   /**
-   * help assign and release a worker for each WAL splitting task
-   * For each worker, concurrent running splitting task should be no more than maxSplitTasks
-   * If a task failed to acquire a worker, it will suspend and wait for workers available
-   *
+   * help assign and release a worker for each WAL splitting task For each worker, concurrent
+   * running splitting task should be no more than maxSplitTasks If a task failed to acquire a
+   * worker, it will suspend and wait for workers available
    */
   private static final class SplitWorkerAssigner implements ServerListener {
     private int maxSplitTasks;

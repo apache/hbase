@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This contains a visibility expression which can be associated with a cell. When it is set with a
  * Mutation, all the cells in that mutation will get associated with this expression. A visibility
- * expression can contain visibility labels combined with logical
- * operators AND(&amp;), OR(|) and NOT(!)
+ * expression can contain visibility labels combined with logical operators AND(&amp;), OR(|) and
+ * NOT(!)
  */
 @InterfaceAudience.Public
 public class CellVisibility {
@@ -48,25 +48,22 @@ public class CellVisibility {
   }
 
   /**
-   * Helps in quoting authentication Strings. Use this if unicode characters to
-   * be used in expression or special characters like '(', ')',
-   * '"','\','&amp;','|','!'
+   * Helps in quoting authentication Strings. Use this if unicode characters to be used in
+   * expression or special characters like '(', ')', '"','\','&amp;','|','!'
    */
   public static String quote(String auth) {
     return quote(Bytes.toBytes(auth));
   }
 
   /**
-   * Helps in quoting authentication Strings. Use this if unicode characters to
-   * be used in expression or special characters like '(', ')',
-   * '"','\','&amp;','|','!'
+   * Helps in quoting authentication Strings. Use this if unicode characters to be used in
+   * expression or special characters like '(', ')', '"','\','&amp;','|','!'
    */
   public static String quote(byte[] auth) {
     int escapeChars = 0;
 
     for (int i = 0; i < auth.length; i++)
-      if (auth[i] == '"' || auth[i] == '\\')
-        escapeChars++;
+      if (auth[i] == '"' || auth[i] == '\\') escapeChars++;
 
     byte[] escapedAuth = new byte[auth.length + escapeChars + 2];
     int index = 1;

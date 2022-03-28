@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,8 +45,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 public class Threads {
   private static final Logger LOG = LoggerFactory.getLogger(Threads.class);
 
-  public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
-    (t, e) -> LOG.warn("Thread:{} exited with Exception:{}", t, StringUtils.stringifyException(e));
+  public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER = (t, e) -> LOG
+      .warn("Thread:{} exited with Exception:{}", t, StringUtils.stringifyException(e));
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
@@ -110,14 +109,11 @@ public class Threads {
     }
   }
 
-
   /**
-   * @param t Waits on the passed thread to die dumping a threaddump every
-   * minute while its up.
+   * @param t Waits on the passed thread to die dumping a threaddump every minute while its up.
    * @throws InterruptedException
    */
-  public static void threadDumpingIsAlive(final Thread t)
-  throws InterruptedException {
+  public static void threadDumpingIsAlive(final Thread t) throws InterruptedException {
     if (t == null) {
       return;
     }
@@ -126,8 +122,7 @@ public class Threads {
       t.join(60 * 1000);
       if (t.isAlive()) {
         printThreadInfo(System.out,
-            "Automatic Stack Trace every 60 seconds waiting on " +
-            t.getName());
+          "Automatic Stack Trace every 60 seconds waiting on " + t.getName());
       }
     }
   }
@@ -146,8 +141,7 @@ public class Threads {
   }
 
   /**
-   * Sleeps for the given amount of time even if interrupted. Preserves
-   * the interrupt status.
+   * Sleeps for the given amount of time even if interrupted. Preserves the interrupt status.
    * @param msToWait the amount of time to sleep in milliseconds
    */
   public static void sleepWithoutInterrupt(final long msToWait) {
@@ -169,28 +163,26 @@ public class Threads {
   }
 
   /**
-   * Create a new CachedThreadPool with a bounded number as the maximum
-   * thread size in the pool.
-   *
+   * Create a new CachedThreadPool with a bounded number as the maximum thread size in the pool.
    * @param maxCachedThread the maximum thread could be created in the pool
    * @param timeout the maximum time to wait
    * @param unit the time unit of the timeout argument
    * @param threadFactory the factory to use when creating new threads
-   * @return threadPoolExecutor the cachedThreadPool with a bounded number
-   * as the maximum thread size in the pool.
+   * @return threadPoolExecutor the cachedThreadPool with a bounded number as the maximum thread
+   *         size in the pool.
    */
   public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
       TimeUnit unit, ThreadFactory threadFactory) {
-    ThreadPoolExecutor boundedCachedThreadPool =
-      new ThreadPoolExecutor(maxCachedThread, maxCachedThread, timeout, unit,
-        new LinkedBlockingQueue<>(), threadFactory);
+    ThreadPoolExecutor boundedCachedThreadPool = new ThreadPoolExecutor(maxCachedThread,
+        maxCachedThread, timeout, unit, new LinkedBlockingQueue<>(), threadFactory);
     // allow the core pool threads timeout and terminate
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
 
-  /** Sets an UncaughtExceptionHandler for the thread which logs the
-   * Exception stack if the thread dies.
+  /**
+   * Sets an UncaughtExceptionHandler for the thread which logs the Exception stack if the thread
+   * dies.
    */
   public static void setLoggingUncaughtExceptionHandler(Thread t) {
     t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
@@ -210,8 +202,8 @@ public class Threads {
       Method method = null;
       try {
         // Hadoop 2.7+ declares printThreadInfo(PrintStream, String)
-        method = ReflectionUtils.class.getMethod("printThreadInfo", PrintStream.class,
-          String.class);
+        method =
+            ReflectionUtils.class.getMethod("printThreadInfo", PrintStream.class, String.class);
         method.setAccessible(true);
         final Method hadoop27Method = method;
         return new PrintThreadInfoHelper() {
@@ -233,8 +225,8 @@ public class Threads {
       }
       try {
         // Hadoop 2.6 and earlier declares printThreadInfo(PrintWriter, String)
-        method = ReflectionUtils.class.getMethod("printThreadInfo", PrintWriter.class,
-          String.class);
+        method =
+            ReflectionUtils.class.getMethod("printThreadInfo", PrintWriter.class, String.class);
         method.setAccessible(true);
         final Method hadoop26Method = method;
         return new PrintThreadInfoHelper() {
@@ -242,8 +234,8 @@ public class Threads {
           @Override
           public void printThreadInfo(PrintStream stream, String title) {
             try {
-              hadoop26Method.invoke(null, new PrintWriter(
-                  new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
+              hadoop26Method.invoke(null,
+                new PrintWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
             } catch (IllegalAccessException | IllegalArgumentException e) {
               throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
@@ -260,7 +252,6 @@ public class Threads {
 
   /**
    * Print all of the thread's information and stack traces. Wrapper around Hadoop's method.
-   *
    * @param stream the stream to
    * @param title a string title for the stack trace
    */
@@ -275,7 +266,7 @@ public class Threads {
    */
   public static boolean isNonDaemonThreadRunning() {
     AtomicInteger nonDaemonThreadCount = new AtomicInteger();
-    Set<Thread> threads =  Thread.getAllStackTraces().keySet();
+    Set<Thread> threads = Thread.getAllStackTraces().keySet();
     threads.forEach(t -> {
       // Exclude current thread
       if (t.getId() != Thread.currentThread().getId() && !t.isDaemon()) {
@@ -288,11 +279,11 @@ public class Threads {
   }
 
   /*
-    Print stack trace of the passed thread
+   * Print stack trace of the passed thread
    */
   public static String printStackTrace(Thread t) {
     StringBuilder sb = new StringBuilder();
-    for (StackTraceElement frame: t.getStackTrace()) {
+    for (StackTraceElement frame : t.getStackTrace()) {
       sb.append("\n").append("    ").append(frame.toString());
     }
     return sb.toString();

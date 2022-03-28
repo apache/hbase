@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used by {@link HBaseFsck} reporting system.
  * @deprecated Since 2.3.0. To be removed in hbase4. Use HBCK2 instead. Remove when
- *   {@link HBaseFsck} is removed.
+ *             {@link HBaseFsck} is removed.
  */
 @Deprecated
 @InterfaceAudience.Private

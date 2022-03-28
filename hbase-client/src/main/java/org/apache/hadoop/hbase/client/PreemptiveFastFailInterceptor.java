@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,8 +63,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(PreemptiveFastFailInterceptor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PreemptiveFastFailInterceptor.class);
 
   // amount of time to wait before we consider a server to be in fast fail
   // mode
@@ -73,7 +71,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
   // Keeps track of failures when we cannot talk to a server. Helps in
   // fast failing clients if the server is down for a long time.
-  protected final ConcurrentMap<ServerName, FailureInfo> repeatedFailuresMap = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<ServerName, FailureInfo> repeatedFailuresMap =
+      new ConcurrentHashMap<>();
 
   // We populate repeatedFailuresMap every time there is a failure. So, to
   // keep it from growing unbounded, we garbage collect the failure information
@@ -90,31 +89,26 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   private final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode = new ThreadLocal<>();
 
   public PreemptiveFastFailInterceptor(Configuration conf) {
-    this.fastFailThresholdMilliSec = conf.getLong(
-        HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS,
-        HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT);
-    this.failureMapCleanupIntervalMilliSec = conf.getLong(
-            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS,
-            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT);
-    this.fastFailClearingTimeMilliSec = conf.getLong(
-            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
-            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
+    this.fastFailThresholdMilliSec = conf.getLong(HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS,
+      HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT);
+    this.failureMapCleanupIntervalMilliSec =
+        conf.getLong(HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS,
+          HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT);
+    this.fastFailClearingTimeMilliSec =
+        conf.getLong(HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
+          HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
     lastFailureMapCleanupTimeMilliSec = EnvironmentEdgeManager.currentTime();
   }
 
-  public void intercept(FastFailInterceptorContext context)
-      throws PreemptiveFastFailException {
+  public void intercept(FastFailInterceptorContext context) throws PreemptiveFastFailException {
     context.setFailureInfo(repeatedFailuresMap.get(context.getServer()));
     if (inFastFailMode(context.getServer()) && !currentThreadInFastFailMode()) {
       // In Fast-fail mode, all but one thread will fast fail. Check
       // if we are that one chosen thread.
-      context.setRetryDespiteFastFailMode(shouldRetryInspiteOfFastFail(context
-          .getFailureInfo()));
+      context.setRetryDespiteFastFailMode(shouldRetryInspiteOfFastFail(context.getFailureInfo()));
       if (!context.isRetryDespiteFastFailMode()) { // we don't have to retry
-        LOG.debug("Throwing PFFE : " + context.getFailureInfo() + " tries : "
-            + context.getTries());
-        throw new PreemptiveFastFailException(
-            context.getFailureInfo().numConsecutiveFailures.get(),
+        LOG.debug("Throwing PFFE : " + context.getFailureInfo() + " tries : " + context.getTries());
+        throw new PreemptiveFastFailException(context.getFailureInfo().numConsecutiveFailures.get(),
             context.getFailureInfo().timeOfFirstFailureMilliSec,
             context.getFailureInfo().timeOfLatestAttemptMilliSec, context.getServer(),
             context.getGuaranteedClientSideOnly().isTrue());
@@ -123,28 +117,23 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     context.setDidTry(true);
   }
 
-  public void handleFailure(FastFailInterceptorContext context,
-      Throwable t) throws IOException {
-    handleThrowable(t, context.getServer(),
-        context.getCouldNotCommunicateWithServer(),
-        context.getGuaranteedClientSideOnly());
+  public void handleFailure(FastFailInterceptorContext context, Throwable t) throws IOException {
+    handleThrowable(t, context.getServer(), context.getCouldNotCommunicateWithServer(),
+      context.getGuaranteedClientSideOnly());
   }
 
   public void updateFailureInfo(FastFailInterceptorContext context) {
-    updateFailureInfoForServer(context.getServer(), context.getFailureInfo(),
-        context.didTry(), context.getCouldNotCommunicateWithServer()
-            .booleanValue(), context.isRetryDespiteFastFailMode());
+    updateFailureInfoForServer(context.getServer(), context.getFailureInfo(), context.didTry(),
+      context.getCouldNotCommunicateWithServer().booleanValue(),
+      context.isRetryDespiteFastFailMode());
   }
 
   /**
-   * Handles failures encountered when communicating with a server.
-   *
-   * Updates the FailureInfo in repeatedFailuresMap to reflect the failure.
-   * Throws RepeatedConnectException if the client is in Fast fail mode.
-   *
+   * Handles failures encountered when communicating with a server. Updates the FailureInfo in
+   * repeatedFailuresMap to reflect the failure. Throws RepeatedConnectException if the client is in
+   * Fast fail mode.
    * @param serverName
-   * @param t
-   *          - the throwable to be handled.
+   * @param t - the throwable to be handled.
    * @throws PreemptiveFastFailException
    */
   protected void handleFailureToServer(ServerName serverName, Throwable t) {
@@ -159,8 +148,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   public void handleThrowable(Throwable t1, ServerName serverName,
-      MutableBoolean couldNotCommunicateWithServer,
-      MutableBoolean guaranteedClientSideOnly) throws IOException {
+      MutableBoolean couldNotCommunicateWithServer, MutableBoolean guaranteedClientSideOnly)
+      throws IOException {
     Throwable t2 = ClientExceptionsUtil.translatePFFE(t1);
     boolean isLocalException = !(t2 instanceof RemoteException);
 
@@ -172,38 +161,38 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   /**
-   * Occasionally cleans up unused information in repeatedFailuresMap.
-   *
-   * repeatedFailuresMap stores the failure information for all remote hosts
-   * that had failures. In order to avoid these from growing indefinitely,
-   * occassionallyCleanupFailureInformation() will clear these up once every
+   * Occasionally cleans up unused information in repeatedFailuresMap. repeatedFailuresMap stores
+   * the failure information for all remote hosts that had failures. In order to avoid these from
+   * growing indefinitely, occassionallyCleanupFailureInformation() will clear these up once every
    * cleanupInterval ms.
    */
   protected void occasionallyCleanupFailureInformation() {
     long now = System.currentTimeMillis();
-    if (!(now > lastFailureMapCleanupTimeMilliSec
-        + failureMapCleanupIntervalMilliSec))
-      return;
+    if (!(now > lastFailureMapCleanupTimeMilliSec + failureMapCleanupIntervalMilliSec)) return;
 
     // remove entries that haven't been attempted in a while
     // No synchronization needed. It is okay if multiple threads try to
     // remove the entry again and again from a concurrent hash map.
     StringBuilder sb = new StringBuilder();
     for (Entry<ServerName, FailureInfo> entry : repeatedFailuresMap.entrySet()) {
-      if (now > entry.getValue().timeOfLatestAttemptMilliSec
-          + failureMapCleanupIntervalMilliSec) { // no recent failures
+      if (now > entry.getValue().timeOfLatestAttemptMilliSec + failureMapCleanupIntervalMilliSec) { // no
+                                                                                                    // recent
+                                                                                                    // failures
         repeatedFailuresMap.remove(entry.getKey());
-      } else if (now > entry.getValue().timeOfFirstFailureMilliSec
-          + this.fastFailClearingTimeMilliSec) { // been failing for a long
-                                                 // time
-        LOG.error(entry.getKey()
-            + " been failing for a long time. clearing out."
-            + entry.getValue().toString());
-        repeatedFailuresMap.remove(entry.getKey());
-      } else {
-        sb.append(entry.getKey().toString()).append(" failing ")
-            .append(entry.getValue().toString()).append("\n");
-      }
+      } else
+        if (now > entry.getValue().timeOfFirstFailureMilliSec + this.fastFailClearingTimeMilliSec) { // been
+                                                                                                     // failing
+                                                                                                     // for
+                                                                                                     // a
+                                                                                                     // long
+                                                                                                     // time
+          LOG.error(entry.getKey() + " been failing for a long time. clearing out."
+              + entry.getValue().toString());
+          repeatedFailuresMap.remove(entry.getKey());
+        } else {
+          sb.append(entry.getKey().toString()).append(" failing ")
+              .append(entry.getValue().toString()).append("\n");
+        }
     }
     if (sb.length() > 0) {
       LOG.warn("Preemptive failure enabled for : " + sb.toString());
@@ -212,11 +201,9 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   /**
-   * Checks to see if we are in the Fast fail mode for requests to the server.
-   *
-   * If a client is unable to contact a server for more than
-   * fastFailThresholdMilliSec the client will get into fast fail mode.
-   *
+   * Checks to see if we are in the Fast fail mode for requests to the server. If a client is unable
+   * to contact a server for more than fastFailThresholdMilliSec the client will get into fast fail
+   * mode.
    * @param server
    * @return true if the client is in fast fail mode for the server.
    */
@@ -225,30 +212,23 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     // if fInfo is null --> The server is considered good.
     // If the server is bad, wait long enough to believe that the server is
     // down.
-    return (fInfo != null &&
-        EnvironmentEdgeManager.currentTime() >
-          (fInfo.timeOfFirstFailureMilliSec + this.fastFailThresholdMilliSec));
+    return (fInfo != null && EnvironmentEdgeManager
+        .currentTime() > (fInfo.timeOfFirstFailureMilliSec + this.fastFailThresholdMilliSec));
   }
 
   /**
-   * Checks to see if the current thread is already in FastFail mode for *some*
-   * server.
-   *
+   * Checks to see if the current thread is already in FastFail mode for *some* server.
    * @return true, if the thread is already in FF mode.
    */
   private boolean currentThreadInFastFailMode() {
-    return (this.threadRetryingInFastFailMode.get() != null && (this.threadRetryingInFastFailMode
-        .get().booleanValue() == true));
+    return (this.threadRetryingInFastFailMode.get() != null
+        && (this.threadRetryingInFastFailMode.get().booleanValue() == true));
   }
 
   /**
-   * Check to see if the client should try to connnect to the server, inspite of
-   * knowing that it is in the fast fail mode.
-   *
-   * The idea here is that we want just one client thread to be actively trying
-   * to reconnect, while all the other threads trying to reach the server will
-   * short circuit.
-   *
+   * Check to see if the client should try to connnect to the server, inspite of knowing that it is
+   * in the fast fail mode. The idea here is that we want just one client thread to be actively
+   * trying to reconnect, while all the other threads trying to reach the server will short circuit.
    * @param fInfo
    * @return true if the client should try to connect to the server.
    */
@@ -257,10 +237,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     // client
     // actively trying to connect. If we are the chosen one, we will retry
     // and not throw an exception.
-    if (fInfo != null
-        && fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true)) {
-      MutableBoolean threadAlreadyInFF = this.threadRetryingInFastFailMode
-          .get();
+    if (fInfo != null && fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true)) {
+      MutableBoolean threadAlreadyInFF = this.threadRetryingInFastFailMode.get();
       if (threadAlreadyInFF == null) {
         threadAlreadyInFF = new MutableBoolean();
         this.threadRetryingInFastFailMode.set(threadAlreadyInFF);
@@ -273,20 +251,15 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   /**
-   *
-   * This function updates the Failure info for a particular server after the
-   * attempt to 
-   *
+   * This function updates the Failure info for a particular server after the attempt to
    * @param server
    * @param fInfo
    * @param couldNotCommunicate
    * @param retryDespiteFastFailMode
    */
-  private void updateFailureInfoForServer(ServerName server,
-      FailureInfo fInfo, boolean didTry, boolean couldNotCommunicate,
-      boolean retryDespiteFastFailMode) {
-    if (server == null || fInfo == null || didTry == false)
-      return;
+  private void updateFailureInfoForServer(ServerName server, FailureInfo fInfo, boolean didTry,
+      boolean couldNotCommunicate, boolean retryDespiteFastFailMode) {
+    if (server == null || fInfo == null || didTry == false) return;
 
     // If we were able to connect to the server, reset the failure
     // information.
@@ -317,8 +290,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   @Override
-  public void handleFailure(RetryingCallerInterceptorContext context,
-      Throwable t) throws IOException {
+  public void handleFailure(RetryingCallerInterceptorContext context, Throwable t)
+      throws IOException {
     if (context instanceof FastFailInterceptorContext) {
       handleFailure((FastFailInterceptorContext) context, t);
     }

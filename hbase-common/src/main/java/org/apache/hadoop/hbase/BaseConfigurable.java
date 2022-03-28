@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * HBase version of Hadoop's Configured class that doesn't initialize the
- * configuration via {@link #setConf(Configuration)} in the constructor, but
- * only sets the configuration through the {@link #setConf(Configuration)}
- * method
+ * HBase version of Hadoop's Configured class that doesn't initialize the configuration via
+ * {@link #setConf(Configuration)} in the constructor, but only sets the configuration through the
+ * {@link #setConf(Configuration)} method
  */
 @InterfaceAudience.Private
 public class BaseConfigurable implements Configurable {

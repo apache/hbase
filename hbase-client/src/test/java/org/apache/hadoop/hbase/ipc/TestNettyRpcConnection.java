@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestNettyRpcConnection {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyRpcConnection.class);
+      HBaseClassTestRule.forClass(TestNettyRpcConnection.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNettyRpcConnection.class);
 
@@ -59,7 +59,7 @@ public class TestNettyRpcConnection {
   public static void setUp() throws IOException {
     CLIENT = new NettyRpcClient(HBaseConfiguration.create());
     CONN = new NettyRpcConnection(CLIENT,
-      new ConnectionId(User.getCurrent(), "test", new InetSocketAddress("localhost", 1234)));
+        new ConnectionId(User.getCurrent(), "test", new InetSocketAddress("localhost", 1234)));
   }
 
   @AfterClass

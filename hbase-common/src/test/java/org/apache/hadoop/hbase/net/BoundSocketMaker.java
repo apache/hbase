@@ -27,11 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility to generate a bound socket. Useful testing for BindException.
- * Use one of the Constructors to create an instance of this class. On creation it will have put
- * up a ServerSocket on a random port. Get the port it is bound to using {@link #getPort()}. In
- * your test, then try to start a Server using same port to generate a BindException. Call
- * {@link #close()} when done to shut down the Socket.
+ * Utility to generate a bound socket. Useful testing for BindException. Use one of the Constructors
+ * to create an instance of this class. On creation it will have put up a ServerSocket on a random
+ * port. Get the port it is bound to using {@link #getPort()}. In your test, then try to start a
+ * Server using same port to generate a BindException. Call {@link #close()} when done to shut down
+ * the Socket.
  */
 public final class BoundSocketMaker implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(BoundSocketMaker.class);
@@ -77,7 +77,8 @@ public final class BoundSocketMaker implements Closeable {
     return ss;
   }
 
-  @Override public void close() throws IOException {
+  @Override
+  public void close() throws IOException {
     if (this.socket != null) {
       this.socket.close();
     }

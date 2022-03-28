@@ -31,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
-  Class that does enqueueing/dequeuing of wal at one place so that we can update the metrics
-  just at one place.
+ * Class that does enqueueing/dequeuing of wal at one place so that we can update the metrics just
+ * at one place.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -69,7 +69,7 @@ public class ReplicationSourceLogQueue {
     PriorityBlockingQueue<Path> queue = queues.get(walGroupId);
     if (queue == null) {
       queue = new PriorityBlockingQueue<>(queueSizePerGroup,
-        new AbstractFSWALProvider.WALStartTimeComparator());
+          new AbstractFSWALProvider.WALStartTimeComparator());
       // make sure that we do not use an empty queue when setting up a ReplicationSource, otherwise
       // the shipper may quit immediately
       queue.put(wal);
@@ -85,9 +85,9 @@ public class ReplicationSourceLogQueue {
     // This will wal a warning for each new wal that gets created above the warn threshold
     int queueSize = queue.size();
     if (queueSize > this.logQueueWarnThreshold) {
-      LOG.warn("{} WAL group {} queue size: {} exceeds value of " +
-          "replication.source.log.queue.warn {}", source.logPeerId(), walGroupId, queueSize,
-        logQueueWarnThreshold);
+      LOG.warn(
+        "{} WAL group {} queue size: {} exceeds value of " + "replication.source.log.queue.warn {}",
+        source.logPeerId(), walGroupId, queueSize, logQueueWarnThreshold);
     }
     return exists;
   }
@@ -116,9 +116,8 @@ public class ReplicationSourceLogQueue {
   }
 
   /**
-   * Return queue for the given walGroupId
-   * Please don't add or remove elements from the returned queue.
-   * Use @enqueueLog and @remove methods respectively.
+   * Return queue for the given walGroupId Please don't add or remove elements from the returned
+   * queue. Use @enqueueLog and @remove methods respectively.
    * @param walGroupId walGroupId
    */
   public PriorityBlockingQueue<Path> getQueue(String walGroupId) {
@@ -156,7 +155,7 @@ public class ReplicationSourceLogQueue {
   }
 
   /*
-    Returns the age of oldest wal.
+   * Returns the age of oldest wal.
    */
   long getOldestWalAge() {
     long now = EnvironmentEdgeManager.currentTime();
@@ -171,8 +170,8 @@ public class ReplicationSourceLogQueue {
   }
 
   /*
-  Get the oldest wal timestamp from all the queues.
-  */
+   * Get the oldest wal timestamp from all the queues.
+   */
   private long getOldestWalTimestamp() {
     long oldestWalTimestamp = Long.MAX_VALUE;
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
@@ -180,8 +179,8 @@ public class ReplicationSourceLogQueue {
       Path path = queue.peek();
       // Can path ever be null ?
       if (path != null) {
-        oldestWalTimestamp = Math.min(oldestWalTimestamp,
-          AbstractFSWALProvider.WALStartTimeComparator.getTS(path));
+        oldestWalTimestamp =
+            Math.min(oldestWalTimestamp, AbstractFSWALProvider.WALStartTimeComparator.getTS(path));
       }
     }
     return oldestWalTimestamp;

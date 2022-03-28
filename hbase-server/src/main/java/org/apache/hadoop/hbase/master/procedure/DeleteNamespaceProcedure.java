@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
@@ -74,39 +73,40 @@ public class DeleteNamespaceProcedure
     LOG.info(this.toString());
     try {
       switch (state) {
-      case DELETE_NAMESPACE_PREPARE:
-        boolean present = prepareDelete(env);
-        releaseSyncLatch();
-        if (!present) {
-          assert isFailed() : "Delete namespace should have an exception here";
+        case DELETE_NAMESPACE_PREPARE:
+          boolean present = prepareDelete(env);
+          releaseSyncLatch();
+          if (!present) {
+            assert isFailed() : "Delete namespace should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          setNextState(DeleteNamespaceState.DELETE_NAMESPACE_DELETE_FROM_NS_TABLE);
+          break;
+        case DELETE_NAMESPACE_DELETE_FROM_NS_TABLE:
+          deleteFromNSTable(env, namespaceName);
+          setNextState(DeleteNamespaceState.DELETE_NAMESPACE_REMOVE_FROM_ZK);
+          break;
+        case DELETE_NAMESPACE_REMOVE_FROM_ZK:
+          removeFromZKNamespaceManager(env, namespaceName);
+          setNextState(DeleteNamespaceState.DELETE_NAMESPACE_DELETE_DIRECTORIES);
+          break;
+        case DELETE_NAMESPACE_DELETE_DIRECTORIES:
+          deleteDirectory(env, namespaceName);
+          setNextState(DeleteNamespaceState.DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA);
+          break;
+        case DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA:
+          removeNamespaceQuota(env, namespaceName);
           return Flow.NO_MORE_STATE;
-        }
-        setNextState(DeleteNamespaceState.DELETE_NAMESPACE_DELETE_FROM_NS_TABLE);
-        break;
-      case DELETE_NAMESPACE_DELETE_FROM_NS_TABLE:
-        deleteFromNSTable(env, namespaceName);
-        setNextState(DeleteNamespaceState.DELETE_NAMESPACE_REMOVE_FROM_ZK);
-        break;
-      case DELETE_NAMESPACE_REMOVE_FROM_ZK:
-        removeFromZKNamespaceManager(env, namespaceName);
-        setNextState(DeleteNamespaceState.DELETE_NAMESPACE_DELETE_DIRECTORIES);
-        break;
-      case DELETE_NAMESPACE_DELETE_DIRECTORIES:
-        deleteDirectory(env, namespaceName);
-        setNextState(DeleteNamespaceState.DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA);
-        break;
-      case DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA:
-        removeNamespaceQuota(env, namespaceName);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-delete-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to delete namespace " + namespaceName +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to delete namespace " + namespaceName + " (in state="
+            + state + ")",
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -153,22 +153,20 @@ public class DeleteNamespaceProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData.Builder deleteNamespaceMsg =
         MasterProcedureProtos.DeleteNamespaceStateData.newBuilder().setNamespaceName(namespaceName);
     if (this.nsDescriptor != null) {
-      deleteNamespaceMsg.setNamespaceDescriptor(
-        ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
+      deleteNamespaceMsg
+          .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
     }
     serializer.serialize(deleteNamespaceMsg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData deleteNamespaceMsg =
@@ -201,8 +199,8 @@ public class DeleteNamespaceProcedure
       return false;
     }
     if (NamespaceDescriptor.RESERVED_NAMESPACES.contains(namespaceName)) {
-      setFailure("master-delete-namespace", new ConstraintException(
-          "Reserved namespace "+ namespaceName +" cannot be removed."));
+      setFailure("master-delete-namespace",
+        new ConstraintException("Reserved namespace " + namespaceName + " cannot be removed."));
       return false;
     }
 
@@ -214,9 +212,9 @@ public class DeleteNamespaceProcedure
       return false;
     }
     if (tableCount > 0) {
-      setFailure("master-delete-namespace", new ConstraintException(
-          "Only empty namespaces can be removed. Namespace "+ namespaceName + " has "
-          + tableCount +" tables"));
+      setFailure("master-delete-namespace",
+        new ConstraintException("Only empty namespaces can be removed. Namespace " + namespaceName
+            + " has " + tableCount + " tables"));
       return false;
     }
 
@@ -231,9 +229,8 @@ public class DeleteNamespaceProcedure
    * @param namespaceName name of the namespace in string format
    * @throws IOException
    */
-  protected static void deleteFromNSTable(
-      final MasterProcedureEnv env,
-      final String namespaceName) throws IOException {
+  protected static void deleteFromNSTable(final MasterProcedureEnv env, final String namespaceName)
+      throws IOException {
     getTableNamespaceManager(env).removeFromNSTable(namespaceName);
   }
 
@@ -259,8 +256,7 @@ public class DeleteNamespaceProcedure
    * @param namespaceName name of the namespace in string format
    * @throws IOException
    */
-  protected static void removeFromZKNamespaceManager(
-      final MasterProcedureEnv env,
+  protected static void removeFromZKNamespaceManager(final MasterProcedureEnv env,
       final String namespaceName) throws IOException {
     getTableNamespaceManager(env).removeFromZKNamespaceManager(namespaceName);
   }
@@ -287,15 +283,14 @@ public class DeleteNamespaceProcedure
    * @param namespaceName name of the namespace in string format
    * @throws IOException
    */
-  protected static void deleteDirectory(
-      final MasterProcedureEnv env,
-      final String namespaceName) throws IOException {
+  protected static void deleteDirectory(final MasterProcedureEnv env, final String namespaceName)
+      throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     FileSystem fs = mfs.getFileSystem();
     Path p = CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
 
     try {
-      for(FileStatus status : fs.listStatus(p)) {
+      for (FileStatus status : fs.listStatus(p)) {
         if (!HConstants.HBASE_NON_TABLE_DIRS.contains(status.getPath().getName())) {
           throw new IOException("Namespace directory contains table dir: " + status.getPath());
         }
@@ -329,8 +324,7 @@ public class DeleteNamespaceProcedure
    * @param namespaceName name of the namespace in string format
    * @throws IOException
    **/
-  protected static void removeNamespaceQuota(
-      final MasterProcedureEnv env,
+  protected static void removeNamespaceQuota(final MasterProcedureEnv env,
       final String namespaceName) throws IOException {
     env.getMasterServices().getMasterQuotaManager().removeNamespaceQuota(namespaceName);
   }
@@ -352,6 +346,7 @@ public class DeleteNamespaceProcedure
   private static TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
     return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
   }
+
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
    * retrieve it.

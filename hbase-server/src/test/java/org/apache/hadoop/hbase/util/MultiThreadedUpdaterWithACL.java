@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
@@ -48,11 +47,11 @@ import org.slf4j.LoggerFactory;
  */
 public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
   private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedUpdaterWithACL.class);
-  private final static String COMMA= ",";
+  private final static String COMMA = ",";
   private User userOwner;
   /**
-   * Maps user with Table instance. Because the table instance has to be created
-   * per user inorder to work in that user's context
+   * Maps user with Table instance. Because the table instance has to be created per user inorder to
+   * work in that user's context
    */
   private Map<String, Table> userVsTable = new HashMap<>();
   private Map<String, User> users = new HashMap<>();
@@ -60,7 +59,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
 
   public MultiThreadedUpdaterWithACL(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName, double updatePercent, User userOwner, String userNames)
-          throws IOException {
+      throws IOException {
     super(dataGen, conf, tableName, updatePercent);
     this.userOwner = userOwner;
     this.userNames = userNames.split(COMMA);
@@ -102,7 +101,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           }
         }
       } catch (Exception e) {
-        LOG.error("Error while closing the HTable "+table.getName(), e);
+        LOG.error("Error while closing the HTable " + table.getName(), e);
       }
     }
 
@@ -125,8 +124,9 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
               res = localTable.get(get);
             }
           } catch (IOException ie) {
-            LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
-                "], column family = [" + Bytes.toString(cf) + "]", ie);
+            LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow())
+                + "], column family = [" + Bytes.toString(cf) + "]",
+              ie);
           }
           return res;
         }
@@ -151,8 +151,9 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           Result result = (Result) user.runAs(action);
           return result;
         } catch (Exception ie) {
-          LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
-              "], column family = [" + Bytes.toString(cf) + "]", ie);
+          LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow())
+              + "], column family = [" + Bytes.toString(cf) + "]",
+            ie);
         }
       }
       // This means that no users were present
@@ -237,8 +238,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           } else if (m instanceof Delete) {
             table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete) m);
           } else {
-            throw new IllegalArgumentException("unsupported mutation "
-                + m.getClass().getSimpleName());
+            throw new IllegalArgumentException(
+                "unsupported mutation " + m.getClass().getSimpleName());
           }
           totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
         } catch (IOException e) {
@@ -248,8 +249,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       }
     }
 
-    private void recordFailure(final Mutation m, final long keyBase,
-        final long start, IOException e) {
+    private void recordFailure(final Mutation m, final long keyBase, final long start,
+        IOException e) {
       failedKeySet.add(keyBase);
       String exceptionInfo;
       if (e instanceof RetriesExhaustedWithDetailsException) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
 import static org.junit.Assert.assertEquals;
@@ -54,18 +53,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * An integration test which checks that the znodes in zookeeper and data in the FileSystem
- * are protected for secure HBase deployments.
- * This test is intended to be run on clusters with kerberos authorization for HBase and ZooKeeper.
- *
- * If hbase.security.authentication is not set to kerberos, the test does not run unless -f is
- * specified which bypasses the check. It is recommended to always run with -f on secure clusters
- * so that the test checks the actual end result, not the configuration.
- *
- * The test should be run as hbase user with kinit / TGT cached since it accesses HDFS.
+ * An integration test which checks that the znodes in zookeeper and data in the FileSystem are
+ * protected for secure HBase deployments. This test is intended to be run on clusters with kerberos
+ * authorization for HBase and ZooKeeper. If hbase.security.authentication is not set to kerberos,
+ * the test does not run unless -f is specified which bypasses the check. It is recommended to
+ * always run with -f on secure clusters so that the test checks the actual end result, not the
+ * configuration. The test should be run as hbase user with kinit / TGT cached since it accesses
+ * HDFS.
  * <p>
- * Example usage:
- *   hbase org.apache.hadoop.hbase.test.IntegrationTestZnodeACLs -h
+ * Example usage: hbase org.apache.hadoop.hbase.test.IntegrationTestZnodeACLs -h
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
@@ -96,9 +92,9 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     addOptNoArg(FORCE_CHECK_ARG, "Whether to skip configuration lookup and assume a secure setup");
     addOptWithArg(PRINCIPAL_ARG, "The principal for zk authorization");
     addOptWithArg(SUPERUSER_ARG, "The principal for super user");
-    addOptWithArg(FS_PERMS,      "FS permissions, ex. 700, 750, etc. Defaults to 700");
+    addOptWithArg(FS_PERMS, "FS permissions, ex. 700, 750, etc. Defaults to 700");
     addOptNoArg(SKIP_CHECK_FS, "Whether to skip checking FS permissions");
-    addOptNoArg(SKIP_CHECK_ZK,   "Whether to skip checking ZK permissions");
+    addOptNoArg(SKIP_CHECK_ZK, "Whether to skip checking ZK permissions");
   }
 
   @Override
@@ -133,7 +129,8 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
 
     if (!skipZKCheck) {
       testZNodeACLs();
-    } if (!skipFSCheck) {
+    }
+    if (!skipFSCheck) {
       testFSPerms();
     }
     return 0;
@@ -157,8 +154,8 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     LOG.info("Checking ZK permissions: SUCCESS");
   }
 
-  private void checkZnodePermsRecursive(ZKWatcher watcher,
-      RecoverableZooKeeper zk, String znode) throws KeeperException, InterruptedException {
+  private void checkZnodePermsRecursive(ZKWatcher watcher, RecoverableZooKeeper zk, String znode)
+      throws KeeperException, InterruptedException {
 
     boolean expectedWorldReadable = watcher.getZNodePaths().isClientReadable(znode);
 
@@ -227,8 +224,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
 
     short expectedPerms = Short.valueOf(fsPerms, 8);
 
-    assertEquals(
-      FsPermission.createImmutable(expectedPerms),
+    assertEquals(FsPermission.createImmutable(expectedPerms),
       fs.getFileStatus(rootDir).getPermission());
 
     LOG.info("Checking FS permissions: SUCCESS");

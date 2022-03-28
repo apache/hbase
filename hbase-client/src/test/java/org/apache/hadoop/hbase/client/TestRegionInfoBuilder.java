@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestRegionInfoBuilder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionInfoBuilder.class);
+      HBaseClassTestRule.forClass(TestRegionInfoBuilder.class);
 
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
@@ -113,7 +113,7 @@ public class TestRegionInfoBuilder {
   public void testContainsRange() {
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(name.getTableName()).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
-      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("g")).build();
+        .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("g")).build();
     // Single row range at start of region
     assertTrue(ri.containsRange(Bytes.toBytes("a"), Bytes.toBytes("a")));
     // Fully contained range
@@ -174,9 +174,9 @@ public class TestRegionInfoBuilder {
   public void testLastRegionCompare() {
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(name.getTableName()).build();
     RegionInfo rip = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
-      .setStartKey(Bytes.toBytes("a")).setEndKey(new byte[0]).build();
+        .setStartKey(Bytes.toBytes("a")).setEndKey(new byte[0]).build();
     RegionInfo ric = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
-      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
+        .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
     assertTrue(RegionInfo.COMPARATOR.compare(rip, ric) > 0);
   }
 
@@ -190,9 +190,9 @@ public class TestRegionInfoBuilder {
     final TableName tableName = name.getTableName();
     byte[] empty = new byte[0];
     RegionInfo older = RegionInfoBuilder.newBuilder(tableName).setStartKey(empty).setEndKey(empty)
-      .setSplit(false).setRegionId(0L).build();
+        .setSplit(false).setRegionId(0L).build();
     RegionInfo newer = RegionInfoBuilder.newBuilder(tableName).setStartKey(empty).setEndKey(empty)
-      .setSplit(false).setRegionId(1L).build();
+        .setSplit(false).setRegionId(1L).build();
     assertTrue(RegionInfo.COMPARATOR.compare(older, newer) < 0);
     assertTrue(RegionInfo.COMPARATOR.compare(newer, older) > 0);
     assertTrue(RegionInfo.COMPARATOR.compare(older, older) == 0);
@@ -258,7 +258,7 @@ public class TestRegionInfoBuilder {
   @Test
   public void testConvert() {
     final TableName tableName =
-      TableName.valueOf("ns1:" + name.getTableName().getQualifierAsString());
+        TableName.valueOf("ns1:" + name.getTableName().getQualifierAsString());
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
@@ -266,7 +266,7 @@ public class TestRegionInfoBuilder {
     int replicaId = 42;
 
     RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)
-      .setSplit(split).setRegionId(regionId).setReplicaId(replicaId).build();
+        .setSplit(split).setRegionId(regionId).setReplicaId(replicaId).build();
 
     // convert two times, compare
     RegionInfo convertedRi = ProtobufUtil.toRegionInfo(ProtobufUtil.toRegionInfo(ri));
@@ -275,16 +275,16 @@ public class TestRegionInfoBuilder {
 
     // test convert RegionInfo without replicaId
     HBaseProtos.RegionInfo info = HBaseProtos.RegionInfo.newBuilder()
-      .setTableName(HBaseProtos.TableName.newBuilder()
-        .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier()))
-        .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace())).build())
-      .setStartKey(UnsafeByteOperations.unsafeWrap(startKey))
-      .setEndKey(UnsafeByteOperations.unsafeWrap(endKey)).setSplit(split).setRegionId(regionId)
-      .build();
+        .setTableName(HBaseProtos.TableName.newBuilder()
+            .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier()))
+            .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace())).build())
+        .setStartKey(UnsafeByteOperations.unsafeWrap(startKey))
+        .setEndKey(UnsafeByteOperations.unsafeWrap(endKey)).setSplit(split).setRegionId(regionId)
+        .build();
 
     convertedRi = ProtobufUtil.toRegionInfo(info);
     RegionInfo expectedRi = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey)
-      .setEndKey(endKey).setSplit(split).setRegionId(regionId).setReplicaId(0).build();
+        .setEndKey(endKey).setSplit(split).setRegionId(regionId).setReplicaId(0).build();
 
     assertEquals(expectedRi, convertedRi);
   }

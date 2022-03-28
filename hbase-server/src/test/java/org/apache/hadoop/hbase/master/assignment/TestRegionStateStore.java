@@ -55,13 +55,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-
 @Category({ MasterTests.class, MediumTests.class })
 public class TestRegionStateStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionStateStore.class);
+      HBaseClassTestRule.forClass(TestRegionStateStore.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -84,13 +83,13 @@ public class TestRegionStateStore {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
-        ServerName regionLocation, ServerName lastHost, long openSeqNum) {
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
         visitorCalled.set(true);
       }
@@ -104,14 +103,14 @@ public class TestRegionStateStore {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-        getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
     // add the BAD_STATE which does not exist in enum RegionState.State
     Put put = new Put(regions.get(0).getRegionInfo().getRegionName(),
         EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
-        Bytes.toBytes("BAD_STATE"));
+      Bytes.toBytes("BAD_STATE"));
 
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
@@ -120,9 +119,8 @@ public class TestRegionStateStore {
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(Result result, RegionInfo regionInfo,
-                                   RegionState.State state, ServerName regionLocation,
-                                   ServerName lastHost, long openSeqNum) {
+      public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
         assertNull(state);
         visitorCalled.set(true);
@@ -134,13 +132,13 @@ public class TestRegionStateStore {
   @Test
   public void testVisitMetaForRegionNonExistingRegion() throws Exception {
     final String encodedName = "fakeencodedregionname";
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
-        ServerName regionLocation, ServerName lastHost, long openSeqNum) {
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         visitorCalled.set(true);
       }
     });
@@ -152,14 +150,14 @@ public class TestRegionStateStore {
     long regionId = System.currentTimeMillis();
     TableName tableName = name.getTableName();
     RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
       List<RegionInfo> regionInfos = Lists.newArrayList(primary);
       MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
       final RegionStateStore regionStateStore =
-        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+          UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
       regionStateStore.removeRegionReplicas(tableName, 3, 1);
       Get get = new Get(primary.getRegionName());
       Result result = meta.get(get);

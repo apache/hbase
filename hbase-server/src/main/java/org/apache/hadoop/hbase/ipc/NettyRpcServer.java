@@ -58,16 +58,16 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  * An RPC server with Netty4 implementation.
  * @since 2.0.0
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class NettyRpcServer extends RpcServer {
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
 
   /**
-   * Name of property to change netty rpc server eventloop thread count. Default is 0.
-   * Tests may set this down from unlimited.
+   * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
+   * this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
-    "hbase.netty.eventloop.rpcserver.thread.count";
+      "hbase.netty.eventloop.rpcserver.thread.count";
   private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
   private final InetSocketAddress bindAddress;
@@ -75,7 +75,7 @@ public class NettyRpcServer extends RpcServer {
   private final CountDownLatch closed = new CountDownLatch(1);
   private final Channel serverChannel;
   private final ChannelGroup allChannels =
-    new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
       InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -89,11 +89,11 @@ public class NettyRpcServer extends RpcServer {
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
-      int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
-        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
-          EVENTLOOP_THREADCOUNT_DEFAULT);
+      int threadCount = server == null ? EVENTLOOP_THREADCOUNT_DEFAULT
+          : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+            EVENTLOOP_THREADCOUNT_DEFAULT);
       eventLoopGroup = new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
+          new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
@@ -188,11 +188,11 @@ public class NettyRpcServer extends RpcServer {
   }
 
   @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status) throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status,
-        System.currentTimeMillis(), 0);
+  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
+      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
+      throws IOException {
+    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),
+      0);
   }
 
   @Override

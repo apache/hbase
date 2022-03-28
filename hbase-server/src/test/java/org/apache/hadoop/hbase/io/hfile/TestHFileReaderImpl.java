@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test
  */
-@Category({ IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileReaderImpl {
 
   @ClassRule
@@ -65,8 +66,8 @@ public class TestHFileReaderImpl {
     HFileContext context =
         new HFileContextBuilder().withBlockSize(blocksize).withIncludesTags(true).build();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
-      .withOutputStream(fout).withFileContext(context).create();
+    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
+        .withFileContext(context).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c"));
@@ -144,7 +145,7 @@ public class TestHFileReaderImpl {
 
   protected void deleteTestDir(FileSystem fs) throws IOException {
     Path dataTestDir = TEST_UTIL.getDataTestDir();
-    if(fs.exists(dataTestDir)) {
+    if (fs.exists(dataTestDir)) {
       fs.delete(dataTestDir, true);
     }
   }

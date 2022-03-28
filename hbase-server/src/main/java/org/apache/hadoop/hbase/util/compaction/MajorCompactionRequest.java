@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,16 +52,14 @@ class MajorCompactionRequest {
     this.region = region;
   }
 
-  MajorCompactionRequest(Connection connection, RegionInfo region,
-      Set<String> stores) {
+  MajorCompactionRequest(Connection connection, RegionInfo region, Set<String> stores) {
     this(connection, region);
     this.stores = stores;
   }
 
   static Optional<MajorCompactionRequest> newRequest(Connection connection, RegionInfo info,
       Set<String> stores, long timestamp) throws IOException {
-    MajorCompactionRequest request =
-        new MajorCompactionRequest(connection, info, stores);
+    MajorCompactionRequest request = new MajorCompactionRequest(connection, info, stores);
     return request.createRequest(connection, stores, timestamp);
   }
 
@@ -77,8 +75,8 @@ class MajorCompactionRequest {
     this.stores = stores;
   }
 
-  Optional<MajorCompactionRequest> createRequest(Connection connection,
-      Set<String> stores, long timestamp) throws IOException {
+  Optional<MajorCompactionRequest> createRequest(Connection connection, Set<String> stores,
+      long timestamp) throws IOException {
     Set<String> familiesToCompact = getStoresRequiringCompaction(stores, timestamp);
     MajorCompactionRequest request = null;
     if (!familiesToCompact.isEmpty()) {
@@ -105,8 +103,9 @@ class MajorCompactionRequest {
     // do we have any store files?
     Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
     if (storeFiles == null) {
-      LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
-          .getRegionInfo().getEncodedName(), " has no store files");
+      LOG.info("Excluding store: " + family + " for compaction for region:  "
+          + fileSystem.getRegionInfo().getEncodedName(),
+        " has no store files");
       return false;
     }
     // check for reference files
@@ -118,8 +117,8 @@ class MajorCompactionRequest {
     // check store file timestamps
     boolean includeStore = this.shouldIncludeStore(fileSystem, family, storeFiles, ts);
     if (!includeStore) {
-      LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
-          .getRegionInfo().getEncodedName() + " already compacted");
+      LOG.info("Excluding store: " + family + " for compaction for region:  "
+          + fileSystem.getRegionInfo().getEncodedName() + " already compacted");
     }
     return includeStore;
   }
@@ -130,8 +129,7 @@ class MajorCompactionRequest {
     for (StoreFileInfo storeFile : storeFiles) {
       if (storeFile.getModificationTime() < ts) {
         LOG.info("Including store: " + family + " with: " + storeFiles.size()
-            + " files for compaction for region: "
-            + fileSystem.getRegionInfo().getEncodedName());
+            + " files for compaction for region: " + fileSystem.getRegionInfo().getEncodedName());
         return true;
       }
     }
@@ -145,8 +143,8 @@ class MajorCompactionRequest {
     for (Path referenceFile : referenceFiles) {
       FileStatus status = fileSystem.getFileSystem().getFileLinkStatus(referenceFile);
       if (status.getModificationTime() < ts) {
-        LOG.info("Including store: " + family + " for compaction for region:  " + fileSystem
-            .getRegionInfo().getEncodedName() + " (reference store files)");
+        LOG.info("Including store: " + family + " for compaction for region:  "
+            + fileSystem.getRegionInfo().getEncodedName() + " (reference store files)");
         return true;
       }
     }
@@ -154,17 +152,16 @@ class MajorCompactionRequest {
 
   }
 
-  List<Path> getReferenceFilePaths(FileSystem fileSystem, Path familyDir)
-      throws IOException {
+  List<Path> getReferenceFilePaths(FileSystem fileSystem, Path familyDir) throws IOException {
     return FSUtils.getReferenceFilePaths(fileSystem, familyDir);
   }
 
   HRegionFileSystem getFileSystem() throws IOException {
     try (Admin admin = connection.getAdmin()) {
       return HRegionFileSystem.openRegionFromFileSystem(admin.getConfiguration(),
-        CommonFSUtils.getCurrentFileSystem(admin.getConfiguration()),
-        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(admin.getConfiguration()),
-          region.getTable()), region, true);
+        CommonFSUtils.getCurrentFileSystem(admin.getConfiguration()), CommonFSUtils.getTableDir(
+          CommonFSUtils.getRootDir(admin.getConfiguration()), region.getTable()),
+        region, true);
     }
   }
 

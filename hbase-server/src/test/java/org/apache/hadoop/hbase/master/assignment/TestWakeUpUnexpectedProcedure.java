@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,7 @@ public class TestWakeUpUnexpectedProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWakeUpUnexpectedProcedure.class);
+      HBaseClassTestRule.forClass(TestWakeUpUnexpectedProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWakeUpUnexpectedProcedure.class);
 
@@ -143,8 +143,8 @@ public class TestWakeUpUnexpectedProcedure {
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
         ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition rst = req.getTransition(0);
-      if (rst.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)) {
+      if (rst.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)) {
         CountDownLatch arrive = ARRIVE_REPORT;
         if (ARRIVE_REPORT != null) {
           ARRIVE_REPORT = null;
@@ -216,7 +216,7 @@ public class TestWakeUpUnexpectedProcedure {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(StartMiniClusterOption.builder().numMasters(1)
-      .masterClass(HMasterForTest.class).numRegionServers(3).rsClass(RSForTest.class).build());
+        .masterClass(HMasterForTest.class).numRegionServers(3).rsClass(RSForTest.class).build());
     UTIL.createTable(NAME, CF);
     // Here the test region must not be hosted on the same rs with meta region.
     // We have 3 RSes and only two regions(meta and the test region), so they will not likely to be

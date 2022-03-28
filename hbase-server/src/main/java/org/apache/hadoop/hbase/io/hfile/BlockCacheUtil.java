@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,28 +51,28 @@ public class BlockCacheUtil {
    * Needed generating JSON.
    */
   private static final Gson GSON = GsonUtil.createGson()
-    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+      .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
 
-      @Override
-      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
-        AgeSnapshot snapshot = new AgeSnapshot(value);
-        out.beginObject();
-        out.name("mean").value(snapshot.getMean());
-        out.name("min").value(snapshot.getMin());
-        out.name("max").value(snapshot.getMax());
-        out.name("75thPercentile").value(snapshot.get75thPercentile());
-        out.name("95thPercentile").value(snapshot.get95thPercentile());
-        out.name("98thPercentile").value(snapshot.get98thPercentile());
-        out.name("99thPercentile").value(snapshot.get99thPercentile());
-        out.name("999thPercentile").value(snapshot.get999thPercentile());
-        out.endObject();
-      }
+        @Override
+        public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+          AgeSnapshot snapshot = new AgeSnapshot(value);
+          out.beginObject();
+          out.name("mean").value(snapshot.getMean());
+          out.name("min").value(snapshot.getMin());
+          out.name("max").value(snapshot.getMax());
+          out.name("75thPercentile").value(snapshot.get75thPercentile());
+          out.name("95thPercentile").value(snapshot.get95thPercentile());
+          out.name("98thPercentile").value(snapshot.get98thPercentile());
+          out.name("99thPercentile").value(snapshot.get99thPercentile());
+          out.name("999thPercentile").value(snapshot.get999thPercentile());
+          out.endObject();
+        }
 
-      @Override
-      public FastLongHistogram read(JsonReader in) throws IOException {
-        throw new UnsupportedOperationException();
-      }
-    }).setPrettyPrinting().create();
+        @Override
+        public FastLongHistogram read(JsonReader in) throws IOException {
+          throw new UnsupportedOperationException();
+        }
+      }).setPrettyPrinting().create();
 
   /**
    * @param cb
@@ -83,8 +83,7 @@ public class BlockCacheUtil {
   }
 
   /**
-   * Little data structure to hold counts for a file.
-   * Used doing a toJSON.
+   * Little data structure to hold counts for a file. Used doing a toJSON.
    */
   static class CachedBlockCountsPerFile {
     private int count = 0;
@@ -155,11 +154,9 @@ public class BlockCacheUtil {
    * @return The block content of <code>bc</code> as a String minus the filename.
    */
   public static String toStringMinusFileName(final CachedBlock cb, final long now) {
-    return "offset=" + cb.getOffset() +
-      ", size=" + cb.getSize() +
-      ", age=" + (now - cb.getCachedTime()) +
-      ", type=" + cb.getBlockType() +
-      ", priority=" + cb.getBlockPriority();
+    return "offset=" + cb.getOffset() + ", size=" + cb.getSize() + ", age="
+        + (now - cb.getCachedTime()) + ", type=" + cb.getBlockType() + ", priority="
+        + cb.getBlockPriority();
   }
 
   /**
@@ -172,38 +169,37 @@ public class BlockCacheUtil {
   public static CachedBlocksByFile getLoadedCachedBlocksByFile(final Configuration conf,
       final BlockCache bc) {
     CachedBlocksByFile cbsbf = new CachedBlocksByFile(conf);
-    for (CachedBlock cb: bc) {
+    for (CachedBlock cb : bc) {
       if (cbsbf.update(cb)) break;
     }
     return cbsbf;
   }
 
   private static int compareCacheBlock(Cacheable left, Cacheable right,
-                                       boolean includeNextBlockMetadata) {
+      boolean includeNextBlockMetadata) {
     ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
     left.serialize(l, includeNextBlockMetadata);
     ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
     right.serialize(r, includeNextBlockMetadata);
-    return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
-	      r.array(), r.arrayOffset(), r.limit());
+    return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(), r.array(), r.arrayOffset(),
+      r.limit());
   }
 
   /**
    * Validate that the existing and newBlock are the same without including the nextBlockMetadata,
-   * if not, throw an exception. If they are the same without the nextBlockMetadata,
-   * return the comparison.
-   *
+   * if not, throw an exception. If they are the same without the nextBlockMetadata, return the
+   * comparison.
    * @param existing block that is existing in the cache.
    * @param newBlock block that is trying to be cached.
    * @param cacheKey the cache key of the blocks.
    * @return comparison of the existing block to the newBlock.
    */
   public static int validateBlockAddition(Cacheable existing, Cacheable newBlock,
-                                          BlockCacheKey cacheKey) {
+      BlockCacheKey cacheKey) {
     int comparison = compareCacheBlock(existing, newBlock, false);
     if (comparison != 0) {
-      throw new RuntimeException("Cached block contents differ, which should not have happened."
-                                 + "cacheKey:" + cacheKey);
+      throw new RuntimeException(
+          "Cached block contents differ, which should not have happened." + "cacheKey:" + cacheKey);
     }
     if ((existing instanceof HFileBlock) && (newBlock instanceof HFileBlock)) {
       comparison = ((HFileBlock) existing).getNextBlockOnDiskSize()
@@ -256,9 +252,9 @@ public class BlockCacheUtil {
   }
 
   /**
-   * Use one of these to keep a running account of cached blocks by file.  Throw it away when done.
-   * This is different than metrics in that it is stats on current state of a cache.
-   * See getLoadedCachedBlocksByFile
+   * Use one of these to keep a running account of cached blocks by file. Throw it away when done.
+   * This is different than metrics in that it is stats on current state of a cache. See
+   * getLoadedCachedBlocksByFile
    */
   public static class CachedBlocksByFile {
     private int count;
@@ -267,11 +263,9 @@ public class BlockCacheUtil {
     private long dataSize;
     private final long now = System.nanoTime();
     /**
-     * How many blocks to look at before we give up.
-     * There could be many millions of blocks. We don't want the
-     * ui to freeze while we run through 1B blocks... users will
-     * think hbase dead. UI displays warning in red when stats
-     * are incomplete.
+     * How many blocks to look at before we give up. There could be many millions of blocks. We
+     * don't want the ui to freeze while we run through 1B blocks... users will think hbase dead. UI
+     * displays warning in red when stats are incomplete.
      */
     private final int max;
     public static final int DEFAULT_MAX = 1000000;
@@ -281,14 +275,14 @@ public class BlockCacheUtil {
     }
 
     CachedBlocksByFile(final Configuration c) {
-      this.max = c == null? DEFAULT_MAX: c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+      this.max = c == null ? DEFAULT_MAX : c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
     }
 
     /**
      * Map by filename. use concurent utils because we want our Map and contained blocks sorted.
      */
     private transient NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile =
-      new ConcurrentSkipListMap<>();
+        new ConcurrentSkipListMap<>();
     FastLongHistogram hist = new FastLongHistogram();
 
     /**
@@ -310,15 +304,15 @@ public class BlockCacheUtil {
         this.dataBlockCount++;
         this.dataSize += cb.getSize();
       }
-      long age = (this.now - cb.getCachedTime())/NANOS_PER_SECOND;
+      long age = (this.now - cb.getCachedTime()) / NANOS_PER_SECOND;
       this.hist.add(age, 1);
       return false;
     }
 
     /**
-     * @return True if full; i.e. there are more items in the cache but we only loaded up
-     * the maximum set in configuration <code>hbase.ui.blockcache.by.file.max</code>
-     * (Default: DEFAULT_MAX).
+     * @return True if full; i.e. there are more items in the cache but we only loaded up the
+     *         maximum set in configuration <code>hbase.ui.blockcache.by.file.max</code> (Default:
+     *         DEFAULT_MAX).
      */
     public boolean isFull() {
       return this.count >= this.max;
@@ -360,16 +354,13 @@ public class BlockCacheUtil {
     @Override
     public String toString() {
       AgeSnapshot snapshot = getAgeInCacheSnapshot();
-      return "count=" + count + ", dataBlockCount=" + dataBlockCount + ", size=" + size +
-          ", dataSize=" + getDataSize() +
-          ", mean age=" + snapshot.getMean() +
-          ", min age=" + snapshot.getMin() +
-          ", max age=" + snapshot.getMax() +
-          ", 75th percentile age="   + snapshot.get75thPercentile() +
-          ", 95th percentile age="   + snapshot.get95thPercentile() +
-          ", 98th percentile age="   + snapshot.get98thPercentile() +
-          ", 99th percentile age="   + snapshot.get99thPercentile() +
-          ", 99.9th percentile age=" + snapshot.get99thPercentile();
+      return "count=" + count + ", dataBlockCount=" + dataBlockCount + ", size=" + size
+          + ", dataSize=" + getDataSize() + ", mean age=" + snapshot.getMean() + ", min age="
+          + snapshot.getMin() + ", max age=" + snapshot.getMax() + ", 75th percentile age="
+          + snapshot.get75thPercentile() + ", 95th percentile age=" + snapshot.get95thPercentile()
+          + ", 98th percentile age=" + snapshot.get98thPercentile() + ", 99th percentile age="
+          + snapshot.get99thPercentile() + ", 99.9th percentile age="
+          + snapshot.get99thPercentile();
     }
   }
 }

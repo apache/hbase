@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,9 +48,9 @@ public class ScanInfo {
   private final long preadMaxBytes;
   private final boolean newVersionBehavior;
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
-      + (4 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_BOOLEAN));
+  public static final long FIXED_OVERHEAD =
+      ClassSize.align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
+          + (4 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_BOOLEAN));
 
   /**
    * @param conf
@@ -82,8 +81,8 @@ public class ScanInfo {
    * @param maxVersions Store's VERSIONS setting
    * @param ttl Store's TTL (in ms)
    * @param blockSize Store's block size
-   * @param timeToPurgeDeletes duration in ms after which a delete marker can
-   *        be purged during a major compaction.
+   * @param timeToPurgeDeletes duration in ms after which a delete marker can be purged during a
+   *          major compaction.
    * @param keepDeletedCells Store's keepDeletedCells setting
    * @param comparator The store's comparator
    */
@@ -176,30 +175,24 @@ public class ScanInfo {
   }
 
   /**
-   * Used by CP users for customizing max versions, ttl, keepDeletedCells, min versions,
-   * and time to purge deletes.
+   * Used by CP users for customizing max versions, ttl, keepDeletedCells, min versions, and time to
+   * purge deletes.
    */
-  ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells,
-    int minVersions, long timeToPurgeDeletes) {
+  ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells, int minVersions,
+      long timeToPurgeDeletes) {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
-      comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
-      preadMaxBytes, newVersionBehavior);
+        comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
+        preadMaxBytes, newVersionBehavior);
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("family", Bytes.toStringBinary(family))
-      .append("minVersions", minVersions)
-      .append("maxVersions", maxVersions)
-      .append("ttl", ttl)
-      .append("keepDeletedCells", keepDeletedCells)
-      .append("timeToPurgeDeletes", timeToPurgeDeletes)
-      .append("tableMaxRowSize", tableMaxRowSize)
-      .append("usePread", usePread)
-      .append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
-      .append("parallelSeekEnabled", parallelSeekEnabled)
-      .append("preadMaxBytes", preadMaxBytes)
-      .append("newVersionBehavior", newVersionBehavior).toString();
+    return new ToStringBuilder(this).append("family", Bytes.toStringBinary(family))
+        .append("minVersions", minVersions).append("maxVersions", maxVersions).append("ttl", ttl)
+        .append("keepDeletedCells", keepDeletedCells)
+        .append("timeToPurgeDeletes", timeToPurgeDeletes).append("tableMaxRowSize", tableMaxRowSize)
+        .append("usePread", usePread).append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
+        .append("parallelSeekEnabled", parallelSeekEnabled).append("preadMaxBytes", preadMaxBytes)
+        .append("newVersionBehavior", newVersionBehavior).toString();
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -115,8 +115,8 @@ public class TestMobStoreCompaction {
     htd.modifyFamily(hcd);
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    region = HBaseTestingUtility
-        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, new MobFileCache(conf));
+    region = HBaseTestingUtility.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd,
+      new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
 
@@ -172,7 +172,7 @@ public class TestMobStoreCompaction {
     assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("Before compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
@@ -187,21 +187,17 @@ public class TestMobStoreCompaction {
 
   private static HRegion setMobThreshold(HRegion region, byte[] cfName, long modThreshold) {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
-            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
-            .setMobThreshold(modThreshold)
-            .build();
-    TableDescriptor td = TableDescriptorBuilder
-            .newBuilder(region.getTableDescriptor())
-            .removeColumnFamily(cfName)
-            .setColumnFamily(cfd)
-            .build();
+        .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+        .setMobThreshold(modThreshold).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(region.getTableDescriptor())
+        .removeColumnFamily(cfName).setColumnFamily(cfd).build();
     region.setTableDescriptor(td);
     return region;
   }
 
   /**
-   * This test will first generate store files, then bulk load them and trigger the compaction.
-   * When compaction, the cell value will be larger than the threshold.
+   * This test will first generate store files, then bulk load them and trigger the compaction. When
+   * compaction, the cell value will be larger than the threshold.
    */
   @Test
   public void testMobCompactionWithBulkload() throws Exception {
@@ -236,7 +232,7 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
     assertEquals("After compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
   }
 
   @Test
@@ -411,8 +407,8 @@ public class TestMobStoreCompaction {
           continue;
         }
         files.add(fileName);
-        Path familyPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(),
-            hcd.getNameAsString());
+        Path familyPath =
+            MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
         assertTrue(fs.exists(new Path(familyPath, fileName)));
       }
     } while (hasMore);
@@ -443,8 +439,8 @@ public class TestMobStoreCompaction {
         false, false, HConstants.LATEST_TIMESTAMP);
       long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
       long ttl = HStore.determineTTLFromFamily(hcd);
-      ScanInfo scanInfo = new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes,
-        CellComparatorImpl.COMPARATOR);
+      ScanInfo scanInfo =
+          new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes, CellComparatorImpl.COMPARATOR);
       StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_DROP_DELETES, scanners);
       try {
         size += UTIL.countRows(scanner);

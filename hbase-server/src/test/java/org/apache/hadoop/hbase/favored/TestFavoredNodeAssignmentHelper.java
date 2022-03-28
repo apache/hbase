@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ import org.mockito.Mockito;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestFavoredNodeAssignmentHelper {
 
   @ClassRule
@@ -123,11 +123,11 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSmallCluster() {
     // Test the case where we cannot assign favored nodes (because the number
     // of nodes in the cluster is too less)
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 2);
     List<ServerName> servers = getServersFromRack(rackToServerCount);
-    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
-        new Configuration());
+    FavoredNodeAssignmentHelper helper =
+        new FavoredNodeAssignmentHelper(servers, new Configuration());
     helper.initialize();
     assertFalse(helper.canPlaceFavoredNodes());
   }
@@ -143,8 +143,8 @@ public class TestFavoredNodeAssignmentHelper {
 
   @Test
   public void testRoundRobinAssignmentsWithUnevenSizedRacks() {
-    //In the case of uneven racks, the regions should be distributed
-    //proportionately to the rack sizes
+    // In the case of uneven racks, the regions should be distributed
+    // proportionately to the rack sizes
     primaryRSPlacement(6, null, 10, 10, 10);
     primaryRSPlacement(600, null, 10, 10, 5);
     primaryRSPlacement(600, null, 10, 5, 10);
@@ -162,11 +162,11 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSecondaryAndTertiaryPlacementWithSingleRack() {
     // Test the case where there is a single rack and we need to choose
     // Primary/Secondary/Tertiary from a single rack.
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 10);
     // have lots of regions to test with
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(60000, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(60000, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
     List<RegionInfo> regions = primaryRSMapAndHelper.getThird();
@@ -188,10 +188,10 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSecondaryAndTertiaryPlacementWithSingleServer() {
     // Test the case where we have a single node in the cluster. In this case
     // the primary can be assigned but the secondary/tertiary would be null
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 1);
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(1, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(1, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
     List<RegionInfo> regions = primaryRSMapAndHelper.getThird();
@@ -206,12 +206,12 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSecondaryAndTertiaryPlacementWithMultipleRacks() {
     // Test the case where we have multiple racks and the region servers
     // belong to multiple racks
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 10);
     rackToServerCount.put("rack2", 10);
 
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(60000, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(60000, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
 
@@ -237,17 +237,17 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSecondaryAndTertiaryPlacementWithLessThanTwoServersInRacks() {
     // Test the case where we have two racks but with less than two servers in each
     // We will not have enough machines to select secondary/tertiary
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 1);
     rackToServerCount.put("rack2", 1);
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(6, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(6, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
     List<RegionInfo> regions = primaryRSMapAndHelper.getThird();
     assertTrue(primaryRSMap.size() == 6);
     Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap =
-          helper.placeSecondaryAndTertiaryRS(primaryRSMap);
+        helper.placeSecondaryAndTertiaryRS(primaryRSMap);
     for (RegionInfo region : regions) {
       // not enough secondary/tertiary room to place the regions
       assertTrue(secondaryAndTertiaryMap.get(region) == null);
@@ -261,17 +261,17 @@ public class TestFavoredNodeAssignmentHelper {
     // racks than what the primary is on. But if the other rack doesn't have
     // enough nodes to have both secondary/tertiary RSs, the tertiary is placed
     // on the same rack as the primary server is on
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 2);
     rackToServerCount.put("rack2", 1);
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(6, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(6, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
     List<RegionInfo> regions = primaryRSMapAndHelper.getThird();
     assertTrue(primaryRSMap.size() == 6);
     Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap =
-          helper.placeSecondaryAndTertiaryRS(primaryRSMap);
+        helper.placeSecondaryAndTertiaryRS(primaryRSMap);
     assertTrue(secondaryAndTertiaryMap.size() == regions.size());
     for (RegionInfo region : regions) {
       ServerName s = primaryRSMap.get(region);
@@ -285,21 +285,18 @@ public class TestFavoredNodeAssignmentHelper {
   }
 
   private Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-  secondaryAndTertiaryRSPlacementHelper(
-      int regionCount, Map<String, Integer> rackToServerCount) {
+      secondaryAndTertiaryRSPlacementHelper(int regionCount,
+          Map<String, Integer> rackToServerCount) {
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<RegionInfo, ServerName>();
     List<ServerName> servers = getServersFromRack(rackToServerCount);
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
-    Map<ServerName, List<RegionInfo>> assignmentMap =
-        new HashMap<ServerName, List<RegionInfo>>();
+    Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<ServerName, List<RegionInfo>>();
     helper.initialize();
     // create regions
     List<RegionInfo> regions = new ArrayList<>(regionCount);
     for (int i = 0; i < regionCount; i++) {
       regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build());
+          .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     // place the regions
     helper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
@@ -308,13 +305,12 @@ public class TestFavoredNodeAssignmentHelper {
 
   private void primaryRSPlacement(int regionCount, Map<RegionInfo, ServerName> primaryRSMap,
       int firstRackSize, int secondRackSize, int thirdRackSize) {
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", firstRackSize);
     rackToServerCount.put("rack2", secondRackSize);
     rackToServerCount.put("rack3", thirdRackSize);
     List<ServerName> servers = getServersFromRack(rackToServerCount);
-    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
-        rackManager);
+    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     helper.initialize();
 
     assertTrue(helper.canPlaceFavoredNodes());
@@ -325,9 +321,7 @@ public class TestFavoredNodeAssignmentHelper {
     List<RegionInfo> regions = new ArrayList<>(regionCount);
     for (int i = 0; i < regionCount; i++) {
       regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf("foobar"))
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build());
+          .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     // place those regions in primary RSs
     helper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
@@ -348,16 +342,16 @@ public class TestFavoredNodeAssignmentHelper {
     // Verify that the regions got placed in the way we expect (documented in
     // FavoredNodeAssignmentHelper#placePrimaryRSAsRoundRobin)
     checkNumRegions(regionCount, firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-        regionsOnRack2, regionsOnRack3, assignmentMap);
+      regionsOnRack2, regionsOnRack3, assignmentMap);
   }
 
   private void checkNumRegions(int regionCount, int firstRackSize, int secondRackSize,
       int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3,
       Map<ServerName, List<RegionInfo>> assignmentMap) {
-    //The regions should be distributed proportionately to the racksizes
-    //Verify the ordering was as expected by inserting the racks and regions
-    //in sorted maps. The keys being the racksize and numregions; values are
-    //the relative positions of the racksizes and numregions respectively
+    // The regions should be distributed proportionately to the racksizes
+    // Verify the ordering was as expected by inserting the racks and regions
+    // in sorted maps. The keys being the racksize and numregions; values are
+    // the relative positions of the racksizes and numregions respectively
     SortedMap<Integer, Integer> rackMap = new TreeMap<>();
     rackMap.put(firstRackSize, 1);
     rackMap.put(secondRackSize, 2);
@@ -366,22 +360,19 @@ public class TestFavoredNodeAssignmentHelper {
     regionMap.put(regionsOnRack1, 1);
     regionMap.put(regionsOnRack2, 2);
     regionMap.put(regionsOnRack3, 3);
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3), rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3),
+      rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3), rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
   }
 
-  private String printProportions(int firstRackSize, int secondRackSize,
-      int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3) {
-    return "The rack sizes " + firstRackSize + " " + secondRackSize
-        + " " + thirdRackSize + " " + regionsOnRack1 + " " + regionsOnRack2 +
-        " " + regionsOnRack3;
+  private String printProportions(int firstRackSize, int secondRackSize, int thirdRackSize,
+      int regionsOnRack1, int regionsOnRack2, int regionsOnRack3) {
+    return "The rack sizes " + firstRackSize + " " + secondRackSize + " " + thirdRackSize + " "
+        + regionsOnRack1 + " " + regionsOnRack2 + " " + regionsOnRack3;
   }
 
   @Test
@@ -397,12 +388,9 @@ public class TestFavoredNodeAssignmentHelper {
     List<RegionInfo> regions = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {
       regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build());
+          .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
-    Map<ServerName, List<RegionInfo>> assignmentMap =
-        new HashMap<ServerName, List<RegionInfo>>();
+    Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<ServerName, List<RegionInfo>>();
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<RegionInfo, ServerName>();
     helper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
     assertTrue(primaryRSMap.size() == regions.size());
@@ -414,7 +402,7 @@ public class TestFavoredNodeAssignmentHelper {
   @Test
   public void testGetOneRandomRack() throws IOException {
 
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     Set<String> rackList = Sets.newHashSet("rack1", "rack2", "rack3");
     for (String rack : rackList) {
       rackToServerCount.put(rack, 2);
@@ -426,20 +414,20 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(helper.canPlaceFavoredNodes());
 
     // Check we don't get a bad rack on any number of attempts
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       assertTrue(rackList.contains(helper.getOneRandomRack(Sets.newHashSet())));
     }
 
     // Check skipRack multiple times when an invalid rack is specified
     Set<String> skipRacks = Sets.newHashSet("rack");
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       assertTrue(rackList.contains(helper.getOneRandomRack(skipRacks)));
     }
 
     // Check skipRack multiple times when an valid rack is specified
     skipRacks = Sets.newHashSet("rack1");
     Set<String> validRacks = Sets.newHashSet("rack2", "rack3");
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       assertTrue(validRacks.contains(helper.getOneRandomRack(skipRacks)));
     }
   }
@@ -447,7 +435,7 @@ public class TestFavoredNodeAssignmentHelper {
   @Test
   public void testGetRandomServerSingleRack() throws IOException {
 
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     final String rack = "rack1";
     rackToServerCount.put(rack, 4);
     List<ServerName> servers = getServersFromRack(rackToServerCount);
@@ -457,7 +445,7 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(helper.canPlaceFavoredNodes());
 
     // Check we don't get a bad node on any number of attempts
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, Sets.newHashSet());
       assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
     }
@@ -465,7 +453,7 @@ public class TestFavoredNodeAssignmentHelper {
     // Check skipServers multiple times when an invalid server is specified
     Set<ServerName> skipServers =
         Sets.newHashSet(ServerName.valueOf("invalidnode:1234", ServerName.NON_STARTCODE));
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, skipServers);
       assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
     }
@@ -473,17 +461,16 @@ public class TestFavoredNodeAssignmentHelper {
     // Check skipRack multiple times when an valid servers are specified
     ServerName skipSN = ServerName.valueOf("foo1:1234", ServerName.NON_STARTCODE);
     skipServers = Sets.newHashSet(skipSN);
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, skipServers);
-      assertNotEquals("Skip server should not be selected ",
-          skipSN.getAddress(), sn.getAddress());
+      assertNotEquals("Skip server should not be selected ", skipSN.getAddress(), sn.getAddress());
       assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
     }
   }
 
   @Test
   public void testGetRandomServerMultiRack() throws IOException {
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     Set<String> rackList = Sets.newHashSet("rack1", "rack2", "rack3");
     for (String rack : rackList) {
       rackToServerCount.put(rack, 4);
@@ -495,22 +482,22 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(helper.canPlaceFavoredNodes());
 
     // Check we don't get a bad node on any number of attempts
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, Sets.newHashSet());
         assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-            rackToServers.get(rack).contains(sn));
+          rackToServers.get(rack).contains(sn));
       }
     }
 
     // Check skipServers multiple times when an invalid server is specified
     Set<ServerName> skipServers =
         Sets.newHashSet(ServerName.valueOf("invalidnode:1234", ServerName.NON_STARTCODE));
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, skipServers);
         assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-            rackToServers.get(rack).contains(sn));
+          rackToServers.get(rack).contains(sn));
       }
     }
 
@@ -519,19 +506,19 @@ public class TestFavoredNodeAssignmentHelper {
     ServerName skipSN2 = ServerName.valueOf("foo10:1234", ServerName.NON_STARTCODE);
     ServerName skipSN3 = ServerName.valueOf("foo20:1234", ServerName.NON_STARTCODE);
     skipServers = Sets.newHashSet(skipSN1, skipSN2, skipSN3);
-    for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, skipServers);
         assertFalse("Skip server should not be selected ", skipServers.contains(sn));
         assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-            rackToServers.get(rack).contains(sn));
+          rackToServers.get(rack).contains(sn));
       }
     }
   }
 
   @Test
   public void testGetFavoredNodes() throws IOException {
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     Set<String> rackList = Sets.newHashSet("rack1", "rack2", "rack3");
     for (String rack : rackList) {
       rackToServerCount.put(rack, 4);
@@ -543,9 +530,7 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(helper.canPlaceFavoredNodes());
 
     RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).build();
 
     for (int maxattempts = 0; maxattempts < MAX_ATTEMPTS; maxattempts++) {
       List<ServerName> fn = helper.generateFavoredNodes(region);
@@ -564,7 +549,6 @@ public class TestFavoredNodeAssignmentHelper {
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     helper.initialize();
     assertTrue(helper.canPlaceFavoredNodes());
-
 
     ServerName snRack1SN1 = ServerName.valueOf("foo1:1234", ServerName.NON_STARTCODE);
     ServerName snRack1SN2 = ServerName.valueOf("foo2:1234", ServerName.NON_STARTCODE);
@@ -592,7 +576,7 @@ public class TestFavoredNodeAssignmentHelper {
     ServerName snRack2SN1 = ServerName.valueOf("foo10:1234", ServerName.NON_STARTCODE);
     ServerName snRack2SN2 = ServerName.valueOf("foo11:1234", ServerName.NON_STARTCODE);
 
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     Set<String> rackList = Sets.newHashSet("rack1", "rack2");
     for (String rack : rackList) {
       rackToServerCount.put(rack, 4);
@@ -632,13 +616,13 @@ public class TestFavoredNodeAssignmentHelper {
     assertNotNull("Generated FN can't be null", genFN);
     favoredNodes.add(genFN);
     assertEquals("Did not find expected number of favored nodes",
-        FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
+      FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
   }
 
   private void checkDuplicateFN(List<ServerName> fnList) {
     Set<ServerName> favoredNodes = Sets.newHashSet(fnList);
     assertEquals("Did not find expected number of favored nodes",
-        FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
+      FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
   }
 
   private void checkFNRacks(List<ServerName> fnList, ServerName genFN) {

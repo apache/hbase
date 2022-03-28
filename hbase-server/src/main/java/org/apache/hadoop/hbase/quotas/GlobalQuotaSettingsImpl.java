@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,9 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Map.Entry;
-
+import java.util.Objects;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
@@ -180,8 +180,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         // To prevent the "empty" row in QuotaTableUtil.QUOTA_TABLE_NAME
 
         QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
-        if (throttleBuilder != null && !otherThrottle.proto.hasTimedQuota() && otherThrottle.proto
-            .hasType()) {
+        if (throttleBuilder != null && !otherThrottle.proto.hasTimedQuota()
+            && otherThrottle.proto.hasType()) {
           switch (otherProto.getType()) {
             case REQUEST_NUMBER:
               throttleBuilder.clearReqNum();
@@ -281,8 +281,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         SpaceQuota quotaToMerge = spaceRequest.getQuota();
         // Validate that the two settings are for the same target.
         // SpaceQuotas either apply to a table or a namespace (no user spacequota).
-        if (!Objects.equals(getTableName(), settingsToMerge.getTableName()) && !Objects
-            .equals(getNamespace(), settingsToMerge.getNamespace())) {
+        if (!Objects.equals(getTableName(), settingsToMerge.getTableName())
+            && !Objects.equals(getNamespace(), settingsToMerge.getNamespace())) {
           throw new IllegalArgumentException("Cannot merge " + settingsToMerge + " into " + this);
         }
 
@@ -326,9 +326,9 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     StringBuilder builder = new StringBuilder();
     builder.append("GlobalQuota: ");
     if (throttleProto != null) {
-      Map<ThrottleType,TimedQuota> throttleQuotas = buildThrottleQuotas(throttleProto);
+      Map<ThrottleType, TimedQuota> throttleQuotas = buildThrottleQuotas(throttleProto);
       builder.append(" { TYPE => THROTTLE ");
-      for (Entry<ThrottleType,TimedQuota> entry : throttleQuotas.entrySet()) {
+      for (Entry<ThrottleType, TimedQuota> entry : throttleQuotas.entrySet()) {
         final ThrottleType type = entry.getKey();
         final TimedQuota timedQuota = entry.getValue();
         builder.append("{THROTTLE_TYPE => ").append(type.name()).append(", LIMIT => ");
@@ -360,7 +360,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           builder.append(timedQuota.getScope().toString());
         }
       }
-      builder.append( "} } ");
+      builder.append("} } ");
     } else {
       builder.append(" {} ");
     }
@@ -386,8 +386,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     return builder.toString();
   }
 
-  private Map<ThrottleType,TimedQuota> buildThrottleQuotas(Throttle proto) {
-    HashMap<ThrottleType,TimedQuota> quotas = new HashMap<>();
+  private Map<ThrottleType, TimedQuota> buildThrottleQuotas(Throttle proto) {
+    HashMap<ThrottleType, TimedQuota> quotas = new HashMap<>();
     if (proto.hasReadNum()) {
       quotas.put(ThrottleType.READ_NUMBER, proto.getReadNum());
     }

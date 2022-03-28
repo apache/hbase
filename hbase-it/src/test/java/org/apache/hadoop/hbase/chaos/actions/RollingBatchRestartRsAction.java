@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -33,10 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a
- * server, or starts one, sleeping randomly (0-sleepTime) in between steps.
- * The parameter maxDeadServers limits the maximum number of servers that
- * can be down at the same time during rolling restarts.
+ * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a server,
+ * or starts one, sleeping randomly (0-sleepTime) in between steps. The parameter maxDeadServers
+ * limits the maximum number of servers that can be down at the same time during rolling restarts.
  */
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   private static final Logger LOG = LoggerFactory.getLogger(RollingBatchRestartRsAction.class);
@@ -52,30 +50,30 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   }
 
   public RollingBatchRestartRsAction(long sleepTime, float ratio, int maxDeadServers,
-    boolean skipMetaRS) {
+      boolean skipMetaRS) {
     this(sleepTime, ratio, maxDeadServers);
     this.skipMetaRS = skipMetaRS;
   }
 
   enum KillOrStart {
-    KILL,
-    START
+    KILL, START
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
   @Override
   public void perform() throws Exception {
     getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
-        (int)(ratio * 100));
+      (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
     Queue<ServerName> serversToBeKilled = new LinkedList<>(selectedServers);
     LinkedList<ServerName> deadServers = new LinkedList<>();
     Random rand = ThreadLocalRandom.current();
     // loop while there are servers to be killed or dead servers to be restarted
-    while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty())  && !context.isStopping()) {
+    while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty()) && !context.isStopping()) {
 
       final KillOrStart action;
       if (serversToBeKilled.isEmpty()) { // no more servers to kill
@@ -114,13 +112,13 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
             // The start may fail but better to just keep going though we may lose server.
             // Shuffle the dead list to avoid getting stuck on a single stubborn host.
             Collections.shuffle(deadServers);
-            getLogger().info(
-              "Problem starting {}, will retry; code={}", server, e.getExitCode(), e);
+            getLogger().info("Problem starting {}, will retry; code={}", server, e.getExitCode(),
+              e);
           }
           break;
       }
 
-      sleep(rand.nextInt((int)sleepTime));
+      sleep(rand.nextInt((int) sleepTime));
     }
   }
 
@@ -134,6 +132,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   public static void main(final String[] args) throws Exception {
     RollingBatchRestartRsAction action = new RollingBatchRestartRsAction(1, 1.0f) {
       private int invocations = 0;
+
       @Override
       protected ServerName[] getCurrentServers() {
         final int count = 4;

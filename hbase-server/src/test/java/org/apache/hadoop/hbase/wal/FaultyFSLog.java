@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +35,7 @@ public class FaultyFSLog extends FSHLog {
   public enum FailureType {
     NONE, APPEND, SYNC
   }
+
   FailureType ft = FailureType.NONE;
 
   public FaultyFSLog(FileSystem fs, Path rootDir, String logName, Configuration conf)
@@ -71,4 +69,3 @@ public class FaultyFSLog extends FSHLog {
     return super.append(info, key, edits, inMemstore);
   }
 }
-

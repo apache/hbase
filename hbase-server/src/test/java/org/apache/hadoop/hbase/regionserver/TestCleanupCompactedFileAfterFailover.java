@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,7 +47,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({LargeTests.class})
+@Category({ LargeTests.class })
 public class TestCleanupCompactedFileAfterFailover {
 
   private static final Logger LOG =
@@ -74,8 +73,8 @@ public class TestCleanupCompactedFileAfterFailover {
     TEST_UTIL = new HBaseTestingUtility();
     // Set the scanner lease to 20min, so the scanner can't be closed by RegionServer
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 1200000);
-    TEST_UTIL.getConfiguration()
-        .setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
+    TEST_UTIL.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,
+      100);
     TEST_UTIL.getConfiguration().set("dfs.blocksize", "64000");
     TEST_UTIL.getConfiguration().set("dfs.namenode.fs-limits.min-block-size", "1024");
     TEST_UTIL.getConfiguration().set(TimeToLiveHFileCleaner.TTL_CONF_KEY, "0");

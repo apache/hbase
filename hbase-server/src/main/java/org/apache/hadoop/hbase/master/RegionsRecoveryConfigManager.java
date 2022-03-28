@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -52,22 +51,22 @@ public class RegionsRecoveryConfigManager implements ConfigurationObserver {
     final int newMaxStoreFileRefCount = getMaxStoreFileRefCount(conf);
     final int newRegionsRecoveryInterval = getRegionsRecoveryChoreInterval(conf);
 
-    if (prevMaxStoreFileRefCount == newMaxStoreFileRefCount &&
-      prevRegionsRecoveryInterval == newRegionsRecoveryInterval) {
+    if (prevMaxStoreFileRefCount == newMaxStoreFileRefCount
+        && prevRegionsRecoveryInterval == newRegionsRecoveryInterval) {
       // no need to re-schedule the chore with updated config
       // as there is no change in desired configs
       return;
     }
 
     LOG.info(
-      "Config Reload for RegionsRecovery Chore. prevMaxStoreFileRefCount: {}," +
-        " newMaxStoreFileRefCount: {}, prevRegionsRecoveryInterval: {}, " +
-        "newRegionsRecoveryInterval: {}",
+      "Config Reload for RegionsRecovery Chore. prevMaxStoreFileRefCount: {},"
+          + " newMaxStoreFileRefCount: {}, prevRegionsRecoveryInterval: {}, "
+          + "newRegionsRecoveryInterval: {}",
       prevMaxStoreFileRefCount, newMaxStoreFileRefCount, prevRegionsRecoveryInterval,
       newRegionsRecoveryInterval);
 
     RegionsRecoveryChore regionsRecoveryChore =
-      new RegionsRecoveryChore(this.hMaster, conf, this.hMaster);
+        new RegionsRecoveryChore(this.hMaster, conf, this.hMaster);
     ChoreService choreService = this.hMaster.getChoreService();
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
@@ -98,7 +97,7 @@ public class RegionsRecoveryConfigManager implements ConfigurationObserver {
   }
 
   @RestrictedApi(explanation = "Only visible for testing", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   RegionsRecoveryChore getChore() {
     return chore;
   }

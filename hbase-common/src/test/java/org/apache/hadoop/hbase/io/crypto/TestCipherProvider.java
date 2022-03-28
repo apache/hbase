@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCipherProvider {
 
   @ClassRule
@@ -46,6 +46,7 @@ public class TestCipherProvider {
 
   public static class MyCipherProvider implements CipherProvider {
     private Configuration conf;
+
     @Override
     public Configuration getConf() {
       return conf;
@@ -148,8 +149,7 @@ public class TestCipherProvider {
     Configuration conf = HBaseConfiguration.create();
     CipherProvider provider = Encryption.getCipherProvider(conf);
     assertTrue(provider instanceof DefaultCipherProvider);
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     assertTrue(Arrays.asList(provider.getSupportedCiphers()).contains(algorithm));
     Cipher a = Encryption.getCipher(conf, algorithm);
     assertNotNull(a);

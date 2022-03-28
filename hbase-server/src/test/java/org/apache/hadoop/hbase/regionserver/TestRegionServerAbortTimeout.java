@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.TimerTask;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;

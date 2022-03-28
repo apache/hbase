@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.function.Function;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,16 +35,18 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 
 /**
- * Helper methods to ease Region Server integration with the Write Ahead Log (WAL).
- * Note that methods in this class specifically should not require access to anything
- * other than the API found in {@link WAL}. For internal use only.
+ * Helper methods to ease Region Server integration with the Write Ahead Log (WAL). Note that
+ * methods in this class specifically should not require access to anything other than the API found
+ * in {@link WAL}. For internal use only.
  */
 @InterfaceAudience.Private
 public class WALUtil {
@@ -68,10 +68,10 @@ public class WALUtil {
    * @param mvcc Used by WAL to get sequence Id for the waledit.
    */
   public static WALKeyImpl writeCompactionMarker(WAL wal,
-    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
-    MultiVersionConcurrencyControl mvcc) throws IOException {
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
+      MultiVersionConcurrencyControl mvcc) throws IOException {
     WALKeyImpl walKey =
-      writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc, null);
+        writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -84,8 +84,8 @@ public class WALUtil {
    * This write is for internal use only. Not for external client consumption.
    */
   public static WALKeyImpl writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
-    RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
-    throws IOException {
+      RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
+      throws IOException {
     WALKeyImpl walKey = doFullMarkerAppendTransaction(wal, replicationScope, hri,
       WALEdit.createFlushWALEdit(hri, f), mvcc, null, sync);
     if (LOG.isTraceEnabled()) {
@@ -100,10 +100,9 @@ public class WALUtil {
    */
   public static WALKeyImpl writeRegionEventMarker(WAL wal,
       NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, RegionEventDescriptor r,
-      MultiVersionConcurrencyControl mvcc)
-    throws IOException {
+      MultiVersionConcurrencyControl mvcc) throws IOException {
     WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
-        WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
+      WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -111,8 +110,8 @@ public class WALUtil {
   }
 
   /**
-   * Write a log marker that a bulk load has succeeded and is about to be committed.
-   * This write is for internal use only. Not for external client consumption.
+   * Write a log marker that a bulk load has succeeded and is about to be committed. This write is
+   * for internal use only. Not for external client consumption.
    * @param wal The log to write into.
    * @param replicationScope The replication scope of the families in the HRegion
    * @param hri A description of the region in the table that we are bulk loading into.
@@ -123,9 +122,9 @@ public class WALUtil {
   public static WALKeyImpl writeBulkLoadMarkerAndSync(final WAL wal,
       final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
-    throws IOException {
-    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
-      WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
+      throws IOException {
+    WALKeyImpl walKey =
+        writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
@@ -133,12 +132,12 @@ public class WALUtil {
   }
 
   private static WALKeyImpl writeMarker(final WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, WALEdit edit, MultiVersionConcurrencyControl mvcc,
-      Map<String, byte[]> extendedAttributes)
-    throws IOException {
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, WALEdit edit,
+      MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes)
+      throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
-    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, mvcc,
-      extendedAttributes, true);
+    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, mvcc, extendedAttributes,
+      true);
   }
 
   /**
@@ -152,10 +151,10 @@ public class WALUtil {
   private static WALKeyImpl doFullMarkerAppendTransaction(WAL wal,
       NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final WALEdit edit,
       MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes, boolean sync)
-    throws IOException {
+      throws IOException {
     // TODO: Pass in current time to use?
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
-      System.currentTimeMillis(), mvcc, replicationScope, extendedAttributes);
+        System.currentTimeMillis(), mvcc, replicationScope, extendedAttributes);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
       trx = wal.appendMarker(hri, walKey, edit);

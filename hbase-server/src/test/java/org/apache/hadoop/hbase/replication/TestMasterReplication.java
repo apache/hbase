@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
@@ -78,7 +79,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestMasterReplication {
 
   @ClassRule
@@ -127,9 +128,8 @@ public class TestMasterReplication {
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     baseConfiguration.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
     baseConfiguration.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
-    baseConfiguration.setStrings(
-        CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        CoprocessorCounter.class.getName());
+    baseConfiguration.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
+      CoprocessorCounter.class.getName());
     table = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
@@ -139,10 +139,9 @@ public class TestMasterReplication {
   }
 
   /**
-   * It tests the replication scenario involving 0 -> 1 -> 0. It does it by
-   * adding and deleting a row to a table in each cluster, checking if it's
-   * replicated. It also tests that the puts and deletes are not replicated back
-   * to the originating cluster.
+   * It tests the replication scenario involving 0 -> 1 -> 0. It does it by adding and deleting a
+   * row to a table in each cluster, checking if it's replicated. It also tests that the puts and
+   * deletes are not replicated back to the originating cluster.
    */
   @Test
   public void testCyclicReplication1() throws Exception {
@@ -175,8 +174,7 @@ public class TestMasterReplication {
    * the replication peer should not be added.
    */
   @Test(expected = DoNotRetryIOException.class)
-  public void testLoopedReplication()
-    throws Exception {
+  public void testLoopedReplication() throws Exception {
     LOG.info("testLoopedReplication");
     startMiniClusters(1);
     createTableOnClusters(table);
@@ -198,8 +196,8 @@ public class TestMasterReplication {
       // Load 100 rows for each hfile range in cluster '0' and validate whether its been replicated
       // to cluster '1'.
       byte[][][] hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
+          new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+              new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
       int numOfRows = 100;
       int[] expectedCounts =
           new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
@@ -210,10 +208,10 @@ public class TestMasterReplication {
       // Load 200 rows for each hfile range in cluster '1' and validate whether its been replicated
       // to cluster '0'.
       hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("gggg"), Bytes.toBytes("iiii") },
-        new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
+          new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
       numOfRows = 200;
       int[] newExpectedCounts = new int[] { hfileRanges.length * numOfRows + expectedCounts[0],
-        hfileRanges.length * numOfRows + expectedCounts[1] };
+          hfileRanges.length * numOfRows + expectedCounts[1] };
 
       loadAndValidateHFileReplication("testHFileCyclicReplication_10", 1, new int[] { 0 }, row,
         famName, htables, hfileRanges, numOfRows, newExpectedCounts, true);
@@ -312,12 +310,12 @@ public class TestMasterReplication {
       // Load 100 rows for each hfile range in cluster '0' and validate whether its been replicated
       // to cluster '1'.
       byte[][][] hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes("mmmm"), Bytes.toBytes("oooo") },
-          new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("rrr") }, };
+          new byte[][][] { new byte[][] { Bytes.toBytes("mmmm"), Bytes.toBytes("oooo") },
+              new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("rrr") }, };
       int numOfRows = 100;
 
       int[] expectedCounts =
-        new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
+          new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
 
       loadAndValidateHFileReplication("testHFileCyclicReplication_0", 0, new int[] { 1 }, row,
         famName, htables, hfileRanges, numOfRows, expectedCounts, true);
@@ -333,11 +331,11 @@ public class TestMasterReplication {
       // Load 200 rows for each hfile range in cluster '0' and validate whether its been replicated
       // to cluster '1' and '2'. Previous data should be replicated to cluster '2'.
       hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("ssss"), Bytes.toBytes("uuuu") },
-        new byte[][] { Bytes.toBytes("vvv"), Bytes.toBytes("xxx") }, };
+          new byte[][] { Bytes.toBytes("vvv"), Bytes.toBytes("xxx") }, };
       numOfRows = 200;
 
       int[] newExpectedCounts = new int[] { hfileRanges.length * numOfRows + expectedCounts[0],
-        hfileRanges.length * numOfRows + expectedCounts[1], hfileRanges.length * numOfRows };
+          hfileRanges.length * numOfRows + expectedCounts[1], hfileRanges.length * numOfRows };
 
       loadAndValidateHFileReplication("testHFileCyclicReplication_1", 0, new int[] { 1, 2 }, row,
         famName, htables, hfileRanges, numOfRows, newExpectedCounts, true);
@@ -368,8 +366,8 @@ public class TestMasterReplication {
 
       // Load 100 rows for each hfile range in cluster '0' for table CF 'f'
       byte[][][] hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
+          new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+              new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
       int numOfRows = 100;
       int[] expectedCounts =
           new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
@@ -379,11 +377,11 @@ public class TestMasterReplication {
 
       // Load 100 rows for each hfile range in cluster '0' for table CF 'f1'
       hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("gggg"), Bytes.toBytes("iiii") },
-        new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
+          new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
       numOfRows = 100;
 
       int[] newExpectedCounts =
-        new int[] { hfileRanges.length * numOfRows + expectedCounts[0], expectedCounts[1] };
+          new int[] { hfileRanges.length * numOfRows + expectedCounts[0], expectedCounts[1] };
 
       loadAndValidateHFileReplication("load_f1", 0, new int[] { 1 }, row, famName1, htables,
         hfileRanges, numOfRows, newExpectedCounts, false);
@@ -442,13 +440,11 @@ public class TestMasterReplication {
   }
 
   /**
-   * Tests that base replication peer configs are applied on peer creation
-   * and the configs are overriden if updated as part of updateReplicationPeerConfig()
-   *
+   * Tests that base replication peer configs are applied on peer creation and the configs are
+   * overriden if updated as part of updateReplicationPeerConfig()
    */
   @Test
-  public void testBasePeerConfigsForReplicationPeer()
-    throws Exception {
+  public void testBasePeerConfigsForReplicationPeer() throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
     String firstCustomPeerConfigValue = "test";
@@ -466,50 +462,50 @@ public class TestMasterReplication {
       Admin admin = utilities[0].getAdmin();
 
       // Validates base configs 1 is present for both peer.
-      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
-        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("2").getConfiguration().get(firstCustomPeerConfigKey));
 
       // override value of configuration 1 for peer "1".
-      ReplicationPeerConfig updatedReplicationConfigForPeer1 = ReplicationPeerConfig.
-        newBuilder(admin.getReplicationPeerConfig("1")).
-        putConfiguration(firstCustomPeerConfigKey, firstCustomPeerConfigUpdatedValue).build();
+      ReplicationPeerConfig updatedReplicationConfigForPeer1 = ReplicationPeerConfig
+          .newBuilder(admin.getReplicationPeerConfig("1"))
+          .putConfiguration(firstCustomPeerConfigKey, firstCustomPeerConfigUpdatedValue).build();
 
       // add configuration 2 for peer "2".
-      ReplicationPeerConfig updatedReplicationConfigForPeer2 = ReplicationPeerConfig.
-        newBuilder(admin.getReplicationPeerConfig("2")).
-        putConfiguration(secondCustomPeerConfigKey, secondCustomPeerConfigUpdatedValue).build();
+      ReplicationPeerConfig updatedReplicationConfigForPeer2 = ReplicationPeerConfig
+          .newBuilder(admin.getReplicationPeerConfig("2"))
+          .putConfiguration(secondCustomPeerConfigKey, secondCustomPeerConfigUpdatedValue).build();
 
       admin.updateReplicationPeerConfig("1", updatedReplicationConfigForPeer1);
       admin.updateReplicationPeerConfig("2", updatedReplicationConfigForPeer2);
 
       // validates configuration is overridden by updateReplicationPeerConfig
-      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
-        getConfiguration().get(secondCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue,
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(secondCustomPeerConfigUpdatedValue,
+        admin.getReplicationPeerConfig("2").getConfiguration().get(secondCustomPeerConfigKey));
 
       // Add second config to base config and perform restart.
-      utilities[0].getConfiguration().set(ReplicationPeerConfigUtil.
-        HBASE_REPLICATION_PEER_BASE_CONFIG, firstCustomPeerConfigKey.concat("=").
-        concat(firstCustomPeerConfigValue).concat(";").concat(secondCustomPeerConfigKey)
-        .concat("=").concat(secondCustomPeerConfigValue));
+      utilities[0].getConfiguration().set(
+        ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        firstCustomPeerConfigKey.concat("=").concat(firstCustomPeerConfigValue).concat(";")
+            .concat(secondCustomPeerConfigKey).concat("=").concat(secondCustomPeerConfigValue));
 
       utilities[0].shutdownMiniHBaseCluster();
       utilities[0].restartHBaseCluster(1);
       admin = utilities[0].getAdmin();
 
       // Configurations should be updated after restart again
-      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
-        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("2").getConfiguration().get(firstCustomPeerConfigKey));
 
-      Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(secondCustomPeerConfigKey));
-      Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
-        getConfiguration().get(secondCustomPeerConfigKey));
+      Assert.assertEquals(secondCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("1").getConfiguration().get(secondCustomPeerConfigKey));
+      Assert.assertEquals(secondCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("2").getConfiguration().get(secondCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
@@ -517,8 +513,7 @@ public class TestMasterReplication {
   }
 
   @Test
-  public void testBasePeerConfigsRemovalForReplicationPeer()
-    throws Exception {
+  public void testBasePeerConfigsRemovalForReplicationPeer() throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
     String firstCustomPeerConfigValue = "test";
@@ -531,22 +526,22 @@ public class TestMasterReplication {
       Admin admin = utilities[0].getAdmin();
 
       // Validates base configs 1 is present for both peer.
-      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue,
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
 
-      utilities[0].getConfiguration().unset(ReplicationPeerConfigUtil.
-        HBASE_REPLICATION_PEER_BASE_CONFIG);
-      utilities[0].getConfiguration().set(ReplicationPeerConfigUtil.
-        HBASE_REPLICATION_PEER_BASE_CONFIG, firstCustomPeerConfigKey.concat("=").concat(""));
-
+      utilities[0].getConfiguration()
+          .unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
+      utilities[0].getConfiguration().set(
+        ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        firstCustomPeerConfigKey.concat("=").concat(""));
 
       utilities[0].shutdownMiniHBaseCluster();
       utilities[0].restartHBaseCluster(1);
       admin = utilities[0].getAdmin();
 
       // Configurations should be removed after restart again
-      Assert.assertNull(admin.getReplicationPeerConfig("1")
-        .getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertNull(
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
@@ -554,8 +549,7 @@ public class TestMasterReplication {
   }
 
   @Test
-  public void testRemoveBasePeerConfigWithoutExistingConfigForReplicationPeer()
-    throws Exception {
+  public void testRemoveBasePeerConfigWithoutExistingConfigForReplicationPeer() throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
 
@@ -566,8 +560,8 @@ public class TestMasterReplication {
       addPeer("1", 0, 1);
       Admin admin = utilities[0].getAdmin();
 
-      Assert.assertNull("Config should not be there", admin.getReplicationPeerConfig("1").
-        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertNull("Config should not be there",
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
@@ -586,8 +580,7 @@ public class TestMasterReplication {
     configurations = new Configuration[numClusters];
     for (int i = 0; i < numClusters; i++) {
       Configuration conf = new Configuration(baseConfiguration);
-      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + i +
-        ThreadLocalRandom.current().nextInt());
+      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + i + ThreadLocalRandom.current().nextInt());
       HBaseTestingUtility utility = new HBaseTestingUtility(conf);
       if (i == 0) {
         utility.startMiniZKCluster();
@@ -618,10 +611,10 @@ public class TestMasterReplication {
     }
   }
 
-  private void addPeer(String id, int masterClusterNumber,
-      int slaveClusterNumber) throws Exception {
+  private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber)
+      throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
-      Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey()));
     }
@@ -630,9 +623,8 @@ public class TestMasterReplication {
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
-      Admin admin = conn.getAdmin()) {
-      admin.addReplicationPeer(
-        id,
+        Admin admin = conn.getAdmin()) {
+      admin.addReplicationPeer(id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
             .setReplicateAllUserTables(false)
             .setTableCFsMap(ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs)));
@@ -641,14 +633,14 @@ public class TestMasterReplication {
 
   private void disablePeer(String id, int masterClusterNumber) throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
-      Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
       admin.disableReplicationPeer(id);
     }
   }
 
   private void enablePeer(String id, int masterClusterNumber) throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
-      Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
       admin.enableReplicationPeer(id);
     }
   }
@@ -676,11 +668,11 @@ public class TestMasterReplication {
     return htables;
   }
 
-  private void validateCounts(Table[] htables, byte[] type,
-      int[] expectedCounts) throws IOException {
+  private void validateCounts(Table[] htables, byte[] type, int[] expectedCounts)
+      throws IOException {
     for (int i = 0; i < htables.length; i++) {
-      assertEquals(Bytes.toString(type) + " were replicated back ",
-          expectedCounts[i], getCount(htables[i], type));
+      assertEquals(Bytes.toString(type) + " were replicated back ", expectedCounts[i],
+        getCount(htables[i], type));
     }
   }
 
@@ -691,15 +683,13 @@ public class TestMasterReplication {
     return Bytes.toInt(res.getValue(count, type));
   }
 
-  private void deleteAndWait(byte[] row, Table source, Table target)
-      throws Exception {
+  private void deleteAndWait(byte[] row, Table source, Table target) throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
     wait(row, target, true);
   }
 
-  private void putAndWait(byte[] row, byte[] fam, Table source, Table target)
-      throws Exception {
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table target) throws Exception {
     Put put = new Put(row);
     put.addColumn(fam, row, row);
     source.put(put);
@@ -765,15 +755,14 @@ public class TestMasterReplication {
       Result res = target.get(get);
       boolean sleep = isDeleted ? res.size() > 0 : res.isEmpty();
       if (sleep) {
-        LOG.info("Waiting for more time for replication. Row:"
-            + Bytes.toString(row) + ". IsDeleteReplication:" + isDeleted);
+        LOG.info("Waiting for more time for replication. Row:" + Bytes.toString(row)
+            + ". IsDeleteReplication:" + isDeleted);
         Thread.sleep(SLEEP_TIME);
       } else {
         if (!isDeleted) {
           assertArrayEquals(res.value(), row);
         }
-        LOG.info("Obtained row:"
-            + Bytes.toString(row) + ". IsDeleteReplication:" + isDeleted);
+        LOG.info("Obtained row:" + Bytes.toString(row) + ". IsDeleteReplication:" + isDeleted);
         break;
       }
     }
@@ -813,8 +802,8 @@ public class TestMasterReplication {
     try {
       latch.await();
     } catch (InterruptedException exception) {
-      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later " +
-          "replication tests fail, it's probably because we should still be waiting.");
+      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later "
+          + "replication tests fail, it's probably because we should still be waiting.");
       Thread.currentThread().interrupt();
     }
     region.getWAL().unregisterWALActionsListener(listener);
@@ -846,8 +835,8 @@ public class TestMasterReplication {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Get get, final List<Cell> result) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+        final List<Cell> result) throws IOException {
       if (get.getAttribute("count") != null) {
         result.clear();
         // order is important!

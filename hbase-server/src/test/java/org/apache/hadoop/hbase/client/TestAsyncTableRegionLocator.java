@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionLocator.class);
+      HBaseClassTestRule.forClass(TestAsyncTableRegionLocator.class);
 
   private static AsyncConnection CONN;
 
@@ -68,7 +68,7 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
   @Override
   protected Pair<byte[][], byte[][]> getStartEndKeys(TableName tableName) throws IOException {
     List<Pair<byte[], byte[]>> startEndKeys =
-      get(CONN.getRegionLocator(tableName).getStartEndKeys());
+        get(CONN.getRegionLocator(tableName).getStartEndKeys());
     byte[][] startKeys = new byte[startEndKeys.size()][];
     byte[][] endKeys = new byte[startEndKeys.size()][];
     for (int i = 0, n = startEndKeys.size(); i < n; i++) {

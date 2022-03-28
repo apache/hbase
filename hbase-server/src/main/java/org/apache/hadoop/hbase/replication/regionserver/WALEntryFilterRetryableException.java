@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +21,9 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This exception should be thrown from any wal filter when the filter is expected
- * to recover from the failures and it wants the replication to backup till it fails.
- * There is special handling in replication wal reader to catch this exception and
- * retry.
+ * This exception should be thrown from any wal filter when the filter is expected to recover from
+ * the failures and it wants the replication to backup till it fails. There is special handling in
+ * replication wal reader to catch this exception and retry.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class WALEntryFilterRetryableException extends RuntimeException {

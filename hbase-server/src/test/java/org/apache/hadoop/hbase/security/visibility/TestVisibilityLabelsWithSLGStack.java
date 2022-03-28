@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsWithSLGStack {
 
   @ClassRule
@@ -112,17 +112,17 @@ public class TestVisibilityLabelsWithSLGStack {
   private static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
-        }
-        return null;
-      }
-    };
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            String[] labels = { SECRET, CONFIDENTIAL };
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              VisibilityClient.addLabels(conn, labels);
+            } catch (Throwable t) {
+              throw new IOException(t);
+            }
+            return null;
+          }
+        };
     SUPERUSER.runAs(action);
   }
 

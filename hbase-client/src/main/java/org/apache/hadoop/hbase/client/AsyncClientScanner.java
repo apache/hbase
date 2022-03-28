@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -165,13 +165,13 @@ class AsyncClientScanner {
   private void startScan(OpenScannerResponse resp) {
     addListener(
       conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
-        .remote(resp.isRegionServerRemote)
-        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
-        .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
-        .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
+          .remote(resp.isRegionServerRemote)
+          .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+          .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
+          .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+          .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+          .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+          .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
       (hasMore, error) -> {
         if (error != null) {
           consumer.onError(error);
@@ -187,16 +187,16 @@ class AsyncClientScanner {
 
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
     return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
-      .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
-      .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-      .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-      .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
-      .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
+        .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
+        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
   }
 
   private long getPrimaryTimeoutNs() {
     return TableName.isMetaTableName(tableName) ? conn.connConf.getPrimaryMetaScanTimeoutNs()
-      : conn.connConf.getPrimaryScanTimeoutNs();
+        : conn.connConf.getPrimaryScanTimeoutNs();
   }
 
   private void openScanner() {

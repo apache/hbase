@@ -187,8 +187,8 @@ public class TestReadOnlyZKClient {
     doAnswer(i -> {
       exchanger.exchange(i.getArgument(2));
       return null;
-    }).when(mockedZK).getData(anyString(), anyBoolean(),
-      any(AsyncCallback.DataCallback.class), any());
+    }).when(mockedZK).getData(anyString(), anyBoolean(), any(AsyncCallback.DataCallback.class),
+      any());
     doAnswer(i -> null).when(mockedZK).close();
     when(mockedZK.getState()).thenReturn(ZooKeeper.States.CONNECTED);
     RO_ZK.zookeeper = mockedZK;

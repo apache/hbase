@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.io.IOException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public interface RpcRetryingCaller<T> {
@@ -34,17 +33,16 @@ public interface RpcRetryingCaller<T> {
    * @throws RuntimeException other unspecified error
    */
   T callWithRetries(RetryingCallable<T> callable, int callTimeout)
-  throws IOException, RuntimeException;
+      throws IOException, RuntimeException;
 
   /**
-   * Call the server once only.
-   * {@link RetryingCallable} has a strange shape so we can do retries.  Use this invocation if you
-   * want to do a single call only (A call to {@link RetryingCallable#call(int)} will not likely
-   * succeed).
+   * Call the server once only. {@link RetryingCallable} has a strange shape so we can do retries.
+   * Use this invocation if you want to do a single call only (A call to
+   * {@link RetryingCallable#call(int)} will not likely succeed).
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
   T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
-  throws IOException, RuntimeException;
+      throws IOException, RuntimeException;
 }

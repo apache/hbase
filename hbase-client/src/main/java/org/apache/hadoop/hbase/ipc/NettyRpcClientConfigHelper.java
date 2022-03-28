@@ -45,21 +45,22 @@ public final class NettyRpcClientConfigHelper {
   public static final String EVENT_LOOP_CONFIG = "hbase.rpc.client.event-loop.config";
 
   /**
-   * Name of property to change netty rpc client eventloop thread count. Default is 0.
-   * Tests may set this down from unlimited.
+   * Name of property to change netty rpc client eventloop thread count. Default is 0. Tests may set
+   * this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY =
-    "hbase.netty.eventloop.rpcclient.thread.count";
+      "hbase.netty.eventloop.rpcclient.thread.count";
 
   private static final String CONFIG_NAME = "global-event-loop";
 
-  private static final Map<String, Pair<EventLoopGroup, Class<? extends Channel>>>
-    EVENT_LOOP_CONFIG_MAP = new HashMap<>();
+  private static final Map<String, Pair<EventLoopGroup, Class<? extends Channel>>> EVENT_LOOP_CONFIG_MAP =
+      new HashMap<>();
 
   /**
    * Shutdown constructor.
    */
-  private NettyRpcClientConfigHelper() {}
+  private NettyRpcClientConfigHelper() {
+  }
 
   /**
    * Set the EventLoopGroup and channel class for {@code AsyncRpcClient}.
@@ -84,7 +85,7 @@ public final class NettyRpcClientConfigHelper {
   private static volatile Pair<EventLoopGroup, Class<? extends Channel>> DEFAULT_EVENT_LOOP;
 
   private static Pair<EventLoopGroup, Class<? extends Channel>>
-    getDefaultEventLoopConfig(Configuration conf) {
+      getDefaultEventLoopConfig(Configuration conf) {
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoop = DEFAULT_EVENT_LOOP;
     if (eventLoop != null) {
       return eventLoop;
@@ -96,9 +97,9 @@ public final class NettyRpcClientConfigHelper {
       }
       int threadCount = conf.getInt(HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
       eventLoop = new Pair<>(
-        new NioEventLoopGroup(threadCount,
-          new DefaultThreadFactory("RPCClient-NioEventLoopGroup", true, Thread.NORM_PRIORITY)),
-        NioSocketChannel.class);
+          new NioEventLoopGroup(threadCount,
+              new DefaultThreadFactory("RPCClient-NioEventLoopGroup", true, Thread.NORM_PRIORITY)),
+          NioSocketChannel.class);
       DEFAULT_EVENT_LOOP = eventLoop;
     }
     return eventLoop;

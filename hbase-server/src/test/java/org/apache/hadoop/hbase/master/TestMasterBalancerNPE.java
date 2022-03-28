@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -93,7 +92,7 @@ public class TestMasterBalancerNPE {
 
     final RegionInfo regionInfo = regionInfos.get(0);
 
-    StochasticLoadBalancer loadBalancer = (StochasticLoadBalancer)master.getLoadBalancer();
+    StochasticLoadBalancer loadBalancer = (StochasticLoadBalancer) master.getLoadBalancer();
     StochasticLoadBalancer spiedLoadBalancer = Mockito.spy(loadBalancer);
     final AtomicReference<RegionPlan> regionPlanRef = new AtomicReference<RegionPlan>();
 
@@ -106,11 +105,10 @@ public class TestMasterBalancerNPE {
       Map<ServerName, List<RegionInfo>> regionServerNameToRegionInfos =
           (Map<ServerName, List<RegionInfo>>) invocation.getArgument(1);
 
-
       List<ServerName> assignedRegionServerNames = new ArrayList<ServerName>();
       for (Map.Entry<ServerName, List<RegionInfo>> entry : regionServerNameToRegionInfos
           .entrySet()) {
-        if (entry.getValue()!= null) {
+        if (entry.getValue() != null) {
           entry.getValue().stream().forEach((reginInfo) -> {
             if (reginInfo.getTable().equals(tableName)) {
               assignedRegionServerNames.add(entry.getKey());
@@ -159,7 +157,6 @@ public class TestMasterBalancerNPE {
       return invocation.callRealMethod();
     }).when(spiedAssignmentManager).balance(Mockito.any());
 
-
     try {
       final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
       Thread unassignThread = new Thread(() -> {
@@ -191,8 +188,8 @@ public class TestMasterBalancerNPE {
        */
       TEST_UTIL.getAdmin().balancerSwitch(true, false);
       /**
-       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
-       * which may throw NPE.
+       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)} which may
+       * throw NPE.
        */
       master.balance();
 

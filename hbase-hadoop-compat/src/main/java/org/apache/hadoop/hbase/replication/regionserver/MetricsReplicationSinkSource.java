@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,9 +27,14 @@ public interface MetricsReplicationSinkSource {
   public static final String SINK_APPLIED_HFILES = "sink.appliedHFiles";
 
   void setLastAppliedOpAge(long age);
+
   void incrAppliedBatches(long batches);
+
   void incrAppliedOps(long batchsize);
+
   long getLastAppliedOpAge();
+
   void incrAppliedHFiles(long hfileSize);
+
   long getSinkAppliedOps();
 }

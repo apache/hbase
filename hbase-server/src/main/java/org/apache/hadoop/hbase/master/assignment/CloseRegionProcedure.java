@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,7 +79,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     CloseRegionProcedureStateData data =
-      serializer.deserialize(CloseRegionProcedureStateData.class);
+        serializer.deserialize(CloseRegionProcedureStateData.class);
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());
     }
@@ -94,8 +94,8 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   protected void checkTransition(RegionStateNode regionNode, TransitionCode transitionCode,
       long seqId) throws UnexpectedStateException {
     if (transitionCode != TransitionCode.CLOSED) {
-      throw new UnexpectedStateException("Received report unexpected " + transitionCode +
-        " transition, " + regionNode.toShortString() + ", " + this + ", expected CLOSED.");
+      throw new UnexpectedStateException("Received report unexpected " + transitionCode
+          + " transition, " + regionNode.toShortString() + ", " + this + ", expected CLOSED.");
     }
   }
 

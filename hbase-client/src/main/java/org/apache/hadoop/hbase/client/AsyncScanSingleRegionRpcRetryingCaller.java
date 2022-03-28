@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -169,8 +169,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     private void preCheck() {
       Preconditions.checkState(Thread.currentThread() == callerThread,
-        "The current thread is %s, expected thread is %s, " +
-            "you should not call this method outside onNext or onHeartbeat",
+        "The current thread is %s, expected thread is %s, "
+            + "you should not call this method outside onNext or onHeartbeat",
         Thread.currentThread(), callerThread);
       Preconditions.checkState(state.equals(ScanControllerState.INITIALIZED),
         "Invalid Stopper state %s", state);
@@ -200,7 +200,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     @Override
     public Optional<Cursor> cursor() {
-        return cursor;
+      return cursor;
     }
   }
 
@@ -351,9 +351,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     ScanRequest req = RequestConverter.buildScanRequest(this.scannerId, 0, true, false);
     stub.scan(controller, req, resp -> {
       if (controller.failed()) {
-        LOG.warn("Call to " + loc.getServerName() + " for closing scanner id = " + scannerId +
-            " for " + loc.getRegion().getEncodedName() + " of " +
-            loc.getRegion().getTable() + " failed, ignore, probably already closed",
+        LOG.warn("Call to " + loc.getServerName() + " for closing scanner id = " + scannerId
+            + " for " + loc.getRegion().getEncodedName() + " of " + loc.getRegion().getTable()
+            + " failed, ignore, probably already closed",
           controller.getFailed());
       }
     });
@@ -391,19 +391,19 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private void onError(Throwable error) {
     error = translateException(error);
     if (tries > startLogErrorsCnt) {
-      LOG.warn("Call to " + loc.getServerName() + " for scanner id = " + scannerId + " for " +
-          loc.getRegion().getEncodedName() + " of " + loc.getRegion().getTable() +
-          " failed, , tries = " + tries + ", maxAttempts = " + maxAttempts + ", timeout = " +
-          TimeUnit.NANOSECONDS.toMillis(scanTimeoutNs) + " ms, time elapsed = " + elapsedMs() +
-          " ms",
+      LOG.warn("Call to " + loc.getServerName() + " for scanner id = " + scannerId + " for "
+          + loc.getRegion().getEncodedName() + " of " + loc.getRegion().getTable()
+          + " failed, , tries = " + tries + ", maxAttempts = " + maxAttempts + ", timeout = "
+          + TimeUnit.NANOSECONDS.toMillis(scanTimeoutNs) + " ms, time elapsed = " + elapsedMs()
+          + " ms",
         error);
     }
-    boolean scannerClosed =
-      error instanceof UnknownScannerException || error instanceof NotServingRegionException ||
-        error instanceof RegionServerStoppedException || error instanceof ScannerResetException;
+    boolean scannerClosed = error instanceof UnknownScannerException
+        || error instanceof NotServingRegionException
+        || error instanceof RegionServerStoppedException || error instanceof ScannerResetException;
     RetriesExhaustedException.ThrowableWithExtraContext qt =
-      new RetriesExhaustedException.ThrowableWithExtraContext(error,
-        EnvironmentEdgeManager.currentTime(), "");
+        new RetriesExhaustedException.ThrowableWithExtraContext(error,
+            EnvironmentEdgeManager.currentTime(), "");
     exceptions.add(qt);
     if (tries >= maxAttempts) {
       completeExceptionally(!scannerClosed);

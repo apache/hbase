@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestReportOnlineRegionsRace {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReportOnlineRegionsRace.class);
+      HBaseClassTestRule.forClass(TestReportOnlineRegionsRace.class);
 
   private static volatile CountDownLatch ARRIVE_RS_REPORT;
   private static volatile CountDownLatch RESUME_RS_REPORT;
@@ -126,7 +126,7 @@ public class TestReportOnlineRegionsRace {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT);
+      HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT);
     UTIL.startMiniCluster(1);
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
@@ -141,7 +141,7 @@ public class TestReportOnlineRegionsRace {
   public void testRace() throws Exception {
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(NAME).get(0).getRegionInfo();
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     RegionStateNode rsn = am.getRegionStates().getRegionStateNode(region);
 
@@ -155,10 +155,10 @@ public class TestReportOnlineRegionsRace {
     // schedule a TRSP to REOPEN the region
     RESUME_REPORT_STATE = new CountDownLatch(1);
     Future<byte[]> future =
-      am.moveAsync(new RegionPlan(region, rsn.getRegionLocation(), rsn.getRegionLocation()));
+        am.moveAsync(new RegionPlan(region, rsn.getRegionLocation(), rsn.getRegionLocation()));
     TransitRegionStateProcedure proc =
-      procExec.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
-        .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p).findAny().get();
+        procExec.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
+            .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p).findAny().get();
     IdLock procExecLock = procExec.getProcExecutionLock();
     // a CloseRegionProcedure and then the OpenRegionProcedure we want to block
     IdLock.Entry lockEntry = procExecLock.getLockEntry(proc.getProcId() + 2);
@@ -181,7 +181,7 @@ public class TestReportOnlineRegionsRace {
     // confirm that the region can still be write, i.e, the regionServerReport method should not
     // change the region state to OPEN
     try (Table table = UTIL.getConnection().getTableBuilder(NAME, null).setWriteRpcTimeout(1000)
-      .setOperationTimeout(2000).build()) {
+        .setOperationTimeout(2000).build()) {
       table.put(
         new Put(Bytes.toBytes("key")).addColumn(CF, Bytes.toBytes("cq"), Bytes.toBytes("val")));
     }

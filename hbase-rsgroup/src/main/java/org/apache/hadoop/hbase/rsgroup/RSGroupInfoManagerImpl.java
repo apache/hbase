@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -75,13 +74,14 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.util.Shell;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This is an implementation of {@link RSGroupInfoManager} which makes use of an HBase table as the
@@ -111,12 +111,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private static final TableDescriptor RSGROUP_TABLE_DESC;
   static {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(RSGROUP_TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(META_FAMILY_BYTES))
-      .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(META_FAMILY_BYTES))
+        .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName());
     try {
       builder.setCoprocessor(
         CoprocessorDescriptorBuilder.newBuilder(MultiRowMutationEndpoint.class.getName())
-          .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
+            .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
     } catch (IOException ex) {
       throw new Error(ex);
     }
@@ -135,7 +135,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // contains list of groups that were last flushed to persistent store
   private Set<String> prevRSGroups = new HashSet<>();
   private final ServerEventsListenerThread serverEventsListenerThread =
-    new ServerEventsListenerThread();
+      new ServerEventsListenerThread();
 
   /** Get rsgroup table mapping script */
   RSGroupMappingScript script;
@@ -145,7 +145,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
     static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
-      "hbase.rsgroup.table.mapping.script.timeout";
+        "hbase.rsgroup.table.mapping.script.timeout";
 
     private Shell.ShellCommandExecutor rsgroupMappingScript;
 
@@ -155,9 +155,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         return;
       }
 
-      rsgroupMappingScript = new Shell.ShellCommandExecutor(
-        new String[] { script, "", "" }, null, null,
-        conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
+      rsgroupMappingScript = new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null,
+          null, conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
       );
     }
 
@@ -206,8 +205,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public synchronized void addRSGroup(RSGroupInfo rsGroupInfo) throws IOException {
     checkGroupName(rsGroupInfo.getName());
-    if (rsGroupMap.get(rsGroupInfo.getName()) != null ||
-      rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
+    if (rsGroupMap.get(rsGroupInfo.getName()) != null
+        || rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new DoNotRetryIOException("Group already exists: " + rsGroupInfo.getName());
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
@@ -249,8 +248,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // it. If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a
     // rsgroup of dead servers that are to come back later).
     Set<Address> onlineServers =
-      dst.getName().equals(RSGroupInfo.DEFAULT_GROUP) ? getOnlineServers(this.masterServices)
-        : null;
+        dst.getName().equals(RSGroupInfo.DEFAULT_GROUP) ? getOnlineServers(this.masterServices)
+            : null;
     for (Address el : servers) {
       src.removeServer(el);
       if (onlineServers != null) {
@@ -328,7 +327,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   public synchronized void removeRSGroup(String groupName) throws IOException {
     if (!rsGroupMap.containsKey(groupName) || groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new DoNotRetryIOException(
-        "Group " + groupName + " does not exist or is a reserved " + "group");
+          "Group " + groupName + " does not exist or is a reserved " + "group");
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(groupName);
@@ -411,23 +410,21 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       throw new ConstraintException("Group already exists: " + newName);
     }
 
-    Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(oldName);
-    RSGroupInfo newGroup = new RSGroupInfo(newName,
-      (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
+    RSGroupInfo newGroup =
+        new RSGroupInfo(newName, (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
     newGroupMap.put(newName, newGroup);
     flushConfig(newGroupMap);
   }
 
   /**
-   * Will try to get the rsgroup from {@code tableMap} first
-   * then try to get the rsgroup from {@code script}
-   * try to get the rsgroup from the {@link NamespaceDescriptor} lastly.
-   * If still not present, return default group.
+   * Will try to get the rsgroup from {@code tableMap} first then try to get the rsgroup from
+   * {@code script} try to get the rsgroup from the {@link NamespaceDescriptor} lastly. If still not
+   * present, return default group.
    */
   @Override
-  public RSGroupInfo determineRSGroupInfoForTable(TableName tableName)
-    throws IOException {
+  public RSGroupInfo determineRSGroupInfoForTable(TableName tableName) throws IOException {
     RSGroupInfo groupFromOldRSGroupInfo = getRSGroup(getRSGroupOfTable(tableName));
     if (groupFromOldRSGroupInfo != null) {
       return groupFromOldRSGroupInfo;
@@ -442,15 +439,15 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     ClusterSchema clusterSchema = masterServices.getClusterSchema();
     if (clusterSchema == null) {
       if (TableName.isMetaTableName(tableName)) {
-        LOG.info("Can not get the namespace rs group config for meta table, since the" +
-          " meta table is not online yet, will use default group to assign meta first");
+        LOG.info("Can not get the namespace rs group config for meta table, since the"
+            + " meta table is not online yet, will use default group to assign meta first");
       } else {
         LOG.warn("ClusterSchema is null, can only use default rsgroup, should not happen?");
       }
     } else {
       NamespaceDescriptor nd = clusterSchema.getNamespace(tableName.getNamespaceAsString());
       RSGroupInfo groupNameOfNs =
-        getRSGroup(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP));
+          getRSGroup(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP));
       if (groupNameOfNs != null) {
         return groupNameOfNs;
       }
@@ -464,8 +461,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     if (RSGroupInfo.DEFAULT_GROUP.equals(groupName)) {
       // We do not persist anything of default group, therefore, it is not supported to update
       // default group's configuration which lost once master down.
-      throw new ConstraintException("configuration of " + RSGroupInfo.DEFAULT_GROUP
-          + " can't be stored persistently");
+      throw new ConstraintException(
+          "configuration of " + RSGroupInfo.DEFAULT_GROUP + " can't be stored persistently");
     }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     new HashSet<>(rsGroupInfo.getConfiguration().keySet())
@@ -484,7 +481,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           break;
         }
         RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo
-          .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
+            .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
         rsGroupInfoList.add(RSGroupProtobufUtil.toGroupInfo(proto));
       }
     }
@@ -506,9 +503,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           if (data != null && data.length > 0) {
             ProtobufUtil.expectPBMagicPrefix(data);
             ByteArrayInputStream bis =
-              new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
+                new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
             RSGroupInfoList
-              .add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+                .add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
           }
         }
         LOG.debug("Read ZK GroupInfo count:" + RSGroupInfoList.size());
@@ -555,7 +552,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // This is added to the last of the list so it overwrites the 'default' rsgroup loaded
     // from region group table or zk
     groupList.add(
-        new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers(groupList), orphanTables));
+      new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers(groupList), orphanTables));
 
     // populate the data
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap();
@@ -619,9 +616,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Map<String, RSGroupInfo> oldGroupMap = Maps.newHashMap(rsGroupMap);
       RSGroupInfo oldDefaultGroup = oldGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
       RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
-      if (!oldGroupMap.equals(newGroupMap) /* compare both tables and servers in other groups */ ||
-          !oldDefaultGroup.getTables().equals(newDefaultGroup.getTables())
-          /* compare tables in default group */) {
+      if (!oldGroupMap.equals(newGroupMap)
+          /* compare both tables and servers in other groups */ || !oldDefaultGroup.getTables()
+              .equals(newDefaultGroup.getTables())
+      /* compare tables in default group */) {
         throw new IOException("Only servers in default group can be updated during offline mode");
       }
 
@@ -855,9 +853,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     private void createRSGroupTable() throws IOException {
       OptionalLong optProcId = masterServices.getProcedures().stream()
-        .filter(p -> p instanceof CreateTableProcedure).map(p -> (CreateTableProcedure) p)
-        .filter(p -> p.getTableName().equals(RSGROUP_TABLE_NAME)).mapToLong(Procedure::getProcId)
-        .findFirst();
+          .filter(p -> p instanceof CreateTableProcedure).map(p -> (CreateTableProcedure) p)
+          .filter(p -> p.getTableName().equals(RSGROUP_TABLE_NAME)).mapToLong(Procedure::getProcId)
+          .findFirst();
       long procId;
       if (optProcId.isPresent()) {
         procId = optProcId.getAsLong();
@@ -866,8 +864,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       // wait for region to be online
       int tries = 600;
-      while (!(masterServices.getMasterProcedureExecutor().isFinished(procId)) &&
-        masterServices.getMasterProcedureExecutor().isRunning() && tries > 0) {
+      while (!(masterServices.getMasterProcedureExecutor().isFinished(procId))
+          && masterServices.getMasterProcedureExecutor().isRunning() && tries > 0) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException e) {
@@ -880,8 +878,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       } else {
         Procedure<?> result = masterServices.getMasterProcedureExecutor().getResult(procId);
         if (result != null && result.isFailed()) {
-          throw new IOException(
-            "Failed to create group table. " + MasterProcedureUtil.unwrapRemoteIOException(result));
+          throw new IOException("Failed to create group table. "
+              + MasterProcedureUtil.unwrapRemoteIOException(result));
         }
       }
     }
@@ -899,7 +897,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     try (Table table = conn.getTable(RSGROUP_TABLE_NAME)) {
       CoprocessorRpcChannel channel = table.coprocessorService(ROW_KEY);
       MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder =
-        MultiRowMutationProtos.MutateRowsRequest.newBuilder();
+          MultiRowMutationProtos.MutateRowsRequest.newBuilder();
       for (Mutation mutation : mutations) {
         if (mutation instanceof Put) {
           mmrBuilder.addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
@@ -911,12 +909,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             mutation));
         } else {
           throw new DoNotRetryIOException(
-            "multiMutate doesn't support " + mutation.getClass().getName());
+              "multiMutate doesn't support " + mutation.getClass().getName());
         }
       }
 
       MultiRowMutationProtos.MultiRowMutationService.BlockingInterface service =
-        MultiRowMutationProtos.MultiRowMutationService.newBlockingStub(channel);
+          MultiRowMutationProtos.MultiRowMutationService.newBlockingStub(channel);
       try {
         service.mutateRows(null, mmrBuilder.build());
       } catch (ServiceException ex) {

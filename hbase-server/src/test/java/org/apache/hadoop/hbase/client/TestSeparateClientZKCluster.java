@@ -53,7 +53,7 @@ public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final File clientZkDir =
-    new File(TEST_UTIL.getDataTestDir("TestSeparateClientZKCluster").toString());
+      new File(TEST_UTIL.getDataTestDir("TestSeparateClientZKCluster").toString());
   private static final int ZK_SESSION_TIMEOUT = 5000;
   private static MiniZooKeeperCluster clientZkCluster;
 
@@ -68,7 +68,7 @@ public class TestSeparateClientZKCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeparateClientZKCluster.class);
+      HBaseClassTestRule.forClass(TestSeparateClientZKCluster.class);
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -89,7 +89,7 @@ public class TestSeparateClientZKCluster {
     TEST_UTIL.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, ZK_SESSION_TIMEOUT);
     // Start a cluster with 2 masters and 3 regionservers.
     StartMiniClusterOption option =
-      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+        StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -107,9 +107,9 @@ public class TestSeparateClientZKCluster {
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family);
+          ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // test simple get and put
       Put put = new Put(row);
@@ -154,13 +154,13 @@ public class TestSeparateClientZKCluster {
     // create table
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin();
-      Table table = conn.getTable(tn);
-      RegionLocator locator = conn.getRegionLocator(tn)) {
+        Table table = conn.getTable(tn);
+        RegionLocator locator = conn.getRegionLocator(tn)) {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family);
+          ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // issue some requests to cache the region location
       Put put = new Put(row);
@@ -207,9 +207,9 @@ public class TestSeparateClientZKCluster {
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family);
+          ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // put some data
       Put put = new Put(row);
@@ -247,9 +247,9 @@ public class TestSeparateClientZKCluster {
     TableName tn = name.getTableName();
     ColumnFamilyDescriptorBuilder cfDescBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
     TableDescriptorBuilder tableDescBuilder =
-      TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
     try (AsyncConnection ASYNC_CONN =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       ASYNC_CONN.getAdmin().createTable(tableDescBuilder.build()).get();
       AsyncTable<?> table = ASYNC_CONN.getTable(tn);
       // put some data
@@ -268,7 +268,7 @@ public class TestSeparateClientZKCluster {
   public void testChangeMetaReplicaCount() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     try (RegionLocator locator =
-      TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+        TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
       assertEquals(1, locator.getAllRegionLocations().size());
       HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 3);

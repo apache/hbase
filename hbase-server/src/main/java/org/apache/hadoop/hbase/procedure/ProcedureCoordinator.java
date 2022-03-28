@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,8 +41,8 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 /**
  * This is the master side of a distributed complex procedure execution.
  * <p>
- * The {@link Procedure} is generic and subclassing or customization shouldn't be
- * necessary -- any customization should happen just in {@link Subprocedure}s.
+ * The {@link Procedure} is generic and subclassing or customization shouldn't be necessary -- any
+ * customization should happen just in {@link Subprocedure}s.
  */
 @InterfaceAudience.Private
 public class ProcedureCoordinator {
@@ -57,16 +57,13 @@ public class ProcedureCoordinator {
   private final long wakeTimeMillis;
   private final long timeoutMillis;
 
-  // Running procedure table.  Maps procedure name to running procedure reference
+  // Running procedure table. Maps procedure name to running procedure reference
   private final ConcurrentMap<String, Procedure> procedures =
       new MapMaker().concurrencyLevel(4).weakValues().makeMap();
 
   /**
-   * Create and start a ProcedureCoordinator.
-   *
-   * The rpc object registers the ProcedureCoordinator and starts any threads in this
-   * constructor.
-   *
+   * Create and start a ProcedureCoordinator. The rpc object registers the ProcedureCoordinator and
+   * starts any threads in this constructor.
    * @param pool Used for executing procedures.
    */
   // Only used in tests. SimpleMasterProcedureManager is a test class.
@@ -75,11 +72,8 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Create and start a ProcedureCoordinator.
-   *
-   * The rpc object registers the ProcedureCoordinator and starts any threads in
-   * this constructor.
-   *
+   * Create and start a ProcedureCoordinator. The rpc object registers the ProcedureCoordinator and
+   * starts any threads in this constructor.
    * @param pool Used for executing procedures.
    */
   public ProcedureCoordinator(ProcedureCoordinatorRpcs rpcs, ThreadPoolExecutor pool,
@@ -93,7 +87,6 @@ public class ProcedureCoordinator {
 
   /**
    * Default thread pool for the procedure
-   *
    * @param coordName
    * @param opThreads the maximum number of threads to allow in the pool
    */
@@ -103,7 +96,6 @@ public class ProcedureCoordinator {
 
   /**
    * Default thread pool for the procedure
-   *
    * @param coordName
    * @param opThreads the maximum number of threads to allow in the pool
    * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
@@ -111,9 +103,10 @@ public class ProcedureCoordinator {
   public static ThreadPoolExecutor defaultPool(String coordName, int opThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, opThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-      new SynchronousQueue<>(),
-      new ThreadFactoryBuilder().setNameFormat("(" + coordName + ")-proc-coordinator-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        new SynchronousQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("(" + coordName + ")-proc-coordinator-pool-%d")
+            .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER)
+            .build());
   }
 
   /**
@@ -129,11 +122,11 @@ public class ProcedureCoordinator {
   /**
    * Submit an procedure to kick off its dependent subprocedures.
    * @param proc Procedure to execute
-   * @return <tt>true</tt> if the procedure was started correctly, <tt>false</tt> if the
-   *         procedure or any subprocedures could not be started.  Failure could be due to
-   *         submitting a procedure multiple times (or one with the same name), or some sort
-   *         of IO problem.  On errors, the procedure's monitor holds a reference to the exception
-   *         that caused the failure.
+   * @return <tt>true</tt> if the procedure was started correctly, <tt>false</tt> if the procedure
+   *         or any subprocedures could not be started. Failure could be due to submitting a
+   *         procedure multiple times (or one with the same name), or some sort of IO problem. On
+   *         errors, the procedure's monitor holds a reference to the exception that caused the
+   *         failure.
    */
   boolean submitProcedure(Procedure proc) {
     // if the submitted procedure was null, then we don't want to run it
@@ -177,7 +170,8 @@ public class ProcedureCoordinator {
         this.pool.submit(proc);
         return true;
       } else {
-        LOG.error("Another thread has submitted procedure '" + procName + "'. Ignoring this attempt.");
+        LOG.error(
+          "Another thread has submitted procedure '" + procName + "'. Ignoring this attempt.");
         return false;
       }
     } catch (RejectedExecutionException e) {
@@ -239,22 +233,20 @@ public class ProcedureCoordinator {
   Procedure createProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
       List<String> expectedMembers) {
     // build the procedure
-    return new Procedure(this, fed, wakeTimeMillis, timeoutMillis,
-        procName, procArgs, expectedMembers);
+    return new Procedure(this, fed, wakeTimeMillis, timeoutMillis, procName, procArgs,
+        expectedMembers);
   }
 
   /**
-   * Kick off the named procedure
-   * Currently only one procedure with the same type and name is allowed to run at a time.
+   * Kick off the named procedure Currently only one procedure with the same type and name is
+   * allowed to run at a time.
    * @param procName name of the procedure to start
    * @param procArgs arguments for the procedure
    * @param expectedMembers expected members to start
-   * @return handle to the running procedure, if it was started correctly,
-   *         <tt>null</tt> otherwise.
-   *         Null could be due to submitting a procedure multiple times
-   *         (or one with the same name), or runtime exception.
-   *         Check the procedure's monitor that holds a reference to the exception
-   *         that caused the failure.
+   * @return handle to the running procedure, if it was started correctly, <tt>null</tt> otherwise.
+   *         Null could be due to submitting a procedure multiple times (or one with the same name),
+   *         or runtime exception. Check the procedure's monitor that holds a reference to the
+   *         exception that caused the failure.
    */
   public Procedure startProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
       List<String> expectedMembers) {
@@ -267,19 +259,20 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Notification that the procedure had the specified member acquired its part of the barrier
-   * via {@link Subprocedure#acquireBarrier()}.
+   * Notification that the procedure had the specified member acquired its part of the barrier via
+   * {@link Subprocedure#acquireBarrier()}.
    * @param procName name of the procedure that acquired
    * @param member name of the member that acquired
    */
   void memberAcquiredBarrier(String procName, final String member) {
     Procedure proc = procedures.get(procName);
     if (proc == null) {
-      LOG.warn("Member '"+ member +"' is trying to acquire an unknown procedure '"+ procName +"'");
+      LOG.warn(
+        "Member '" + member + "' is trying to acquire an unknown procedure '" + procName + "'");
       return;
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Member '"+ member +"' acquired procedure '"+ procName +"'");
+      LOG.trace("Member '" + member + "' acquired procedure '" + procName + "'");
     }
     proc.barrierAcquiredByMember(member);
   }
@@ -294,11 +287,12 @@ public class ProcedureCoordinator {
   void memberFinishedBarrier(String procName, final String member, byte[] dataFromMember) {
     Procedure proc = procedures.get(procName);
     if (proc == null) {
-      LOG.warn("Member '"+ member +"' is trying to release an unknown procedure '"+ procName +"'");
+      LOG.warn(
+        "Member '" + member + "' is trying to release an unknown procedure '" + procName + "'");
       return;
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Member '"+ member +"' released procedure '"+ procName +"'");
+      LOG.trace("Member '" + member + "' released procedure '" + procName + "'");
     }
     proc.barrierReleasedByMember(member, dataFromMember);
   }
@@ -311,8 +305,8 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Returns the procedure.  This Procedure is a live instance so should not be modified but can
-   * be inspected.
+   * Returns the procedure. This Procedure is a live instance so should not be modified but can be
+   * inspected.
    * @param name Name of the procedure
    * @return Procedure or null if not present any more
    */

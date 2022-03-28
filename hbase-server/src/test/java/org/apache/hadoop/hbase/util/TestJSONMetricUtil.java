@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestJSONMetricUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJSONMetricUtil.class);
+      HBaseClassTestRule.forClass(TestJSONMetricUtil.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJSONMetricUtil.class);
 
@@ -70,7 +70,7 @@ public class TestJSONMetricUtil {
     String[] values = { "MemoryPool", "Par Eden Space" };
     Hashtable<String, String> properties = JSONMetricUtil.buldKeyValueTable(keys, values);
     ObjectName testObject =
-      JSONMetricUtil.buildObjectName(JSONMetricUtil.JAVA_LANG_DOMAIN, properties);
+        JSONMetricUtil.buildObjectName(JSONMetricUtil.JAVA_LANG_DOMAIN, properties);
     assertEquals(JSONMetricUtil.JAVA_LANG_DOMAIN, testObject.getDomain());
     assertEquals(testObject.getKeyPropertyList(), properties);
   }

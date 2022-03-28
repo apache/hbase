@@ -30,7 +30,6 @@ import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -58,7 +57,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionAfterBulkLoad.class);
+      HBaseClassTestRule.forClass(TestCompactionAfterBulkLoad.class);
 
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,

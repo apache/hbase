@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,13 +63,12 @@ public class AsyncMetaTableAccessor {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncMetaTableAccessor.class);
 
-
   /** The delimiter for meta columns for replicaIds &gt; 0 */
   private static final char META_REPLICA_ID_DELIMITER = '_';
 
   /** A regex for parsing server columns from meta. See above javadoc for meta layout */
-  private static final Pattern SERVER_COLUMN_PATTERN = Pattern
-      .compile("^server(_[0-9a-fA-F]{4})?$");
+  private static final Pattern SERVER_COLUMN_PATTERN =
+      Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
 
   public static CompletableFuture<Boolean> tableExists(AsyncTable<?> metaTable,
       TableName tableName) {
@@ -106,19 +105,20 @@ public class AsyncMetaTableAccessor {
    * @param regionName region we're looking for
    * @return HRegionLocation for the given region
    */
-  public static CompletableFuture<Optional<HRegionLocation>> getRegionLocation(
-      AsyncTable<?> metaTable, byte[] regionName) {
+  public static CompletableFuture<Optional<HRegionLocation>>
+      getRegionLocation(AsyncTable<?> metaTable, byte[] regionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
       RegionInfo parsedRegionInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
       addListener(metaTable.get(new Get(MetaTableAccessor.getMetaKeyForRegion(parsedRegionInfo))
-        .addFamily(HConstants.CATALOG_FAMILY)), (r, err) -> {
+          .addFamily(HConstants.CATALOG_FAMILY)),
+        (r, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
             return;
           }
           future.complete(getRegionLocations(r)
-            .map(locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
+              .map(locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
         });
     } catch (IOException parseEx) {
       LOG.warn("Failed to parse the passed region name: " + Bytes.toStringBinary(regionName));
@@ -133,12 +133,12 @@ public class AsyncMetaTableAccessor {
    * @param encodedRegionName region we're looking for
    * @return HRegionLocation for the given region
    */
-  public static CompletableFuture<Optional<HRegionLocation>> getRegionLocationWithEncodedName(
-      AsyncTable<?> metaTable, byte[] encodedRegionName) {
+  public static CompletableFuture<Optional<HRegionLocation>>
+      getRegionLocationWithEncodedName(AsyncTable<?> metaTable, byte[] encodedRegionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     addListener(
       metaTable
-        .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)),
+          .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)),
       (results, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
@@ -146,17 +146,17 @@ public class AsyncMetaTableAccessor {
         }
         String encodedRegionNameStr = Bytes.toString(encodedRegionName);
         results.stream().filter(result -> !result.isEmpty())
-          .filter(result -> MetaTableAccessor.getRegionInfo(result) != null).forEach(result -> {
-            getRegionLocations(result).ifPresent(locations -> {
-              for (HRegionLocation location : locations.getRegionLocations()) {
-                if (location != null &&
-                  encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
-                  future.complete(Optional.of(location));
-                  return;
+            .filter(result -> MetaTableAccessor.getRegionInfo(result) != null).forEach(result -> {
+              getRegionLocations(result).ifPresent(locations -> {
+                for (HRegionLocation location : locations.getRegionLocations()) {
+                  if (location != null
+                      && encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
+                    future.complete(Optional.of(location));
+                    return;
+                  }
                 }
-              }
+              });
             });
-          });
         future.complete(Optional.empty());
       });
     return future;
@@ -166,10 +166,9 @@ public class AsyncMetaTableAccessor {
     Cell cell = r.getColumnLatestCell(getTableFamily(), getStateColumn());
     if (cell == null) return Optional.empty();
     try {
-      return Optional.of(TableState.parseFrom(
-        TableName.valueOf(r.getRow()),
-        Arrays.copyOfRange(cell.getValueArray(), cell.getValueOffset(), cell.getValueOffset()
-            + cell.getValueLength())));
+      return Optional.of(
+        TableState.parseFrom(TableName.valueOf(r.getRow()), Arrays.copyOfRange(cell.getValueArray(),
+          cell.getValueOffset(), cell.getValueOffset() + cell.getValueLength())));
     } catch (DeserializationException e) {
       throw new IOException("Failed to parse table state from result: " + r, e);
     }
@@ -192,8 +191,8 @@ public class AsyncMetaTableAccessor {
         future.complete(Collections.emptyList());
       } else {
         List<HRegionLocation> regionLocations =
-          locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
-            .collect(Collectors.toList());
+            locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+                .collect(Collectors.toList());
         future.complete(regionLocations);
       }
     });
@@ -209,8 +208,8 @@ public class AsyncMetaTableAccessor {
    *         {@link CompletableFuture}.
    */
   private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
-      final AsyncTable<AdvancedScanResultConsumer> metaTable,
-      final TableName tableName, final boolean excludeOfflinedSplitParents) {
+      final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
+      final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       future.completeExceptionally(new IOException(
@@ -219,36 +218,36 @@ public class AsyncMetaTableAccessor {
 
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     CollectingVisitor<Pair<RegionInfo, ServerName>> visitor =
-      new CollectingVisitor<Pair<RegionInfo, ServerName>>() {
-      private RegionLocations current = null;
+        new CollectingVisitor<Pair<RegionInfo, ServerName>>() {
+          private RegionLocations current = null;
 
-      @Override
-      public boolean visit(Result r) throws IOException {
-        Optional<RegionLocations> currentRegionLocations = getRegionLocations(r);
-        current = currentRegionLocations.orElse(null);
-        if (current == null || current.getRegionLocation().getRegion() == null) {
-          LOG.warn("No serialized RegionInfo in " + r);
-          return true;
-        }
-        RegionInfo hri = current.getRegionLocation().getRegion();
-        if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-        // Else call super and add this Result to the collection.
-        return super.visit(r);
-      }
-
-      @Override
-      void add(Result r) {
-        if (current == null) {
-          return;
-        }
-        for (HRegionLocation loc : current.getRegionLocations()) {
-          if (loc != null) {
-            this.results.add(new Pair<RegionInfo, ServerName>(loc.getRegion(), loc
-                .getServerName()));
+          @Override
+          public boolean visit(Result r) throws IOException {
+            Optional<RegionLocations> currentRegionLocations = getRegionLocations(r);
+            current = currentRegionLocations.orElse(null);
+            if (current == null || current.getRegionLocation().getRegion() == null) {
+              LOG.warn("No serialized RegionInfo in " + r);
+              return true;
+            }
+            RegionInfo hri = current.getRegionLocation().getRegion();
+            if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
+            // Else call super and add this Result to the collection.
+            return super.visit(r);
           }
-        }
-      }
-    };
+
+          @Override
+          void add(Result r) {
+            if (current == null) {
+              return;
+            }
+            for (HRegionLocation loc : current.getRegionLocations()) {
+              if (loc != null) {
+                this.results
+                    .add(new Pair<RegionInfo, ServerName>(loc.getRegion(), loc.getServerName()));
+              }
+            }
+          }
+        };
 
     addListener(scanMeta(metaTable, tableName, QueryType.REGION, visitor), (v, error) -> {
       if (error != null) {
@@ -332,7 +331,7 @@ public class AsyncMetaTableAccessor {
 
     @Override
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",
-      justification = "https://github.com/findbugsproject/findbugs/issues/79")
+        justification = "https://github.com/findbugsproject/findbugs/issues/79")
     public void onComplete() {
       future.complete(null);
     }
@@ -423,9 +422,8 @@ public class AsyncMetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation parsed from the given meta row Result
-   * for the given regionInfo and replicaId. The regionInfo can be the default region info
-   * for the replica.
+   * Returns the HRegionLocation parsed from the given meta row Result for the given regionInfo and
+   * replicaId. The regionInfo can be the default region info for the replica.
    * @param r the meta row result
    * @param regionInfo RegionInfo for default replica
    * @param replicaId the replicaId for the HRegionLocation
@@ -448,8 +446,8 @@ public class AsyncMetaTableAccessor {
     byte[] serverColumn = getServerColumn(replicaId);
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
     if (cell == null || cell.getValueLength() == 0) return Optional.empty();
-    String hostAndPort = Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
-      cell.getValueLength());
+    String hostAndPort =
+        Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     byte[] startcodeColumn = getStartCodeColumn(replicaId);
     cell = r.getColumnLatestCell(getCatalogFamily(), startcodeColumn);
     if (cell == null || cell.getValueLength() == 0) return Optional.empty();
@@ -463,8 +461,8 @@ public class AsyncMetaTableAccessor {
   }
 
   /**
-   * The latest seqnum that the server writing to meta observed when opening the region.
-   * E.g. the seqNum when the result of {@link #getServerName(Result, int)} was written.
+   * The latest seqnum that the server writing to meta observed when opening the region. E.g. the
+   * seqNum when the result of {@link #getServerName(Result, int)} was written.
    * @param r Result to pull the seqNum from
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
    */
@@ -582,10 +580,9 @@ public class AsyncMetaTableAccessor {
    * @return a byte[] for server column qualifier
    */
   private static byte[] getServerColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.SERVER_QUALIFIER
-      : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SERVER_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -594,10 +591,9 @@ public class AsyncMetaTableAccessor {
    * @return a byte[] for server start code column qualifier
    */
   private static byte[] getStartCodeColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.STARTCODE_QUALIFIER
-      : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.STARTCODE_QUALIFIER
+        : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -606,15 +602,14 @@ public class AsyncMetaTableAccessor {
    * @return a byte[] for seqNum column qualifier
    */
   private static byte[] getSeqNumColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.SEQNUM_QUALIFIER
-      : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SEQNUM_QUALIFIER
+        : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
-   * Parses the replicaId from the server column qualifier. See top of the class javadoc
-   * for the actual meta layout
+   * Parses the replicaId from the server column qualifier. See top of the class javadoc for the
+   * actual meta layout
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */

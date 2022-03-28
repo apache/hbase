@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,11 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link BaseHFileCleanerDelegate} that prevents cleaning HFiles from a mob region
- *
- * keeps a map of table name strings to mob region name strings over the life of
- * a JVM instance. if there's churn of unique table names we'll eat memory until
- * Master restart.
+ * {@link BaseHFileCleanerDelegate} that prevents cleaning HFiles from a mob region keeps a map of
+ * table name strings to mob region name strings over the life of a JVM instance. if there's churn
+ * of unique table names we'll eat memory until Master restart.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ManualMobMaintHFileCleaner extends BaseHFileCleanerDelegate {
@@ -68,7 +66,7 @@ public class ManualMobMaintHFileCleaner extends BaseHFileCleanerDelegate {
         String tmp = MobUtils.getMobRegionInfo(tableName).getEncodedName();
         if (tmp == null) {
           LOG.error("couldn't determine mob region for table {} keeping files just in case.",
-              tableName);
+            tableName);
           return false;
         }
         mobRegion = MOB_REGIONS.putIfAbsent(tableName, tmp);
@@ -77,7 +75,7 @@ public class ManualMobMaintHFileCleaner extends BaseHFileCleanerDelegate {
           mobRegion = tmp;
         }
         LOG.debug("Had to calculate name of mob region for table {} and it is {}", tableName,
-            mobRegion);
+          mobRegion);
       }
 
       boolean ret = !mobRegion.equals(region.getName());
@@ -87,7 +85,7 @@ public class ManualMobMaintHFileCleaner extends BaseHFileCleanerDelegate {
       return ret;
     } catch (RuntimeException e) {
       LOG.error("Failed to determine mob status of '{}', keeping it just in case.", fStat.getPath(),
-          e);
+        e);
       return false;
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
-
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * A scan result consumer which buffers all the data in memory and you can call the {@link #take()}

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -50,14 +51,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class})
+@Category({ MediumTests.class })
 public class TestSplitWithBlockingFiles {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWithBlockingFiles.class);
+      HBaseClassTestRule.forClass(TestSplitWithBlockingFiles.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWithBlockingFiles.class);
 
@@ -66,7 +68,6 @@ public class TestSplitWithBlockingFiles {
   private static Admin ADMIN;
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
-
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -78,8 +79,8 @@ public class TestSplitWithBlockingFiles {
     UTIL.startMiniCluster(1);
     ADMIN = UTIL.getAdmin();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(CF).setBlocksize(1000).build()).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).setBlocksize(1000).build())
+        .build();
     TABLE = UTIL.createTable(td, null);
     UTIL.waitTableAvailable(TABLE_NAME);
   }
@@ -117,16 +118,16 @@ public class TestSplitWithBlockingFiles {
     assertNotNull(regions.get(0).getSplitPolicy().getSplitPoint());
     assertTrue(regions.get(0).getCompactPriority() >= PRIORITY_USER);
     assertTrue(UTIL.getMiniHBaseCluster().getRegionServer(0).getCompactSplitThread()
-      .requestSplit(regions.get(0)));
+        .requestSplit(regions.get(0)));
 
     // split region
     ADMIN.splitSwitch(true, true);
     MasterProcedureEnv env =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     final ProcedureExecutor<MasterProcedureEnv> executor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     SplitTableRegionProcedure splitProcedure =
-      new SplitTableRegionProcedure(env, regions.get(0).getRegionInfo(), Bytes.toBytes("row5"));
+        new SplitTableRegionProcedure(env, regions.get(0).getRegionInfo(), Bytes.toBytes("row5"));
     executor.submitProcedure(splitProcedure);
     ProcedureTestingUtility.waitProcedure(executor, splitProcedure.getProcId());
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the ability to specify favored nodes for a region.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionFavoredNodes {
 
   @ClassRule
@@ -57,8 +57,7 @@ public class TestRegionFavoredNodes {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Table table;
-  private static final TableName TABLE_NAME =
-      TableName.valueOf("table");
+  private static final TableName TABLE_NAME = TableName.valueOf("table");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("family");
   private static final int FAVORED_NODES_NUM = 3;
   private static final int REGION_SERVERS = 6;
@@ -69,8 +68,8 @@ public class TestRegionFavoredNodes {
   public static void setUpBeforeClass() throws Exception {
     try {
       createWithFavoredNode = DistributedFileSystem.class.getDeclaredMethod("create", Path.class,
-        FsPermission.class, boolean.class, int.class, short.class, long.class,
-        Progressable.class, InetSocketAddress[].class);
+        FsPermission.class, boolean.class, int.class, short.class, long.class, Progressable.class,
+        InetSocketAddress[].class);
     } catch (NoSuchMethodException nm) {
       return;
     }
@@ -104,13 +103,12 @@ public class TestRegionFavoredNodes {
       selfAddress = DataNode.class.getMethod("getXferAddress");
     }
     for (int i = 0; i < REGION_SERVERS; i++) {
-      nodes[i] = (InetSocketAddress)selfAddress.invoke(datanodes.get(i));
+      nodes[i] = (InetSocketAddress) selfAddress.invoke(datanodes.get(i));
     }
 
     String[] nodeNames = new String[REGION_SERVERS];
     for (int i = 0; i < REGION_SERVERS; i++) {
-      nodeNames[i] = nodes[i].getAddress().getHostAddress() + ":" +
-          nodes[i].getPort();
+      nodeNames[i] = nodes[i].getAddress().getHostAddress() + ":" + nodes[i].getPort();
     }
 
     // For each region, choose some datanodes as the favored nodes then assign
@@ -119,7 +117,7 @@ public class TestRegionFavoredNodes {
       HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
       List<HRegion> regions = server.getRegions(TABLE_NAME);
       for (HRegion region : regions) {
-        List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>favoredNodes =
+        List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes =
             new ArrayList<>(3);
         String encodedRegionName = region.getRegionInfo().getEncodedName();
         for (int j = 0; j < FAVORED_NODES_NUM; j++) {
@@ -147,24 +145,22 @@ public class TestRegionFavoredNodes {
       HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
       List<HRegion> regions = server.getRegions(TABLE_NAME);
       for (HRegion region : regions) {
-        List<String> files = region.getStoreFileList(new byte[][]{COLUMN_FAMILY});
+        List<String> files = region.getStoreFileList(new byte[][] { COLUMN_FAMILY });
         for (String file : files) {
-          FileStatus status = TEST_UTIL.getDFSCluster().getFileSystem().
-              getFileStatus(new Path(new URI(file).getPath()));
-          BlockLocation[] lbks =
-              ((DistributedFileSystem)TEST_UTIL.getDFSCluster().getFileSystem())
+          FileStatus status = TEST_UTIL.getDFSCluster().getFileSystem()
+              .getFileStatus(new Path(new URI(file).getPath()));
+          BlockLocation[] lbks = ((DistributedFileSystem) TEST_UTIL.getDFSCluster().getFileSystem())
               .getFileBlockLocations(status, 0, Long.MAX_VALUE);
           for (BlockLocation lbk : lbks) {
-            locations:
-              for (String info : lbk.getNames()) {
-                for (int j = 0; j < FAVORED_NODES_NUM; j++) {
-                  if (info.equals(nodeNames[(i + j) % REGION_SERVERS])) {
-                    continue locations;
-                  }
+            locations: for (String info : lbk.getNames()) {
+              for (int j = 0; j < FAVORED_NODES_NUM; j++) {
+                if (info.equals(nodeNames[(i + j) % REGION_SERVERS])) {
+                  continue locations;
                 }
-                // This block was at a location that was not a favored location.
-                fail("Block location " + info + " not a favored node");
               }
+              // This block was at a location that was not a favored location.
+              fail("Block location " + info + " not a favored node");
+            }
           }
         }
       }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -44,6 +45,7 @@ public class TestCachedClusterId {
 
   private static class GetClusterIdThread extends TestThread {
     CachedClusterId cachedClusterId;
+
     public GetClusterIdThread(TestContext ctx, CachedClusterId clusterId) {
       super(ctx);
       cachedClusterId = clusterId;
@@ -76,8 +78,8 @@ public class TestCachedClusterId {
   @Test
   public void testMultiThreadedGetClusterId() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    CachedClusterId cachedClusterId = new CachedClusterId(TEST_UTIL.getHBaseCluster().getMaster(),
-      conf);
+    CachedClusterId cachedClusterId =
+        new CachedClusterId(TEST_UTIL.getHBaseCluster().getMaster(), conf);
     TestContext context = new TestContext(conf);
     int numThreads = 16;
     for (int i = 0; i < numThreads; i++) {

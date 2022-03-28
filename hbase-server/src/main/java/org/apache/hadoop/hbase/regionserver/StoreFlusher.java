@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -58,8 +56,8 @@ abstract class StoreFlusher {
       MonitoredTask status, ThroughputController throughputController,
       FlushLifeCycleTracker tracker) throws IOException;
 
-  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
-      MonitoredTask status) throws IOException {
+  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum, MonitoredTask status)
+      throws IOException {
     // Write out the log sequence number that corresponds to this output
     // hfile. Also write current time in metadata as minFlushTime.
     // The hfile is current up to and including cacheFlushSeqNum.
@@ -69,14 +67,13 @@ abstract class StoreFlusher {
     writer.close();
   }
 
-
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
    * @param snapshotScanners
    * @return The scanner; null if coprocessor is canceling the flush.
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
-    FlushLifeCycleTracker tracker) throws IOException {
+      FlushLifeCycleTracker tracker) throws IOException {
     ScanInfo scanInfo;
     if (store.getCoprocessorHost() != null) {
       scanInfo = store.getCoprocessorHost().preFlushScannerOpen(store, tracker);

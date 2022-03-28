@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +22,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * A more restricted interface for HStore. Only gives the caller access to information
- * about store configuration/settings that cannot easily be obtained from XML config object.
- * Example user would be CompactionPolicy that doesn't need entire (H)Store, only this.
- * Add things here as needed.
+ * A more restricted interface for HStore. Only gives the caller access to information about store
+ * configuration/settings that cannot easily be obtained from XML config object. Example user would
+ * be CompactionPolicy that doesn't need entire (H)Store, only this. Add things here as needed.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -34,8 +32,8 @@ public interface StoreConfigInformation {
   /**
    * @return Gets the Memstore flush size for the region that this store works with.
    */
-  // TODO: Why is this in here?  It should be in Store and it should return the Store flush size,
-  // not the Regions.  St.Ack
+  // TODO: Why is this in here? It should be in Store and it should return the Store flush size,
+  // not the Regions. St.Ack
   long getMemStoreFlushSize();
 
   /**
@@ -44,9 +42,9 @@ public interface StoreConfigInformation {
   long getStoreFileTtl();
 
   /**
-   * @return Gets the cf-specific compaction check frequency multiplier.
-   *         The need for compaction (outside of normal checks during flush, open, etc.) will
-   *         be ascertained every multiplier * HConstants.THREAD_WAKE_FREQUENCY milliseconds.
+   * @return Gets the cf-specific compaction check frequency multiplier. The need for compaction
+   *         (outside of normal checks during flush, open, etc.) will be ascertained every
+   *         multiplier * HConstants.THREAD_WAKE_FREQUENCY milliseconds.
    */
   long getCompactionCheckMultiplier();
 

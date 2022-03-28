@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public final class HFileArchiveUtil {
    *         not be archived
    */
   public static Path getStoreArchivePath(final Configuration conf, final TableName tableName,
-    final String regionName, final String familyName) throws IOException {
+      final String regionName, final String familyName) throws IOException {
     Path tableArchiveDir = getTableArchivePath(conf, tableName);
     return HRegionFileSystem.getStoreHomedir(tableArchiveDir, regionName,
       Bytes.toBytes(familyName));
@@ -62,7 +62,7 @@ public final class HFileArchiveUtil {
    *         not be archived
    */
   public static Path getStoreArchivePath(Configuration conf, RegionInfo region, Path tabledir,
-    byte[] family) throws IOException {
+      byte[] family) throws IOException {
     return getStoreArchivePath(conf, region, family);
   }
 
@@ -75,7 +75,7 @@ public final class HFileArchiveUtil {
    *         not be archived
    */
   public static Path getStoreArchivePath(Configuration conf, RegionInfo region, byte[] family)
-    throws IOException {
+      throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
     return HRegionFileSystem.getStoreHomedir(tableArchiveDir, region, family);
@@ -98,7 +98,7 @@ public final class HFileArchiveUtil {
   }
 
   public static Path getStoreArchivePathForArchivePath(Path archivePath, RegionInfo region,
-    byte[] family) {
+      byte[] family) {
     Path tableArchiveDir = CommonFSUtils.getTableDir(archivePath, region.getTable());
     return HRegionFileSystem.getStoreHomedir(tableArchiveDir, region, family);
   }
@@ -128,7 +128,7 @@ public final class HFileArchiveUtil {
    *         should not be archived
    */
   public static Path getRegionArchiveDir(Path rootDir, TableName tableName,
-    String encodedRegionName) {
+      String encodedRegionName) {
     // get the archive directory for a table
     Path archiveDir = getTableArchivePath(rootDir, tableName);
     return HRegion.getRegionDir(archiveDir, encodedRegionName);
@@ -158,7 +158,7 @@ public final class HFileArchiveUtil {
    * @return {@link Path} to the archive directory for the table
    */
   public static Path getTableArchivePath(final Configuration conf, final TableName tableName)
-    throws IOException {
+      throws IOException {
     return CommonFSUtils.getTableDir(getArchivePath(conf), tableName);
   }
 

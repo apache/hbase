@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -66,15 +65,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.C
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
-public class CloneSnapshotProcedure
-    extends AbstractStateMachineTableProcedure<CloneSnapshotState> {
+public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<CloneSnapshotState> {
   private static final Logger LOG = LoggerFactory.getLogger(CloneSnapshotProcedure.class);
 
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
   private boolean restoreAcl;
   private List<RegionInfo> newRegions = null;
-  private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
+  private Map<String, Pair<String, String>> parentsToChildrenPairMap = new HashMap<>();
 
   // Monitor
   private MonitoredTask monitorStatus = null;
@@ -85,8 +83,8 @@ public class CloneSnapshotProcedure
   public CloneSnapshotProcedure() {
   }
 
-  public CloneSnapshotProcedure(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor, final SnapshotDescription snapshot) {
+  public CloneSnapshotProcedure(final MasterProcedureEnv env, final TableDescriptor tableDescriptor,
+      final SnapshotDescription snapshot) {
     this(env, tableDescriptor, snapshot, false);
   }
 
@@ -96,9 +94,8 @@ public class CloneSnapshotProcedure
    * @param tableDescriptor the table to operate on
    * @param snapshot snapshot to clone from
    */
-  public CloneSnapshotProcedure(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
-      final boolean restoreAcl) {
+  public CloneSnapshotProcedure(final MasterProcedureEnv env, final TableDescriptor tableDescriptor,
+      final SnapshotDescription snapshot, final boolean restoreAcl) {
     super(env);
     this.tableDescriptor = tableDescriptor;
     this.snapshot = snapshot;
@@ -112,8 +109,8 @@ public class CloneSnapshotProcedure
    */
   private MonitoredTask getMonitorStatus() {
     if (monitorStatus == null) {
-      monitorStatus = TaskMonitor.get().createStatus("Cloning  snapshot '" + snapshot.getName() +
-        "' to table " + getTableName());
+      monitorStatus = TaskMonitor.get().createStatus(
+        "Cloning  snapshot '" + snapshot.getName() + "' to table " + getTableName());
     }
     return monitorStatus;
   }
@@ -164,12 +161,11 @@ public class CloneSnapshotProcedure
 
           // For split regions, add them to RegionStates
           AssignmentManager am = env.getAssignmentManager();
-          splitRegions.forEach(ri ->
-            am.getRegionStates().updateRegionState(ri, RegionState.State.SPLIT)
-          );
+          splitRegions
+              .forEach(ri -> am.getRegionStates().updateRegionState(ri, RegionState.State.SPLIT));
 
-          addChildProcedure(env.getAssignmentManager()
-            .createRoundRobinAssignProcedures(regionsToAssign));
+          addChildProcedure(
+            env.getAssignmentManager().createRoundRobinAssignProcedures(regionsToAssign));
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
@@ -188,7 +184,7 @@ public class CloneSnapshotProcedure
           MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
           metricsSnapshot.addSnapshotClone(
             getMonitorStatus().getCompletionTimestamp() - getMonitorStatus().getStartTime());
-          getMonitorStatus().markComplete("Clone snapshot '"+ snapshot.getName() +"' completed!");
+          getMonitorStatus().markComplete("Clone snapshot '" + snapshot.getName() + "' completed!");
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -197,8 +193,9 @@ public class CloneSnapshotProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-clone-snapshot", e);
       } else {
-        LOG.warn("Retriable error trying to clone snapshot=" + snapshot.getName() +
-          " to table=" + getTableName() + " state=" + state, e);
+        LOG.warn("Retriable error trying to clone snapshot=" + snapshot.getName() + " to table="
+            + getTableName() + " state=" + state,
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -263,33 +260,31 @@ public class CloneSnapshotProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.CloneSnapshotStateData.Builder cloneSnapshotMsg =
-      MasterProcedureProtos.CloneSnapshotStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setSnapshot(this.snapshot)
-        .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
+        MasterProcedureProtos.CloneSnapshotStateData.newBuilder()
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser())).setSnapshot(this.snapshot)
+            .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
 
     cloneSnapshotMsg.setRestoreAcl(restoreAcl);
     if (newRegions != null) {
-      for (RegionInfo hri: newRegions) {
+      for (RegionInfo hri : newRegions) {
         cloneSnapshotMsg.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (!parentsToChildrenPairMap.isEmpty()) {
       final Iterator<Map.Entry<String, Pair<String, String>>> it =
-        parentsToChildrenPairMap.entrySet().iterator();
+          parentsToChildrenPairMap.entrySet().iterator();
       while (it.hasNext()) {
         final Map.Entry<String, Pair<String, String>> entry = it.next();
 
         MasterProcedureProtos.RestoreParentToChildRegionsPair.Builder parentToChildrenPair =
-          MasterProcedureProtos.RestoreParentToChildRegionsPair.newBuilder()
-          .setParentRegionName(entry.getKey())
-          .setChild1RegionName(entry.getValue().getFirst())
-          .setChild2RegionName(entry.getValue().getSecond());
+            MasterProcedureProtos.RestoreParentToChildRegionsPair.newBuilder()
+                .setParentRegionName(entry.getKey())
+                .setChild1RegionName(entry.getValue().getFirst())
+                .setChild2RegionName(entry.getValue().getSecond());
         cloneSnapshotMsg.addParentToChildRegionsPairList(parentToChildrenPair);
       }
     }
@@ -297,8 +292,7 @@ public class CloneSnapshotProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.CloneSnapshotStateData cloneSnapshotMsg =
@@ -313,19 +307,17 @@ public class CloneSnapshotProcedure
       newRegions = null;
     } else {
       newRegions = new ArrayList<>(cloneSnapshotMsg.getRegionInfoCount());
-      for (HBaseProtos.RegionInfo hri: cloneSnapshotMsg.getRegionInfoList()) {
+      for (HBaseProtos.RegionInfo hri : cloneSnapshotMsg.getRegionInfoList()) {
         newRegions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (cloneSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
       parentsToChildrenPairMap = new HashMap<>();
-      for (MasterProcedureProtos.RestoreParentToChildRegionsPair parentToChildrenPair:
-        cloneSnapshotMsg.getParentToChildRegionsPairListList()) {
-        parentsToChildrenPairMap.put(
-          parentToChildrenPair.getParentRegionName(),
-          new Pair<>(
-            parentToChildrenPair.getChild1RegionName(),
-            parentToChildrenPair.getChild2RegionName()));
+      for (MasterProcedureProtos.RestoreParentToChildRegionsPair parentToChildrenPair : cloneSnapshotMsg
+          .getParentToChildRegionsPairListList()) {
+        parentsToChildrenPairMap.put(parentToChildrenPair.getParentRegionName(),
+          new Pair<>(parentToChildrenPair.getChild1RegionName(),
+              parentToChildrenPair.getChild2RegionName()));
       }
     }
     // Make sure that the monitor status is set up
@@ -355,14 +347,12 @@ public class CloneSnapshotProcedure
       // Check and update namespace quota
       final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
 
-      SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterConfiguration(),
-        mfs.getFileSystem(),
-        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, mfs.getRootDir()),
-        snapshot);
+      SnapshotManifest manifest =
+          SnapshotManifest.open(env.getMasterConfiguration(), mfs.getFileSystem(),
+            SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, mfs.getRootDir()), snapshot);
 
-      ProcedureSyncWait.getMasterQuotaManager(env)
-        .checkNamespaceTableAndRegionQuota(getTableName(), manifest.getRegionManifestsMap().size());
+      ProcedureSyncWait.getMasterQuotaManager(env).checkNamespaceTableAndRegionQuota(getTableName(),
+        manifest.getRegionManifestsMap().size());
     }
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
@@ -381,8 +371,8 @@ public class CloneSnapshotProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      final RegionInfo[] regions = (newRegions == null) ? null :
-        newRegions.toArray(new RegionInfo[newRegions.size()]);
+      final RegionInfo[] regions =
+          (newRegions == null) ? null : newRegions.toArray(new RegionInfo[newRegions.size()]);
       cpHost.postCompletedCreateTableAction(tableDescriptor, regions, getUser());
     }
   }
@@ -392,16 +382,13 @@ public class CloneSnapshotProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<RegionInfo> createFilesystemLayout(
-    final MasterProcedureEnv env,
-    final TableDescriptor tableDescriptor,
-    final List<RegionInfo> newRegions) throws IOException {
+  private List<RegionInfo> createFilesystemLayout(final MasterProcedureEnv env,
+      final TableDescriptor tableDescriptor, final List<RegionInfo> newRegions) throws IOException {
     return createFsLayout(env, tableDescriptor, newRegions, new CreateHdfsRegions() {
       @Override
-      public List<RegionInfo> createHdfsRegions(
-        final MasterProcedureEnv env,
-        final Path tableRootDir, final TableName tableName,
-        final List<RegionInfo> newRegions) throws IOException {
+      public List<RegionInfo> createHdfsRegions(final MasterProcedureEnv env,
+          final Path tableRootDir, final TableName tableName, final List<RegionInfo> newRegions)
+          throws IOException {
 
         final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
         final FileSystem fs = mfs.getFileSystem();
@@ -415,30 +402,30 @@ public class CloneSnapshotProcedure
           // 1. Execute the on-disk Clone
           Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
           SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
-          RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-            conf, fs, manifest, tableDescriptor, tableRootDir, monitorException, monitorStatus);
+          RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs, manifest,
+              tableDescriptor, tableRootDir, monitorException, monitorStatus);
           RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
           // Clone operation should not have stuff to restore or remove
-          Preconditions.checkArgument(
-            !metaChanges.hasRegionsToRestore(), "A clone should not have regions to restore");
-          Preconditions.checkArgument(
-            !metaChanges.hasRegionsToRemove(), "A clone should not have regions to remove");
+          Preconditions.checkArgument(!metaChanges.hasRegionsToRestore(),
+            "A clone should not have regions to restore");
+          Preconditions.checkArgument(!metaChanges.hasRegionsToRemove(),
+            "A clone should not have regions to remove");
 
           // At this point the clone is complete. Next step is enabling the table.
           String msg =
-            "Clone snapshot="+ snapshot.getName() +" on table=" + tableName + " completed!";
+              "Clone snapshot=" + snapshot.getName() + " on table=" + tableName + " completed!";
           LOG.info(msg);
           monitorStatus.setStatus(msg + " Waiting for table to be enabled...");
 
           // 2. Let the next step to add the regions to meta
           return metaChanges.getRegionsToAdd();
         } catch (Exception e) {
-          String msg = "clone snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
-            " failed because " + e.getMessage();
+          String msg = "clone snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
+              + " failed because " + e.getMessage();
           LOG.error(msg, e);
-          IOException rse = new RestoreSnapshotException(msg, e,
-              ProtobufUtil.createSnapshotDesc(snapshot));
+          IOException rse =
+              new RestoreSnapshotException(msg, e, ProtobufUtil.createSnapshotDesc(snapshot));
 
           // these handlers aren't futures so we need to register the error here.
           monitorException.receive(new ForeignException("Master CloneSnapshotProcedure", rse));
@@ -453,11 +440,9 @@ public class CloneSnapshotProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<RegionInfo> createFsLayout(
-    final MasterProcedureEnv env,
-    final TableDescriptor tableDescriptor,
-    List<RegionInfo> newRegions,
-    final CreateHdfsRegions hdfsRegionHandler) throws IOException {
+  private List<RegionInfo> createFsLayout(final MasterProcedureEnv env,
+      final TableDescriptor tableDescriptor, List<RegionInfo> newRegions,
+      final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tempdir = mfs.getTempDir();
 
@@ -470,12 +455,12 @@ public class CloneSnapshotProcedure
       CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
     }
     ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
-      .createTableDescriptorForTableDirectory(tempTableDir,
-        TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
+        .createTableDescriptorForTableDirectory(tempTableDir,
+          TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
 
     // 2. Create Regions
-    newRegions = hdfsRegionHandler.createHdfsRegions(
-      env, tempdir, tableDescriptor.getTableName(), newRegions);
+    newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir, tableDescriptor.getTableName(),
+      newRegions);
 
     // 3. Move Table temp directory to the hbase root location
     CreateTableProcedure.moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
@@ -522,8 +507,7 @@ public class CloneSnapshotProcedure
     // TODO: parentsToChildrenPairMap is always empty, which makes updateMetaParentRegions()
     // a no-op. This part seems unnecessary. Figure out. - Appy 12/21/17
     RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
-        new RestoreSnapshotHelper.RestoreMetaChanges(
-                tableDescriptor, parentsToChildrenPairMap);
+        new RestoreSnapshotHelper.RestoreMetaChanges(tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
   }
 
@@ -531,7 +515,7 @@ public class CloneSnapshotProcedure
    * Exposed for Testing: HBASE-26462
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public boolean getRestoreAcl() {
     return restoreAcl;
   }

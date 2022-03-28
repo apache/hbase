@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,7 @@ public class TestTableInputFormatScanEmptyToOPP extends TestTableInputFormatScan
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableInputFormatScanEmptyToOPP.class);
+      HBaseClassTestRule.forClass(TestTableInputFormatScanEmptyToOPP.class);
 
   /**
    * Tests a MR scan using specific start and stop rows.

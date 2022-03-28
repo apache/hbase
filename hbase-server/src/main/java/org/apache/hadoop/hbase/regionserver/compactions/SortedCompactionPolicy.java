@@ -1,12 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
@@ -23,6 +30,7 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -47,8 +55,8 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   /**
    * @param candidateFiles candidate files, ordered from oldest to newest by seqId. We rely on
-   *   DefaultStoreFileManager to sort the files by seqId to guarantee contiguous compaction based
-   *   on seqId for data consistency.
+   *          DefaultStoreFileManager to sort the files by seqId to guarantee contiguous compaction
+   *          based on seqId for data consistency.
    * @return subset copy of candidate list that meets compaction criteria
    */
   public CompactionRequestImpl selectCompaction(Collection<HStoreFile> candidateFiles,
@@ -60,13 +68,14 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     // able to compact more if stuck and compacting, because ratio policy excludes some
     // non-compacting files from consideration during compaction (see getCurrentEligibleFiles).
     int futureFiles = filesCompacting.isEmpty() ? 0 : 1;
-    boolean mayBeStuck = (candidateFiles.size() - filesCompacting.size() + futureFiles)
-        >= storeConfigInfo.getBlockingFileCount();
+    boolean mayBeStuck =
+        (candidateFiles.size() - filesCompacting.size() + futureFiles) >= storeConfigInfo
+            .getBlockingFileCount();
 
     candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
-    LOG.debug("Selecting compaction from " + candidateFiles.size() + " store files, " +
-        filesCompacting.size() + " compacting, " + candidateSelection.size() +
-        " eligible, " + storeConfigInfo.getBlockingFileCount() + " blocking");
+    LOG.debug("Selecting compaction from " + candidateFiles.size() + " store files, "
+        + filesCompacting.size() + " compacting, " + candidateSelection.size() + " eligible, "
+        + storeConfigInfo.getBlockingFileCount() + " blocking");
 
     // If we can't have all files, we cannot do major anyway
     boolean isAllFiles = candidateFiles.size() == candidateSelection.size();
@@ -79,7 +88,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     // or if we do not have too many files to compact and this was requested as a major compaction
     boolean isTryingMajor = (forceMajor && isAllFiles && isUserCompaction)
         || (((forceMajor && isAllFiles) || shouldPerformMajorCompaction(candidateSelection))
-          && (candidateSelection.size() < comConf.getMaxFilesToCompact()));
+            && (candidateSelection.size() < comConf.getMaxFilesToCompact()));
     // Or, if there are any references among the candidates.
     boolean isAfterSplit = StoreUtils.hasReferences(candidateSelection);
 
@@ -122,8 +131,8 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     }
 
     /**
-     * Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_JITTER},
-     * that is, +/- 3.5 days (7 days * 0.5).
+     * Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_JITTER}, that
+     * is, +/- 3.5 days (7 days * 0.5).
      */
     double jitterPct = comConf.getMajorCompactionJitter();
     if (jitterPct <= 0) {
@@ -172,19 +181,18 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   /**
    * @param candidates pre-filtrate
-   * @return filtered subset exclude all files above maxCompactSize
-   *   Also save all references. We MUST compact them
+   * @return filtered subset exclude all files above maxCompactSize Also save all references. We
+   *         MUST compact them
    */
   protected ArrayList<HStoreFile> skipLargeFiles(ArrayList<HStoreFile> candidates,
-    boolean mayUseOffpeak) {
+      boolean mayUseOffpeak) {
     int pos = 0;
     while (pos < candidates.size() && !candidates.get(pos).isReference()
-      && (candidates.get(pos).getReader().length() > comConf.getMaxCompactSize(mayUseOffpeak))) {
+        && (candidates.get(pos).getReader().length() > comConf.getMaxCompactSize(mayUseOffpeak))) {
       ++pos;
     }
     if (pos > 0) {
-      LOG.debug("Some files are too large. Excluding " + pos
-          + " files from compaction candidates");
+      LOG.debug("Some files are too large. Excluding " + pos + " files from compaction candidates");
       candidates.subList(0, pos).clear();
     }
     return candidates;
@@ -200,16 +208,16 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
   /**
    * @param candidates pre-filtrate
    */
-  protected void removeExcessFiles(ArrayList<HStoreFile> candidates,
-      boolean isUserCompaction, boolean isMajorCompaction) {
+  protected void removeExcessFiles(ArrayList<HStoreFile> candidates, boolean isUserCompaction,
+      boolean isMajorCompaction) {
     int excess = candidates.size() - comConf.getMaxFilesToCompact();
     if (excess > 0) {
       if (isMajorCompaction && isUserCompaction) {
         LOG.debug("Warning, compacting more than " + comConf.getMaxFilesToCompact()
             + " files because of a user-requested major compaction");
       } else {
-        LOG.debug("Too many admissible files. Excluding " + excess
-            + " files from compaction candidates");
+        LOG.debug(
+          "Too many admissible files. Excluding " + excess + " files from compaction candidates");
         candidates.subList(comConf.getMaxFilesToCompact(), candidates.size()).clear();
       }
     }
@@ -223,8 +231,8 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
       int minFiles) {
     if (candidates.size() < minFiles) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Not compacting files because we only have " + candidates.size() +
-            " files ready for compaction. Need " + minFiles + " to initiate.");
+        LOG.debug("Not compacting files because we only have " + candidates.size()
+            + " files ready for compaction. Need " + minFiles + " to initiate.");
       }
       candidates.clear();
     }

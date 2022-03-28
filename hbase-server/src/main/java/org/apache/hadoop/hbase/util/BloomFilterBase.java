@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,8 +31,7 @@ public interface BloomFilterBase {
   long getKeyCount();
 
   /**
-   * @return The max number of keys that can be inserted
-   *         to maintain the desired error rate
+   * @return The max number of keys that can be inserted to maintain the desired error rate
    */
   long getMaxKeys();
 

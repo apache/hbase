@@ -34,15 +34,15 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * Class that manages the output streams from the log splitting process.
- * Every region only has one recovered edits file PER split WAL (if we split
- * multiple WALs during a log-splitting session, on open, a Region may
- * have multiple recovered.edits files to replay -- one per split WAL).
- * @see BoundedRecoveredEditsOutputSink which is like this class but imposes upper bound on
- *   the number of writers active at one time (makes for better throughput).
+ * Class that manages the output streams from the log splitting process. Every region only has one
+ * recovered edits file PER split WAL (if we split multiple WALs during a log-splitting session, on
+ * open, a Region may have multiple recovered.edits files to replay -- one per split WAL).
+ * @see BoundedRecoveredEditsOutputSink which is like this class but imposes upper bound on the
+ *      number of writers active at one time (makes for better throughput).
  */
 @InterfaceAudience.Private
 class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
@@ -61,9 +61,8 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
       LOG.warn("got an empty buffer, skipping");
       return;
     }
-    RecoveredEditsWriter writer =
-      getRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId());
+    RecoveredEditsWriter writer = getRecoveredEditsWriter(buffer.tableName,
+      buffer.encodedRegionName, entries.get(0).getKey().getSequenceId());
     if (writer != null) {
       writer.writeRegionEntries(entries);
     }
@@ -102,7 +101,6 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   /**
    * Close all of the output streams.
-   *
    * @return true when there is no error.
    */
   private boolean closeWriters() throws IOException {

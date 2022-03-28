@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +74,7 @@ public abstract class TestWALEntryStreamDifferentCounts extends WALEntryStreamTe
     log.rollWriter();
 
     try (WALEntryStream entryStream =
-      new WALEntryStream(logQueue, CONF, 0, log, null, new MetricsSource("1"), fakeWalGroupId)) {
+        new WALEntryStream(logQueue, CONF, 0, log, null, new MetricsSource("1"), fakeWalGroupId)) {
       int i = 0;
       while (entryStream.hasNext()) {
         assertNotNull(entryStream.next());

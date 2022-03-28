@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -104,8 +103,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public String getPeerId() {
     String[] parts = peerClusterId.split("-", 2);
-    return parts.length != 1 ?
-        parts[0] : peerClusterId;
+    return parts.length != 1 ? parts[0] : peerClusterId;
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,16 +49,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * General snapshot verification on the master.
  * <p>
- * This is a light-weight verification mechanism for all the files in a snapshot. It doesn't
- * attempt to verify that the files are exact copies (that would be paramount to taking the
- * snapshot again!), but instead just attempts to ensure that the files match the expected
- * files and are the same length.
+ * This is a light-weight verification mechanism for all the files in a snapshot. It doesn't attempt
+ * to verify that the files are exact copies (that would be paramount to taking the snapshot
+ * again!), but instead just attempts to ensure that the files match the expected files and are the
+ * same length.
  * <p>
- * Taking an online snapshots can race against other operations and this is an last line of
- * defense.  For example, if meta changes between when snapshots are taken not all regions of a
- * table may be present.  This can be caused by a region split (daughters present on this scan,
- * but snapshot took parent), or move (snapshots only checks lists of region servers, a move could
- * have caused a region to be skipped or done twice).
+ * Taking an online snapshots can race against other operations and this is an last line of defense.
+ * For example, if meta changes between when snapshots are taken not all regions of a table may be
+ * present. This can be caused by a region split (daughters present on this scan, but snapshot took
+ * parent), or move (snapshots only checks lists of region servers, a move could have caused a
+ * region to be skipped or done twice).
  * <p>
  * Current snapshot files checked:
  * <ol>
@@ -89,8 +89,8 @@ public final class MasterSnapshotVerifier {
    * @param snapshot snapshot to check
    * @param workingDirFs the file system containing the temporary snapshot information
    */
-  public MasterSnapshotVerifier(MasterServices services,
-      SnapshotDescription snapshot, FileSystem workingDirFs) {
+  public MasterSnapshotVerifier(MasterServices services, SnapshotDescription snapshot,
+      FileSystem workingDirFs) {
     this.workingDirFs = workingDirFs;
     this.services = services;
     this.snapshot = snapshot;
@@ -100,15 +100,15 @@ public final class MasterSnapshotVerifier {
   /**
    * Verify that the snapshot in the directory is a valid snapshot
    * @param snapshotDir snapshot directory to check
-   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers
-   *        that are involved in the snapshot
+   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers that are
+   *          involved in the snapshot
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */
   public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
       throws CorruptedSnapshotException, IOException {
-    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), workingDirFs,
-                                                      snapshotDir, snapshot);
+    SnapshotManifest manifest =
+        SnapshotManifest.open(services.getConfiguration(), workingDirFs, snapshotDir, snapshot);
     // verify snapshot info matches
     verifySnapshotDescription(snapshotDir);
 
@@ -124,8 +124,8 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    */
   private void verifySnapshotDescription(Path snapshotDir) throws CorruptedSnapshotException {
-    SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(workingDirFs,
-        snapshotDir);
+    SnapshotDescription found =
+        SnapshotDescriptionUtils.readSnapshotInfo(workingDirFs, snapshotDir);
     if (!this.snapshot.equals(found)) {
       throw new CorruptedSnapshotException(
           "Snapshot read (" + found + ") doesn't equal snapshot we ran (" + snapshot + ").",
@@ -141,13 +141,13 @@ public final class MasterSnapshotVerifier {
     TableDescriptor htd = manifest.getTableDescriptor();
     if (htd == null) {
       throw new CorruptedSnapshotException("Missing Table Descriptor",
-        ProtobufUtil.createSnapshotDesc(snapshot));
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     if (!htd.getTableName().getNameAsString().equals(snapshot.getTable())) {
-      throw new CorruptedSnapshotException(
-          "Invalid Table Descriptor. Expected " + snapshot.getTable() + " name, got "
-              + htd.getTableName().getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
+      throw new CorruptedSnapshotException("Invalid Table Descriptor. Expected "
+          + snapshot.getTable() + " name, got " + htd.getTableName().getNameAsString(),
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -182,9 +182,9 @@ public final class MasterSnapshotVerifier {
     }
     int realRegionCount = hasMobStore ? regionManifests.size() - 1 : regionManifests.size();
     if (realRegionCount != regions.size()) {
-      errorMsg = "Regions moved during the snapshot '" +
-                   ClientSnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
-                   regions.size() + " snapshotted=" + realRegionCount + ".";
+      errorMsg =
+          "Regions moved during the snapshot '" + ClientSnapshotDescriptionUtils.toString(snapshot)
+              + "'. expected=" + regions.size() + " snapshotted=" + realRegionCount + ".";
       LOG.error(errorMsg);
     }
 
@@ -217,12 +217,12 @@ public final class MasterSnapshotVerifier {
    * @param region the region to check
    * @param manifest snapshot manifest to inspect
    */
-  private void verifyRegionInfo(final RegionInfo region,
-      final SnapshotRegionManifest manifest) throws IOException {
+  private void verifyRegionInfo(final RegionInfo region, final SnapshotRegionManifest manifest)
+      throws IOException {
     RegionInfo manifestRegionInfo = ProtobufUtil.toRegionInfo(manifest.getRegionInfo());
     if (RegionInfo.COMPARATOR.compare(region, manifestRegionInfo) != 0) {
-      String msg = "Manifest region info " + manifestRegionInfo +
-                   "doesn't match expected region:" + region;
+      String msg =
+          "Manifest region info " + manifestRegionInfo + "doesn't match expected region:" + region;
       throw new CorruptedSnapshotException(msg, ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }

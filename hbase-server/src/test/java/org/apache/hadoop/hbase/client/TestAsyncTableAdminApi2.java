@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,8 +42,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations
- * @see TestAsyncTableAdminApi This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ * @see TestAsyncTableAdminApi This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
@@ -207,7 +207,6 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
       assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
     }
   }
-
 
   @Test
   public void testTableAvailableWithRandomSplitKeys() throws Exception {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +39,7 @@ public class ImmutableHTableDescriptor extends HTableDescriptor {
       return new ImmutableHColumnDescriptor(desc);
     }
   }
+
   /*
    * Create an unmodifyable copy of an HTableDescriptor
    * @param desc
@@ -49,8 +49,8 @@ public class ImmutableHTableDescriptor extends HTableDescriptor {
   }
 
   public ImmutableHTableDescriptor(final TableDescriptor desc) {
-    super(desc instanceof ModifyableTableDescriptor ?
-      (ModifyableTableDescriptor) desc : new ModifyableTableDescriptor(desc.getTableName(), desc));
+    super(desc instanceof ModifyableTableDescriptor ? (ModifyableTableDescriptor) desc
+        : new ModifyableTableDescriptor(desc.getTableName(), desc));
   }
 
   @Override

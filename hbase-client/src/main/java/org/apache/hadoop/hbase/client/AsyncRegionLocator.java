@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,11 +30,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 /**
  * The asynchronous region locator.
@@ -86,13 +87,13 @@ class AsyncRegionLocator {
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       RegionLocateType type, boolean reload, long timeoutNs) {
     CompletableFuture<RegionLocations> future = isMeta(tableName)
-      ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
-      : nonMetaRegionLocator.getRegionLocations(tableName, row,
-        RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
+        ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
+        : nonMetaRegionLocator.getRegionLocations(tableName, row,
+          RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
     return withTimeout(future, timeoutNs,
-      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
-        "ms) waiting for region locations for " + tableName + ", row='" +
-        Bytes.toStringBinary(row) + "'");
+      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+          + "ms) waiting for region locations for " + tableName + ", row='"
+          + Bytes.toStringBinary(row) + "'");
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
@@ -101,8 +102,8 @@ class AsyncRegionLocator {
     // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
     CompletableFuture<RegionLocations> locsFuture =
-      isMeta(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload)
-        : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
+        isMeta(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload)
+            : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
     addListener(locsFuture, (locs, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
@@ -111,21 +112,21 @@ class AsyncRegionLocator {
       HRegionLocation loc = locs.getRegionLocation(replicaId);
       if (loc == null) {
         future.completeExceptionally(
-          new RegionOfflineException("No location for " + tableName + ", row='" +
-            Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
+          new RegionOfflineException("No location for " + tableName + ", row='"
+              + Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
       } else if (loc.getServerName() == null) {
         future.completeExceptionally(
-          new RegionOfflineException("No server address listed for region '" +
-            loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row) +
-            "', locateType=" + type + ", replicaId=" + replicaId));
+          new RegionOfflineException("No server address listed for region '"
+              + loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row)
+              + "', locateType=" + type + ", replicaId=" + replicaId));
       } else {
         future.complete(loc);
       }
     });
     return withTimeout(future, timeoutNs,
-      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
-        "ms) waiting for region location for " + tableName + ", row='" + Bytes.toStringBinary(row) +
-        "', replicaId=" + replicaId);
+      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+          + "ms) waiting for region location for " + tableName + ", row='"
+          + Bytes.toStringBinary(row) + "', replicaId=" + replicaId);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,

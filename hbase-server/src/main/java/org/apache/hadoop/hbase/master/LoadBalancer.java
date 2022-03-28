@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,26 +33,22 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Makes decisions about the placement and movement of Regions across
- * RegionServers.
- *
- * <p>Cluster-wide load balancing will occur only when there are no regions in
- * transition and according to a fixed period of a time using {@link #balanceCluster(Map)}.
- *
- * <p>On cluster startup, bulk assignment can be used to determine
- * locations for all Regions in a cluster.
- *
- * <p>This class produces plans for the
- * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager}
- * to execute.
+ * Makes decisions about the placement and movement of Regions across RegionServers.
+ * <p>
+ * Cluster-wide load balancing will occur only when there are no regions in transition and according
+ * to a fixed period of a time using {@link #balanceCluster(Map)}.
+ * <p>
+ * On cluster startup, bulk assignment can be used to determine locations for all Regions in a
+ * cluster.
+ * <p>
+ * This class produces plans for the
+ * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
 public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
   /**
-   * Master can carry regions as of hbase-2.0.0.
-   * By default, it carries no tables.
-   * TODO: Add any | system as flags to indicate what it can do.
-   *
+   * Master can carry regions as of hbase-2.0.0. By default, it carries no tables. TODO: Add any |
+   * system as flags to indicate what it can do.
    * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
@@ -62,7 +57,6 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
   /**
    * Master carries system tables.
-   *
    * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
@@ -74,7 +68,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
-   * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
+   * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    * @param st
    */
   void setClusterMetrics(ClusterMetrics st);
@@ -86,15 +80,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setMasterServices(MasterServices masterServices);
 
   /**
-   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do
-   * actual balance. Normally not need override this method, except SimpleLoadBalancer and
+   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
+   * balance. Normally not need override this method, except SimpleLoadBalancer and
    * RSGroupBasedLoadBalancer.
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is
    *         already balanced
    */
-  List<RegionPlan> balanceCluster(Map<TableName,
-      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
+  List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable)
+      throws IOException;
 
   /**
    * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
@@ -105,6 +99,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable);
+
   /**
    * Perform a Round Robin assignment of regions.
    * @param regions
@@ -131,9 +126,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param servers
    * @return Servername
    */
-  ServerName randomAssignment(
-    RegionInfo regionInfo, List<ServerName> servers
-  ) throws HBaseIOException;
+  ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
+      throws HBaseIOException;
 
   /**
    * Initialize the load balancer. Must be called after setters.
@@ -166,7 +160,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   void postMasterStartupInitialize();
 
-  /*Updates balancer status tag reported to JMX*/
+  /* Updates balancer status tag reported to JMX */
   void updateBalancerStatus(boolean status);
 
   /**

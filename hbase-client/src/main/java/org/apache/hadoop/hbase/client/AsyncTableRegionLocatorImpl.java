@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
   public CompletableFuture<List<HRegionLocation>> getAllRegionLocations() {
     if (TableName.isMetaTableName(tableName)) {
       return conn.registry.getMetaRegionLocations()
-        .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+          .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
     }
     return AsyncMetaTableAccessor.getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME),
       tableName);
@@ -65,8 +65,8 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
   @Override
   public CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] row, boolean reload) {
     return conn.getLocator()
-      .getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L)
-      .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+        .getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L)
+        .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
   }
 
   @Override

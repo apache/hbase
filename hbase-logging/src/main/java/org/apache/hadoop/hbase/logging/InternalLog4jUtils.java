@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ final class InternalLog4jUtils {
     org.apache.log4j.Appender a;
     @SuppressWarnings("unchecked")
     Enumeration<org.apache.log4j.Appender> e =
-      org.apache.log4j.Logger.getRootLogger().getAllAppenders();
+        org.apache.log4j.Logger.getRootLogger().getAllAppenders();
     while (e.hasMoreElements()) {
       a = e.nextElement();
       if (a instanceof org.apache.log4j.FileAppender) {

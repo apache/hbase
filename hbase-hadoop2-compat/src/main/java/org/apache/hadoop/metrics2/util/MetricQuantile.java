@@ -20,8 +20,7 @@ package org.apache.hadoop.metrics2.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Specifies a quantile (with error bounds) to be watched by a
- * {@link MetricSampleQuantiles} object.
+ * Specifies a quantile (with error bounds) to be watched by a {@link MetricSampleQuantiles} object.
  */
 @InterfaceAudience.Private
 public class MetricQuantile {
@@ -59,7 +58,6 @@ public class MetricQuantile {
 
   @Override
   public int hashCode() {
-    return (int) (Double.doubleToLongBits(quantile) ^ Double
-        .doubleToLongBits(error));
+    return (int) (Double.doubleToLongBits(quantile) ^ Double.doubleToLongBits(error));
   }
 }

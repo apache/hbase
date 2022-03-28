@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,32 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Helper class that allows to create and manipulate an AvlTree.
- * The main utility is in cases where over time we have a lot of add/remove of the same object,
- * and we want to avoid all the allocations/deallocations of the "node" objects that the
- * java containers will create.
+ * Helper class that allows to create and manipulate an AvlTree. The main utility is in cases where
+ * over time we have a lot of add/remove of the same object, and we want to avoid all the
+ * allocations/deallocations of the "node" objects that the java containers will create.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class AvlUtil {
-  private AvlUtil() {}
+  private AvlUtil() {
+  }
 
   /**
-   * This class represent a node that will be used in an AvlTree.
-   * Instead of creating another object for the tree node,
-   * like the TreeMap and the other java contains, here the node can be extended
-   * and the content can be embedded directly in the node itself.
-   * This is useful in cases where over time we have a lot of add/remove of the same object.
+   * This class represent a node that will be used in an AvlTree. Instead of creating another object
+   * for the tree node, like the TreeMap and the other java contains, here the node can be extended
+   * and the content can be embedded directly in the node itself. This is useful in cases where over
+   * time we have a lot of add/remove of the same object.
    */
   @InterfaceAudience.Private
   public static abstract class AvlNode<TNode extends AvlNode> {
@@ -53,11 +49,10 @@ public final class AvlUtil {
   }
 
   /**
-   * This class extends the AvlNode and adds two links that will be used in conjunction
-   * with the AvlIterableList class.
-   * This is useful in situations where your node must be in a map to have a quick lookup by key,
-   * but it also require to be in something like a list/queue.
-   * This is useful in cases where over time we have a lot of add/remove of the same object.
+   * This class extends the AvlNode and adds two links that will be used in conjunction with the
+   * AvlIterableList class. This is useful in situations where your node must be in a map to have a
+   * quick lookup by key, but it also require to be in something like a list/queue. This is useful
+   * in cases where over time we have a lot of add/remove of the same object.
    */
   @InterfaceAudience.Private
   public static abstract class AvlLinkedNode<TNode extends AvlLinkedNode> extends AvlNode<TNode> {
@@ -68,14 +63,14 @@ public final class AvlUtil {
   @InterfaceAudience.Private
   public interface AvlInsertOrReplace<TNode extends AvlNode> {
     TNode insert(Object searchKey);
+
     TNode replace(Object searchKey, TNode prevNode);
   }
 
   /**
-   * The AvlTree allows to lookup an object using a custom key.
-   * e.g. the java Map allows only to lookup by key using the Comparator
-   * specified in the constructor.
-   * In this case you can pass a specific comparator for every needs.
+   * The AvlTree allows to lookup an object using a custom key. e.g. the java Map allows only to
+   * lookup by key using the Comparator specified in the constructor. In this case you can pass a
+   * specific comparator for every needs.
    */
   @InterfaceAudience.Private
   public static interface AvlKeyComparator<TNode extends AvlNode> {
@@ -83,8 +78,8 @@ public final class AvlUtil {
   }
 
   /**
-   * Visitor that allows to traverse a set of AvlNodes.
-   * If you don't like the callback style of the visitor you can always use the AvlTreeIterator.
+   * Visitor that allows to traverse a set of AvlNodes. If you don't like the callback style of the
+   * visitor you can always use the AvlTreeIterator.
    */
   @InterfaceAudience.Private
   public static interface AvlNodeVisitor<TNode extends AvlNode> {
@@ -111,11 +106,11 @@ public final class AvlUtil {
       while (root != null) {
         int cmp = keyComparator.compareKey(root, key);
         if (cmp > 0) {
-          root = (TNode)root.avlLeft;
+          root = (TNode) root.avlLeft;
         } else if (cmp < 0) {
-          root = (TNode)root.avlRight;
+          root = (TNode) root.avlRight;
         } else {
-          return (TNode)root;
+          return (TNode) root;
         }
       }
       return null;
@@ -128,7 +123,7 @@ public final class AvlUtil {
     public static <TNode extends AvlNode> TNode getFirst(TNode root) {
       if (root != null) {
         while (root.avlLeft != null) {
-          root = (TNode)root.avlLeft;
+          root = (TNode) root.avlLeft;
         }
       }
       return root;
@@ -141,15 +136,15 @@ public final class AvlUtil {
     public static <TNode extends AvlNode> TNode getLast(TNode root) {
       if (root != null) {
         while (root.avlRight != null) {
-          root = (TNode)root.avlRight;
+          root = (TNode) root.avlRight;
         }
       }
       return root;
     }
 
     /**
-     * Insert a node into the tree. It uses the AvlNode.compareTo() for ordering.
-     * NOTE: The node must not be already in the tree.
+     * Insert a node into the tree. It uses the AvlNode.compareTo() for ordering. NOTE: The node
+     * must not be already in the tree.
      * @param root the current root of the tree
      * @param node the node to insert
      * @return the new root of the tree
@@ -168,11 +163,9 @@ public final class AvlUtil {
     }
 
     /**
-     * Insert a node into the tree.
-     * This is useful when you want to create a new node or replace the content
-     * depending if the node already exists or not.
-     * Using AvlInsertOrReplace class you can return the node to add/replace.
-     *
+     * Insert a node into the tree. This is useful when you want to create a new node or replace the
+     * content depending if the node already exists or not. Using AvlInsertOrReplace class you can
+     * return the node to add/replace.
      * @param root the current root of the tree
      * @param key the key for the node we are trying to insert
      * @param keyComparator the comparator to use to match node and key
@@ -188,12 +181,12 @@ public final class AvlUtil {
 
       int cmp = keyComparator.compareKey(root, key);
       if (cmp < 0) {
-        root.avlLeft = insert((TNode)root.avlLeft, key, keyComparator, insertOrReplace);
+        root.avlLeft = insert((TNode) root.avlLeft, key, keyComparator, insertOrReplace);
       } else if (cmp > 0) {
-        root.avlRight = insert((TNode)root.avlRight, key, keyComparator, insertOrReplace);
+        root.avlRight = insert((TNode) root.avlRight, key, keyComparator, insertOrReplace);
       } else {
-        TNode left = (TNode)root.avlLeft;
-        TNode right = (TNode)root.avlRight;
+        TNode left = (TNode) root.avlLeft;
+        TNode right = (TNode) root.avlRight;
         root = insertOrReplace.replace(key, root);
         root.avlLeft = left;
         root.avlRight = right;
@@ -203,8 +196,7 @@ public final class AvlUtil {
     }
 
     private static <TNode extends AvlNode> TNode removeMin(TNode p) {
-      if (p.avlLeft == null)
-        return (TNode)p.avlRight;
+      if (p.avlLeft == null) return (TNode) p.avlRight;
       p.avlLeft = removeMin(p.avlLeft);
       return balance(p);
     }
@@ -237,17 +229,17 @@ public final class AvlUtil {
       if (cmp == 0) {
         if (removed != null) removed.set(true);
 
-        TNode q = (TNode)root.avlLeft;
-        TNode r = (TNode)root.avlRight;
+        TNode q = (TNode) root.avlLeft;
+        TNode r = (TNode) root.avlRight;
         if (r == null) return q;
         TNode min = getFirst(r);
         min.avlRight = removeMin(r);
         min.avlLeft = q;
         return balance(min);
       } else if (cmp > 0) {
-        root.avlLeft = remove((TNode)root.avlLeft, key, keyComparator);
+        root.avlLeft = remove((TNode) root.avlLeft, key, keyComparator);
       } else /* if (cmp < 0) */ {
-        root.avlRight = remove((TNode)root.avlRight, key, keyComparator);
+        root.avlRight = remove((TNode) root.avlRight, key, keyComparator);
       }
       return balance(root);
     }
@@ -286,7 +278,7 @@ public final class AvlUtil {
     }
 
     private static <TNode extends AvlNode> TNode rotateRight(TNode p) {
-      TNode q = (TNode)p.avlLeft;
+      TNode q = (TNode) p.avlLeft;
       p.avlLeft = q.avlRight;
       q.avlRight = p;
       fixHeight(p);
@@ -295,7 +287,7 @@ public final class AvlUtil {
     }
 
     private static <TNode extends AvlNode> TNode rotateLeft(TNode q) {
-      TNode p = (TNode)q.avlRight;
+      TNode p = (TNode) q.avlRight;
       q.avlRight = p.avlLeft;
       p.avlLeft = q;
       fixHeight(q);
@@ -376,7 +368,7 @@ public final class AvlUtil {
       if (root != null) {
         while (current.avlLeft != null) {
           stack[height++] = current;
-          current = (TNode)current.avlLeft;
+          current = (TNode) current.avlLeft;
         }
       }
     }
@@ -397,7 +389,7 @@ public final class AvlUtil {
         if (keyComparator.compareKey(node, key) >= 0) {
           if (node.avlLeft != null) {
             stack[height++] = node;
-            node = (TNode)node.avlLeft;
+            node = (TNode) node.avlLeft;
           } else {
             current = node;
             return;
@@ -405,17 +397,17 @@ public final class AvlUtil {
         } else {
           if (node.avlRight != null) {
             stack[height++] = node;
-            node = (TNode)node.avlRight;
+            node = (TNode) node.avlRight;
           } else {
             if (height > 0) {
-              TNode parent = (TNode)stack[--height];
+              TNode parent = (TNode) stack[--height];
               while (node == parent.avlRight) {
                 if (height == 0) {
                   current = null;
                   return;
                 }
                 node = parent;
-                parent = (TNode)stack[--height];
+                parent = (TNode) stack[--height];
               }
               current = parent;
               return;
@@ -431,10 +423,10 @@ public final class AvlUtil {
       if (current == null) return;
       if (current.avlRight != null) {
         stack[height++] = current;
-        current = (TNode)current.avlRight;
+        current = (TNode) current.avlRight;
         while (current.avlLeft != null) {
           stack[height++] = current;
-          current = (TNode)current.avlLeft;
+          current = (TNode) current.avlLeft;
         }
       } else {
         TNode node;
@@ -444,7 +436,7 @@ public final class AvlUtil {
             return;
           }
           node = current;
-          current = (TNode)stack[--height];
+          current = (TNode) stack[--height];
         } while (current.avlRight == node);
       }
     }
@@ -460,7 +452,7 @@ public final class AvlUtil {
      * @return the successor of the current node
      */
     public static <TNode extends AvlLinkedNode> TNode readNext(TNode node) {
-      return (TNode)node.iterNext;
+      return (TNode) node.iterNext;
     }
 
     /**
@@ -468,7 +460,7 @@ public final class AvlUtil {
      * @return the predecessor of the current node
      */
     public static <TNode extends AvlLinkedNode> TNode readPrev(TNode node) {
-      return (TNode)node.iterPrev;
+      return (TNode) node.iterPrev;
     }
 
     /**
@@ -479,7 +471,7 @@ public final class AvlUtil {
     public static <TNode extends AvlLinkedNode> TNode prepend(TNode head, TNode node) {
       assert !isLinked(node) : node + " is already linked";
       if (head != null) {
-        TNode tail = (TNode)head.iterPrev;
+        TNode tail = (TNode) head.iterPrev;
         tail.iterNext = node;
         head.iterPrev = node;
         node.iterNext = head;
@@ -499,7 +491,7 @@ public final class AvlUtil {
     public static <TNode extends AvlLinkedNode> TNode append(TNode head, TNode node) {
       assert !isLinked(node) : node + " is already linked";
       if (head != null) {
-        TNode tail = (TNode)head.iterPrev;
+        TNode tail = (TNode) head.iterPrev;
         tail.iterNext = node;
         node.iterNext = head;
         node.iterPrev = tail;
@@ -520,8 +512,8 @@ public final class AvlUtil {
       if (head == null) return otherHead;
       if (otherHead == null) return head;
 
-      TNode tail = (TNode)head.iterPrev;
-      TNode otherTail = (TNode)otherHead.iterPrev;
+      TNode tail = (TNode) head.iterPrev;
+      TNode otherTail = (TNode) otherHead.iterPrev;
       tail.iterNext = otherHead;
       otherHead.iterPrev = tail;
       otherTail.iterNext = head;
@@ -539,7 +531,7 @@ public final class AvlUtil {
       if (node != node.iterNext) {
         node.iterPrev.iterNext = node.iterNext;
         node.iterNext.iterPrev = node.iterPrev;
-        head = (head == node) ? (TNode)node.iterNext : head;
+        head = (head == node) ? (TNode) node.iterNext : head;
       } else {
         head = null;
       }

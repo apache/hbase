@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,22 +68,23 @@ public class TestRegionReplicaFailover {
 
   private static final int NB_SERVERS = 3;
 
-  protected final byte[][] families = new byte[][] {HBaseTestingUtility.fam1,
-      HBaseTestingUtility.fam2, HBaseTestingUtility.fam3};
+  protected final byte[][] families =
+      new byte[][] { HBaseTestingUtility.fam1, HBaseTestingUtility.fam2, HBaseTestingUtility.fam3 };
   protected final byte[] fam = HBaseTestingUtility.fam1;
   protected final byte[] qual1 = Bytes.toBytes("qual1");
   protected final byte[] value1 = Bytes.toBytes("value1");
   protected final byte[] row = Bytes.toBytes("rowA");
   protected final byte[] row2 = Bytes.toBytes("rowB");
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private HTableDescriptor htd;
 
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
-   // Up the handlers; this test needs more than usual.
+    // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
@@ -92,7 +93,7 @@ public class TestRegionReplicaFailover {
 
     HTU.startMiniCluster(NB_SERVERS);
     htd = HTU.createTableDescriptor(
-      name.getMethodName().substring(0, name.getMethodName().length()-3));
+      name.getMethodName().substring(0, name.getMethodName().length() - 3));
     htd.setRegionReplication(3);
     HTU.getAdmin().createTable(htd);
   }
@@ -182,7 +183,8 @@ public class TestRegionReplicaFailover {
     HTU.getMiniHBaseCluster().startRegionServer();
   }
 
-  /** wal replication is async, we have to wait until the replication catches up, or we timeout
+  /**
+   * wal replication is async, we have to wait until the replication catches up, or we timeout
    */
   private void verifyNumericRowsWithTimeout(final Table table, final byte[] f, final int startRow,
       final int endRow, final int replicaId, final long timeout) throws Exception {
@@ -246,9 +248,9 @@ public class TestRegionReplicaFailover {
   }
 
   /**
-   * Tests the case where there are 3 region replicas and the primary is continuously accepting
-   * new writes while one of the secondaries is killed. Verification is done for both of the
-   * secondary replicas.
+   * Tests the case where there are 3 region replicas and the primary is continuously accepting new
+   * writes while one of the secondaries is killed. Verification is done for both of the secondary
+   * replicas.
    */
   @Test
   public void testSecondaryRegionKillWhilePrimaryIsAcceptingWrites() throws Exception {
@@ -269,7 +271,7 @@ public class TestRegionReplicaFailover {
         public void run() {
           while (!done.get()) {
             try {
-              HTU.loadNumericRows(table, fam, key.get(), key.get()+1000);
+              HTU.loadNumericRows(table, fam, key.get(), key.get() + 1000);
               key.addAndGet(1000);
             } catch (Throwable e) {
               ex.compareAndSet(null, e);

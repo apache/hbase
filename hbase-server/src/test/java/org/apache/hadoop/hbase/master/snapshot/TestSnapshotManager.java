@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ import org.mockito.Mockito;
 /**
  * Test basic snapshot manager functionality
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSnapshotManager {
 
   @ClassRule
@@ -82,7 +82,7 @@ public class TestSnapshotManager {
     }
   }
 
-   private SnapshotManager getNewManager() throws IOException, KeeperException {
+  private SnapshotManager getNewManager() throws IOException, KeeperException {
     return getNewManager(UTIL.getConfiguration());
   }
 
@@ -132,14 +132,14 @@ public class TestSnapshotManager {
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
     assertFalse("Manager is in process when there is no current handler",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
     manager.setSnapshotHandlerForTesting(tableName, handler);
     Mockito.when(handler.isFinished()).thenReturn(false);
     assertTrue("Manager isn't in process when handler is running",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
     Mockito.when(handler.isFinished()).thenReturn(true);
     assertFalse("Manager is process when handler isn't running",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
   }
 
   /**
@@ -166,24 +166,24 @@ public class TestSnapshotManager {
 
     // force snapshot feature to be disabled, even if cleaners are present
     conf = new Configuration();
-    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName(),
+      HFileLinkCleaner.class.getName());
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     manager = getNewManager(conf);
     assertFalse("Snapshot should be disabled", isSnapshotSupported(manager));
 
     // cleaners are present, but missing snapshot enabled property
     conf = new Configuration();
-    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName(),
+      HFileLinkCleaner.class.getName());
     manager = getNewManager(conf);
     assertTrue("Snapshot should be enabled, because cleaners are present",
       isSnapshotSupported(manager));
 
     // Create a "test snapshot"
     Path rootDir = UTIL.getDataTestDir();
-    Path testSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-      "testSnapshotSupportConfiguration", rootDir);
+    Path testSnapshotDir = SnapshotDescriptionUtils
+        .getCompletedSnapshotDir("testSnapshotSupportConfiguration", rootDir);
     fs.mkdirs(testSnapshotDir);
     try {
       // force snapshot feature to be disabled, but snapshots are present
@@ -215,8 +215,8 @@ public class TestSnapshotManager {
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-      tableName, hri.getEncodedName(), familyName);
+    Path archiveStoreDir =
+        HFileArchiveUtil.getStoreArchivePath(conf, tableName, hri.getEncodedName(), familyName);
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
     Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
@@ -224,7 +224,7 @@ public class TestSnapshotManager {
     fs.createNewFile(hfilePath);
     // Create link to hfile
     Path familyLinkPath =
-      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
+        getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
     Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));

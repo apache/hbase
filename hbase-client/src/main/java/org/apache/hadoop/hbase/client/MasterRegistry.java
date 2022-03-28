@@ -46,6 +46,16 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.DNS.ServerType;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
@@ -55,14 +65,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMasters
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.util.DNS.ServerType;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -79,7 +81,7 @@ public class MasterRegistry implements ConnectionRegistry {
 
   /** Configuration key that controls the fan out of requests **/
   public static final String MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY =
-    "hbase.client.master_registry.hedged.fanout";
+      "hbase.client.master_registry.hedged.fanout";
 
   /** Default value for the fan out of hedged requests. **/
   public static final int MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT = 2;
@@ -108,7 +110,7 @@ public class MasterRegistry implements ConnectionRegistry {
     String configuredMasters = getMasterAddr(conf);
     for (String masterAddr : configuredMasters.split(MASTER_ADDRS_CONF_SEPARATOR)) {
       HostAndPort masterHostPort =
-        HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
+          HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
       masterAddrs.add(ServerName.valueOf(masterHostPort.toString(), ServerName.NON_STARTCODE));
     }
     Preconditions.checkArgument(!masterAddrs.isEmpty(), "At least one master address is needed");
@@ -138,7 +140,7 @@ public class MasterRegistry implements ConnectionRegistry {
     User user = User.getCurrent();
     for (ServerName masterAddr : masters) {
       builder.put(masterAddr,
-          ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
+        ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
     }
     masterAddr2Stub = builder.build();
   }
@@ -173,7 +175,7 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private <T extends Message> CompletableFuture<T> call(ClientMetaService.Interface stub,
-    Callable<T> callable) {
+      Callable<T> callable) {
     HBaseRpcController controller = rpcControllerFactory.newController();
     CompletableFuture<T> future = new CompletableFuture<>();
     callable.call(controller, stub, resp -> {
@@ -224,12 +226,11 @@ public class MasterRegistry implements ConnectionRegistry {
             if (endIndexExclusive == masterStubs.size()) {
               // we are done, complete the future with exception
               RetriesExhaustedException ex = new RetriesExhaustedException("masters",
-                masterStubs.size(), new ArrayList<>(errors));
-              future.completeExceptionally(
-                new MasterRegistryFetchException(masterServers, ex));
+                  masterStubs.size(), new ArrayList<>(errors));
+              future.completeExceptionally(new MasterRegistryFetchException(masterServers, ex));
             } else {
               groupCall(future, masterServers, masterStubs, endIndexExclusive, callable,
-                  isValidResp, debug, errors);
+                isValidResp, debug, errors);
             }
           }
         } else {
@@ -241,14 +242,14 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private <T extends Message> CompletableFuture<T> call(Callable<T> callable,
-    Predicate<T> isValidResp, String debug) {
+      Predicate<T> isValidResp, String debug) {
     ImmutableMap<ServerName, ClientMetaService.Interface> masterAddr2StubRef = masterAddr2Stub;
     Set<ServerName> masterServers = masterAddr2StubRef.keySet();
     List<ClientMetaService.Interface> masterStubs = new ArrayList<>(masterAddr2StubRef.values());
     Collections.shuffle(masterStubs, ThreadLocalRandom.current());
     CompletableFuture<T> future = new CompletableFuture<>();
     groupCall(future, masterServers, masterStubs, 0, callable, isValidResp, debug,
-        new ConcurrentLinkedQueue<>());
+      new ConcurrentLinkedQueue<>());
     return future;
   }
 
@@ -258,40 +259,42 @@ public class MasterRegistry implements ConnectionRegistry {
   private static RegionLocations transformMetaRegionLocations(GetMetaRegionLocationsResponse resp) {
     List<HRegionLocation> regionLocations = new ArrayList<>();
     resp.getMetaLocationsList()
-      .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
+        .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
     return new RegionLocations(regionLocations);
   }
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    return this.<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
-      GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,
-      "getMetaLocationsCount").thenApply(MasterRegistry::transformMetaRegionLocations);
+    return this
+        .<GetMetaRegionLocationsResponse> call(
+          (c, s, d) -> s.getMetaRegionLocations(c,
+            GetMetaRegionLocationsRequest.getDefaultInstance(), d),
+          r -> r.getMetaLocationsCount() != 0, "getMetaLocationsCount")
+        .thenApply(MasterRegistry::transformMetaRegionLocations);
   }
 
   @Override
   public CompletableFuture<String> getClusterId() {
     return this
-      .<GetClusterIdResponse> call(
-        (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
-        GetClusterIdResponse::hasClusterId, "getClusterId()")
-      .thenApply(GetClusterIdResponse::getClusterId);
+        .<GetClusterIdResponse> call(
+          (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
+          GetClusterIdResponse::hasClusterId, "getClusterId()")
+        .thenApply(GetClusterIdResponse::getClusterId);
   }
 
   private static boolean hasActiveMaster(GetMastersResponse resp) {
-    List<GetMastersResponseEntry> activeMasters =
-        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
-        Collectors.toList());
+    List<GetMastersResponseEntry> activeMasters = resp.getMasterServersList().stream()
+        .filter(GetMastersResponseEntry::getIsActive).collect(Collectors.toList());
     return activeMasters.size() == 1;
   }
 
   private static ServerName filterActiveMaster(GetMastersResponse resp) throws IOException {
-    List<GetMastersResponseEntry> activeMasters =
-        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
-            Collectors.toList());
+    List<GetMastersResponseEntry> activeMasters = resp.getMasterServersList().stream()
+        .filter(GetMastersResponseEntry::getIsActive).collect(Collectors.toList());
     if (activeMasters.size() != 1) {
-      throw new IOException(String.format("Incorrect number of active masters encountered." +
-          " Expected: 1 found: %d. Content: %s", activeMasters.size(), activeMasters));
+      throw new IOException(String.format(
+        "Incorrect number of active masters encountered." + " Expected: 1 found: %d. Content: %s",
+        activeMasters.size(), activeMasters));
     }
     return ProtobufUtil.toServerName(activeMasters.get(0).getServerName());
   }
@@ -306,7 +309,7 @@ public class MasterRegistry implements ConnectionRegistry {
         }
         ServerName result = null;
         try {
-          result = filterActiveMaster((GetMastersResponse)resp);
+          result = filterActiveMaster((GetMastersResponse) resp);
         } catch (IOException e) {
           future.completeExceptionally(e);
         }
@@ -316,15 +319,16 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private static List<ServerName> transformServerNames(GetMastersResponse resp) {
-    return resp.getMasterServersList().stream().map(s -> ProtobufUtil.toServerName(
-        s.getServerName())).collect(Collectors.toList());
+    return resp.getMasterServersList().stream()
+        .map(s -> ProtobufUtil.toServerName(s.getServerName())).collect(Collectors.toList());
   }
 
   CompletableFuture<List<ServerName>> getMasters() {
     return this
-        .<GetMastersResponse> call((c, s, d) -> s.getMasters(
-            c, GetMastersRequest.getDefaultInstance(), d), r -> r.getMasterServersCount() != 0,
-            "getMasters()").thenApply(MasterRegistry::transformServerNames);
+        .<GetMastersResponse> call(
+          (c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
+          r -> r.getMasterServersCount() != 0, "getMasters()")
+        .thenApply(MasterRegistry::transformServerNames);
   }
 
   Set<ServerName> getParsedMasterServers() {

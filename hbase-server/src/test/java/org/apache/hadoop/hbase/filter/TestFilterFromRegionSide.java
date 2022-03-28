@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,9 +88,9 @@ public class TestFilterFromRegionSide {
       htd.addFamily(hcd);
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    REGION = HBaseTestingUtility
-        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
-    for(Put put:createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE)){
+    REGION = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
+    for (Put put : createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE)) {
       REGION.put(put);
     }
   }
@@ -132,13 +132,13 @@ public class TestFilterFromRegionSide {
       assertEquals(1, results.size());
       Cell cell = results.get(0);
       assertArrayEquals(ROWS[i],
-          Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+        Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
     }
     assertFalse(scanner.next(results));
     scanner.close();
   }
 
-  public static class FirstSeveralCellsFilter extends FilterBase{
+  public static class FirstSeveralCellsFilter extends FilterBase {
     private int count = 0;
 
     @Override
@@ -159,7 +159,7 @@ public class TestFilterFromRegionSide {
       return ReturnCode.SKIP;
     }
 
-    public static Filter parseFrom(final byte [] pbBytes){
+    public static Filter parseFrom(final byte[] pbBytes) {
       return new FirstSeveralCellsFilter();
     }
   }
@@ -177,11 +177,11 @@ public class TestFilterFromRegionSide {
       assertEquals(NUM_COLS, results.size());
       Cell cell = results.get(0);
       assertArrayEquals(ROWS[i],
-          Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+        Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
       assertArrayEquals(FAMILIES[0],
-          Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
-      assertArrayEquals(QUALIFIERS[0], Bytes.copy(cell.getQualifierArray(),
-          cell.getQualifierOffset(), cell.getQualifierLength()));
+        Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+      assertArrayEquals(QUALIFIERS[0],
+        Bytes.copy(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
     }
     assertFalse(scanner.next(results));
     scanner.close();

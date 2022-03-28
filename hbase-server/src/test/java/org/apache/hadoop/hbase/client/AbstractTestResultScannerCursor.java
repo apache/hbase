@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.junit.Test;
 
 public abstract class AbstractTestResultScannerCursor extends AbstractTestScanCursor {
@@ -37,8 +36,7 @@ public abstract class AbstractTestResultScannerCursor extends AbstractTestScanCu
       while ((r = scanner.next()) != null) {
         if (num < (NUM_ROWS - 1) * NUM_FAMILIES * NUM_QUALIFIERS) {
           assertTrue(r.isCursor());
-          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
-            r.getCursor().getRow());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getCursor().getRow());
         } else {
           assertFalse(r.isCursor());
           assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());
@@ -76,8 +74,7 @@ public abstract class AbstractTestResultScannerCursor extends AbstractTestScanCu
       while ((r = scanner.next()) != null) {
         if (num % (NUM_FAMILIES * NUM_QUALIFIERS) != (NUM_FAMILIES * NUM_QUALIFIERS) - 1) {
           assertTrue(r.isCursor());
-          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
-            r.getCursor().getRow());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getCursor().getRow());
         } else {
           assertFalse(r.isCursor());
           assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());

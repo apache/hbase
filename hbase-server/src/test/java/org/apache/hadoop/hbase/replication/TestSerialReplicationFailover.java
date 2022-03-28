@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestSerialReplicationFailover extends SerialReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSerialReplicationFailover.class);
+      HBaseClassTestRule.forClass(TestSerialReplicationFailover.class);
 
   @Before
   public void setUp() throws IOException, StreamLacksCapabilityException {
@@ -54,7 +54,7 @@ public class TestSerialReplicationFailover extends SerialReplicationTestBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+          .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
@@ -62,7 +62,7 @@ public class TestSerialReplicationFailover extends SerialReplicationTestBase {
       }
     }
     RegionServerThread thread = UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .filter(t -> !t.getRegionServer().getRegions(tableName).isEmpty()).findFirst().get();
+        .filter(t -> !t.getRegionServer().getRegions(tableName).isEmpty()).findFirst().get();
     thread.getRegionServer().abort("for testing");
     thread.join();
     try (Table table = UTIL.getConnection().getTable(tableName)) {

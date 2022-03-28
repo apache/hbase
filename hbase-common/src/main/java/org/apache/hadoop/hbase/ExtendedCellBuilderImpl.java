@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.List;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 

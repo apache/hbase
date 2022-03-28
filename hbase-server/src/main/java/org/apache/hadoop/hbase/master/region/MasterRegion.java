@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,7 +102,7 @@ public final class MasterRegion {
   private MasterRegionWALRoller walRoller;
 
   private MasterRegion(HRegion region, WALFactory walFactory,
-    MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
+      MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.region = region;
     this.walFactory = walFactory;
     this.flusherAndCompactor = flusherAndCompactor;
@@ -171,18 +171,18 @@ public final class MasterRegion {
   }
 
   private static WAL createWAL(WALFactory walFactory, MasterRegionWALRoller walRoller,
-    String serverName, FileSystem walFs, Path walRootDir, RegionInfo regionInfo)
-    throws IOException {
+      String serverName, FileSystem walFs, Path walRootDir, RegionInfo regionInfo)
+      throws IOException {
     String logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     Path walDir = new Path(walRootDir, logName);
     LOG.debug("WALDir={}", walDir);
     if (walFs.exists(walDir)) {
       throw new HBaseIOException(
-        "Already created wal directory at " + walDir + " for local region " + regionInfo);
+          "Already created wal directory at " + walDir + " for local region " + regionInfo);
     }
     if (!walFs.mkdirs(walDir)) {
       throw new IOException(
-        "Can not create wal directory " + walDir + " for local region " + regionInfo);
+          "Can not create wal directory " + walDir + " for local region " + regionInfo);
     }
     WAL wal = walFactory.getWAL(regionInfo);
     walRoller.addWAL(wal);
@@ -190,8 +190,8 @@ public final class MasterRegion {
   }
 
   private static HRegion bootstrap(Configuration conf, TableDescriptor td, FileSystem fs,
-    Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName) throws IOException {
+      Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
+      MasterRegionWALRoller walRoller, String serverName) throws IOException {
     TableName tn = td.getTableName();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).setRegionId(REGION_ID).build();
     Path tmpTableDir = CommonFSUtils.getTableDir(rootDir,
@@ -209,12 +209,12 @@ public final class MasterRegion {
   }
 
   private static HRegion open(Configuration conf, TableDescriptor td, FileSystem fs, Path rootDir,
-    FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
-    String serverName) throws IOException {
+      FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
+      String serverName) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
+        fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
+            .getPath();
     RegionInfo regionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
 
     Path walRegionDir = FSUtils.getRegionDirFromRootDir(walRootDir, regionInfo);
@@ -233,8 +233,9 @@ public final class MasterRegion {
     if (walFs.exists(walsDir)) {
       replayWALs(conf, walFs, walRootDir, walsDir, regionInfo, serverName, replayEditsDir);
     } else {
-      LOG.error("UNEXPECTED: WAL directory for MasterRegion is missing."
-          + " {} is unexpectedly missing.", walsDir);
+      LOG.error(
+        "UNEXPECTED: WAL directory for MasterRegion is missing." + " {} is unexpectedly missing.",
+        walsDir);
     }
 
     // Create a new WAL
@@ -246,22 +247,22 @@ public final class MasterRegion {
 
   private static void replayWALs(Configuration conf, FileSystem walFs, Path walRootDir,
       Path walsDir, RegionInfo regionInfo, String serverName, Path replayEditsDir)
-          throws IOException {
+      throws IOException {
     for (FileStatus walDir : walFs.listStatus(walsDir)) {
       if (!walDir.isDirectory()) {
         continue;
       }
       if (walDir.getPath().getName().startsWith(serverName)) {
-        LOG.warn("This should not happen in real production as we have not created our WAL " +
-          "directory yet, ignore if you are running a local region related UT");
+        LOG.warn("This should not happen in real production as we have not created our WAL "
+            + "directory yet, ignore if you are running a local region related UT");
       }
       Path deadWALDir;
       if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
-        deadWALDir =
-          new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
+        deadWALDir = new Path(walDir.getPath().getParent(),
+            walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
         if (!walFs.rename(walDir.getPath(), deadWALDir)) {
-          throw new IOException("Can not rename " + walDir + " to " + deadWALDir +
-            " when recovering lease of proc store");
+          throw new IOException("Can not rename " + walDir + " to " + deadWALDir
+              + " when recovering lease of proc store");
         }
         LOG.info("Renamed {} to {} as it is dead", walDir.getPath(), deadWALDir);
       } else {
@@ -272,8 +273,8 @@ public final class MasterRegion {
         Path replayEditsFile = new Path(replayEditsDir, walFile.getPath().getName());
         RecoverLeaseFSUtils.recoverFileLease(walFs, walFile.getPath(), conf);
         if (!walFs.rename(walFile.getPath(), replayEditsFile)) {
-          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile +
-            " when recovering lease for local region");
+          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile
+              + " when recovering lease for local region");
         }
         LOG.info("Renamed {} to {}", walFile.getPath(), replayEditsFile);
       }
@@ -328,13 +329,15 @@ public final class MasterRegion {
     }
     Path globalArchiveDir = HFileArchiveUtil.getArchivePath(baseConf);
     MasterRegionFlusherAndCompactor flusherAndCompactor = new MasterRegionFlusherAndCompactor(conf,
-      server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),
-      params.compactMin(), globalArchiveDir, params.archivedHFileSuffix());
+        server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),
+        params.compactMin(), globalArchiveDir, params.archivedHFileSuffix());
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     if (!fs.mkdirs(archiveDir)) {
-      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
-        " be created again when we actually archive the hfiles later, so continue", archiveDir);
+      LOG.warn(
+        "Failed to create archive directory {}. Usually this should not happen but it will"
+            + " be created again when we actually archive the hfiles later, so continue",
+        archiveDir);
     }
     return new MasterRegion(region, walFactory, flusherAndCompactor, walRoller);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -31,18 +30,20 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
- * Callable that handles the <code>multi</code> method call going against a single
- * regionserver; i.e. A RegionServerCallable for the multi call (It is NOT a
- * RegionServerCallable that goes against multiple regions).
+ * Callable that handles the <code>multi</code> method call going against a single regionserver;
+ * i.e. A RegionServerCallable for the multi call (It is NOT a RegionServerCallable that goes
+ * against multiple regions).
  * @param <R>
  */
 @InterfaceAudience.Private
@@ -102,8 +103,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     // is RowMutations/CheckAndMutate in the action list.
     Map<Integer, Integer> indexMap = new HashMap<>();
     // The multi object is a list of Actions by region. Iterate by region.
-    for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
-      final byte [] regionName = e.getKey();
+    for (Map.Entry<byte[], List<Action>> e : this.multiAction.actions.entrySet()) {
+      final byte[] regionName = e.getKey();
       final List<Action> actions = e.getValue();
       if (this.cellBlock) {
         // Send data in cellblocks.
@@ -132,8 +133,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
   }
 
   /**
-   * @return True if we should send data in cellblocks.  This is an expensive call.  Cache the
-   * result if you can rather than call each time.
+   * @return True if we should send data in cellblocks. This is an expensive call. Cache the result
+   *         if you can rather than call each time.
    */
   private boolean isCellBlock() {
     // This is not exact -- the configuration could have changed on us after connection was set up

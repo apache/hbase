@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -30,14 +29,14 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of locks and queues in procedure scheduler independently from other
- * framework components.
- * Inserts table and region operations in the scheduler, then polls them and exercises their locks
- * Number of tables, regions and operations can be set using cli args.
+ * framework components. Inserts table and region operations in the scheduler, then polls them and
+ * exercises their locks Number of tables, regions and operations can be set using cli args.
  */
 public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -49,7 +48,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   public static final int DEFAULT_REGIONS_PER_TABLE = 10;
   public static final Option REGIONS_PER_TABLE_OPTION = new Option("regions_per_table", true,
       "Total number of regions per table. Default: " + DEFAULT_REGIONS_PER_TABLE);
-  public static final int DEFAULT_NUM_OPERATIONS = 10000000;  // 10M
+  public static final int DEFAULT_NUM_OPERATIONS = 10000000; // 10M
   public static final Option NUM_OPERATIONS_OPTION = new Option("num_ops", true,
       "Total number of operations to schedule. Default: " + DEFAULT_NUM_OPERATIONS);
   public static final int DEFAULT_NUM_THREADS = 10;
@@ -58,8 +57,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   public static final String DEFAULT_OPS_TYPE = "both";
   public static final Option OPS_TYPE_OPTION = new Option("ops_type", true,
       "Type of operations to run. Value can be table/region/both. In case of 'both', "
-          + "proportion of table:region ops is 1:regions_per_table. Default: "
-          + DEFAULT_OPS_TYPE);
+          + "proportion of table:region ops is 1:regions_per_table. Default: " + DEFAULT_OPS_TYPE);
 
   private int numTables = DEFAULT_NUM_TABLES;
   private int regionsPerTable = DEFAULT_REGIONS_PER_TABLE;
@@ -84,8 +82,9 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
     @Override
     public LockState acquireLock(Void env) {
-      return procedureScheduler.waitRegions(this, getTableName(), getRegionInfo())?
-        LockState.LOCK_EVENT_WAIT: LockState.LOCK_ACQUIRED;
+      return procedureScheduler.waitRegions(this, getTableName(), getRegionInfo())
+          ? LockState.LOCK_EVENT_WAIT
+          : LockState.LOCK_ACQUIRED;
     }
 
     @Override
@@ -115,8 +114,9 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
     @Override
     public LockState acquireLock(Void env) {
-      return procedureScheduler.waitTableExclusiveLock(this, getTableName())?
-        LockState.LOCK_EVENT_WAIT: LockState.LOCK_ACQUIRED;
+      return procedureScheduler.waitTableExclusiveLock(this, getTableName())
+          ? LockState.LOCK_EVENT_WAIT
+          : LockState.LOCK_ACQUIRED;
     }
 
     @Override
@@ -149,7 +149,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     for (int i = 0; i < numTables; ++i) {
       for (int j = 0; j < regionsPerTable; ++j) {
         regionOps[i * regionsPerTable + j] = new RegionProcedureFactory(
-            new HRegionInfo(((TableProcedureFactory)tableOps[i]).tableName, Bytes.toBytes(j),
+            new HRegionInfo(((TableProcedureFactory) tableOps[i]).tableName, Bytes.toBytes(j),
                 Bytes.toBytes(j + 1)));
       }
     }
@@ -162,7 +162,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       ops = regionOps;
     } else if (opsType.equals("both")) {
       System.out.println("Operations: both (table + region)");
-      ops = (ProcedureFactory[])ArrayUtils.addAll(tableOps, regionOps);
+      ops = (ProcedureFactory[]) ArrayUtils.addAll(tableOps, regionOps);
     } else {
       throw new Exception("-ops_type should be one of table/region/both.");
     }
@@ -180,10 +180,9 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   @Override
   protected void processOptions(CommandLine cmd) {
     numTables = getOptionAsInt(cmd, NUM_TABLES_OPTION.getOpt(), DEFAULT_NUM_TABLES);
-    regionsPerTable = getOptionAsInt(cmd, REGIONS_PER_TABLE_OPTION.getOpt(),
-        DEFAULT_REGIONS_PER_TABLE);
-    numOps = getOptionAsInt(cmd, NUM_OPERATIONS_OPTION.getOpt(),
-        DEFAULT_NUM_OPERATIONS);
+    regionsPerTable =
+        getOptionAsInt(cmd, REGIONS_PER_TABLE_OPTION.getOpt(), DEFAULT_REGIONS_PER_TABLE);
+    numOps = getOptionAsInt(cmd, NUM_OPERATIONS_OPTION.getOpt(), DEFAULT_NUM_OPERATIONS);
     numThreads = getOptionAsInt(cmd, NUM_THREADS_OPTION.getOpt(), DEFAULT_NUM_THREADS);
     opsType = cmd.getOptionValue(OPS_TYPE_OPTION.getOpt(), DEFAULT_OPS_TYPE);
   }
@@ -214,7 +213,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     public void run() {
       while (completed.get() < numOps) {
         // With lock/unlock being ~100ns, and no other workload, 1000ns wait seams reasonable.
-        TestProcedure proc = (TestProcedure)procedureScheduler.poll(1000);
+        TestProcedure proc = (TestProcedure) procedureScheduler.poll(1000);
         if (proc == null) {
           yield.incrementAndGet();
           continue;
@@ -289,11 +288,12 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     System.out.println("Threads            : " + numThreads);
     System.out.println("******************************************");
     System.out.println("Raw format for scripts");
-    System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
-            + "num_yield=%s, time_addback_ms=%s, time_poll_ms=%s]",
-        NUM_OPERATIONS_OPTION.getOpt(), numOps, OPS_TYPE_OPTION.getOpt(), opsType,
-        NUM_TABLES_OPTION.getOpt(), numTables, REGIONS_PER_TABLE_OPTION.getOpt(), regionsPerTable,
-        NUM_THREADS_OPTION.getOpt(), numThreads, yield.get(), addBackTime, pollTime));
+    System.out.println(String.format(
+      "RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
+          + "num_yield=%s, time_addback_ms=%s, time_poll_ms=%s]",
+      NUM_OPERATIONS_OPTION.getOpt(), numOps, OPS_TYPE_OPTION.getOpt(), opsType,
+      NUM_TABLES_OPTION.getOpt(), numTables, REGIONS_PER_TABLE_OPTION.getOpt(), regionsPerTable,
+      NUM_THREADS_OPTION.getOpt(), numThreads, yield.get(), addBackTime, pollTime));
     return 0;
   }
 

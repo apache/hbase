@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,7 +86,7 @@ public final class ProcedureTree {
     }
     checkOrphan(procMap);
     Comparator<ProtoAndProcedure> cmp =
-      (p1, p2) -> Long.compare(p1.getProto().getProcId(), p2.getProto().getProcId());
+        (p1, p2) -> Long.compare(p1.getProto().getProcId(), p2.getProto().getProcId());
     Collections.sort(validProcs, cmp);
     Collections.sort(corruptedProcs, cmp);
   }
@@ -109,7 +109,7 @@ public final class ProcedureTree {
   }
 
   private void collectStackId(Entry entry, Map<Integer, List<Entry>> stackId2Proc,
-    MutableInt maxStackId) {
+      MutableInt maxStackId) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Procedure {} stack ids={}", entry, entry.proc.getStackIdList());
     }
@@ -124,7 +124,7 @@ public final class ProcedureTree {
   }
 
   private void addAllToCorruptedAndRemoveFromProcMap(Entry entry,
-    Map<Long, Entry> remainingProcMap) {
+      Map<Long, Entry> remainingProcMap) {
     corruptedProcs.add(new ProtoAndProcedure(entry.proc));
     remainingProcMap.remove(entry.proc.getProcId());
     for (Entry e : entry.subProcs) {
@@ -167,8 +167,9 @@ public final class ProcedureTree {
           rootEntry);
         valid = false;
       } else if (entries.size() > 1) {
-        LOG.error("Multiple procedures {} have the same stack id {}, max stack id is {}," +
-          " root procedure is {}", entries, i, maxStackId, rootEntry);
+        LOG.error("Multiple procedures {} have the same stack id {}, max stack id is {},"
+            + " root procedure is {}",
+          entries, i, maxStackId, rootEntry);
         valid = false;
       }
     }

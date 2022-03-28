@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestSplitMerge {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitMerge.class);
+      HBaseClassTestRule.forClass(TestSplitMerge.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -65,7 +65,7 @@ public class TestSplitMerge {
     TableName tableName = TableName.valueOf("SplitMerge");
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     UTIL.getAdmin().createTable(td, new byte[][] { Bytes.toBytes(1) });
     UTIL.waitTableAvailable(tableName);
     UTIL.getAdmin().split(tableName, Bytes.toBytes(2));
@@ -94,32 +94,32 @@ public class TestSplitMerge {
     assertNotNull(regionA);
     assertNotNull(regionB);
     UTIL.getAdmin().mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false)
-      .get(30, TimeUnit.SECONDS);
+        .get(30, TimeUnit.SECONDS);
     assertEquals(2, UTIL.getAdmin().getRegions(tableName).size());
 
     ServerName expected = UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
     assertEquals(expected, UTIL.getConnection().getRegionLocator(tableName)
-      .getRegionLocation(Bytes.toBytes(1), true).getServerName());
+        .getRegionLocation(Bytes.toBytes(1), true).getServerName());
     try (AsyncConnection asyncConn =
-      ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
       assertEquals(expected, asyncConn.getRegionLocator(tableName)
-        .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
+          .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
     }
   }
 
   @Test
   public void testMergeRegionOrder() throws Exception {
-    int regionCount= 20;
+    int regionCount = 20;
 
     TableName tableName = TableName.valueOf("MergeRegionOrder");
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
-    byte[][] splitKeys = new byte[regionCount-1][];
+    byte[][] splitKeys = new byte[regionCount - 1][];
 
-    for (int c = 0; c < regionCount-1; c++) {
-      splitKeys[c] = Bytes.toBytes(c+1 * 1000);
+    for (int c = 0; c < regionCount - 1; c++) {
+      splitKeys[c] = Bytes.toBytes(c + 1 * 1000);
     }
 
     UTIL.getAdmin().createTable(td, splitKeys);
@@ -141,8 +141,8 @@ public class TestSplitMerge {
 
     RegionInfo mergedRegion = mergedRegions.get(0);
 
-    List<RegionInfo> mergeParentRegions = MetaTableAccessor.getMergeRegions(UTIL.getConnection(),
-      mergedRegion.getRegionName());
+    List<RegionInfo> mergeParentRegions =
+        MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion.getRegionName());
 
     assertEquals(mergeParentRegions.size(), regionCount);
 

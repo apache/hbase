@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,7 @@ public class TestMalformedCellFromClient {
   private static final Logger LOG = LoggerFactory.getLogger(TestMalformedCellFromClient.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMalformedCellFromClient.class);
+      HBaseClassTestRule.forClass(TestMalformedCellFromClient.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -83,8 +83,8 @@ public class TestMalformedCellFromClient {
   @Before
   public void before() throws Exception {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-      .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, String.valueOf(CELL_SIZE)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, String.valueOf(CELL_SIZE)).build();
     TEST_UTIL.getConnection().getAdmin().createTable(desc);
   }
 
@@ -101,10 +101,9 @@ public class TestMalformedCellFromClient {
   }
 
   /**
-   * The purpose of this ut is to check the consistency between the exception and results.
-   * If the RetriesExhaustedWithDetailsException contains the whole batch,
-   * each result should be of IOE. Otherwise, the row operation which is not in the exception
-   * should have a true result.
+   * The purpose of this ut is to check the consistency between the exception and results. If the
+   * RetriesExhaustedWithDetailsException contains the whole batch, each result should be of IOE.
+   * Otherwise, the row operation which is not in the exception should have a true result.
    */
   @Test
   public void testRegionException() throws InterruptedException, IOException {
@@ -162,8 +161,8 @@ public class TestMalformedCellFromClient {
     RowMutations rm = new RowMutations(Bytes.toBytes("fail"));
     rm.add(new Put(rm.getRow()).addColumn(FAMILY, null, new byte[CELL_SIZE]));
     batches.add(rm);
-    try (AsyncConnection asyncConnection = ConnectionFactory
-      .createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+    try (AsyncConnection asyncConnection =
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       AsyncTable<AdvancedScanResultConsumer> table = asyncConnection.getTable(TABLE_NAME);
       List<CompletableFuture<AdvancedScanResultConsumer>> results = table.batch(batches);
       assertEquals(2, results.size());
@@ -195,13 +194,14 @@ public class TestMalformedCellFromClient {
     // build the request
     HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     ClientProtos.MultiRequest request =
-      ClientProtos.MultiRequest.newBuilder(createRequest(rm, r.getRegionInfo().getRegionName()))
-        .addRegionAction(ClientProtos.RegionAction.newBuilder().setRegion(RequestConverter
-          .buildRegionSpecifier(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME,
-            r.getRegionInfo().getRegionName())).addAction(ClientProtos.Action.newBuilder()
-          .setMutation(
-            ProtobufUtil.toMutationNoData(ClientProtos.MutationProto.MutationType.PUT, put))))
-        .build();
+        ClientProtos.MultiRequest.newBuilder(createRequest(rm, r.getRegionInfo().getRegionName()))
+            .addRegionAction(ClientProtos.RegionAction.newBuilder()
+                .setRegion(RequestConverter.buildRegionSpecifier(
+                  HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME,
+                  r.getRegionInfo().getRegionName()))
+                .addAction(ClientProtos.Action.newBuilder().setMutation(
+                  ProtobufUtil.toMutationNoData(ClientProtos.MutationProto.MutationType.PUT, put))))
+            .build();
 
     List<Cell> cells = new ArrayList<>();
     for (Mutation m : rm.getMutations()) {
@@ -211,9 +211,9 @@ public class TestMalformedCellFromClient {
     assertEquals(3, cells.size());
     HBaseRpcController controller = Mockito.mock(HBaseRpcController.class);
     Mockito.when(controller.cellScanner()).thenReturn(CellUtil.createCellScanner(cells));
-    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(
-      TEST_UTIL.getMiniHBaseCluster()
-        .getServerHoldingRegion(TABLE_NAME, r.getRegionInfo().getRegionName()));
+    HRegionServer rs =
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(TEST_UTIL.getMiniHBaseCluster()
+            .getServerHoldingRegion(TABLE_NAME, r.getRegionInfo().getRegionName()));
 
     ClientProtos.MultiResponse response = rs.getRSRpcServices().multi(controller, request);
     assertEquals(2, response.getRegionActionResultCount());
@@ -231,9 +231,9 @@ public class TestMalformedCellFromClient {
   }
 
   private static ClientProtos.MultiRequest createRequest(RowMutations rm, byte[] regionName)
-    throws IOException {
+      throws IOException {
     ClientProtos.RegionAction.Builder builder = RequestConverter
-      .getRegionActionBuilderWithRegion(ClientProtos.RegionAction.newBuilder(), regionName);
+        .getRegionActionBuilderWithRegion(ClientProtos.RegionAction.newBuilder(), regionName);
     builder.setAtomic(true);
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     ClientProtos.MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
@@ -247,11 +247,11 @@ public class TestMalformedCellFromClient {
         mutateType = ClientProtos.MutationProto.MutationType.DELETE;
       } else {
         throw new DoNotRetryIOException(
-          "RowMutations supports only put and delete, not " + mutation.getClass().getName());
+            "RowMutations supports only put and delete, not " + mutation.getClass().getName());
       }
       mutationBuilder.clear();
       ClientProtos.MutationProto mp =
-        ProtobufUtil.toMutationNoData(mutateType, mutation, mutationBuilder);
+          ProtobufUtil.toMutationNoData(mutateType, mutation, mutationBuilder);
       actionBuilder.clear();
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
@@ -262,11 +262,9 @@ public class TestMalformedCellFromClient {
   }
 
   /**
-   * This test depends on how regionserver process the batch ops.
-   * 1) group the put/delete until meeting the increment
-   * 2) process the batch of put/delete
-   * 3) process the increment
-   * see RSRpcServices#doNonAtomicRegionMutation
+   * This test depends on how regionserver process the batch ops. 1) group the put/delete until
+   * meeting the increment 2) process the batch of put/delete 3) process the increment see
+   * RSRpcServices#doNonAtomicRegionMutation
    */
   @Test
   public void testNonAtomicOperations() throws InterruptedException, IOException {

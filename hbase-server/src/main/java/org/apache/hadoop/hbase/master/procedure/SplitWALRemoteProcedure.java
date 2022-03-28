@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,14 +29,15 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 /**
- * A remote procedure which is used to send split WAL request to region server.
- * It will return null if the task succeeded or return a DoNotRetryIOException.
- * {@link SplitWALProcedure} will help handle the situation that encounters
- * DoNotRetryIOException. Otherwise it will retry until success.
+ * A remote procedure which is used to send split WAL request to region server. It will return null
+ * if the task succeeded or return a DoNotRetryIOException. {@link SplitWALProcedure} will help
+ * handle the situation that encounters DoNotRetryIOException. Otherwise it will retry until
+ * success.
  */
 @InterfaceAudience.Private
 public class SplitWALRemoteProcedure extends ServerRemoteProcedure
@@ -86,10 +86,9 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   @Override
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
       ServerName serverName) {
-    return Optional
-        .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), SplitWALCallable.class,
-            MasterProcedureProtos.SplitWALParameter.newBuilder().setWalPath(walPath).build()
-                .toByteArray()));
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
+        SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter.newBuilder()
+            .setWalPath(walPath).build().toByteArray()));
   }
 
   @Override
@@ -132,7 +131,8 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     return ServerOperationType.SPLIT_WAL_REMOTE;
   }
 
-  @Override protected void toStringClassDetails(StringBuilder builder) {
+  @Override
+  protected void toStringClassDetails(StringBuilder builder) {
     builder.append(getProcName());
     if (this.targetServer != null) {
       builder.append(", worker=");
@@ -140,7 +140,8 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     }
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + SplitWALProcedure.getWALNameFromStrPath(getWAL());
   }
 }

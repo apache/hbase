@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -32,13 +30,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 
 /**
- * Manages the store files and basic metadata about that that determines the logical structure
- * (e.g. what files to return for scan, how to determine split point, and such).
- * Does NOT affect the physical structure of files in HDFS.
- * Example alternative structures - the default list of files by seqNum; levelDB one sorted
- * by level and seqNum.
- *
- * Implementations are assumed to be not thread safe.
+ * Manages the store files and basic metadata about that that determines the logical structure (e.g.
+ * what files to return for scan, how to determine split point, and such). Does NOT affect the
+ * physical structure of files in HDFS. Example alternative structures - the default list of files
+ * by seqNum; levelDB one sorted by level and seqNum. Implementations are assumed to be not thread
+ * safe.
  */
 @InterfaceAudience.Private
 public interface StoreFileManager {
@@ -59,8 +55,8 @@ public interface StoreFileManager {
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
    */
-  void addCompactionResults(
-      Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results) throws IOException;
+  void addCompactionResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results)
+      throws IOException;
 
   /**
    * Remove the compacted files
@@ -76,24 +72,23 @@ public interface StoreFileManager {
   ImmutableCollection<HStoreFile> clearFiles();
 
   /**
-   * Clears all the compacted files and returns them. This method is expected to be
-   * accessed single threaded.
+   * Clears all the compacted files and returns them. This method is expected to be accessed single
+   * threaded.
    * @return The files compacted previously.
    */
   Collection<HStoreFile> clearCompactedFiles();
 
   /**
-   * Gets the snapshot of the store files currently in use. Can be used for things like metrics
-   * and checks; should not assume anything about relations between store files in the list.
+   * Gets the snapshot of the store files currently in use. Can be used for things like metrics and
+   * checks; should not assume anything about relations between store files in the list.
    * @return The list of StoreFiles.
    */
   Collection<HStoreFile> getStorefiles();
 
   /**
-   * List of compacted files inside this store that needs to be excluded in reads
-   * because further new reads will be using only the newly created files out of compaction.
-   * These compacted files will be deleted/cleared once all the existing readers on these
-   * compacted files are done.
+   * List of compacted files inside this store that needs to be excluded in reads because further
+   * new reads will be using only the newly created files out of compaction. These compacted files
+   * will be deleted/cleared once all the existing readers on these compacted files are done.
    * @return the list of compacted files
    */
   Collection<HStoreFile> getCompactedfiles();
@@ -122,25 +117,24 @@ public interface StoreFileManager {
   /**
    * Gets initial, full list of candidate store files to check for row-key-before.
    * @param targetKey The key that is the basis of the search.
-   * @return The files that may have the key less than or equal to targetKey, in reverse
-   *         order of new-ness, and preference for target key.
+   * @return The files that may have the key less than or equal to targetKey, in reverse order of
+   *         new-ness, and preference for target key.
    */
   Iterator<HStoreFile> getCandidateFilesForRowKeyBefore(KeyValue targetKey);
 
   /**
    * Updates the candidate list for finding row key before. Based on the list of candidates
-   * remaining to check from getCandidateFilesForRowKeyBefore, targetKey and current candidate,
-   * may trim and reorder the list to remove the files where a better candidate cannot be found.
-   * @param candidateFiles The candidate files not yet checked for better candidates - return
-   *                       value from {@link #getCandidateFilesForRowKeyBefore(KeyValue)},
-   *                       with some files already removed.
+   * remaining to check from getCandidateFilesForRowKeyBefore, targetKey and current candidate, may
+   * trim and reorder the list to remove the files where a better candidate cannot be found.
+   * @param candidateFiles The candidate files not yet checked for better candidates - return value
+   *          from {@link #getCandidateFilesForRowKeyBefore(KeyValue)}, with some files already
+   *          removed.
    * @param targetKey The key to search for.
    * @param candidate The current best candidate found.
    * @return The list to replace candidateFiles.
    */
   Iterator<HStoreFile> updateCandidateFilesForRowKeyBefore(Iterator<HStoreFile> candidateFiles,
       KeyValue targetKey, Cell candidate);
-
 
   /**
    * Gets the split point for the split of this set of store files (approx. middle).

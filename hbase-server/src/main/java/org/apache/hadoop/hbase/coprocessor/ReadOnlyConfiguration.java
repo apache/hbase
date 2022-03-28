@@ -34,11 +34,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Wraps a Configuration to make it read-only.

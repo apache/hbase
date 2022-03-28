@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +19,14 @@ package org.apache.hadoop.hbase.wal;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A WAL grouping strategy based on namespace.
- * Notice: the wal-group mapping might change if we support dynamic namespace updating later,
- * and special attention needed if we support feature like group-based replication.
+ * A WAL grouping strategy based on namespace. Notice: the wal-group mapping might change if we
+ * support dynamic namespace updating later, and special attention needed if we support feature like
+ * group-based replication.
  */
 @InterfaceAudience.Private
 public class NamespaceGroupingStrategy implements RegionGroupingStrategy {

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -66,7 +67,9 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -85,7 +88,8 @@ public class TestHbck {
   @Rule
   public TestName name = new TestName();
 
-  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @Parameter
   public boolean async;
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
@@ -179,7 +183,7 @@ public class TestHbck {
     // Method {@link Hbck#setTableStateInMeta()} returns previous state, which in this case
     // will be DISABLED
     TableState prevState =
-      hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
+        hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
     assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
       prevState.isDisabled());
   }
@@ -220,51 +224,50 @@ public class TestHbck {
       List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .getRegionStates().getRegionState(ri.getEncodedName());
+            .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
       }
-      List<Long> pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      List<Long> pids = hbck
+          .unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
       // Rerun the unassign. Should fail for all Regions since they already unassigned; failed
       // unassign will manifest as all pids being -1 (ever since HBASE-24885).
-      pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      pids = hbck
+          .unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
-      for (long pid: pids) {
+      for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
       // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
-      pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()),
-          true);
+      pids = hbck.unassigns(
+        regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()), true);
       waitOnPids(pids);
-      for (long pid: pids) {
+      for (long pid : pids) {
         assertNotEquals(Procedure.NO_PROC_ID, pid);
       }
       // Clean-up by bypassing all the unassigns we just made so tests can continue.
       hbck.bypassProcedure(pids, 10000, true, true);
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .getRegionStates().getRegionState(ri.getEncodedName());
+            .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
         assertTrue(rs.toString(), rs.isClosed());
       }
       pids =
-        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+          hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
       // Rerun the assign. Should fail for all Regions since they already assigned; failed
       // assign will manifest as all pids being -1 (ever since HBASE-24885).
       pids =
-        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
-      for (long pid: pids) {
+          hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .getRegionStates().getRegionState(ri.getEncodedName());
+            .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
         assertTrue(rs.toString(), rs.isOpened());
       }
@@ -285,12 +288,12 @@ public class TestHbck {
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+        hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
     List<Long> newPids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+        hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);
@@ -312,7 +315,8 @@ public class TestHbck {
 
   public static class FailingSplitAfterMetaUpdatedMasterObserver
       implements MasterCoprocessor, MasterObserver {
-    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
@@ -339,7 +343,8 @@ public class TestHbck {
 
   public static class FailingMergeAfterMetaUpdatedMasterObserver
       implements MasterCoprocessor, MasterObserver {
-    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {

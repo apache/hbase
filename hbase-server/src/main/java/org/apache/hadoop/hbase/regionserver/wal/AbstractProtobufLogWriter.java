@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,8 +78,7 @@ public abstract class AbstractProtobufLogWriter {
       builder.setWriterClsName(getWriterClassName());
     }
     if (!builder.hasCellCodecClsName()) {
-      builder.setCellCodecClsName(
-          WALCellCodec.getWALCellCodecClass(conf).getName());
+      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf).getName());
     }
     return builder.build();
   }
@@ -110,10 +109,9 @@ public abstract class AbstractProtobufLogWriter {
       // Generate a random encryption key for this WAL
       Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
-          conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
-              conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-                  User.getCurrent().getShortName())),
-          key)));
+        conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
+          conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName())),
+        key)));
 
       // Set up the encryptor
       Encryptor encryptor = cipher.getEncryptor();
@@ -140,8 +138,8 @@ public abstract class AbstractProtobufLogWriter {
     if (doCompress) {
       try {
         this.compressionContext =
-          new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
-            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
+            new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
+                conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
@@ -162,7 +160,7 @@ public abstract class AbstractProtobufLogWriter {
       initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
 
       boolean doTagCompress =
-        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+          doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
       length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC, buildWALHeader(conf,
         WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))));
 

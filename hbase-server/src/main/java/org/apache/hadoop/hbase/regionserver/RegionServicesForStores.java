@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,11 +29,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * Services a Store needs from a Region.
- * RegionServicesForStores class is the interface through which memstore access services at the
- * region level.
- * For example, when using alternative memory formats or due to compaction the memstore needs to
- * take occasional lock and update size counters at the region level.
+ * Services a Store needs from a Region. RegionServicesForStores class is the interface through
+ * which memstore access services at the region level. For example, when using alternative memory
+ * formats or due to compaction the memstore needs to take occasional lock and update size counters
+ * at the region level.
  */
 @InterfaceAudience.Private
 public class RegionServicesForStores {
@@ -88,8 +86,8 @@ public class RegionServicesForStores {
   private static synchronized ThreadPoolExecutor getInMemoryCompactionPoolForTest() {
     if (INMEMORY_COMPACTION_POOL_FOR_TEST == null) {
       INMEMORY_COMPACTION_POOL_FOR_TEST = new ThreadPoolExecutor(10, 10, 60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setDaemon(true)
-          .setNameFormat("InMemoryCompactionsForTest-%d").build());
+          new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setDaemon(true)
+              .setNameFormat("InMemoryCompactionsForTest-%d").build());
     }
     return INMEMORY_COMPACTION_POOL_FOR_TEST;
   }

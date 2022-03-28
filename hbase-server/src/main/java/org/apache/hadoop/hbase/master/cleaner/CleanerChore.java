@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,10 +57,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private static final int AVAIL_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
   /**
-   * If it is an integer and >= 1, it would be the size;
-   * if 0.0 < size <= 1.0, size would be available processors * size.
-   * Pay attention that 1.0 is different from 1, former indicates it will use 100% of cores,
-   * while latter will use only 1 thread for chore to scan dir.
+   * If it is an integer and >= 1, it would be the size; if 0.0 < size <= 1.0, size would be
+   * available processors * size. Pay attention that 1.0 is different from 1, former indicates it
+   * will use 100% of cores, while latter will use only 1 thread for chore to scan dir.
    */
   public static final String CHORE_POOL_SIZE = "hbase.cleaner.scan.dir.concurrent.size";
   static final String DEFAULT_CHORE_POOL_SIZE = "0.25";
@@ -75,7 +74,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected List<T> cleanersChain;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
+      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
     this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null);
   }
 
@@ -91,7 +90,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param params members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params) {
+      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool,
+      Map<String, Object> params) {
     super(name, s, sleepPeriod);
 
     Preconditions.checkNotNull(pool, "Chore's pool can not be null");
@@ -127,8 +127,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       }
       return computedThreads;
     } else {
-      LOG.error("Unrecognized value: " + poolSize + " for " + CHORE_POOL_SIZE +
-          ", use default config: " + DEFAULT_CHORE_POOL_SIZE + " instead.");
+      LOG.error("Unrecognized value: " + poolSize + " for " + CHORE_POOL_SIZE
+          + ", use default config: " + DEFAULT_CHORE_POOL_SIZE + " instead.");
       return calculatePoolSize(DEFAULT_CHORE_POOL_SIZE);
     }
   }
@@ -149,7 +149,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.cleanersChain = new LinkedList<>();
     String[] logCleaners = conf.getStrings(confKey);
     if (logCleaners != null) {
-      for (String className: logCleaners) {
+      for (String className : logCleaners) {
         className = className.trim();
         if (className.isEmpty()) {
           continue;
@@ -172,8 +172,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    */
   private T newFileCleaner(String className, Configuration conf) {
     try {
-      Class<? extends FileCleanerDelegate> c = Class.forName(className).asSubclass(
-        FileCleanerDelegate.class);
+      Class<? extends FileCleanerDelegate> c =
+          Class.forName(className).asSubclass(FileCleanerDelegate.class);
       @SuppressWarnings("unchecked")
       T cleaner = (T) c.getDeclaredConstructor().newInstance();
       cleaner.setConf(conf);
@@ -352,8 +352,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
               + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
         }
       } catch (IOException e) {
-        e = e instanceof RemoteException ?
-                  ((RemoteException)e).unwrapRemoteException() : e;
+        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
         LOG.warn("Error while deleting: " + filePath, e);
       }
     }
@@ -382,7 +381,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     return this.enabled.getAndSet(enabled);
   }
 
-  public boolean getEnabled() { return this.enabled.get();
+  public boolean getEnabled() {
+    return this.enabled.get();
   }
 
   private interface Action<T> {
@@ -469,12 +469,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       deleted = false;
     } catch (IOException ioe) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, " +
-            "quote the exception when asking on mailing list.", type, dir, ioe);
+        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, "
+            + "quote the exception when asking on mailing list.",
+          type, dir, ioe);
       } else {
-        LOG.info("Could not delete {} under {} because {}; will retry. If it  keeps happening, enable" +
-            "TRACE-level logging and quote the exception when asking on mailing list.",
-            type, dir, ioe.getMessage());
+        LOG.info(
+          "Could not delete {} under {} because {}; will retry. If it  keeps happening, enable"
+              + "TRACE-level logging and quote the exception when asking on mailing list.",
+          type, dir, ioe.getMessage());
       }
       deleted = false;
     } catch (Exception e) {

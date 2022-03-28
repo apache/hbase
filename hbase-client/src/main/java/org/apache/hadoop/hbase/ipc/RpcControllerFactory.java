@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Factory to create a {@link HBaseRpcController}
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class RpcControllerFactory {
   private static final Logger LOG = LoggerFactory.getLogger(RpcControllerFactory.class);
@@ -73,8 +73,7 @@ public class RpcControllerFactory {
 
   public static RpcControllerFactory instantiate(Configuration configuration) {
     String rpcControllerFactoryClazz =
-        configuration.get(CUSTOM_CONTROLLER_CONF_KEY,
-          RpcControllerFactory.class.getName());
+        configuration.get(CUSTOM_CONTROLLER_CONF_KEY, RpcControllerFactory.class.getName());
     try {
       return ReflectionUtils.instantiateWithCustomCtor(rpcControllerFactoryClazz,
         new Class[] { Configuration.class }, new Object[] { configuration });

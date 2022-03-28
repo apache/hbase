@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
@@ -61,8 +59,8 @@ public class MobStoreScanner extends StoreScanner {
 
   /**
    * Firstly reads the cells from the HBase. If the cell are a reference cell (which has the
-   * reference tag), the scanner need seek this cell from the mob file, and use the cell found
-   * from the mob file as the result.
+   * reference tag), the scanner need seek this cell from the mob file, and use the cell found from
+   * the mob file as the result.
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext ctx) throws IOException {

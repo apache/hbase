@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestShutdownWithNoRegionServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShutdownWithNoRegionServer.class);
+      HBaseClassTestRule.forClass(TestShutdownWithNoRegionServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

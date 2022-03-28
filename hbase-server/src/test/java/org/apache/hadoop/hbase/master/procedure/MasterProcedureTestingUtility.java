@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
@@ -71,7 +70,8 @@ import org.slf4j.LoggerFactory;
 public class MasterProcedureTestingUtility {
   private static final Logger LOG = LoggerFactory.getLogger(MasterProcedureTestingUtility.class);
 
-  private MasterProcedureTestingUtility() { }
+  private MasterProcedureTestingUtility() {
+  }
 
   public static void restartMasterProcedureExecutor(ProcedureExecutor<MasterProcedureEnv> procExec)
       throws Exception {
@@ -84,7 +84,7 @@ public class MasterProcedureTestingUtility {
         public Void call() throws Exception {
           AssignmentManager am = env.getAssignmentManager();
           // try to simulate a master restart by removing the ServerManager states about seqIDs
-          for (RegionState regionState: am.getRegionStates().getRegionStates()) {
+          for (RegionState regionState : am.getRegionStates().getRegionStates()) {
             env.getMasterServices().getServerManager().removeRegion(regionState.getRegion());
           }
           am.stop();
@@ -102,8 +102,8 @@ public class MasterProcedureTestingUtility {
           // just follow the same way with HMaster.finishActiveMasterInitialization. See the
           // comments there
           am.setupRIT(procExec.getActiveProceduresNoCopy().stream().filter(p -> !p.isSuccess())
-            .filter(p -> p instanceof TransitRegionStateProcedure)
-            .map(p -> (TransitRegionStateProcedure) p).collect(Collectors.toList()));
+              .filter(p -> p instanceof TransitRegionStateProcedure)
+              .map(p -> (TransitRegionStateProcedure) p).collect(Collectors.toList()));
           return null;
         }
       },
@@ -125,10 +125,9 @@ public class MasterProcedureTestingUtility {
   }
 
   // ==========================================================================
-  //  Master failover utils
+  // Master failover utils
   // ==========================================================================
-  public static void masterFailover(final HBaseTestingUtility testUtil)
-      throws Exception {
+  public static void masterFailover(final HBaseTestingUtility testUtil) throws Exception {
     MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     // Kill the master
@@ -139,8 +138,8 @@ public class MasterProcedureTestingUtility {
     waitBackupMaster(testUtil, oldMaster);
   }
 
-  public static void waitBackupMaster(final HBaseTestingUtility testUtil,
-      final HMaster oldMaster) throws Exception {
+  public static void waitBackupMaster(final HBaseTestingUtility testUtil, final HMaster oldMaster)
+      throws Exception {
     MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     HMaster newMaster = cluster.getMaster();
@@ -155,7 +154,7 @@ public class MasterProcedureTestingUtility {
   }
 
   // ==========================================================================
-  //  Table Helpers
+  // Table Helpers
   // ==========================================================================
   public static TableDescriptor createHTD(final TableName tableName, final String... family) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -185,7 +184,7 @@ public class MasterProcedureTestingUtility {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir =
-      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+        CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
     CommonFSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> unwantedRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
@@ -220,17 +219,18 @@ public class MasterProcedureTestingUtility {
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue("table descriptor not found", htd != null);
     for (int i = 0; i < family.length; ++i) {
-      assertTrue("family not found " + family[i], htd.getColumnFamily(Bytes.toBytes(family[i])) != null);
+      assertTrue("family not found " + family[i],
+        htd.getColumnFamily(Bytes.toBytes(family[i])) != null);
     }
     assertEquals(family.length, htd.getColumnFamilyCount());
   }
 
-  public static void validateTableDeletion(
-      final HMaster master, final TableName tableName) throws IOException {
+  public static void validateTableDeletion(final HMaster master, final TableName tableName)
+      throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir =
-      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+        CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertFalse(fs.exists(tableDir));
 
     // check meta
@@ -238,8 +238,7 @@ public class MasterProcedureTestingUtility {
     assertEquals(0, countMetaRegions(master, tableName));
 
     // check htd
-    assertTrue("found htd of deleted table",
-      master.getTableDescriptors().get(tableName) == null);
+    assertTrue("found htd of deleted table", master.getTableDescriptors().get(tableName) == null);
   }
 
   private static int countMetaRegions(final HMaster master, final TableName tableName)
@@ -307,7 +306,7 @@ public class MasterProcedureTestingUtility {
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir =
-      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+        CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     for (Path regionDir : FSUtils.getRegionDirs(fs, tableDir)) {
       final Path familyDir = new Path(regionDir, family);
       assertFalse(family + " family dir should not exist", fs.exists(familyDir));
@@ -324,8 +323,8 @@ public class MasterProcedureTestingUtility {
     assertEquals(0, ColumnFamilyDescriptor.COMPARATOR.compare(hcfd, columnDescriptor));
   }
 
-  public static void loadData(final Connection connection, final TableName tableName,
-      int rows, final byte[][] splitKeys,  final String... sfamilies) throws IOException {
+  public static void loadData(final Connection connection, final TableName tableName, int rows,
+      final byte[][] splitKeys, final String... sfamilies) throws IOException {
     byte[][] families = new byte[sfamilies.length][];
     for (int i = 0; i < families.length; ++i) {
       families[i] = Bytes.toBytes(sfamilies[i]);
@@ -335,7 +334,7 @@ public class MasterProcedureTestingUtility {
 
     // Ensure one row per region
     assertTrue(rows >= splitKeys.length);
-    for (byte[] k: splitKeys) {
+    for (byte[] k : splitKeys) {
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       mutator.mutate(createPut(families, key, value));
@@ -355,14 +354,14 @@ public class MasterProcedureTestingUtility {
     byte[] q = Bytes.toBytes("q");
     Put put = new Put(key);
     put.setDurability(Durability.SKIP_WAL);
-    for (byte[] family: families) {
+    for (byte[] family : families) {
       put.addColumn(family, q, value);
     }
     return put;
   }
 
   // ==========================================================================
-  //  Procedure Helpers
+  // Procedure Helpers
   // ==========================================================================
   public static long generateNonceGroup(final HMaster master) {
     return master.getClusterConnection().getNonceGenerator().getNonceGroup();
@@ -375,28 +374,28 @@ public class MasterProcedureTestingUtility {
   /**
    * Run through all procedure flow states TWICE while also restarting procedure executor at each
    * step; i.e force a reread of procedure store.
-   *
-   *<p>It does
-   * <ol><li>Execute step N - kill the executor before store update
+   * <p>
+   * It does
+   * <ol>
+   * <li>Execute step N - kill the executor before store update
    * <li>Restart executor/store
    * <li>Execute step N - and then save to store
    * </ol>
-   *
-   *<p>This is a good test for finding state that needs persisting and steps that are not
-   * idempotent. Use this version of the test when a procedure executes all flow steps from start to
-   * finish.
+   * <p>
+   * This is a good test for finding state that needs persisting and steps that are not idempotent.
+   * Use this version of the test when a procedure executes all flow steps from start to finish.
    * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long)
    */
   public static void testRecoveryAndDoubleExecution(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int lastStep, final boolean expectExecRunning) throws Exception {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final int lastStep,
+      final boolean expectExecRunning) throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
 
     // Restart the executor and execute the step twice
-    //   execute step N - kill before store update
-    //   restart executor/store
-    //   execute step N - save on store
+    // execute step N - kill before store update
+    // restart executor/store
+    // execute step N - save on store
     // NOTE: currently we make assumption that states/ steps are sequential. There are already
     // instances of a procedures which skip (don't use) intermediate states/ steps. In future,
     // intermediate states/ steps can be added with ordinal greater than lastStep. If and when
@@ -408,8 +407,9 @@ public class MasterProcedureTestingUtility {
     // state is in that list. Current assumption of sequential proregression of steps/ states is
     // made at multiple places so we can keep while condition below for simplicity.
     Procedure<?> proc = procExec.getProcedure(procId);
-    int stepNum = proc instanceof StateMachineProcedure ?
-        ((StateMachineProcedure) proc).getCurrentStateId() : 0;
+    int stepNum =
+        proc instanceof StateMachineProcedure ? ((StateMachineProcedure) proc).getCurrentStateId()
+            : 0;
     for (;;) {
       if (stepNum == lastStep) {
         break;
@@ -420,28 +420,29 @@ public class MasterProcedureTestingUtility {
       ProcedureTestingUtility.waitProcedure(procExec, procId);
       // Old proc object is stale, need to get the new one after ProcedureExecutor restart
       proc = procExec.getProcedure(procId);
-      stepNum = proc instanceof StateMachineProcedure ?
-          ((StateMachineProcedure) proc).getCurrentStateId() : stepNum + 1;
+      stepNum =
+          proc instanceof StateMachineProcedure ? ((StateMachineProcedure) proc).getCurrentStateId()
+              : stepNum + 1;
     }
 
     assertEquals(expectExecRunning, procExec.isRunning());
   }
 
   /**
-   * Run through all procedure flow states TWICE while also restarting
-   * procedure executor at each step; i.e force a reread of procedure store.
-   *
-   *<p>It does
-   * <ol><li>Execute step N - kill the executor before store update
+   * Run through all procedure flow states TWICE while also restarting procedure executor at each
+   * step; i.e force a reread of procedure store.
+   * <p>
+   * It does
+   * <ol>
+   * <li>Execute step N - kill the executor before store update
    * <li>Restart executor/store
    * <li>Executes hook for each step twice
    * <li>Execute step N - and then save to store
    * </ol>
-   *
-   *<p>This is a good test for finding state that needs persisting and steps that are not
-   * idempotent. Use this version of the test when the order in which flow steps are executed is
-   * not start to finish; where the procedure may vary the flow steps dependent on circumstance
-   * found.
+   * <p>
+   * This is a good test for finding state that needs persisting and steps that are not idempotent.
+   * Use this version of the test when the order in which flow steps are executed is not start to
+   * finish; where the procedure may vary the flow steps dependent on circumstance found.
    * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long, int, boolean)
    */
   public static void testRecoveryAndDoubleExecution(
@@ -469,7 +470,7 @@ public class MasterProcedureTestingUtility {
   /**
    * Hook which will be executed on each step
    */
-  public interface StepHook{
+  public interface StepHook {
     /**
      * @param step Step no. at which this will be executed
      * @return false if test should fail otherwise true
@@ -479,29 +480,28 @@ public class MasterProcedureTestingUtility {
   }
 
   /**
-   * Execute the procedure up to "lastStep" and then the ProcedureExecutor
-   * is restarted and an abort() is injected.
-   * If the procedure implement abort() this should result in rollback being triggered.
-   * Each rollback step is called twice, by restarting the executor after every step.
-   * At the end of this call the procedure should be finished and rolledback.
-   * This method assert on the procedure being terminated with an AbortException.
+   * Execute the procedure up to "lastStep" and then the ProcedureExecutor is restarted and an
+   * abort() is injected. If the procedure implement abort() this should result in rollback being
+   * triggered. Each rollback step is called twice, by restarting the executor after every step. At
+   * the end of this call the procedure should be finished and rolledback. This method assert on the
+   * procedure being terminated with an AbortException.
    */
   public static void testRollbackAndDoubleExecution(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int lastStep) throws Exception {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final int lastStep)
+      throws Exception {
     testRollbackAndDoubleExecution(procExec, procId, lastStep, false);
   }
 
   public static void testRollbackAndDoubleExecution(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int lastStep, boolean waitForAsyncProcs) throws Exception {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final int lastStep,
+      boolean waitForAsyncProcs) throws Exception {
     // Execute up to last step
     testRecoveryAndDoubleExecution(procExec, procId, lastStep, false);
 
     // Restart the executor and rollback the step twice
-    //   rollback step N - kill before store update
-    //   restart executor/store
-    //   rollback step N - save on store
+    // rollback step N - kill before store update
+    // restart executor/store
+    // rollback step N - save on store
     InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
     abortListener.addProcId(procId);
     procExec.registerListener(abortListener);
@@ -524,8 +524,8 @@ public class MasterProcedureTestingUtility {
       // check 3 times to confirm that the procedure executor has not been killed
       for (int i = 0; i < 3; i++) {
         if (!procExec.isRunning()) {
-          LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due" +
-            " to KillAndToggleBeforeStoreUpdate flag.");
+          LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due"
+              + " to KillAndToggleBeforeStoreUpdate flag.");
           restartMasterProcedureExecutor(procExec);
           break;
         }
@@ -539,15 +539,14 @@ public class MasterProcedureTestingUtility {
   }
 
   /**
-   * Execute the procedure up to "lastStep" and then the ProcedureExecutor
-   * is restarted and an abort() is injected.
-   * If the procedure implement abort() this should result in rollback being triggered.
-   * At the end of this call the procedure should be finished and rolledback.
-   * This method assert on the procedure being terminated with an AbortException.
+   * Execute the procedure up to "lastStep" and then the ProcedureExecutor is restarted and an
+   * abort() is injected. If the procedure implement abort() this should result in rollback being
+   * triggered. At the end of this call the procedure should be finished and rolledback. This method
+   * assert on the procedure being terminated with an AbortException.
    */
   public static void testRollbackRetriableFailure(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int lastStep) throws Exception {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final int lastStep)
+      throws Exception {
     // Execute up to last step
     testRecoveryAndDoubleExecution(procExec, procId, lastStep, false);
 
@@ -559,9 +558,9 @@ public class MasterProcedureTestingUtility {
   }
 
   /**
-   * Restart the ProcedureExecutor and inject an abort to the specified procedure.
-   * If the procedure implement abort() this should result in rollback being triggered.
-   * At the end of this call the procedure should be finished and rolledback, if abort is implemnted
+   * Restart the ProcedureExecutor and inject an abort to the specified procedure. If the procedure
+   * implement abort() this should result in rollback being triggered. At the end of this call the
+   * procedure should be finished and rolledback, if abort is implemnted
    */
   public static void testRestartWithAbort(ProcedureExecutor<MasterProcedureEnv> procExec,
       long procId) throws Exception {
@@ -610,9 +609,11 @@ public class MasterProcedureTestingUtility {
     }
 
     @Override
-    public void procedureAdded(long procId) { /* no-op */ }
+    public void procedureAdded(long procId) {
+      /* no-op */ }
 
     @Override
-    public void procedureFinished(long procId) { /* no-op */ }
+    public void procedureFinished(long procId) {
+      /* no-op */ }
   }
 }

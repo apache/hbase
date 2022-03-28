@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the value filter
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestSingleColumnValueFilter {
 
   @ClassRule
@@ -48,18 +48,19 @@ public class TestSingleColumnValueFilter {
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
-  private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
+  private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");
   private static final byte[] VAL_1 = Bytes.toBytes("a");
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
   private static final byte[] VAL_3 = Bytes.toBytes("abc");
   private static final byte[] VAL_4 = Bytes.toBytes("abcd");
   private static final byte[] FULLSTRING_1 =
-    Bytes.toBytes("The quick brown fox jumps over the lazy dog.");
+      Bytes.toBytes("The quick brown fox jumps over the lazy dog.");
   private static final byte[] FULLSTRING_2 =
-    Bytes.toBytes("The slow grey fox trips over the lazy dog.");
+      Bytes.toBytes("The slow grey fox trips over the lazy dog.");
   private static final String QUICK_SUBSTR = "quick";
   private static final String QUICK_REGEX = ".+quick.+";
-  private static final Pattern QUICK_PATTERN = Pattern.compile("QuIcK", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+  private static final Pattern QUICK_PATTERN =
+      Pattern.compile("QuIcK", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
   Filter basicFilter;
   Filter nullFilter;
@@ -78,7 +79,7 @@ public class TestSingleColumnValueFilter {
 
   private Filter basicFilterNew() {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-    CompareOperator.GREATER_OR_EQUAL, VAL_2);
+        CompareOperator.GREATER_OR_EQUAL, VAL_2);
   }
 
   private Filter nullFilterNew() {
@@ -87,29 +88,25 @@ public class TestSingleColumnValueFilter {
   }
 
   private Filter substrFilterNew() {
-    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-    CompareOperator.EQUAL,
-      new SubstringComparator(QUICK_SUBSTR));
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOperator.EQUAL,
+        new SubstringComparator(QUICK_SUBSTR));
   }
 
   private Filter regexFilterNew() {
-    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-    CompareOperator.EQUAL,
-      new RegexStringComparator(QUICK_REGEX));
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOperator.EQUAL,
+        new RegexStringComparator(QUICK_REGEX));
   }
 
   private Filter regexFilterNew(Pattern pattern) {
-    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-    CompareOperator.EQUAL,
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOperator.EQUAL,
         new RegexStringComparator(pattern.pattern(), pattern.flags()));
   }
 
   @Test
   public void testLongComparator() throws IOException {
-    Filter filter = new SingleColumnValueFilter(COLUMN_FAMILY,
-        COLUMN_QUALIFIER, CompareOperator.GREATER, new LongComparator(100L));
-    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(1L));
+    Filter filter = new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+        CompareOperator.GREATER, new LongComparator(100L));
+    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, Bytes.toBytes(1L));
     assertTrue("less than", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
     filter.reset();
     byte[] buffer = cell.getBuffer();
@@ -117,8 +114,7 @@ public class TestSingleColumnValueFilter {
     assertTrue("less than", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
     filter.reset();
 
-    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(100L));
+    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, Bytes.toBytes(100L));
     assertTrue("Equals 100", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
     filter.reset();
     buffer = cell.getBuffer();
@@ -126,8 +122,7 @@ public class TestSingleColumnValueFilter {
     assertTrue("Equals 100", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
     filter.reset();
 
-    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(120L));
+    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, Bytes.toBytes(120L));
     assertTrue("include 120", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     filter.reset();
     buffer = cell.getBuffer();
@@ -135,8 +130,7 @@ public class TestSingleColumnValueFilter {
     assertTrue("include 120", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
   }
 
-  private void basicFilterTests(SingleColumnValueFilter filter)
-      throws Exception {
+  private void basicFilterTests(SingleColumnValueFilter filter) throws Exception {
     KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
     assertTrue("basicFilter1", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     byte[] buffer = cell.getBuffer();
@@ -198,17 +192,13 @@ public class TestSingleColumnValueFilter {
     assertTrue("null2FilterRow", filter.filterRow());
   }
 
-  private void substrFilterTests(Filter filter)
-      throws Exception {
-    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      FULLSTRING_1);
-    assertTrue("substrTrue",
-      filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+  private void substrFilterTests(Filter filter) throws Exception {
+    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_1);
+    assertTrue("substrTrue", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     byte[] buffer = cell.getBuffer();
     Cell c = new ByteBufferKeyValue(ByteBuffer.wrap(buffer), 0, buffer.length);
     assertTrue("substrTrue", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
-    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      FULLSTRING_2);
+    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_2);
     assertTrue("substrFalse", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     buffer = cell.getBuffer();
     c = new ByteBufferKeyValue(ByteBuffer.wrap(buffer), 0, buffer.length);
@@ -217,17 +207,13 @@ public class TestSingleColumnValueFilter {
     assertFalse("substrFilterNotNull", filter.filterRow());
   }
 
-  private void regexFilterTests(Filter filter)
-      throws Exception {
-    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      FULLSTRING_1);
-    assertTrue("regexTrue",
-      filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+  private void regexFilterTests(Filter filter) throws Exception {
+    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_1);
+    assertTrue("regexTrue", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     byte[] buffer = cell.getBuffer();
     Cell c = new ByteBufferKeyValue(ByteBuffer.wrap(buffer), 0, buffer.length);
     assertTrue("regexTrue", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
-    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      FULLSTRING_2);
+    cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_2);
     assertTrue("regexFalse", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     buffer = cell.getBuffer();
     c = new ByteBufferKeyValue(ByteBuffer.wrap(buffer), 0, buffer.length);
@@ -236,12 +222,9 @@ public class TestSingleColumnValueFilter {
     assertFalse("regexFilterNotNull", filter.filterRow());
   }
 
-  private void regexPatternFilterTests(Filter filter)
-      throws Exception {
-    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      FULLSTRING_1);
-    assertTrue("regexTrue",
-      filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+  private void regexPatternFilterTests(Filter filter) throws Exception {
+    KeyValue cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_1);
+    assertTrue("regexTrue", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     byte[] buffer = cell.getBuffer();
     Cell c = new ByteBufferKeyValue(ByteBuffer.wrap(buffer), 0, buffer.length);
     assertTrue("regexTrue", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
@@ -249,8 +232,7 @@ public class TestSingleColumnValueFilter {
     assertFalse("regexFilterNotNull", filter.filterRow());
   }
 
-  private Filter serializationTest(Filter filter)
-      throws Exception {
+  private Filter serializationTest(Filter filter) throws Exception {
     // Decompose filter to bytes.
     byte[] buffer = filter.toByteArray();
 
@@ -279,7 +261,7 @@ public class TestSingleColumnValueFilter {
   @Test
   public void testSerialization() throws Exception {
     Filter newFilter = serializationTest(basicFilter);
-    basicFilterTests((SingleColumnValueFilter)newFilter);
+    basicFilterTests((SingleColumnValueFilter) newFilter);
     newFilter = serializationTest(nullFilter);
     nullFilterTests(newFilter);
     newFilter = serializationTest(substrFilter);
@@ -291,4 +273,3 @@ public class TestSingleColumnValueFilter {
   }
 
 }
-

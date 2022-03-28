@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This tests the TableInputFormat and its recovery semantics
- *
  */
 @Category(LargeTests.class)
 public class TestTableInputFormat {
@@ -107,7 +106,6 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values.
-   *
    * @param tableName
    * @return A Table instance for the created table.
    * @throws IOException
@@ -118,7 +116,6 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values per column family.
-   *
    * @param tableName
    * @return A Table instance for the created table.
    * @throws IOException
@@ -140,15 +137,14 @@ public class TestTableInputFormat {
 
   /**
    * Verify that the result and key have expected values.
-   *
    * @param r single row result
    * @param key the row key
    * @param expectedKey the expected key
    * @param expectedValue the expected value
    * @return true if the result contains the expected key and value, false otherwise.
    */
-  static boolean checkResult(Result r, ImmutableBytesWritable key,
-      byte[] expectedKey, byte[] expectedValue) {
+  static boolean checkResult(Result r, ImmutableBytesWritable key, byte[] expectedKey,
+      byte[] expectedValue) {
     assertEquals(0, key.compareTo(expectedKey));
     Map<byte[], byte[]> vals = r.getFamilyMap(FAMILY);
     byte[] value = vals.values().iterator().next();
@@ -157,15 +153,12 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create table data and run tests on specified htable using the
-   * o.a.h.hbase.mapreduce API.
-   *
+   * Create table data and run tests on specified htable using the o.a.h.hbase.mapreduce API.
    * @param table
    * @throws IOException
    * @throws InterruptedException
    */
-  static void runTestMapreduce(Table table) throws IOException,
-      InterruptedException {
+  static void runTestMapreduce(Table table) throws IOException, InterruptedException {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
         new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
     Scan s = new Scan();
@@ -198,11 +191,9 @@ public class TestTableInputFormat {
 
   /**
    * Create a table that IOE's on first scanner next call
-   *
    * @throws IOException
    */
-  static Table createIOEScannerTable(byte[] name, final int failCnt)
-      throws IOException {
+  static Table createIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
       int cnt = 0;
@@ -231,13 +222,10 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create a table that throws a NotServingRegionException on first scanner
-   * next call
-   *
+   * Create a table that throws a NotServingRegionException on first scanner next call
    * @throws IOException
    */
-  static Table createDNRIOEScannerTable(byte[] name, final int failCnt)
-      throws IOException {
+  static Table createDNRIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
       int cnt = 0;
@@ -252,8 +240,7 @@ public class TestTableInputFormat {
           ResultScanner scanner = mock(ResultScanner.class);
 
           invocation.callRealMethod(); // simulate NotServingRegionException
-          doThrow(
-              new NotServingRegionException("Injected simulated TimeoutException"))
+          doThrow(new NotServingRegionException("Injected simulated TimeoutException"))
               .when(scanner).next();
           return scanner;
         }
@@ -270,46 +257,40 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming no errors using newer mapreduce api
-   *
    * @throws IOException
    * @throws InterruptedException
    */
   @Test
-  public void testTableRecordReaderMapreduce() throws IOException,
-      InterruptedException {
+  public void testTableRecordReaderMapreduce() throws IOException, InterruptedException {
     Table table = createTable("table1-mr".getBytes());
     runTestMapreduce(table);
   }
 
   /**
    * Run test assuming Scanner IOException failure using newer mapreduce api
-   *
    * @throws IOException
    * @throws InterruptedException
    */
   @Test
-  public void testTableRecordReaderScannerFailMapreduce() throws IOException,
-      InterruptedException {
+  public void testTableRecordReaderScannerFailMapreduce() throws IOException, InterruptedException {
     Table htable = createIOEScannerTable("table2-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
   /**
    * Run test assuming Scanner IOException failure using newer mapreduce api
-   *
    * @throws IOException
    * @throws InterruptedException
    */
   @Test(expected = IOException.class)
-  public void testTableRecordReaderScannerFailMapreduceTwice() throws IOException,
-      InterruptedException {
+  public void testTableRecordReaderScannerFailMapreduceTwice()
+      throws IOException, InterruptedException {
     Table htable = createIOEScannerTable("table3-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 
   /**
    * Run test assuming NotServingRegionException using newer mapreduce api
-   *
    * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
@@ -322,7 +303,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming NotServingRegionException using newer mapreduce api
-   *
    * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.NotServingRegionException
    */
@@ -348,8 +328,8 @@ public class TestTableInputFormat {
   @Test
   public void testJobConfigurableExtensionOfTableInputFormatBase()
       throws IOException, InterruptedException, ClassNotFoundException {
-    LOG.info("testing use of an InputFormat taht extends InputFormatBase, " +
-        "using JobConfigurable.");
+    LOG.info(
+      "testing use of an InputFormat taht extends InputFormatBase, " + "using JobConfigurable.");
     final Table htable = createTable(Bytes.toBytes("exampleJobConfigurableTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
     testInputFormat(ExampleJobConfigurableTIF.class);
@@ -358,8 +338,8 @@ public class TestTableInputFormat {
   @Test
   public void testDeprecatedExtensionOfTableInputFormatBase()
       throws IOException, InterruptedException, ClassNotFoundException {
-    LOG.info("testing use of an InputFormat taht extends InputFormatBase, " +
-        "using the approach documented in 0.98.");
+    LOG.info("testing use of an InputFormat taht extends InputFormatBase, "
+        + "using the approach documented in 0.98.");
     final Table htable = createTable(Bytes.toBytes("exampleDeprecatedTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
     testInputFormat(ExampleDeprecatedTIF.class);
@@ -392,17 +372,19 @@ public class TestTableInputFormat {
   public static class ExampleVerifier extends TableMapper<NullWritable, NullWritable> {
 
     @Override
-    public void map(ImmutableBytesWritable key, Result value, Context context)
-        throws IOException {
+    public void map(ImmutableBytesWritable key, Result value, Context context) throws IOException {
       for (Cell cell : value.listCells()) {
-        context.getCounter(TestTableInputFormat.class.getName() + ":row",
-            Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
+        context
+            .getCounter(TestTableInputFormat.class.getName() + ":row",
+              Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
             .increment(1l);
-        context.getCounter(TestTableInputFormat.class.getName() + ":family",
-            Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))
+        context
+            .getCounter(TestTableInputFormat.class.getName() + ":family",
+              Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))
             .increment(1l);
-        context.getCounter(TestTableInputFormat.class.getName() + ":value",
-            Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()))
+        context
+            .getCounter(TestTableInputFormat.class.getName() + ":value",
+              Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()))
             .increment(1l);
       }
     }
@@ -418,15 +400,14 @@ public class TestTableInputFormat {
         Table exampleTable = connection.getTable(TableName.valueOf(("exampleDeprecatedTable")));
         // mandatory
         initializeTable(connection, exampleTable.getName());
-        byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
-          Bytes.toBytes("columnB") };
+        byte[][] inputColumns = new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") };
         // optional
         Scan scan = new Scan();
         for (byte[] family : inputColumns) {
           scan.addFamily(family);
         }
         Filter exampleFilter =
-          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
+            new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         scan.setFilter(exampleFilter);
         setScan(scan);
       } catch (IOException exception) {
@@ -435,7 +416,6 @@ public class TestTableInputFormat {
     }
 
   }
-
 
   public static class ExampleJobConfigurableTIF extends TableInputFormatBase
       implements JobConfigurable {
@@ -447,15 +427,14 @@ public class TestTableInputFormat {
         TableName tableName = TableName.valueOf("exampleJobConfigurableTable");
         // mandatory
         initializeTable(connection, tableName);
-        byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
-          Bytes.toBytes("columnB") };
-        //optional
+        byte[][] inputColumns = new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") };
+        // optional
         Scan scan = new Scan();
         for (byte[] family : inputColumns) {
           scan.addFamily(family);
         }
         Filter exampleFilter =
-          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
+            new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         scan.setFilter(exampleFilter);
         setScan(scan);
       } catch (IOException exception) {
@@ -464,29 +443,26 @@ public class TestTableInputFormat {
     }
   }
 
-
   public static class ExampleTIF extends TableInputFormatBase {
 
     @Override
     protected void initialize(JobContext job) throws IOException {
-      Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(
-          job.getConfiguration()));
+      Connection connection =
+          ConnectionFactory.createConnection(HBaseConfiguration.create(job.getConfiguration()));
       TableName tableName = TableName.valueOf("exampleTable");
       // mandatory
       initializeTable(connection, tableName);
-      byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
-        Bytes.toBytes("columnB") };
-      //optional
+      byte[][] inputColumns = new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") };
+      // optional
       Scan scan = new Scan();
       for (byte[] family : inputColumns) {
         scan.addFamily(family);
       }
       Filter exampleFilter =
-        new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
+          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
       scan.setFilter(exampleFilter);
       setScan(scan);
     }
 
   }
 }
-

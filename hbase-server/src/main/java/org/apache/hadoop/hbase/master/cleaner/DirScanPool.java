@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class DirScanPool implements ConfigurationObserver {
   private static ThreadPoolExecutor initializePool(int size) {
     return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES,
       new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

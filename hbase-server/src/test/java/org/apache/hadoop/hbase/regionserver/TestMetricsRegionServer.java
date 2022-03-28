@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Unit test version of rs metrics tests.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMetricsRegionServer {
 
   @ClassRule
@@ -119,34 +119,35 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testConstuctor() {
-    assertNotNull("There should be a hadoop1/hadoop2 metrics source", rsm.getMetricsSource() );
-    assertNotNull("The RegionServerMetricsWrapper should be accessable", rsm.getRegionServerWrapper());
+    assertNotNull("There should be a hadoop1/hadoop2 metrics source", rsm.getMetricsSource());
+    assertNotNull("The RegionServerMetricsWrapper should be accessable",
+      rsm.getRegionServerWrapper());
   }
 
   @Test
   public void testSlowCount() {
-    for (int i=0; i < 12; i ++) {
+    for (int i = 0; i < 12; i++) {
       rsm.updateAppend(null, 12);
       rsm.updateAppend(null, 1002);
     }
-    for (int i=0; i < 13; i ++) {
+    for (int i = 0; i < 13; i++) {
       rsm.updateDeleteBatch(null, 13);
       rsm.updateDeleteBatch(null, 1003);
     }
-    for (int i=0; i < 14; i ++) {
+    for (int i = 0; i < 14; i++) {
       rsm.updateGet(null, 14);
       rsm.updateGet(null, 1004);
     }
-    for (int i=0; i < 15; i ++) {
+    for (int i = 0; i < 15; i++) {
       rsm.updateIncrement(null, 15);
       rsm.updateIncrement(null, 1005);
     }
-    for (int i=0; i < 16; i ++) {
+    for (int i = 0; i < 16; i++) {
       rsm.updatePutBatch(null, 16);
       rsm.updatePutBatch(null, 1006);
     }
 
-    for (int i=0; i < 17; i ++) {
+    for (int i = 0; i < 17; i++) {
       rsm.updatePut(null, 17);
       rsm.updateDelete(null, 17);
       rsm.updatePut(null, 1006);
@@ -246,4 +247,3 @@ public class TestMetricsRegionServer {
   }
 
 }
-

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
@@ -127,8 +126,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use {@link RawCell#cloneTags()}
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Use {@link RawCell#cloneTags()}
    */
   @Deprecated
   public static byte[] cloneTags(Cell cell) {
@@ -211,8 +209,8 @@ public final class CellUtil {
     short rowLen = cell.getRowLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition(), destinationOffset, rowLen);
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition(), destinationOffset, rowLen);
     } else {
       System.arraycopy(cell.getRowArray(), cell.getRowOffset(), destination, destinationOffset,
         rowLen);
@@ -266,8 +264,8 @@ public final class CellUtil {
     byte fLen = cell.getFamilyLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getFamilyPosition(), destinationOffset, fLen);
+        ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getFamilyPosition(), destinationOffset, fLen);
     } else {
       System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(), destination,
         destinationOffset, fLen);
@@ -325,9 +323,8 @@ public final class CellUtil {
     int qlen = cell.getQualifierLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToBuffer(
-          ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
-          destination, ((ByteBufferExtendedCell) cell).getQualifierPosition(),
-          destinationOffset, qlen);
+        ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(), destination,
+        ((ByteBufferExtendedCell) cell).getQualifierPosition(), destinationOffset, qlen);
     } else {
       ByteBufferUtils.copyFromArrayToBuffer(destination, destinationOffset,
         cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
@@ -346,8 +343,8 @@ public final class CellUtil {
     int vlen = cell.getValueLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getValueByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getValuePosition(), destinationOffset, vlen);
+        ((ByteBufferExtendedCell) cell).getValueByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getValuePosition(), destinationOffset, vlen);
     } else {
       System.arraycopy(cell.getValueArray(), cell.getValueOffset(), destination, destinationOffset,
         vlen);
@@ -386,12 +383,12 @@ public final class CellUtil {
   public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
     int tlen = cell.getTagsLength();
     if (cell instanceof ByteBufferExtendedCell) {
-      ByteBufferUtils
-        .copyFromBufferToArray(destination, ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getTagsPosition(), destinationOffset, tlen);
+      ByteBufferUtils.copyFromBufferToArray(destination,
+        ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getTagsPosition(), destinationOffset, tlen);
     } else {
-      System
-        .arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset, tlen);
+      System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
+        tlen);
     }
     return destinationOffset + tlen;
   }
@@ -462,14 +459,9 @@ public final class CellUtil {
   @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .build();
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+        .setFamily(family).setQualifier(qualifier).setTimestamp(timestamp).setType(type)
+        .setValue(value).build();
   }
 
   /**
@@ -483,18 +475,14 @@ public final class CellUtil {
       final byte[] qualifierArray, final int qualifierOffset, final int qualifierLength) {
     // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(rowArray, rowOffset, rowLength)
-            .setFamily(familyArray, familyOffset, familyLength)
-            .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
-            .setTimestamp(HConstants.LATEST_TIMESTAMP)
-            .setType(KeyValue.Type.Maximum.getCode())
-            .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-            .build();
+        .setRow(rowArray, rowOffset, rowLength).setFamily(familyArray, familyOffset, familyLength)
+        .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
+        .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+        .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length).build();
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with a memstoreTS/mvcc is an internal
+   * Marked as audience Private as of 1.2.0. Creating a Cell with a memstoreTS/mvcc is an internal
    * implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
@@ -507,8 +495,7 @@ public final class CellUtil {
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags and a memstoreTS/mvcc is an
+   * Marked as audience Private as of 1.2.0. Creating a Cell with tags and a memstoreTS/mvcc is an
    * internal implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
@@ -518,21 +505,14 @@ public final class CellUtil {
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, byte[] tags,
       final long memstoreTS) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .setTags(tags)
-            .setSequenceId(memstoreTS)
-            .build();
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+        .setFamily(family).setQualifier(qualifier).setTimestamp(timestamp).setType(type)
+        .setValue(value).setTags(tags).setSequenceId(memstoreTS).build();
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags is an internal implementation detail not for public use.
+   * Marked as audience Private as of 1.2.0. Creating a Cell with tags is an internal implementation
+   * detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
    */
@@ -590,11 +570,10 @@ public final class CellUtil {
   }
 
   /**
-   * Note : Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Note : Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
@@ -602,8 +581,8 @@ public final class CellUtil {
   }
 
   /**
-   * Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
@@ -613,8 +592,8 @@ public final class CellUtil {
   }
 
   /**
-   * Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -757,7 +736,7 @@ public final class CellUtil {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
-   *   {@link #matchingRows(Cell, byte[])}
+   *             {@link #matchingRows(Cell, byte[])}
    */
   @Deprecated
   public static boolean matchingRow(final Cell left, final byte[] buf) {
@@ -827,15 +806,14 @@ public final class CellUtil {
    */
   @Deprecated
   public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
-    final int length) {
+      final int length) {
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
         ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(), buf, offset,
         length);
     }
-    return Bytes
-      .equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf, offset,
-        length);
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
+      offset, length);
   }
 
   public static boolean matchingQualifier(final Cell left, final Cell right) {
@@ -890,7 +868,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static boolean matchingQualifier(final Cell left, final byte[] buf, final int offset,
-    final int length) {
+      final int length) {
     if (buf == null) {
       return left.getQualifierLength() == 0;
     }
@@ -899,9 +877,8 @@ public final class CellUtil {
         ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(), buf,
         offset, length);
     }
-    return Bytes
-      .equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(), buf,
-        offset, length);
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+      left.getQualifierLength(), buf, offset, length);
   }
 
   public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
@@ -1097,8 +1074,8 @@ public final class CellUtil {
    * timestamp, type, value and tags.
    * @param cell
    * @return estimate of the heap space
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link RawCell#getTags()}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link RawCell#getTags()}
    */
   @Deprecated
   public static long estimatedHeapSizeOf(final Cell cell) {
@@ -1164,8 +1141,7 @@ public final class CellUtil {
    * @param cell The Cell
    * @param type Type of the Tag to retrieve
    * @return null if there is no tag of the passed in tag type
-   * @deprecated As of 2.0.0 and will be removed in HBase-3.0.0
-   *             Use {@link RawCell#getTag(byte)}
+   * @deprecated As of 2.0.0 and will be removed in HBase-3.0.0 Use {@link RawCell#getTag(byte)}
    */
   @Deprecated
   public static Tag getTag(Cell cell, byte type) {
@@ -1274,13 +1250,13 @@ public final class CellUtil {
     // component of cell
     if (cell instanceof ByteBufferExtendedCell) {
       out.writeShort(rowLen);
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition(), rowLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition(), rowLen);
       out.writeByte(fLen);
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getFamilyPosition(), fLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getFamilyPosition(), fLen);
       ByteBufferUtils.copyBufferToStream((DataOutput) out,
         ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
         ((ByteBufferExtendedCell) cell).getQualifierPosition(), qLen);
@@ -1305,11 +1281,11 @@ public final class CellUtil {
    */
   @Deprecated
   public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
-    int commonPrefix) throws IOException {
+      int commonPrefix) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
     } else {
       out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rlength - commonPrefix);
     }
@@ -1332,13 +1308,14 @@ public final class CellUtil {
   public static String getCellKeyAsString(Cell cell, Function<Cell, String> rowConverter) {
     StringBuilder sb = new StringBuilder(rowConverter.apply(cell));
     sb.append('/');
-    sb.append(cell.getFamilyLength() == 0 ? "" :
-      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+    sb.append(cell.getFamilyLength() == 0 ? ""
+        : Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
+          cell.getFamilyLength()));
     // KeyValue only added ':' if family is non-null. Do same.
     if (cell.getFamilyLength() > 0) sb.append(':');
-    sb.append(cell.getQualifierLength() == 0 ? "" :
-      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-        cell.getQualifierLength()));
+    sb.append(cell.getQualifierLength() == 0 ? ""
+        : Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+          cell.getQualifierLength()));
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');
@@ -1408,34 +1385,32 @@ public final class CellUtil {
    */
   @Deprecated
   public static int findCommonPrefixInFlatKey(Cell c1, Cell c2, boolean bypassFamilyCheck,
-    boolean withTsType) {
+      boolean withTsType) {
     // Compare the 2 bytes in RK length part
     short rLen1 = c1.getRowLength();
     short rLen2 = c2.getRowLength();
     int commonPrefix = KeyValue.ROW_LENGTH_SIZE;
     if (rLen1 != rLen2) {
       // early out when the RK length itself is not matching
-      return ByteBufferUtils
-        .findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE, Bytes.toBytes(rLen2),
-          0, KeyValue.ROW_LENGTH_SIZE);
+      return ByteBufferUtils.findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE,
+        Bytes.toBytes(rLen2), 0, KeyValue.ROW_LENGTH_SIZE);
     }
     // Compare the RKs
     int rkCommonPrefix = 0;
     if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-      rkCommonPrefix = ByteBufferUtils
-        .findCommonPrefix(((ByteBufferExtendedCell) c1).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) c1).getRowPosition(), rLen1,
-          ((ByteBufferExtendedCell) c2).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) c2).getRowPosition(), rLen2);
+      rkCommonPrefix =
+          ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) c1).getRowPosition(), rLen1,
+            ((ByteBufferExtendedCell) c2).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) c2).getRowPosition(), rLen2);
     } else {
       // There cannot be a case where one cell is BBCell and other is KeyValue. This flow comes
       // either
       // in flush or compactions. In flushes both cells are KV and in case of compaction it will be
       // either
       // KV or BBCell
-      rkCommonPrefix = ByteBufferUtils
-        .findCommonPrefix(c1.getRowArray(), c1.getRowOffset(), rLen1, c2.getRowArray(),
-          c2.getRowOffset(), rLen2);
+      rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(), rLen1,
+        c2.getRowArray(), c2.getRowOffset(), rLen2);
     }
     commonPrefix += rkCommonPrefix;
     if (rkCommonPrefix != rLen1) {
@@ -1459,15 +1434,14 @@ public final class CellUtil {
       // Compare the CF names
       int fCommonPrefix;
       if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-        fCommonPrefix = ByteBufferUtils
-          .findCommonPrefix(((ByteBufferExtendedCell) c1).getFamilyByteBuffer(),
-            ((ByteBufferExtendedCell) c1).getFamilyPosition(), fLen1,
-            ((ByteBufferExtendedCell) c2).getFamilyByteBuffer(),
-            ((ByteBufferExtendedCell) c2).getFamilyPosition(), fLen2);
+        fCommonPrefix =
+            ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getFamilyByteBuffer(),
+              ((ByteBufferExtendedCell) c1).getFamilyPosition(), fLen1,
+              ((ByteBufferExtendedCell) c2).getFamilyByteBuffer(),
+              ((ByteBufferExtendedCell) c2).getFamilyPosition(), fLen2);
       } else {
-        fCommonPrefix = ByteBufferUtils
-          .findCommonPrefix(c1.getFamilyArray(), c1.getFamilyOffset(), fLen1, c2.getFamilyArray(),
-            c2.getFamilyOffset(), fLen2);
+        fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(), c1.getFamilyOffset(),
+          fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
       }
       commonPrefix += fCommonPrefix;
       if (fCommonPrefix != fLen1) {
@@ -1479,24 +1453,22 @@ public final class CellUtil {
     int qLen2 = c2.getQualifierLength();
     int qCommon;
     if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-      qCommon = ByteBufferUtils
-        .findCommonPrefix(((ByteBufferExtendedCell) c1).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) c1).getQualifierPosition(), qLen1,
-          ((ByteBufferExtendedCell) c2).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) c2).getQualifierPosition(), qLen2);
+      qCommon =
+          ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) c1).getQualifierPosition(), qLen1,
+            ((ByteBufferExtendedCell) c2).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) c2).getQualifierPosition(), qLen2);
     } else {
-      qCommon = ByteBufferUtils
-        .findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(), qLen1,
-          c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
+      qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
+        qLen1, c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
     }
     commonPrefix += qCommon;
     if (!withTsType || Math.max(qLen1, qLen2) != qCommon) {
       return commonPrefix;
     }
     // Compare the timestamp parts
-    int tsCommonPrefix = ByteBufferUtils
-      .findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE,
-        Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
+    int tsCommonPrefix = ByteBufferUtils.findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0,
+      KeyValue.TIMESTAMP_SIZE, Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
     commonPrefix += tsCommonPrefix;
     if (tsCommonPrefix != KeyValue.TIMESTAMP_SIZE) {
       return commonPrefix;
@@ -1601,22 +1573,22 @@ public final class CellUtil {
     if (lrowlength != rrowlength) return false;
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength,
-          ((ByteBufferExtendedCell) right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength,
+        ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength);
     }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength, right.getRowArray(),
-          right.getRowOffset(), rrowlength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength, right.getRowArray(),
+        right.getRowOffset(), rrowlength);
     }
     if (right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength, left.getRowArray(),
-          left.getRowOffset(), lrowlength);
+        ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength, left.getRowArray(),
+        left.getRowOffset(), lrowlength);
     }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-        right.getRowOffset(), rrowlength);
+      right.getRowOffset(), rrowlength);
   }
 
   /**
@@ -1666,18 +1638,17 @@ public final class CellUtil {
 
     // match row
     if (!Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-        right.getRowOffset(), rrowlength)) {
+      right.getRowOffset(), rrowlength)) {
       return false;
     }
-    //match family
+    // match family
     if (!Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), lfamlength,
-        right.getFamilyArray(), right.getFamilyOffset(), rfamlength)) {
+      right.getFamilyArray(), right.getFamilyOffset(), rfamlength)) {
       return false;
     }
-    //match qualifier
-    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
-        lqlength, right.getQualifierArray(), right.getQualifierOffset(),
-        rqlength);
+    // match qualifier
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), lqlength,
+      right.getQualifierArray(), right.getQualifierOffset(), rqlength);
   }
 
   /**
@@ -1692,8 +1663,8 @@ public final class CellUtil {
   public final static int compareQualifiers(Cell left, byte[] right, int rOffset, int rLength) {
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) left).getQualifierPosition(),
-          left.getQualifierLength(), right, rOffset, rLength);
+        ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(), right,
+        rOffset, rLength);
     }
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
       left.getQualifierLength(), right, rOffset, rLength);

@@ -89,8 +89,8 @@ public class CatalogJanitor extends ScheduledChore {
 
   public CatalogJanitor(final MasterServices services) {
     super("CatalogJanitor-" + services.getServerName().toShortString(), services,
-      services.getConfiguration().getInt("hbase.catalogjanitor.interval",
-        DEFAULT_HBASE_CATALOGJANITOR_INTERVAL));
+        services.getConfiguration().getInt("hbase.catalogjanitor.interval",
+          DEFAULT_HBASE_CATALOGJANITOR_INTERVAL));
     this.services = services;
   }
 
@@ -129,14 +129,14 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (getEnabled() && !this.services.isInMaintenanceMode() &&
-        !this.services.getServerManager().isClusterShutdown() && isMetaLoaded(am)) {
+      if (getEnabled() && !this.services.isInMaintenanceMode()
+          && !this.services.getServerManager().isClusterShutdown() && isMetaLoaded(am)) {
         scan();
       } else {
-        LOG.warn("CatalogJanitor is disabled! Enabled=" + getEnabled() + ", maintenanceMode=" +
-          this.services.isInMaintenanceMode() + ", am=" + am + ", metaLoaded=" + isMetaLoaded(am) +
-          ", hasRIT=" + isRIT(am) + " clusterShutDown=" +
-          this.services.getServerManager().isClusterShutdown());
+        LOG.warn("CatalogJanitor is disabled! Enabled=" + getEnabled() + ", maintenanceMode="
+            + this.services.isInMaintenanceMode() + ", am=" + am + ", metaLoaded="
+            + isMetaLoaded(am) + ", hasRIT=" + isRIT(am) + " clusterShutDown="
+            + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
       LOG.warn("Failed janitorial scan of hbase:meta table", e);
@@ -206,8 +206,8 @@ public class CatalogJanitor extends ScheduledChore {
           break;
         }
 
-        if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-          cleanParent(e.getKey(), e.getValue())) {
+        if (!parentNotCleaned.contains(e.getKey().getEncodedName())
+            && cleanParent(e.getKey(), e.getValue())) {
           gcs++;
         } else {
           // We could not clean the parent, so it's daughters should not be
@@ -249,7 +249,7 @@ public class CatalogJanitor extends ScheduledChore {
    *         the file system
    */
   private boolean cleanMergeRegion(final RegionInfo mergedRegion, List<RegionInfo> parents)
-    throws IOException {
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Cleaning merged region {}", mergedRegion);
     }
@@ -268,7 +268,7 @@ public class CatalogJanitor extends ScheduledChore {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
           "Deleting parents ({}) from fs; merged child {} no longer holds references", parents
-            .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
+              .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
           mergedRegion);
       }
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
@@ -318,7 +318,7 @@ public class CatalogJanitor extends ScheduledChore {
   }
 
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
-    throws IOException {
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Cleaning parent region {}", parent);
     }
@@ -336,12 +336,12 @@ public class CatalogJanitor extends ScheduledChore {
     Pair<Boolean, Boolean> b = checkDaughterInFs(services, parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
       String daughterA =
-        daughters.getFirst() != null ? daughters.getFirst().getShortNameToLog() : "null";
+          daughters.getFirst() != null ? daughters.getFirst().getShortNameToLog() : "null";
       String daughterB =
-        daughters.getSecond() != null ? daughters.getSecond().getShortNameToLog() : "null";
+          daughters.getSecond() != null ? daughters.getSecond().getShortNameToLog() : "null";
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- " +
-          daughterA + ", " + daughterB + " -- no longer hold references");
+        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- "
+            + daughterA + ", " + daughterB + " -- no longer hold references");
       }
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
@@ -394,7 +394,7 @@ public class CatalogJanitor extends ScheduledChore {
    *         to the parent.
    */
   private static Pair<Boolean, Boolean> checkDaughterInFs(MasterServices services,
-    final RegionInfo parent, final RegionInfo daughter) throws IOException {
+      final RegionInfo parent, final RegionInfo daughter) throws IOException {
     if (daughter == null) {
       return new Pair<>(Boolean.FALSE, Boolean.FALSE);
     }
@@ -412,8 +412,9 @@ public class CatalogJanitor extends ScheduledChore {
         return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
-      LOG.error("Error trying to determine if daughter region exists, " +
-        "assuming exists and has references", ioe);
+      LOG.error("Error trying to determine if daughter region exists, "
+          + "assuming exists and has references",
+        ioe);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
 
@@ -430,8 +431,9 @@ public class CatalogJanitor extends ScheduledChore {
         }
       }
     } catch (IOException e) {
-      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName() +
-        ", to: " + parent.getEncodedName() + " assuming has references", e);
+      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
+          + ", to: " + parent.getEncodedName() + " assuming has references",
+        e);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
     return new Pair<>(Boolean.TRUE, references);
@@ -455,7 +457,7 @@ public class CatalogJanitor extends ScheduledChore {
   private static void checkLog4jProperties() {
     String filename = "log4j.properties";
     try (final InputStream inStream =
-      CatalogJanitor.class.getClassLoader().getResourceAsStream(filename)) {
+        CatalogJanitor.class.getClassLoader().getResourceAsStream(filename)) {
       if (inStream != null) {
         new Properties().load(inStream);
       } else {

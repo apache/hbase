@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ByteBuffer based cell which has the chunkid at the 0th offset and with no tags

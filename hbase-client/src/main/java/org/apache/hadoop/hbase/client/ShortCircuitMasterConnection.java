@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -100,10 +101,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-  .IsSnapshotCleanupEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-  .IsSnapshotCleanupEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -279,9 +278,8 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
-  public IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
-      RpcController controller, IsSnapshotCleanupEnabledRequest request)
-      throws ServiceException {
+  public IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(RpcController controller,
+      IsSnapshotCleanupEnabledRequest request) throws ServiceException {
     return stub.isSnapshotCleanupEnabled(controller, request);
   }
 
@@ -353,14 +351,14 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
-  public GetProceduresResponse getProcedures(RpcController controller,
-      GetProceduresRequest request) throws ServiceException {
+  public GetProceduresResponse getProcedures(RpcController controller, GetProceduresRequest request)
+      throws ServiceException {
     return stub.getProcedures(controller, request);
   }
 
   @Override
-  public GetLocksResponse getLocks(RpcController controller,
-      GetLocksRequest request) throws ServiceException {
+  public GetLocksResponse getLocks(RpcController controller, GetLocksRequest request)
+      throws ServiceException {
     return stub.getLocks(controller, request);
   }
 
@@ -371,8 +369,9 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
-  public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(RpcController controller,
-      ListDecommissionedRegionServersRequest request) throws ServiceException {
+  public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(
+      RpcController controller, ListDecommissionedRegionServersRequest request)
+      throws ServiceException {
     return stub.listDecommissionedRegionServers(controller, request);
   }
 
@@ -683,8 +682,8 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
-  public SplitTableRegionResponse splitRegion(RpcController controller, SplitTableRegionRequest request)
-      throws ServiceException {
+  public SplitTableRegionResponse splitRegion(RpcController controller,
+      SplitTableRegionRequest request) throws ServiceException {
     return stub.splitRegion(controller, request);
   }
 

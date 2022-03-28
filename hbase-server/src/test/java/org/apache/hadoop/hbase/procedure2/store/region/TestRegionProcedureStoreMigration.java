@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestRegionProcedureStoreMigration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionProcedureStoreMigration.class);
+      HBaseClassTestRule.forClass(TestRegionProcedureStoreMigration.class);
 
   private HBaseCommonTestingUtility htu;
 
@@ -119,7 +119,7 @@ public class TestRegionProcedureStoreMigration {
     }
     walStore.stop(true);
     SortedSet<RegionProcedureStoreTestProcedure> loadedProcs =
-      new TreeSet<>((p1, p2) -> Long.compare(p1.getProcId(), p2.getProcId()));
+        new TreeSet<>((p1, p2) -> Long.compare(p1.getProcId(), p2.getProcId()));
     MutableLong maxProcIdSet = new MutableLong(0);
     store = RegionProcedureStoreTestHelper.createStore(server, region, new ProcedureLoader() {
 
@@ -132,7 +132,7 @@ public class TestRegionProcedureStoreMigration {
       public void load(ProcedureIterator procIter) throws IOException {
         while (procIter.hasNext()) {
           RegionProcedureStoreTestProcedure proc =
-            (RegionProcedureStoreTestProcedure) procIter.next();
+              (RegionProcedureStoreTestProcedure) procIter.next();
           loadedProcs.add(proc);
         }
       }

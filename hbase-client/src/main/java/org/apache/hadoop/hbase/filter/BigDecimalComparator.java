@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
 /**
  * A BigDecimal comparator which numerical compares against the specified byte array
@@ -99,8 +97,8 @@ public class BigDecimalComparator extends ByteArrayComparable {
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    return new BigDecimalComparator(Bytes.toBigDecimal(proto.getComparable().getValue()
-        .toByteArray()));
+    return new BigDecimalComparator(
+        Bytes.toBigDecimal(proto.getComparable().getValue().toByteArray()));
   }
 
   /**

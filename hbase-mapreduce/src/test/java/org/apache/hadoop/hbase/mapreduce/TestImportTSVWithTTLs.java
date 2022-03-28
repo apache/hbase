@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestImportTSVWithTTLs implements Configurable {
 
   @ClassRule
@@ -67,8 +67,7 @@ public class TestImportTSVWithTTLs implements Configurable {
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
   /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
+   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is false.
    */
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
@@ -114,8 +113,7 @@ public class TestImportTSVWithTTLs implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+        "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_TTL",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001b1000000\n";
@@ -131,8 +129,8 @@ public class TestImportTSVWithTTLs implements Configurable {
 
     // populate input file
     FileSystem fs = FileSystem.get(conf);
-    Path inputPath = fs.makeQualified(new Path(util
-        .getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
+    Path inputPath = fs
+        .makeQualified(new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
     FSDataOutputStream op = fs.create(inputPath, true);
     op.write(Bytes.toBytes(data));
     op.close();

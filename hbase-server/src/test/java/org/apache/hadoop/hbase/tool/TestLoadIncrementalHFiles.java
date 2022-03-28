@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -66,6 +67,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -138,8 +140,8 @@ public class TestLoadIncrementalHFiles {
   public void testSimpleLoadWithFileCopy() throws Exception {
     String testName = tn.getMethodName();
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
-    runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE),
-        false, null, new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+    runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE), false, null,
+      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
           new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
       false, true, 2);
   }
@@ -266,28 +268,24 @@ public class TestLoadIncrementalHFiles {
     runTest(testName, TABLE_WITHOUT_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, 2);
 
-
-    /* Run the test bulkloading the table from a depth of 3
-      directory structure is now
-      baseDirectory
-          -- regionDir
-            -- familyDir
-              -- storeFileDir
-    */
+    /*
+     * Run the test bulkloading the table from a depth of 3 directory structure is now baseDirectory
+     * -- regionDir -- familyDir -- storeFileDir
+     */
     if (preCreateTable) {
-      runTest(testName + 2, TABLE_WITHOUT_NS, bloomType, true, tableSplitKeys, hfileRanges,
-          false, 3);
+      runTest(testName + 2, TABLE_WITHOUT_NS, bloomType, true, tableSplitKeys, hfileRanges, false,
+        3);
     }
 
     // Run the test bulkloading the table to the specified namespace
     final TableName TABLE_WITH_NS = TableName.valueOf(Bytes.toBytes(NAMESPACE), TABLE_NAME);
-    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, 2);
+    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges, useMap,
+      2);
   }
 
   private void runTest(String testName, TableName tableName, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges,
-      boolean useMap, int depth) throws Exception {
+      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
+      int depth) throws Exception {
     TableDescriptor htd = buildHTD(tableName, bloomType);
     runTest(testName, htd, preCreateTable, tableSplitKeys, hfileRanges, useMap, false, depth);
   }
@@ -297,7 +295,7 @@ public class TestLoadIncrementalHFiles {
       byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
       int initRowCount, int factor) throws Exception {
     return loadHFiles(testName, htd, util, fam, qual, preCreateTable, tableSplitKeys, hfileRanges,
-        useMap, deleteFile, copyFiles, initRowCount, factor, 2);
+      useMap, deleteFile, copyFiles, initRowCount, factor, 2);
   }
 
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
@@ -385,16 +383,16 @@ public class TestLoadIncrementalHFiles {
     return expectedRows;
   }
 
-  private void runTest(String testName, TableDescriptor htd,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
-      boolean copyFiles, int depth) throws Exception {
+  private void runTest(String testName, TableDescriptor htd, boolean preCreateTable,
+      byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
+      throws Exception {
     loadHFiles(testName, htd, util, FAMILY, QUALIFIER, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, true, copyFiles, 0, 1000, depth);
 
     final TableName tableName = htd.getTableName();
     // verify staging folder has been cleaned up
     Path stagingBasePath = new Path(CommonFSUtils.getRootDir(util.getConfiguration()),
-      HConstants.BULKLOAD_STAGING_DIR_NAME);
+        HConstants.BULKLOAD_STAGING_DIR_NAME);
     FileSystem fs = util.getTestFileSystem();
     if (fs.exists(stagingBasePath)) {
       FileStatus[] files = fs.listStatus(stagingBasePath);
@@ -474,8 +472,8 @@ public class TestLoadIncrementalHFiles {
       // further check whether the exception message is correct
       String errMsg = e.getMessage();
       assertTrue(
-        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY +
-            "], current message: [" + errMsg + "]",
+        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY
+            + "], current message: [" + errMsg + "]",
         errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
     }
   }
@@ -613,7 +611,7 @@ public class TestLoadIncrementalHFiles {
   private int verifyHFile(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader =
-      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
+        HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();
     int count = 0;

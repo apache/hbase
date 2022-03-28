@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,15 +44,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestConstraint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestConstraint.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestConstraint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -229,9 +228,9 @@ public class TestConstraint {
     byte[] qualifier = new byte[0];
     put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
-    try{
-    table.put(put);
-    fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
+    try {
+      table.put(put);
+      fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
     } catch (Exception e) {// NOOP
     }
 

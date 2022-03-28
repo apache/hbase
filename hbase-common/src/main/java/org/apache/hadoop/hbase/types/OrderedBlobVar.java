@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,8 +23,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An alternative to {@link OrderedBlob} for use by {@link Struct} fields that
- * do not terminate the fields list. Built on
+ * An alternative to {@link OrderedBlob} for use by {@link Struct} fields that do not terminate the
+ * fields list. Built on
  * {@link OrderedBytes#encodeBlobVar(PositionedByteRange, byte[], int, int, Order)}.
  */
 @InterfaceAudience.Public

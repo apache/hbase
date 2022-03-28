@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestModifyPeerProcedureRetryBackoff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModifyPeerProcedureRetryBackoff.class);
+      HBaseClassTestRule.forClass(TestModifyPeerProcedureRetryBackoff.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -70,8 +70,8 @@ public class TestModifyPeerProcedureRetryBackoff {
     }
 
     @Override
-    protected <T extends Procedure<MasterProcedureEnv>> void addChildProcedure(
-        @SuppressWarnings("unchecked") T... subProcedure) {
+    protected <T extends Procedure<MasterProcedureEnv>> void
+        addChildProcedure(@SuppressWarnings("unchecked") T... subProcedure) {
       // Make it a no-op
     }
 
@@ -145,7 +145,7 @@ public class TestModifyPeerProcedureRetryBackoff {
   @Test
   public void test() throws IOException, InterruptedException {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     long procId = procExec.submitProcedure(new TestModifyPeerProcedure("1"));
     // PRE_PEER_MODIFICATION
     assertBackoffIncrease();

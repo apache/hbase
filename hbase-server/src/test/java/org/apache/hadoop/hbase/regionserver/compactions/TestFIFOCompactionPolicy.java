@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,6 +57,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ RegionServerTests.class, MediumTests.class })
@@ -229,7 +230,7 @@ public class TestFIFOCompactionPolicy {
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
     TEST_UTIL.waitFor(testWaitTimeoutMs,
-        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+      (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
 
     Assert.assertEquals(1, store.getStorefilesCount());
     HStoreFile sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
@@ -242,7 +243,7 @@ public class TestFIFOCompactionPolicy {
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
     TEST_UTIL.waitFor(testWaitTimeoutMs,
-        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+      (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
 
     Assert.assertEquals(1, store.getStorefilesCount());
     sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());

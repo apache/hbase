@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestStoreFileRefresherChore {
 
   @ClassRule
@@ -118,11 +118,9 @@ public class TestStoreFileRefresherChore {
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    HRegion region =
-        new HRegion(fs, wals.getWAL(info),
-            conf, htd, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
 
     region.initialize();
 
@@ -175,10 +173,12 @@ public class TestStoreFileRefresherChore {
 
   static class StaleStorefileRefresherChore extends StorefileRefresherChore {
     boolean isStale = false;
+
     public StaleStorefileRefresherChore(int period, HRegionServer regionServer,
         Stoppable stoppable) {
       super(period, false, regionServer, stoppable);
     }
+
     @Override
     protected boolean isRegionStale(String encodedName, long time) {
       return isStale;
@@ -188,7 +188,7 @@ public class TestStoreFileRefresherChore {
   @Test
   public void testIsStale() throws IOException {
     int period = 0;
-    byte[][] families = new byte[][] {Bytes.toBytes("cf")};
+    byte[][] families = new byte[][] { Bytes.toBytes("cf") };
     byte[] qf = Bytes.toBytes("cq");
 
     HRegionServer regionServer = mock(HRegionServer.class);
@@ -202,8 +202,8 @@ public class TestStoreFileRefresherChore {
     regions.add(primary);
     regions.add(replica1);
 
-    StaleStorefileRefresherChore chore = new StaleStorefileRefresherChore(period, regionServer,
-      new StoppableImplementation());
+    StaleStorefileRefresherChore chore =
+        new StaleStorefileRefresherChore(period, regionServer, new StoppableImplementation());
 
     // write some data to primary and flush
     putData(primary, 0, 100, qf, families);
@@ -215,7 +215,7 @@ public class TestStoreFileRefresherChore {
     verifyData(replica1, 0, 100, qf, families);
 
     // simulate an fs failure where we cannot refresh the store files for the replica
-    ((FailingHRegionFileSystem)replica1.getRegionFileSystem()).fail = true;
+    ((FailingHRegionFileSystem) replica1.getRegionFileSystem()).fail = true;
 
     // write some more data to primary and flush
     putData(primary, 100, 100, qf, families);
@@ -228,11 +228,11 @@ public class TestStoreFileRefresherChore {
     verifyDataExpectFail(replica1, 100, 100, qf, families);
 
     chore.isStale = true;
-    chore.chore(); //now after this, we cannot read back any value
+    chore.chore(); // now after this, we cannot read back any value
     try {
       verifyData(replica1, 0, 100, qf, families);
       fail("should have failed with IOException");
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       // expected
     }
   }

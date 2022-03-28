@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A utility that constrains the total throughput of one or more simultaneous flows by
- * sleeping when necessary.
+ * A utility that constrains the total throughput of one or more simultaneous flows by sleeping when
+ * necessary.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public interface ThroughputController extends Stoppable {

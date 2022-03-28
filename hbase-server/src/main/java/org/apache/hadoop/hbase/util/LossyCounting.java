@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.Map;
@@ -35,14 +33,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * LossyCounting utility, bounded data structure that maintains approximate high frequency
- * elements in data stream.
- *
- * Bucket size is 1 / error rate.  (Error rate is 0.02 by default)
- * Lemma If element does not appear in set, then is frequency is less than e * N
- *       (N is total element counts until now.)
- * Based on paper:
- * http://www.vldb.org/conf/2002/S10P03.pdf
+ * LossyCounting utility, bounded data structure that maintains approximate high frequency elements
+ * in data stream. Bucket size is 1 / error rate. (Error rate is 0.02 by default) Lemma If element
+ * does not appear in set, then is frequency is less than e * N (N is total element counts until
+ * now.) Based on paper: http://www.vldb.org/conf/2002/S10P03.pdf
  */
 @InterfaceAudience.Private
 public class LossyCounting<T> {
@@ -88,22 +82,22 @@ public class LossyCounting<T> {
   }
 
   private void addByOne(T key) {
-    //If entry exists, we update the entry by incrementing its frequency by one. Otherwise,
-    //we create a new entry starting with currentTerm so that it will not be pruned immediately
+    // If entry exists, we update the entry by incrementing its frequency by one. Otherwise,
+    // we create a new entry starting with currentTerm so that it will not be pruned immediately
     data.put(key, data.getOrDefault(key, currentTerm != 0 ? currentTerm - 1 : 0) + 1);
 
-    //update totalDataCount and term
+    // update totalDataCount and term
     totalDataCount++;
     calculateCurrentTerm();
   }
 
   public void add(T key) {
     addByOne(key);
-    if(totalDataCount % bucketSize == 0) {
-      //sweep the entries at bucket boundaries
-      //run Sweep
+    if (totalDataCount % bucketSize == 0) {
+      // sweep the entries at bucket boundaries
+      // run Sweep
       Future<?> future = fut.get();
-      if (future != null && !future.isDone()){
+      if (future != null && !future.isDone()) {
         return;
       }
       future = executor.submit(new SweepRunnable());
@@ -111,13 +105,12 @@ public class LossyCounting<T> {
     }
   }
 
-
   /**
    * sweep low frequency data
    */
   public void sweep() {
-    for(Map.Entry<T, Integer> entry : data.entrySet()) {
-      if(entry.getValue() < currentTerm) {
+    for (Map.Entry<T, Integer> entry : data.entrySet()) {
+      if (entry.getValue() < currentTerm) {
         T metric = entry.getKey();
         data.remove(metric);
         if (listener != null) {
@@ -134,7 +127,7 @@ public class LossyCounting<T> {
     this.currentTerm = (int) Math.ceil(1.0 * totalDataCount / (double) bucketSize);
   }
 
-  public long getBucketSize(){
+  public long getBucketSize() {
     return bucketSize;
   }
 
@@ -146,7 +139,7 @@ public class LossyCounting<T> {
     return data.containsKey(key);
   }
 
-  public Set<T> getElements(){
+  public Set<T> getElements() {
     return data.keySet();
   }
 
@@ -155,7 +148,8 @@ public class LossyCounting<T> {
   }
 
   class SweepRunnable implements Runnable {
-    @Override public void run() {
+    @Override
+    public void run() {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Starting sweep of lossyCounting-" + name);
       }
@@ -171,4 +165,3 @@ public class LossyCounting<T> {
     return fut.get();
   }
 }
-

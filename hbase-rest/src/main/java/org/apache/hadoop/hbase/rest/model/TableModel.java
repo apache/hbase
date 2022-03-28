@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.Serializable;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,18 +33,19 @@ import org.apache.yetus.audience.InterfaceAudience;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="table")
+@XmlRootElement(name = "table")
 @InterfaceAudience.Private
 public class TableModel implements Serializable {
 
   private static final long serialVersionUID = 1L;
-  
+
   private String name;
-  
+
   /**
    * Default constructor
    */
-  public TableModel() {}
+  public TableModel() {
+  }
 
   /**
    * Constructor
@@ -74,7 +71,8 @@ public class TableModel implements Serializable {
     this.name = name;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override

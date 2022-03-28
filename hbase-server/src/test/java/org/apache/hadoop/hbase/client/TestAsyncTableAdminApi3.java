@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,8 +47,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations.
- * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
@@ -123,7 +123,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertEquals(tables.length + 1, size);
     for (int i = 0, j = 0; i < tables.length && j < size; i++, j++) {
       assertTrue("tableName should be equal in order",
-          tableDescs.get(j).getTableName().equals(tables[i]));
+        tableDescs.get(j).getTableName().equals(tables[i]));
     }
     assertTrue(tableDescs.get(size - 1).getTableName().equals(TableName.META_TABLE_NAME));
 
@@ -277,14 +277,14 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
   @Test
   public void testEnableTableRetainAssignment() throws Exception {
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions = AsyncMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regions =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -294,8 +294,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName).join();
 
-    List<HRegionLocation> regions2 = AsyncMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regions2 =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());
     assertTrue(regions2.containsAll(regions));

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import static org.junit.Assert.assertFalse;
@@ -28,7 +27,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -41,10 +39,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestMajorCompactionTTLRequest extends TestMajorCompactionRequest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

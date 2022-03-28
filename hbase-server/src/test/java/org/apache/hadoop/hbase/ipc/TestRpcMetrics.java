@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RPCTests.class, SmallTests.class})
+@Category({ RPCTests.class, SmallTests.class })
 public class TestRpcMetrics {
 
   @ClassRule
@@ -46,10 +46,12 @@ public class TestRpcMetrics {
 
   @Test
   public void testFactory() {
-    MetricsHBaseServer masterMetrics = new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
+    MetricsHBaseServer masterMetrics =
+        new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
     MetricsHBaseServerSource masterSource = masterMetrics.getMetricsSource();
 
-    MetricsHBaseServer rsMetrics = new MetricsHBaseServer("HRegionServer", new MetricsHBaseServerWrapperStub());
+    MetricsHBaseServer rsMetrics =
+        new MetricsHBaseServer("HRegionServer", new MetricsHBaseServerWrapperStub());
     MetricsHBaseServerSource rsSource = rsMetrics.getMetricsSource();
 
     assertEquals("master", masterSource.getMetricsContext());
@@ -68,7 +70,8 @@ public class TestRpcMetrics {
    */
   @Test
   public void testWrapperSource() {
-    MetricsHBaseServer mrpc = new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
+    MetricsHBaseServer mrpc =
+        new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
     MetricsHBaseServerSource serverSource = mrpc.getMetricsSource();
     HELPER.assertGauge("queueSize", 101, serverSource);
     HELPER.assertGauge("numCallsInGeneralQueue", 102, serverSource);
@@ -92,29 +95,27 @@ public class TestRpcMetrics {
    */
   @Test
   public void testSourceMethods() {
-    MetricsHBaseServer mrpc = new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
+    MetricsHBaseServer mrpc =
+        new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
     MetricsHBaseServerSource serverSource = mrpc.getMetricsSource();
 
-    for (int i=0; i < 12; i++) {
+    for (int i = 0; i < 12; i++) {
       mrpc.authenticationFailure();
     }
-    for (int i=0; i < 13; i++) {
+    for (int i = 0; i < 13; i++) {
       mrpc.authenticationSuccess();
     }
     HELPER.assertCounter("authenticationFailures", 12, serverSource);
     HELPER.assertCounter("authenticationSuccesses", 13, serverSource);
 
-
-
-    for (int i=0; i < 14; i++) {
+    for (int i = 0; i < 14; i++) {
       mrpc.authorizationSuccess();
     }
-    for (int i=0; i < 15; i++) {
+    for (int i = 0; i < 15; i++) {
       mrpc.authorizationFailure();
     }
     HELPER.assertCounter("authorizationSuccesses", 14, serverSource);
     HELPER.assertCounter("authorizationFailures", 15, serverSource);
-
 
     mrpc.dequeuedCall(100);
     mrpc.processedCall(101);
@@ -193,4 +194,3 @@ public class TestRpcMetrics {
     }
   }
 }
-

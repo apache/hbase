@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,20 +19,19 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public abstract class PressureAwareThroughputController extends Configured implements
-    ThroughputController, Stoppable {
+public abstract class PressureAwareThroughputController extends Configured
+    implements ThroughputController, Stoppable {
   private static final Logger LOG =
       LoggerFactory.getLogger(PressureAwareThroughputController.class);
 
@@ -77,7 +76,8 @@ public abstract class PressureAwareThroughputController extends Configured imple
   private volatile double maxThroughput;
   private volatile double maxThroughputPerOperation;
 
-  protected final ConcurrentMap<String, ActiveOperation> activeOperations = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<String, ActiveOperation> activeOperations =
+      new ConcurrentHashMap<>();
 
   @Override
   public abstract void setup(final RegionServerServices server);
@@ -142,9 +142,8 @@ public abstract class PressureAwareThroughputController extends Configured imple
     ActiveOperation operation = activeOperations.remove(opName);
     maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
     long elapsedTime = EnvironmentEdgeManager.currentTime() - operation.startTime;
-    LOG.info(opName + " average throughput is "
-        + throughputDesc(operation.totalSize, elapsedTime) + ", slept "
-        + operation.numberOfSleeps + " time(s) and total slept time is "
+    LOG.info(opName + " average throughput is " + throughputDesc(operation.totalSize, elapsedTime)
+        + ", slept " + operation.numberOfSleeps + " time(s) and total slept time is "
         + operation.totalSleepTime + " ms. " + activeOperations.size()
         + " active operations remaining, total limit is " + throughputDesc(getMaxThroughput()));
   }

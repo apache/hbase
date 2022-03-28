@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -149,8 +149,8 @@ public interface AsyncTableRegionLocator {
   default CompletableFuture<List<Pair<byte[], byte[]>>> getStartEndKeys() throws IOException {
     return getAllRegionLocations().thenApply(
       locs -> locs.stream().filter(loc -> RegionReplicaUtil.isDefaultReplica(loc.getRegion()))
-        .map(HRegionLocation::getRegion).map(r -> Pair.newPair(r.getStartKey(), r.getEndKey()))
-        .collect(Collectors.toList()));
+          .map(HRegionLocation::getRegion).map(r -> Pair.newPair(r.getStartKey(), r.getEndKey()))
+          .collect(Collectors.toList()));
   }
 
   /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -34,8 +33,8 @@ public class MetricsBalancer {
   }
 
   /**
-   * A function to instantiate the metrics source. This function can be overridden in its
-   * subclasses to provide extended sources
+   * A function to instantiate the metrics source. This function can be overridden in its subclasses
+   * to provide extended sources
    */
   protected void initSource() {
     source = CompatibilitySingletonFactory.getInstance(MetricsBalancerSource.class);

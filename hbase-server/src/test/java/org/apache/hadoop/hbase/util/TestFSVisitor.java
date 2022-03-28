@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link FSUtils}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestFSVisitor {
 
   @ClassRule
@@ -97,13 +97,9 @@ public class TestFSVisitor {
   }
 
   /*
-   * |-testtb/
-   * |----f1d3ff8443297732862df21dc4e57262/
-   * |-------f1/
-   * |----------d0be84935ba84b66b1e866752ec5d663
-   * |----------9fc9d481718f4878b29aad0a597ecb94
-   * |-------f2/
-   * |----------4b0fe6068c564737946bcf4fd4ab8ae1
+   * |-testtb/ |----f1d3ff8443297732862df21dc4e57262/ |-------f1/
+   * |----------d0be84935ba84b66b1e866752ec5d663 |----------9fc9d481718f4878b29aad0a597ecb94
+   * |-------f2/ |----------4b0fe6068c564737946bcf4fd4ab8ae1
    */
   private Path createTableFiles(final Path rootDir, final String tableName,
       final Set<String> tableRegions, final Set<String> tableFamilies,

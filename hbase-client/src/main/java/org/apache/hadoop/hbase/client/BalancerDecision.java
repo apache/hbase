@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,13 +42,12 @@ final public class BalancerDecision extends LogEntry {
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
-  private static final Gson GSON = GsonUtil.createGson()
-    .setPrettyPrinting()
-    .registerTypeAdapter(BalancerDecision.class, (JsonSerializer<BalancerDecision>)
-      (balancerDecision, type, jsonSerializationContext) -> {
-        Gson gson = new Gson();
-        return gson.toJsonTree(balancerDecision);
-      }).create();
+  private static final Gson GSON =
+      GsonUtil.createGson().setPrettyPrinting().registerTypeAdapter(BalancerDecision.class,
+        (JsonSerializer<BalancerDecision>) (balancerDecision, type, jsonSerializationContext) -> {
+          Gson gson = new Gson();
+          return gson.toJsonTree(balancerDecision);
+        }).create();
 
   private BalancerDecision(String initialFunctionCosts, String finalFunctionCosts,
       double initTotalCost, double computedTotalCost, List<String> regionPlans,
@@ -90,14 +86,10 @@ final public class BalancerDecision extends LogEntry {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("initialFunctionCosts", initialFunctionCosts)
-      .append("finalFunctionCosts", finalFunctionCosts)
-      .append("initTotalCost", initTotalCost)
-      .append("computedTotalCost", computedTotalCost)
-      .append("computedSteps", computedSteps)
-      .append("regionPlans", regionPlans)
-      .toString();
+    return new ToStringBuilder(this).append("initialFunctionCosts", initialFunctionCosts)
+        .append("finalFunctionCosts", finalFunctionCosts).append("initTotalCost", initTotalCost)
+        .append("computedTotalCost", computedTotalCost).append("computedSteps", computedSteps)
+        .append("regionPlans", regionPlans).toString();
   }
 
   @Override
@@ -144,8 +136,8 @@ final public class BalancerDecision extends LogEntry {
     }
 
     public BalancerDecision build() {
-      return new BalancerDecision(initialFunctionCosts, finalFunctionCosts,
-        initTotalCost, computedTotalCost, regionPlans, computedSteps);
+      return new BalancerDecision(initialFunctionCosts, finalFunctionCosts, initTotalCost,
+          computedTotalCost, regionPlans, computedSteps);
     }
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,22 +17,21 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Maintains regionserver statistics and publishes them through the metrics interfaces.
- * This class has a number of metrics variables that are publicly accessible;
- * these variables (objects) have methods to update their values. Batch your updates rather than
- * call on each instance else all threads will do nothing but contend trying to maintain metric
- * counters!
+ * Maintains regionserver statistics and publishes them through the metrics interfaces. This class
+ * has a number of metrics variables that are publicly accessible; these variables (objects) have
+ * methods to update their values. Batch your updates rather than call on each instance else all
+ * threads will do nothing but contend trying to maintain metric counters!
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
@@ -62,7 +61,8 @@ public class MetricsRegionServer {
       MetricsTable metricsTable) {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .createServer(regionServerWrapper), createTableMetrics(conf), metricsTable,
+            .createServer(regionServerWrapper),
+        createTableMetrics(conf), metricsTable,
         MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
@@ -200,12 +200,12 @@ public class MetricsRegionServer {
     userAggregate.updateAppend(t);
   }
 
-  public void updateReplay(long t){
+  public void updateReplay(long t) {
     serverSource.updateReplay(t);
     userAggregate.updateReplay(t);
   }
 
-  public void updateScanSize(TableName tn, long scanSize){
+  public void updateScanSize(TableName tn, long scanSize) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateScanSize(tn, scanSize);
     }
@@ -245,8 +245,8 @@ public class MetricsRegionServer {
 
   }
 
-  public void updateCompaction(String table, boolean isMajor, long t, int inputFileCount, int outputFileCount,
-      long inputBytes, long outputBytes) {
+  public void updateCompaction(String table, boolean isMajor, long t, int inputFileCount,
+      int outputFileCount, long inputBytes, long outputBytes) {
     serverSource.updateCompactionTime(isMajor, t);
     serverSource.updateCompactionInputFileCount(isMajor, inputFileCount);
     serverSource.updateCompactionOutputFileCount(isMajor, outputFileCount);

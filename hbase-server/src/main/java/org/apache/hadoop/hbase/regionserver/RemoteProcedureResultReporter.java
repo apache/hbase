@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -94,7 +94,7 @@ class RemoteProcedureResultReporter extends Thread {
         tries = 0;
       } catch (IOException e) {
         boolean pause =
-          e instanceof ServerNotRunningYetException || e instanceof PleaseHoldException;
+            e instanceof ServerNotRunningYetException || e instanceof PleaseHoldException;
         long pauseTime;
         if (pause) {
           // Do backoff else we flood the Master with requests.
@@ -102,9 +102,10 @@ class RemoteProcedureResultReporter extends Thread {
         } else {
           pauseTime = INIT_PAUSE_TIME_MS; // Reset.
         }
-        LOG.info("Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" +
-          tries + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."
-            : " immediately."),
+        LOG.info(
+          "Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" + tries
+              + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."
+                  : " immediately."),
           e);
         Threads.sleep(pauseTime);
         tries++;

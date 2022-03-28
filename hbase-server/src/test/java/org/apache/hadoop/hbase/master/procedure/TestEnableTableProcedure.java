@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -40,7 +41,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEnableTableProcedure.class);
+      HBaseClassTestRule.forClass(TestEnableTableProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEnableTableProcedure.class);
 
@@ -57,7 +58,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table
     long procId =
-      procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
+        procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -73,7 +74,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table - expect failure
     long procId1 =
-      procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
+        procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
     Procedure<?> result = procExec.getResult(procId1);
@@ -95,7 +96,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
@@ -104,7 +105,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Enable procedure && kill the executor
     long procId =
-      procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
+        procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
@@ -118,7 +119,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
@@ -126,7 +127,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Enable procedure && kill the executor
     long procId =
-      procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
+        procExec.submitProcedure(new EnableTableProcedure(procExec.getEnvironment(), tableName));
 
     int lastStep = 3; // fail before ENABLE_TABLE_SET_ENABLING_TABLE_STATE
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);

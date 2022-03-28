@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,20 +63,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Run tests that use the HBase clients; {@link Table}.
- * Sets up the HBase mini cluster once at start and runs through all client tests.
- * Each creates a table named for the method and does its stuff against that.
- *
- * Parameterized to run with different registry implementations.
+ * Run tests that use the HBase clients; {@link Table}. Sets up the HBase mini cluster once at start
+ * and runs through all client tests. Each creates a table named for the method and does its stuff
+ * against that. Parameterized to run with different registry implementations.
  */
-@Category({LargeTests.class, ClientTests.class})
-@SuppressWarnings ("deprecation")
+@Category({ LargeTests.class, ClientTests.class })
+@SuppressWarnings("deprecation")
 @RunWith(Parameterized.class)
 public class TestFromClientSide4 extends FromClientSideBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide4.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSide4.class);
+      HBaseClassTestRule.forClass(TestFromClientSide4.class);
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
 
@@ -90,7 +89,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
   @Parameterized.Parameters
   public static Collection parameters() {
     return Arrays.asList(new Object[][] { { MasterRegistry.class, 1 }, { MasterRegistry.class, 2 },
-      { ZKConnectionRegistry.class, 1 } });
+        { ZKConnectionRegistry.class, 1 } });
   }
 
   @AfterClass
@@ -101,7 +100,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
   /**
    * Test batch operations with combination of valid and invalid args
    */
-  @Test public void testBatchOperationsWithErrors() throws Exception {
+  @Test
+  public void testBatchOperationsWithErrors() throws Exception {
     final TableName tableName = name.getTableName();
     try (Table foo = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 10)) {
 
@@ -135,7 +135,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
         fail();
       } catch (RetriesExhaustedException e) {
         if (e instanceof RetriesExhaustedWithDetailsException) {
-          assertThat(((RetriesExhaustedWithDetailsException)e).exceptions.get(0),
+          assertThat(((RetriesExhaustedWithDetailsException) e).exceptions.get(0),
             instanceOf(NoSuchColumnFamilyException.class));
         } else {
           assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
@@ -172,7 +172,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
         fail();
       } catch (RetriesExhaustedException e) {
         if (e instanceof RetriesExhaustedWithDetailsException) {
-          assertThat(((RetriesExhaustedWithDetailsException)e).exceptions.get(0),
+          assertThat(((RetriesExhaustedWithDetailsException) e).exceptions.get(0),
             instanceOf(NoSuchColumnFamilyException.class));
         } else {
           assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
@@ -191,7 +191,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
         fail();
       } catch (RetriesExhaustedException e) {
         if (e instanceof RetriesExhaustedWithDetailsException) {
-          assertThat(((RetriesExhaustedWithDetailsException)e).exceptions.get(0),
+          assertThat(((RetriesExhaustedWithDetailsException) e).exceptions.get(0),
             instanceOf(NoSuchColumnFamilyException.class));
         } else {
           assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
@@ -226,14 +226,13 @@ public class TestFromClientSide4 extends FromClientSideBase {
   //
 
   /**
-   * HBASE-867
-   * If millions of columns in a column family, hbase scanner won't come up
-   * Test will create numRows rows, each with numColsPerRow columns
-   * (1 version each), and attempt to scan them all.
-   * To test at scale, up numColsPerRow to the millions
-   * (have not gotten that to work running as junit though)
+   * HBASE-867 If millions of columns in a column family, hbase scanner won't come up Test will
+   * create numRows rows, each with numColsPerRow columns (1 version each), and attempt to scan them
+   * all. To test at scale, up numColsPerRow to the millions (have not gotten that to work running
+   * as junit though)
    */
-  @Test public void testJiraTest867() throws Exception {
+  @Test
+  public void testJiraTest867() throws Exception {
     int numRows = 10;
     int numColsPerRow = 2000;
 
@@ -252,9 +251,9 @@ public class TestFromClientSide4 extends FromClientSideBase {
         for (int j = 0; j < numColsPerRow; j++) {
           put.addColumn(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
         }
-        assertEquals(
-          "Put expected to contain " + numColsPerRow + " columns but " + "only contains " + put
-            .size(), put.size(), numColsPerRow);
+        assertEquals("Put expected to contain " + numColsPerRow + " columns but " + "only contains "
+            + put.size(),
+          put.size(), numColsPerRow);
         ht.put(put);
       }
 
@@ -317,11 +316,11 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * HBASE-861
-   * get with timestamp will return a value if there is a version with an
-   * earlier timestamp
+   * HBASE-861 get with timestamp will return a value if there is a version with an earlier
+   * timestamp
    */
-  @Test public void testJiraTest861() throws Exception {
+  @Test
+  public void testJiraTest861() throws Exception {
     final TableName tableName = name.getTableName();
     byte[][] VALUES = makeNAscii(VALUE, 7);
     long[] STAMPS = makeStamps(7);
@@ -379,11 +378,11 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * HBASE-33
-   * Add a HTable get/obtainScanner method that retrieves all versions of a
-   * particular column and row between two timestamps
+   * HBASE-33 Add a HTable get/obtainScanner method that retrieves all versions of a particular
+   * column and row between two timestamps
    */
-  @Test public void testJiraTest33() throws Exception {
+  @Test
+  public void testJiraTest33() throws Exception {
     final TableName tableName = name.getTableName();
     byte[][] VALUES = makeNAscii(VALUE, 7);
     long[] STAMPS = makeStamps(7);
@@ -427,10 +426,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * HBASE-1014
-   * commit(BatchUpdate) method should return timestamp
+   * HBASE-1014 commit(BatchUpdate) method should return timestamp
    */
-  @Test public void testJiraTest1014() throws Exception {
+  @Test
+  public void testJiraTest1014() throws Exception {
     final TableName tableName = name.getTableName();
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
@@ -450,10 +449,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * HBASE-1182
-   * Scan for columns > some timestamp
+   * HBASE-1182 Scan for columns > some timestamp
    */
-  @Test public void testJiraTest1182() throws Exception {
+  @Test
+  public void testJiraTest1182() throws Exception {
     final TableName tableName = name.getTableName();
     byte[][] VALUES = makeNAscii(VALUE, 7);
     long[] STAMPS = makeStamps(7);
@@ -493,10 +492,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * HBASE-52
-   * Add a means of scanning over all versions
+   * HBASE-52 Add a means of scanning over all versions
    */
-  @Test public void testJiraTest52() throws Exception {
+  @Test
+  public void testJiraTest52() throws Exception {
     final TableName tableName = name.getTableName();
     byte[][] VALUES = makeNAscii(VALUE, 7);
     long[] STAMPS = makeStamps(7);
@@ -634,7 +633,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8] },
         new byte[][] { VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
-          VALUES[8] }, 0, 6);
+            VALUES[8] },
+        0, 6);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -643,7 +643,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8] },
         new byte[][] { VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
-          VALUES[8] }, 0, 6);
+            VALUES[8] },
+        0, 6);
 
       get = new Get(ROW);
       get.readVersions(7);
@@ -651,7 +652,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8] },
         new byte[][] { VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
-          VALUES[8] }, 0, 6);
+            VALUES[8] },
+        0, 6);
 
       scan = new Scan(ROW);
       scan.setMaxVersions(7);
@@ -659,7 +661,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8] },
         new byte[][] { VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
-          VALUES[8] }, 0, 6);
+            VALUES[8] },
+        0, 6);
 
       // Verify we can get each one properly
       getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -695,9 +698,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
-          STAMPS[11], STAMPS[13], STAMPS[15] },
+            STAMPS[11], STAMPS[13], STAMPS[15] },
         new byte[][] { VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
-          VALUES[11], VALUES[13], VALUES[15] }, 0, 9);
+            VALUES[11], VALUES[13], VALUES[15] },
+        0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -705,9 +709,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
-          STAMPS[11], STAMPS[13], STAMPS[15] },
+            STAMPS[11], STAMPS[13], STAMPS[15] },
         new byte[][] { VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
-          VALUES[11], VALUES[13], VALUES[15] }, 0, 9);
+            VALUES[11], VALUES[13], VALUES[15] },
+        0, 9);
 
       // Delete a version in the memstore and a version in a storefile
       Delete delete = new Delete(ROW);
@@ -722,9 +727,10 @@ public class TestFromClientSide4 extends FromClientSideBase {
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
-          STAMPS[9], STAMPS[13], STAMPS[15] },
+            STAMPS[9], STAMPS[13], STAMPS[15] },
         new byte[][] { VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8],
-          VALUES[9], VALUES[13], VALUES[15] }, 0, 9);
+            VALUES[9], VALUES[13], VALUES[15] },
+        0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -732,13 +738,15 @@ public class TestFromClientSide4 extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
-          STAMPS[9], STAMPS[13], STAMPS[15] },
+            STAMPS[9], STAMPS[13], STAMPS[15] },
         new byte[][] { VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8],
-          VALUES[9], VALUES[13], VALUES[15] }, 0, 9);
+            VALUES[9], VALUES[13], VALUES[15] },
+        0, 9);
     }
   }
 
-  @Test public void testUpdates() throws Exception {
+  @Test
+  public void testUpdates() throws Exception {
     final TableName tableName = name.getTableName();
     try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
@@ -786,7 +794,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testUpdatesWithMajorCompaction() throws Exception {
+  @Test
+  public void testUpdatesWithMajorCompaction() throws Exception {
     final TableName tableName = name.getTableName();
     try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
         Admin admin = TEST_UTIL.getAdmin()) {
@@ -845,7 +854,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testMajorCompactionBetweenTwoUpdates() throws Exception {
+  @Test
+  public void testMajorCompactionBetweenTwoUpdates() throws Exception {
     final TableName tableName = name.getTableName();
     try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
         Admin admin = TEST_UTIL.getAdmin()) {
@@ -910,7 +920,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testGet_EmptyTable() throws IOException {
+  @Test
+  public void testGet_EmptyTable() throws IOException {
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
       Get get = new Get(ROW);
       get.addFamily(FAMILY);
@@ -919,7 +930,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testGet_NullQualifier() throws IOException {
+  @Test
+  public void testGet_NullQualifier() throws IOException {
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -942,7 +954,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testGet_NonExistentRow() throws IOException {
+  @Test
+  public void testGet_NonExistentRow() throws IOException {
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -964,14 +977,15 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testPut() throws IOException {
+  @Test
+  public void testPut() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final byte[] row1 = Bytes.toBytes("row1");
     final byte[] row2 = Bytes.toBytes("row2");
     final byte[] value = Bytes.toBytes("abcd");
-    try (Table table = TEST_UTIL
-      .createTable(name.getTableName(), new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
+    try (Table table = TEST_UTIL.createTable(name.getTableName(),
+      new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
       Put put = new Put(row1);
       put.addColumn(CONTENTS_FAMILY, null, value);
       table.put(put);
@@ -982,7 +996,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       assertEquals(1, put.size());
       assertEquals(1, put.getFamilyCellMap().get(CONTENTS_FAMILY).size());
 
-      // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+      // KeyValue v1 expectation. Cast for now until we go all Cell all the time. TODO
       KeyValue kv = (KeyValue) put.getFamilyCellMap().get(CONTENTS_FAMILY).get(0);
 
       assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), CONTENTS_FAMILY));
@@ -1005,7 +1019,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testPutNoCF() throws IOException {
+  @Test
+  public void testPutNoCF() throws IOException {
     final byte[] BAD_FAM = Bytes.toBytes("BAD_CF");
     final byte[] VAL = Bytes.toBytes(100);
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
@@ -1022,13 +1037,14 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testRowsPut() throws IOException {
+  @Test
+  public void testRowsPut() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final int NB_BATCH_ROWS = 10;
     final byte[] value = Bytes.toBytes("abcd");
-    try (Table table = TEST_UTIL
-      .createTable(name.getTableName(), new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
+    try (Table table = TEST_UTIL.createTable(name.getTableName(),
+      new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
       ArrayList<Put> rowsUpdate = new ArrayList<>();
       for (int i = 0; i < NB_BATCH_ROWS; i++) {
         byte[] row = Bytes.toBytes("row" + i);
@@ -1042,7 +1058,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       scan.addFamily(CONTENTS_FAMILY);
       try (ResultScanner scanner = table.getScanner(scan)) {
         int nbRows = 0;
-        for (@SuppressWarnings("unused") Result row : scanner) {
+        for (@SuppressWarnings("unused")
+        Result row : scanner) {
           nbRows++;
         }
         assertEquals(NB_BATCH_ROWS, nbRows);
@@ -1050,13 +1067,14 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testRowsPutBufferedManyManyFlushes() throws IOException {
+  @Test
+  public void testRowsPutBufferedManyManyFlushes() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final byte[] value = Bytes.toBytes("abcd");
     final int NB_BATCH_ROWS = 10;
-    try (Table table = TEST_UTIL
-      .createTable(name.getTableName(), new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
+    try (Table table = TEST_UTIL.createTable(name.getTableName(),
+      new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
       ArrayList<Put> rowsUpdate = new ArrayList<>();
       for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
         byte[] row = Bytes.toBytes("row" + i);
@@ -1071,7 +1089,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
       scan.addFamily(CONTENTS_FAMILY);
       try (ResultScanner scanner = table.getScanner(scan)) {
         int nbRows = 0;
-        for (@SuppressWarnings("unused") Result row : scanner) {
+        for (@SuppressWarnings("unused")
+        Result row : scanner) {
           nbRows++;
         }
         assertEquals(NB_BATCH_ROWS * 10, nbRows);
@@ -1079,7 +1098,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testAddKeyValue() {
+  @Test
+  public void testAddKeyValue() {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] value = Bytes.toBytes("abcd");
     final byte[] row1 = Bytes.toBytes("row1");
@@ -1111,7 +1131,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
   /**
    * test for HBASE-737
    */
-  @Test public void testHBase737() throws IOException {
+  @Test
+  public void testHBase737() throws IOException {
     final byte[] FAM1 = Bytes.toBytes("fam1");
     final byte[] FAM2 = Bytes.toBytes("fam2");
     // Open table
@@ -1123,7 +1144,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException i) {
-        //ignore
+        // ignore
       }
 
       put = new Put(ROW);
@@ -1133,7 +1154,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException i) {
-        //ignore
+        // ignore
       }
 
       put = new Put(ROW);
@@ -1171,7 +1192,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException i) {
-        //ignore
+        // ignore
       }
       scan = new Scan();
       scan.addFamily(FAM1);
@@ -1193,7 +1214,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testListTables() throws IOException {
+  @Test
+  public void testListTables() throws IOException {
     final String testTableName = name.getTableName().toString();
     final TableName tableName1 = TableName.valueOf(testTableName + "1");
     final TableName tableName2 = TableName.valueOf(testTableName + "2");
@@ -1221,28 +1243,29 @@ public class TestFromClientSide4 extends FromClientSideBase {
   }
 
   /**
-   * simple test that just executes parts of the client
-   * API that accept a pre-created Connection instance
+   * simple test that just executes parts of the client API that accept a pre-created Connection
+   * instance
    */
-  @Test public void testUnmanagedHConnection() throws IOException {
+  @Test
+  public void testUnmanagedHConnection() throws IOException {
     final TableName tableName = name.getTableName();
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table t = conn.getTable(tableName);
-      Admin admin = conn.getAdmin()) {
+        Table t = conn.getTable(tableName);
+        Admin admin = conn.getAdmin()) {
       assertTrue(admin.tableExists(tableName));
       assertTrue(t.get(new Get(ROW)).isEmpty());
     }
   }
 
   /**
-   * test of that unmanaged HConnections are able to reconnect
-   * properly (see HBASE-5058)
+   * test of that unmanaged HConnections are able to reconnect properly (see HBASE-5058)
    */
-  @Test public void testUnmanagedHConnectionReconnect() throws Exception {
+  @Test
+  public void testUnmanagedHConnectionReconnect() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    Class registryImpl = conf
-      .getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class);
+    Class registryImpl = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      ZKConnectionRegistry.class);
     // This test does not make sense for MasterRegistry since it stops the only master in the
     // cluster and starts a new master without populating the underlying config for the connection.
     Assume.assumeFalse(registryImpl.equals(MasterRegistry.class));
@@ -1275,7 +1298,8 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 
-  @Test public void testMiscHTableStuff() throws IOException {
+  @Test
+  public void testMiscHTableStuff() throws IOException {
     final String testTableName = name.getTableName().toString();
     final TableName tableAname = TableName.valueOf(testTableName + "A");
     final TableName tableBname = TableName.valueOf(testTableName + "B");
@@ -1284,7 +1308,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
     byte[] value = Bytes.toBytes("value");
 
     try (Table a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
-      Table b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY)) {
+        Table b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY)) {
       Put put = new Put(ROW);
       put.addColumn(HConstants.CATALOG_FAMILY, null, value);
       a.put(put);
@@ -1351,4 +1375,3 @@ public class TestFromClientSide4 extends FromClientSideBase {
     }
   }
 }
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -76,8 +75,9 @@ public class QuotaSettingsFactory {
     }
   }
 
-  /* ==========================================================================
-   *  QuotaSettings from the Quotas object
+  /*
+   * ========================================================================== QuotaSettings from
+   * the Quotas object
    */
   static List<QuotaSettings> fromUserQuotas(final String userName, final Quotas quotas) {
     return fromQuotas(userName, null, null, null, quotas);
@@ -193,13 +193,12 @@ public class QuotaSettingsFactory {
     }
   }
 
-  /* ==========================================================================
-   *  RPC Throttle
+  /*
+   * ========================================================================== RPC Throttle
    */
 
   /**
    * Throttle the specified user.
-   *
    * @param userName the user to throttle
    * @param type the type of throttling
    * @param limit the allowed number of request/data per timeUnit
@@ -227,7 +226,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Throttle the specified user on the specified table.
-   *
    * @param userName the user to throttle
    * @param tableName the table to throttle
    * @param type the type of throttling
@@ -257,7 +255,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Throttle the specified user on the specified namespace.
-   *
    * @param userName the user to throttle
    * @param namespace the namespace to throttle
    * @param type the type of throttling
@@ -287,7 +284,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user.
-   *
    * @param userName the user
    * @return the quota settings
    */
@@ -297,7 +293,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user.
-   *
    * @param userName the user
    * @param type the type of throttling
    * @return the quota settings
@@ -309,7 +304,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified table.
-   *
    * @param userName the user
    * @param tableName the table
    * @return the quota settings
@@ -320,7 +314,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified table.
-   *
    * @param userName the user
    * @param tableName the table
    * @param type the type of throttling
@@ -333,7 +326,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified namespace.
-   *
    * @param userName the user
    * @param namespace the namespace
    * @return the quota settings
@@ -344,7 +336,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified namespace.
-   *
    * @param userName the user
    * @param namespace the namespace
    * @param type the type of throttling
@@ -357,7 +348,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Throttle the specified table.
-   *
    * @param tableName the table to throttle
    * @param type the type of throttling
    * @param limit the allowed number of request/data per timeUnit
@@ -385,7 +375,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified table.
-   *
    * @param tableName the table
    * @return the quota settings
    */
@@ -395,7 +384,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified table.
-   *
    * @param tableName the table
    * @param type the type of throttling
    * @return the quota settings
@@ -407,7 +395,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Throttle the specified namespace.
-   *
    * @param namespace the namespace to throttle
    * @param type the type of throttling
    * @param limit the allowed number of request/data per timeUnit
@@ -435,7 +422,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified namespace.
-   *
    * @param namespace the namespace
    * @return the quota settings
    */
@@ -445,7 +431,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified namespace by throttle type.
-   *
    * @param namespace the namespace
    * @param type the type of throttling
    * @return the quota settings
@@ -457,7 +442,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Throttle the specified region server.
-   *
    * @param regionServer the region server to throttle
    * @param type the type of throttling
    * @param limit the allowed number of request/data per timeUnit
@@ -471,7 +455,6 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified region server.
-   *
    * @param regionServer the region Server
    * @return the quota settings
    */
@@ -481,8 +464,7 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified region server by throttle type.
-   *
-   * @param regionServer  the region Server
+   * @param regionServer the region Server
    * @param type the type of throttling
    * @return the quota settings
    */
@@ -505,44 +487,42 @@ public class QuotaSettingsFactory {
     return new ThrottleSettings(userName, tableName, namespace, regionServer, builder.build());
   }
 
-  /* ==========================================================================
-   *  Global Settings
+  /*
+   * ========================================================================== Global Settings
    */
 
   /**
    * Set the "bypass global settings" for the specified user
-   *
    * @param userName the user to throttle
    * @param bypassGlobals true if the global settings should be bypassed
    * @return the quota settings
    */
   public static QuotaSettings bypassGlobals(final String userName, final boolean bypassGlobals) {
-    return new QuotaGlobalsSettingsBypass(userName, null, null, null,  bypassGlobals);
+    return new QuotaGlobalsSettingsBypass(userName, null, null, null, bypassGlobals);
   }
 
-  /* ==========================================================================
-   *  FileSystem Space Settings
+  /*
+   * ========================================================================== FileSystem Space
+   * Settings
    */
 
   /**
    * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given table
    * to the given size in bytes. When the space usage is exceeded by the table, the provided
    * {@link SpaceViolationPolicy} is enacted on the table.
-   *
    * @param tableName The name of the table on which the quota should be applied.
    * @param sizeLimit The limit of a table's size in bytes.
    * @param violationPolicy The action to take when the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitTableSpace(
-      final TableName tableName, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitTableSpace(final TableName tableName, long sizeLimit,
+      final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(tableName, sizeLimit, violationPolicy);
   }
 
   /**
    * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
    * table.
-   *
    * @param tableName The name of the table to remove the quota for.
    * @return A {@link QuotaSettings} object.
    */
@@ -554,21 +534,19 @@ public class QuotaSettingsFactory {
    * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given
    * namespace to the given size in bytes. When the space usage is exceeded by all tables in the
    * namespace, the provided {@link SpaceViolationPolicy} is enacted on all tables in the namespace.
-   *
    * @param namespace The namespace on which the quota should be applied.
    * @param sizeLimit The limit of the namespace's size in bytes.
    * @param violationPolicy The action to take when the the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitNamespaceSpace(
-      final String namespace, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitNamespaceSpace(final String namespace, long sizeLimit,
+      final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(namespace, sizeLimit, violationPolicy);
   }
 
   /**
    * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
    * namespace.
-   *
    * @param namespace The namespace to remove the quota on.
    * @return A {@link QuotaSettings} object.
    */

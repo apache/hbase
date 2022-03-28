@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
+
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -30,8 +31,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.junit.Assert.assertTrue;
 
 public abstract class TestTableDDLProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestTableDDLProcedureBase.class);
@@ -64,7 +63,7 @@ public abstract class TestTableDDLProcedureBase {
   @After
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
-    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
+    for (HTableDescriptor htd : UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,12 +22,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -42,8 +40,8 @@ public final class UnsafeAccess {
   /** The offset to the first element in a byte array. */
   public static final long BYTE_ARRAY_BASE_OFFSET;
 
-  public static final boolean LITTLE_ENDIAN = ByteOrder.nativeOrder()
-      .equals(ByteOrder.LITTLE_ENDIAN);
+  public static final boolean LITTLE_ENDIAN =
+      ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
   // This number limits the number of bytes to copy per call to Unsafe's
   // copyMemory method. A limit is imposed to allow for safepoint polling
@@ -66,12 +64,13 @@ public final class UnsafeAccess {
 
     if (theUnsafe != null) {
       BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
-    } else{
+    } else {
       BYTE_ARRAY_BASE_OFFSET = -1;
     }
   }
 
-  private UnsafeAccess(){}
+  private UnsafeAccess() {
+  }
 
   // APIs to read primitive data from a byte[] using Unsafe way
   /**
@@ -166,7 +165,6 @@ public final class UnsafeAccess {
   /**
    * Reads a short value at the given buffer's offset considering it was written in big-endian
    * format.
-   *
    * @param buf
    * @param offset
    * @return short value at offset
@@ -208,7 +206,6 @@ public final class UnsafeAccess {
   /**
    * Reads an int value at the given buffer's offset considering it was written in big-endian
    * format.
-   *
    * @param buf
    * @param offset
    * @return int value at offset
@@ -221,8 +218,7 @@ public final class UnsafeAccess {
   }
 
   /**
-   * Reads a int value at the given Object's offset considering it was written in big-endian
-   * format.
+   * Reads a int value at the given Object's offset considering it was written in big-endian format.
    * @param ref
    * @param offset
    * @return int value at offset
@@ -250,7 +246,6 @@ public final class UnsafeAccess {
   /**
    * Reads a long value at the given buffer's offset considering it was written in big-endian
    * format.
-   *
    * @param buf
    * @param offset
    * @return long value at offset
@@ -343,15 +338,13 @@ public final class UnsafeAccess {
   /**
    * Copies specified number of bytes from given offset of {@code src} ByteBuffer to the
    * {@code dest} array.
-   *
    * @param src
    * @param srcOffset
    * @param dest
    * @param destOffset
    * @param length
    */
-  public static void copy(ByteBuffer src, int srcOffset, byte[] dest, int destOffset,
-      int length) {
+  public static void copy(ByteBuffer src, int srcOffset, byte[] dest, int destOffset, int length) {
     long srcAddress = srcOffset;
     Object srcBase = null;
     if (src.isDirect()) {
@@ -367,7 +360,6 @@ public final class UnsafeAccess {
   /**
    * Copies specified number of bytes from given offset of {@code src} buffer into the {@code dest}
    * buffer.
-   *
    * @param src
    * @param srcOffset
    * @param dest
@@ -381,7 +373,7 @@ public final class UnsafeAccess {
     if (src.isDirect()) {
       srcAddress = srcOffset + ((DirectBuffer) src).address();
     } else {
-      srcAddress = (long) srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
+      srcAddress = (long) srcOffset + src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
       srcBase = src.array();
     }
     if (dest.isDirect()) {
@@ -431,6 +423,7 @@ public final class UnsafeAccess {
     }
     return offset + Bytes.SIZEOF_LONG;
   }
+
   /**
    * Put a byte value out to the specified BB position in big-endian format.
    * @param buf the byte buffer
@@ -442,8 +435,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putByte(((DirectBuffer) buf).address() + offset, b);
     } else {
-      theUnsafe.putByte(buf.array(),
-          BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
+      theUnsafe.putByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
     }
     return offset + 1;
   }

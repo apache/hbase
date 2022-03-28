@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.types;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -33,7 +32,8 @@ public class StructBuilder {
   /**
    * Create an empty {@code StructBuilder}.
    */
-  public StructBuilder() {}
+  public StructBuilder() {
+  }
 
   /**
    * Append {@code field} to the sequence of accumulated fields.

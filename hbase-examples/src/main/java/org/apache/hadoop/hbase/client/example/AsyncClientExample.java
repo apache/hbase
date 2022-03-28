@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,10 +37,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A simple example shows how to use asynchronous client.
@@ -81,7 +82,7 @@ public class AsyncClientExample extends Configured implements Tool {
     for (;;) {
       if (future.compareAndSet(null, new CompletableFuture<>())) {
         CompletableFuture<AsyncConnection> toComplete = future.get();
-        addListener(ConnectionFactory.createAsyncConnection(getConf()),(conn, error) -> {
+        addListener(ConnectionFactory.createAsyncConnection(getConf()), (conn, error) -> {
           if (error != null) {
             toComplete.completeExceptionally(error);
             // we need to reset the future holder so we will get a chance to recreate an async
@@ -132,7 +133,7 @@ public class AsyncClientExample extends Configured implements Tool {
     int numOps = args.length > 1 ? Integer.parseInt(args[1]) : DEFAULT_NUM_OPS;
     ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE,
       new ThreadFactoryBuilder().setNameFormat("AsyncClientExample-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     // We use AsyncTable here so we need to provide a separated thread pool. RawAsyncTable does not
     // need a thread pool and may have a better performance if you use it correctly as it can save
     // some context switches. But if you use RawAsyncTable incorrectly, you may have a very bad
@@ -164,13 +165,13 @@ public class AsyncClientExample extends Configured implements Tool {
               if (result.isEmpty()) {
                 LOG.warn("get failed for " + i + ", server returns empty result");
               } else if (!result.containsColumn(FAMILY, QUAL)) {
-                LOG.warn("get failed for " + i + ", the result does not contain " +
-                  Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
+                LOG.warn("get failed for " + i + ", the result does not contain "
+                    + Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
               } else {
                 int v = Bytes.toInt(result.getValue(FAMILY, QUAL));
                 if (v != i) {
-                  LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) +
-                    ":" + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
+                  LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) + ":"
+                      + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
                 } else {
                   LOG.info("get for " + i + " succeeded");
                 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents headers for the metrics in the top screen.
  */
@@ -36,7 +35,7 @@ public class Header {
   }
 
   public String format() {
-    return "%" + (field.isLeftJustify() ? "-" : "")  + length + "s";
+    return "%" + (field.isLeftJustify() ? "-" : "") + length + "s";
   }
 
   public Field getField() {

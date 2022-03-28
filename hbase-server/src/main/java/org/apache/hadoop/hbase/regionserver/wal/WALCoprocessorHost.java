@@ -1,6 +1,4 @@
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -9,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,19 +37,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implements the coprocessor environment and runtime support for coprocessors
- * loaded within a {@link WAL}.
+ * Implements the coprocessor environment and runtime support for coprocessors loaded within a
+ * {@link WAL}.
  */
 @InterfaceAudience.Private
-public class WALCoprocessorHost
-    extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
+public class WALCoprocessorHost extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
   private static final Logger LOG = LoggerFactory.getLogger(WALCoprocessorHost.class);
 
   /**
    * Encapsulation of the environment of each coprocessor
    */
   static class WALEnvironment extends BaseEnvironment<WALCoprocessor>
-    implements WALCoprocessorEnvironment {
+      implements WALCoprocessorEnvironment {
 
     private final WAL wal;
 
@@ -76,8 +71,8 @@ public class WALCoprocessorHost
         final Configuration conf, final WAL wal) {
       super(impl, priority, seq, conf);
       this.wal = wal;
-      this.metricRegistry = MetricsCoprocessor.createRegistryForWALCoprocessor(
-          impl.getClass().getName());
+      this.metricRegistry =
+          MetricsCoprocessor.createRegistryForWALCoprocessor(impl.getClass().getName());
     }
 
     @Override
@@ -119,8 +114,8 @@ public class WALCoprocessorHost
   }
 
   @Override
-  public WALCoprocessor checkAndGetInstance(Class<?> implClass) throws IllegalAccessException,
-      InstantiationException {
+  public WALCoprocessor checkAndGetInstance(Class<?> implClass)
+      throws IllegalAccessException, InstantiationException {
     if (WALCoprocessor.class.isAssignableFrom(implClass)) {
       try {
         return implClass.asSubclass(WALCoprocessor.class).getDeclaredConstructor().newInstance();
@@ -137,8 +132,7 @@ public class WALCoprocessorHost
   private ObserverGetter<WALCoprocessor, WALObserver> walObserverGetter =
       WALCoprocessor::getWALObserver;
 
-  abstract class WALObserverOperation extends
-      ObserverOperationWithoutResult<WALObserver> {
+  abstract class WALObserverOperation extends ObserverOperationWithoutResult<WALObserver> {
     public WALObserverOperation() {
       super(walObserverGetter);
     }

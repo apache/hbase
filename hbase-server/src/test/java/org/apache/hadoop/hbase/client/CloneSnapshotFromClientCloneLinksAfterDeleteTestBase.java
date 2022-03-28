@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ public class CloneSnapshotFromClientCloneLinksAfterDeleteTestBase
   public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
     // Clone a table from the first snapshot
     final TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "1-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
 
@@ -41,7 +41,7 @@ public class CloneSnapshotFromClientCloneLinksAfterDeleteTestBase
 
     // Clone the snapshot of the cloned table
     final TableName clonedTableName2 =
-      TableName.valueOf(getValidMethodName() + "2-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "2-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName2);
     verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
@@ -69,7 +69,7 @@ public class CloneSnapshotFromClientCloneLinksAfterDeleteTestBase
 
     // Clone a new table from cloned
     final TableName clonedTableName3 =
-      TableName.valueOf(getValidMethodName() + "3-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "3-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName3);
     verifyRowCount(TEST_UTIL, clonedTableName3, snapshot0Rows);
 

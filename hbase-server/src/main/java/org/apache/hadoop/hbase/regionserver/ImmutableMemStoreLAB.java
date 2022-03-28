@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -46,14 +45,12 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
   }
 
   /**
-   * The process of merging assumes all cells are allocated on mslab.
-   * There is a rare case in which the first immutable segment,
-   * participating in a merge, is a CSLM.
-   * Since the CSLM hasn't been flattened yet, and there is no point in flattening it (since it is
-   * going to be merged), its big cells (for whom size > maxAlloc) must be copied into mslab.
-   * This method copies the passed cell into the first mslab in the mslabs list,
-   * returning either a new cell instance over the copied data,
-   * or null when this cell cannt be copied.
+   * The process of merging assumes all cells are allocated on mslab. There is a rare case in which
+   * the first immutable segment, participating in a merge, is a CSLM. Since the CSLM hasn't been
+   * flattened yet, and there is no point in flattening it (since it is going to be merged), its big
+   * cells (for whom size > maxAlloc) must be copied into mslab. This method copies the passed cell
+   * into the first mslab in the mslabs list, returning either a new cell instance over the copied
+   * data, or null when this cell cannt be copied.
    */
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
@@ -61,21 +58,21 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     return mslab.forceCopyOfBigCellInto(cell);
   }
 
-  /* Returning a new pool chunk, without replacing current chunk,
-  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-  ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers.
-  */
+  /*
+   * Returning a new pool chunk, without replacing current chunk, meaning MSLABImpl does not make
+   * the returned chunk as CurChunk. The space on this chunk will be allocated externally. The
+   * interface is only for external callers.
+   */
   @Override
   public Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType) {
     MemStoreLAB mslab = this.mslabs.get(0);
     return mslab.getNewExternalChunk(chunkType);
   }
 
-  /* Returning a new chunk, without replacing current chunk,
-   ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-   ** The space on this chunk will be allocated externally.
-   ** The interface is only for external callers.
+  /*
+   * Returning a new chunk, without replacing current chunk, meaning MSLABImpl does not make the
+   * returned chunk as CurChunk. The space on this chunk will be allocated externally. The interface
+   * is only for external callers.
    */
   @Override
   public Chunk getNewExternalChunk(int size) {
@@ -137,6 +134,5 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
   public boolean isOffHeap() {
     return ChunkCreator.getInstance().isOffheap();
   }
-
 
 }

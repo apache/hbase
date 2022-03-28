@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,7 +83,7 @@ public class SnapshotFileCache implements Stoppable {
      * @return the collection of file names needed by the snapshot.
      */
     Collection<String> filesUnderSnapshot(final FileSystem fs, final Path snapshotDir)
-      throws IOException;
+        throws IOException;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotFileCache.class);
@@ -113,12 +113,12 @@ public class SnapshotFileCache implements Stoppable {
    * @throws IOException if the {@link FileSystem} or root directory cannot be loaded
    */
   public SnapshotFileCache(Configuration conf, long cacheRefreshPeriod, long cacheRefreshDelay,
-    String refreshThreadName, SnapshotFileInspector inspectSnapshotFiles) throws IOException {
+      String refreshThreadName, SnapshotFileInspector inspectSnapshotFiles) throws IOException {
     this(CommonFSUtils.getCurrentFileSystem(conf), CommonFSUtils.getRootDir(conf),
-      SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf).
-        getFileSystem(conf),
-      SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf),
-      cacheRefreshPeriod, cacheRefreshDelay, refreshThreadName, inspectSnapshotFiles);
+        SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf)
+            .getFileSystem(conf),
+        SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf),
+        cacheRefreshPeriod, cacheRefreshDelay, refreshThreadName, inspectSnapshotFiles);
   }
 
   /**
@@ -134,8 +134,8 @@ public class SnapshotFileCache implements Stoppable {
    * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
    */
   public SnapshotFileCache(FileSystem fs, Path rootDir, FileSystem workingFs, Path workingDir,
-    long cacheRefreshPeriod, long cacheRefreshDelay, String refreshThreadName,
-    SnapshotFileInspector inspectSnapshotFiles) {
+      long cacheRefreshPeriod, long cacheRefreshDelay, String refreshThreadName,
+      SnapshotFileInspector inspectSnapshotFiles) {
     this.fs = fs;
     this.workingFs = workingFs;
     this.workingSnapshotDir = workingDir;
@@ -196,8 +196,8 @@ public class SnapshotFileCache implements Stoppable {
     if (lock == null || lock.tryLock()) {
       try {
         if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
-          LOG.warn("Not checking unreferenced files since snapshot is running, it will " +
-            "skip to clean the HFiles this time");
+          LOG.warn("Not checking unreferenced files since snapshot is running, it will "
+              + "skip to clean the HFiles this time");
           return unReferencedFiles;
         }
         for (FileStatus file : files) {
@@ -257,8 +257,8 @@ public class SnapshotFileCache implements Stoppable {
       // that new snapshot, even though it has the same name as the files referenced have
       // probably changed.
       if (files == null || files.hasBeenModified(snapshotDir.getModificationTime())) {
-        Collection<String> storedFiles = fileInspector.filesUnderSnapshot(fs,
-          snapshotDir.getPath());
+        Collection<String> storedFiles =
+            fileInspector.filesUnderSnapshot(fs, snapshotDir.getPath());
         files = new SnapshotDirectoryInfo(snapshotDir.getModificationTime(), storedFiles);
       }
       // add all the files to cache
@@ -274,13 +274,14 @@ public class SnapshotFileCache implements Stoppable {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
 
-    FileStatus[] snapshotsInProgress = CommonFSUtils.listStatus(this.workingFs, this.workingSnapshotDir);
+    FileStatus[] snapshotsInProgress =
+        CommonFSUtils.listStatus(this.workingFs, this.workingSnapshotDir);
 
     if (!ArrayUtils.isEmpty(snapshotsInProgress)) {
       for (FileStatus snapshot : snapshotsInProgress) {
         try {
-          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(workingFs,
-            snapshot.getPath()));
+          snapshotInProgress
+              .addAll(fileInspector.filesUnderSnapshot(workingFs, snapshot.getPath()));
         } catch (CorruptedSnapshotException cse) {
           LOG.info("Corrupted in-progress snapshot file exception, ignored.", cse);
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -58,7 +57,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestZooKeeper {
 
   @ClassRule
@@ -79,12 +78,12 @@ public class TestZooKeeper {
     // A couple of tests rely on master expiring ZK session, hence killing the only master. So it
     // makes sense only for ZK registry. Enforcing it.
     conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
-        LoadBalancer.class);
+      LoadBalancer.class);
     TEST_UTIL.startMiniDFSCluster(2);
   }
 
@@ -95,8 +94,8 @@ public class TestZooKeeper {
 
   @Before
   public void setUp() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(2).numRegionServers(2).build();
+    StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numMasters(2).numRegionServers(2).build();
     TEST_UTIL.startMiniHBaseCluster(option);
   }
 
@@ -132,17 +131,15 @@ public class TestZooKeeper {
   }
 
   /**
-   * Master recovery when the znode already exists. Internally, this
-   *  test differs from {@link #testMasterSessionExpired} because here
-   *  the master znode will exist in ZK.
+   * Master recovery when the znode already exists. Internally, this test differs from
+   * {@link #testMasterSessionExpired} because here the master znode will exist in ZK.
    */
   @Test
   public void testMasterZKSessionRecoveryFailure() throws Exception {
     LOG.info("Starting " + name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
-    m.abort("Test recovery from zk session expired",
-        new KeeperException.SessionExpiredException());
+    m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
     assertTrue(m.isStopped()); // Master doesn't recover any more
     testSanity(name.getMethodName());
   }
@@ -196,7 +193,7 @@ public class TestZooKeeper {
       MockLoadBalancer.retainAssignCalled = false;
       final int expectedNumOfListeners = countPermanentListeners(zkw);
       m.abort("Test recovery from zk session expired",
-          new KeeperException.SessionExpiredException());
+        new KeeperException.SessionExpiredException());
       assertTrue(m.isStopped()); // Master doesn't recover any more
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
@@ -210,8 +207,8 @@ public class TestZooKeeper {
   }
 
   /**
-   * Count listeners in zkw excluding listeners, that belongs to workers or other
-   * temporary processes.
+   * Count listeners in zkw excluding listeners, that belongs to workers or other temporary
+   * processes.
    */
   private int countPermanentListeners(ZKWatcher watcher) {
     return countListeners(watcher, ZkSplitLogWorkerCoordination.class);
@@ -249,7 +246,7 @@ public class TestZooKeeper {
     byte[] family = Bytes.toBytes("col");
     try (Admin admin = TEST_UTIL.getAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
-        Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
+          Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(htd, SPLIT_KEYS);
@@ -285,12 +282,11 @@ public class TestZooKeeper {
 
     @Override
     @NonNull
-    public Map<ServerName, List<RegionInfo>> retainAssignment(
-        Map<RegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
+    public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
+        List<ServerName> servers) throws HBaseIOException {
       retainAssignCalled = true;
       return super.retainAssignment(regions, servers);
     }
   }
 
 }
-

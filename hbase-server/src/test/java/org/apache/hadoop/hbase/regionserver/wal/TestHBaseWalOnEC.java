@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -61,7 +60,7 @@ public class TestHBaseWalOnEC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
+      HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -72,12 +71,12 @@ public class TestHBaseWalOnEC {
       DistributedFileSystem fs = cluster.getFileSystem();
 
       Method enableAllECPolicies =
-        DFSTestUtil.class.getMethod("enableAllECPolicies", DistributedFileSystem.class);
+          DFSTestUtil.class.getMethod("enableAllECPolicies", DistributedFileSystem.class);
       enableAllECPolicies.invoke(null, fs);
 
       DFSClient client = fs.getClient();
       Method setErasureCodingPolicy =
-        DFSClient.class.getMethod("setErasureCodingPolicy", String.class, String.class);
+          DFSClient.class.getMethod("setErasureCodingPolicy", String.class, String.class);
       setErasureCodingPolicy.invoke(client, "/", "RS-3-2-1024k"); // try a built-in policy
 
       try (FSDataOutputStream out = fs.create(new Path("/canary"))) {

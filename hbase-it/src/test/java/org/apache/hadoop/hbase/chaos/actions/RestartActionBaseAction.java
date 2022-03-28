@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -23,8 +22,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
-* Base class for restarting HBaseServer's
-*/
+ * Base class for restarting HBaseServer's
+ */
 public abstract class RestartActionBaseAction extends Action {
   long sleepTime; // how long should we sleep
 

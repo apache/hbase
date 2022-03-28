@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -84,8 +83,8 @@ public class TestBalancer {
     TableStateManager tableStateManager = master.getTableStateManager();
     ServerManager serverManager = master.getServerManager();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-      assignmentManager.getRegionStates()
-        .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList());
+        assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
+          serverManager.getOnlineServersList());
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
     assertFalse(assignments.get(tableName).containsKey(sn1));

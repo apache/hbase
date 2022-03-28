@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,8 +55,8 @@ public class TestScanModifyingObserver {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final TableName NAME = TableName.valueOf("TestScanModifications");
   private static final byte[] FAMILY = Bytes.toBytes("f");
-  private static final ColumnFamilyDescriptor CFD = ColumnFamilyDescriptorBuilder
-      .newBuilder(FAMILY).build();
+  private static final ColumnFamilyDescriptor CFD =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final byte[] EXPLICIT_QUAL = Bytes.toBytes("our_qualifier");
   private static final byte[] IMPLICIT_QUAL = Bytes.toBytes("their_qualifier");

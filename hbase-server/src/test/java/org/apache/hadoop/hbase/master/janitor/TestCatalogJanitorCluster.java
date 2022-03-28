@@ -55,7 +55,7 @@ public class TestCatalogJanitorCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogJanitorCluster.class);
+      HBaseClassTestRule.forClass(TestCatalogJanitorCluster.class);
 
   @Rule
   public final TestName name = new TestName();
@@ -75,7 +75,7 @@ public class TestCatalogJanitorCluster {
     TEST_UTIL.createMultiRegionTable(T3, new byte[][] { HConstants.CATALOG_FAMILY });
 
     final byte[][] keysForT4 =
-      { Bytes.toBytes("aa"), Bytes.toBytes("bb"), Bytes.toBytes("cc"), Bytes.toBytes("dd") };
+        { Bytes.toBytes("aa"), Bytes.toBytes("bb"), Bytes.toBytes("cc"), Bytes.toBytes("dd") };
 
     TEST_UTIL.createTable(T4, HConstants.CATALOG_FAMILY, keysForT4);
 
@@ -100,7 +100,7 @@ public class TestCatalogJanitorCluster {
   public void testConsistency() throws IOException {
     CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().getCatalogJanitor();
     RegionStateStore regionStateStore =
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     janitor.scan();
     Report report = janitor.getLastReport();
     // Assert no problems.
@@ -113,18 +113,19 @@ public class TestCatalogJanitorCluster {
     assertFalse(report.isEmpty());
     assertEquals(1, report.getHoles().size());
     assertTrue(report.getHoles().get(0).getFirst().getTable()
-      .equals(RegionInfoBuilder.UNDEFINED.getTable()));
+        .equals(RegionInfoBuilder.UNDEFINED.getTable()));
     assertTrue(report.getHoles().get(0).getSecond().getTable().equals(T2));
     assertEquals(0, report.getOverlaps().size());
     // Next, add overlaps to first row in t3
     List<RegionInfo> t3Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T3);
     RegionInfo ri = t3Ris.get(0);
-    RegionInfo newRi1 = RegionInfoBuilder.newBuilder(ri.getTable())
-      .setStartKey(incrementRow(ri.getStartKey())).setEndKey(incrementRow(ri.getEndKey())).build();
+    RegionInfo newRi1 =
+        RegionInfoBuilder.newBuilder(ri.getTable()).setStartKey(incrementRow(ri.getStartKey()))
+            .setEndKey(incrementRow(ri.getEndKey())).build();
     Put p1 = MetaTableAccessor.makePutFromRegionInfo(newRi1, System.currentTimeMillis());
     RegionInfo newRi2 = RegionInfoBuilder.newBuilder(newRi1.getTable())
-      .setStartKey(incrementRow(newRi1.getStartKey())).setEndKey(incrementRow(newRi1.getEndKey()))
-      .build();
+        .setStartKey(incrementRow(newRi1.getStartKey())).setEndKey(incrementRow(newRi1.getEndKey()))
+        .build();
     Put p2 = MetaTableAccessor.makePutFromRegionInfo(newRi2, System.currentTimeMillis());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(p1, p2));
     janitor.scan();
@@ -181,7 +182,7 @@ public class TestCatalogJanitorCluster {
 
     // add a new region [a, cc)
     RegionInfo newRiT4 = RegionInfoBuilder.newBuilder(T4).setStartKey("a".getBytes())
-      .setEndKey("cc".getBytes()).build();
+        .setEndKey("cc".getBytes()).build();
     Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4, System.currentTimeMillis());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT4));
 
@@ -203,7 +204,7 @@ public class TestCatalogJanitorCluster {
 
     // add a new region [a, g)
     RegionInfo newRiT5 = RegionInfoBuilder.newBuilder(T5).setStartKey("a".getBytes())
-      .setEndKey("g".getBytes()).build();
+        .setEndKey("g".getBytes()).build();
     Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5, System.currentTimeMillis());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT5));
 
@@ -279,7 +280,7 @@ public class TestCatalogJanitorCluster {
     assertEquals(1, holes.size());
     Pair<RegionInfo, RegionInfo> regionInfoRegionInfoPair = holes.get(0);
     assertTrue(regionInfoRegionInfoPair.getFirst().getTable()
-      .equals(RegionInfoBuilder.UNDEFINED.getTable()));
+        .equals(RegionInfoBuilder.UNDEFINED.getTable()));
     assertTrue(regionInfoRegionInfoPair.getSecond().getTable().equals(tableName));
     assertTrue(
       regionInfoRegionInfoPair.getSecond().getEncodedName().equals(secondRegion.getEncodedName()));
@@ -291,21 +292,21 @@ public class TestCatalogJanitorCluster {
     assertEquals(2, holes.size());
     regionInfoRegionInfoPair = holes.get(1);
     assertTrue(regionInfoRegionInfoPair.getFirst().getEncodedName()
-      .equals(secondLastRegion.getEncodedName()));
+        .equals(secondLastRegion.getEncodedName()));
     assertTrue(regionInfoRegionInfoPair.getSecond().getTable()
-      .equals(RegionInfoBuilder.UNDEFINED.getTable()));
+        .equals(RegionInfoBuilder.UNDEFINED.getTable()));
   }
 
   // Get Holes filter by table
   private LinkedList<Pair<RegionInfo, RegionInfo>> getHoles(CatalogJanitor janitor,
-    TableName tableName) throws IOException {
+      TableName tableName) throws IOException {
     janitor.scan();
     Report lastReport = janitor.getLastReport();
     assertFalse(lastReport.isEmpty());
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = new LinkedList<>();
     for (Pair<RegionInfo, RegionInfo> hole : lastReport.getHoles()) {
-      if (hole.getFirst().getTable().equals(tableName) ||
-        hole.getSecond().getTable().equals(tableName)) {
+      if (hole.getFirst().getTable().equals(tableName)
+          || hole.getSecond().getTable().equals(tableName)) {
         holes.add(hole);
       }
     }
@@ -314,7 +315,7 @@ public class TestCatalogJanitorCluster {
 
   private RegionInfo getRegionInfo(TableName tableName, byte[] row) throws IOException {
     RegionInfo regionInfo =
-      TEST_UTIL.getConnection().getRegionLocator(tableName).getRegionLocation(row).getRegion();
+        TEST_UTIL.getConnection().getRegionLocator(tableName).getRegionLocation(row).getRegion();
     assertNotNull(regionInfo);
     return regionInfo;
   }

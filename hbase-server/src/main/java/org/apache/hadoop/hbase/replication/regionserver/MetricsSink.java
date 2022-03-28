@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -39,7 +38,6 @@ public class MetricsSink {
 
   /**
    * Set the age of the last applied operation
-   *
    * @param timestamp The timestamp of the last operation applied.
    * @return the age that was set
    */
@@ -54,8 +52,8 @@ public class MetricsSink {
   }
 
   /**
-   * Refreshing the age makes sure the value returned is the actual one and
-   * not the one set a replication time
+   * Refreshing the age makes sure the value returned is the actual one and not the one set a
+   * replication time
    * @return refreshed age
    */
   public long refreshAgeOfLastAppliedOp() {
@@ -64,7 +62,6 @@ public class MetricsSink {
 
   /**
    * Convience method to change metrics when a batch of operations are applied.
-   *
    * @param batchSize
    */
   public void applyBatch(long batchSize) {
@@ -74,7 +71,6 @@ public class MetricsSink {
 
   /**
    * Convience method to change metrics when a batch of operations are applied.
-   *
    * @param batchSize total number of mutations that are applied/replicated
    * @param hfileSize total number of hfiles that are applied/replicated
    */

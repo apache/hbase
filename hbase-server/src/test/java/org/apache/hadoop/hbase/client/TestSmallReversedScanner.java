@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,10 +78,10 @@ public class TestSmallReversedScanner {
    */
   @Test
   public void testSmallReversedScan01() throws IOException {
-    String[][] keysCases = new String[][] {
-      { "d0", "d1", "d2", "d3" }, // all rowKeys fit in the last region.
-      { "a0", "a1", "a2", "a3" }, // all rowKeys fit in the first region.
-      { "a0", "b1", "c2", "d3" }, // each region with a rowKey
+    String[][] keysCases = new String[][] { { "d0", "d1", "d2", "d3" }, // all rowKeys fit in the
+                                                                        // last region.
+        { "a0", "a1", "a2", "a3" }, // all rowKeys fit in the first region.
+        { "a0", "b1", "c2", "d3" }, // each region with a rowKey
     };
 
     for (int caseIndex = 0; caseIndex < keysCases.length; caseIndex++) {
@@ -115,9 +115,9 @@ public class TestSmallReversedScanner {
   }
 
   /**
-   * Corner case:
-   *  HBase has 4 regions, (-oo,b),[b,c),[c,d),[d,+oo), and only rowKey with byte[]={0x00} locate in region (-oo,b) .
-   *  test whether reversed small scanner will return infinity results with RowKey={0x00}.
+   * Corner case: HBase has 4 regions, (-oo,b),[b,c),[c,d),[d,+oo), and only rowKey with
+   * byte[]={0x00} locate in region (-oo,b) . test whether reversed small scanner will return
+   * infinity results with RowKey={0x00}.
    * @throws IOException
    */
   @Test

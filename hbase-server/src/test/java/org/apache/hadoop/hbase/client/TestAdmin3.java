@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ public class TestAdmin3 extends TestAdminBase {
 
     ADMIN.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
 
     // Test that table is disabled
@@ -94,7 +94,7 @@ public class TestAdmin3 extends TestAdminBase {
     assertTrue(ok);
     ADMIN.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
 
     // Test that table is enabled
@@ -176,11 +176,11 @@ public class TestAdmin3 extends TestAdminBase {
   public void testEnableTableRetainAssignment() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     ADMIN.createTable(desc, splitKeys);
 
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
@@ -229,9 +229,9 @@ public class TestAdmin3 extends TestAdminBase {
   @Test
   public void testGetTableDescriptor() throws IOException {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam2"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam3")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam2"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam3")).build();
     ADMIN.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     TableDescriptor confirmedHtd = table.getDescriptor();
@@ -250,12 +250,12 @@ public class TestAdmin3 extends TestAdminBase {
 
     // Make table read only
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName)).setReadOnly(true).build();
+        TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName)).setReadOnly(true).build();
     ADMIN.modifyTable(htd);
 
     // try to modify the read only table now
     htd = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
-      .setCompactionEnabled(false).build();
+        .setCompactionEnabled(false).build();
     ADMIN.modifyTable(htd);
     // Delete the table
     ADMIN.disableTable(tableName);
@@ -349,7 +349,7 @@ public class TestAdmin3 extends TestAdminBase {
     exception = null;
     try {
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(nonexistentTable)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
       ADMIN.modifyTable(htd);
     } catch (IOException e) {
       exception = e;
@@ -359,9 +359,9 @@ public class TestAdmin3 extends TestAdminBase {
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
     final TableName tableName =
-      TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
+        TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     ADMIN.createTable(htd);
     try {
       exception = null;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.io.IOException;
+import java.util.List;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.ByteToMessageDecoder;
-
-import java.io.IOException;
-import java.util.List;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Decode the sasl challenge sent by RpcServer.

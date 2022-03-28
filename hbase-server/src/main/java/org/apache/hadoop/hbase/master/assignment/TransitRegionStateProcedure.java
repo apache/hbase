@@ -237,7 +237,7 @@ public class TransitRegionStateProcedure
     if (retries >= maxAttempts) {
       env.getAssignmentManager().regionFailedOpen(regionNode, true);
       setFailure(getClass().getSimpleName(), new RetriesExhaustedException(
-        "Max attempts " + env.getAssignmentManager().getAssignMaxAttempts() + " exceeded"));
+          "Max attempts " + env.getAssignmentManager().getAssignMaxAttempts() + " exceeded"));
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
@@ -250,8 +250,8 @@ public class TransitRegionStateProcedure
 
     if (retries > env.getAssignmentManager().getAssignRetryImmediatelyMaxAttempts()) {
       // Throw exception to backoff and retry when failed open too many times
-      throw new HBaseIOException("Failed confirm OPEN of " + regionNode +
-          " (remote log may yield more detail on why).");
+      throw new HBaseIOException(
+          "Failed confirm OPEN of " + regionNode + " (remote log may yield more detail on why).");
     } else {
       // Here we do not throw exception because we want to the region to be online ASAP
       return Flow.HAS_MORE_STATE;
@@ -263,7 +263,7 @@ public class TransitRegionStateProcedure
       // this is the normal case
       env.getAssignmentManager().regionClosing(regionNode);
       addChildProcedure(new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-        assignCandidate));
+          assignCandidate));
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
     } else {
       forceNewPlan = true;
@@ -299,8 +299,8 @@ public class TransitRegionStateProcedure
     // edits. Notice that the region will remain in ABNORMALLY_CLOSED state, the upper layer need to
     // deal with this state. For non-default replica, this is usually the same with CLOSED.
     assert regionNode.isInState(State.ABNORMALLY_CLOSED);
-    if (!RegionReplicaUtil.isDefaultReplica(getRegion()) &&
-      lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED) {
+    if (!RegionReplicaUtil.isDefaultReplica(getRegion())
+        && lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED) {
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
@@ -315,7 +315,7 @@ public class TransitRegionStateProcedure
   protected Procedure[] execute(MasterProcedureEnv env)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     RegionStateNode regionNode =
-      env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
+        env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
     regionNode.lock();
     try {
       return super.execute(env);
@@ -339,9 +339,9 @@ public class TransitRegionStateProcedure
           // master, do not try to assign the replica region, log error and return.
           if (!RegionReplicaUtil.isDefaultReplica(regionNode.getRegionInfo())) {
             RegionInfo defaultRI =
-              RegionReplicaUtil.getRegionInfoForDefaultReplica(regionNode.getRegionInfo());
-            if (env.getMasterServices().getAssignmentManager().getRegionStates().
-              getRegionStateNode(defaultRI) == null) {
+                RegionReplicaUtil.getRegionInfoForDefaultReplica(regionNode.getRegionInfo());
+            if (env.getMasterServices().getAssignmentManager().getRegionStates()
+                .getRegionStateNode(defaultRI) == null) {
               LOG.error(
                 "Cannot assign replica region {} because its primary region {} does not exist.",
                 regionNode.getRegionInfo(), defaultRI);
@@ -370,8 +370,8 @@ public class TransitRegionStateProcedure
       }
       long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
       LOG.warn(
-        "Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
-          "by other Procedure or operator intervention",
+        "Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed "
+            + "by other Procedure or operator intervention",
         backoff / 1000, this, regionNode.toShortString(), e);
       setTimeout(Math.toIntExact(backoff));
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
@@ -395,8 +395,8 @@ public class TransitRegionStateProcedure
       ServerName serverName, TransitionCode code, long seqId, long procId) throws IOException {
     if (remoteProc == null) {
       LOG.warn(
-        "There is no outstanding remote region procedure for {}, serverName={}, code={}," +
-          " seqId={}, proc={}, should be a retry, ignore",
+        "There is no outstanding remote region procedure for {}, serverName={}, code={},"
+            + " seqId={}, proc={}, should be a retry, ignore",
         regionNode, serverName, code, seqId, this);
       return;
     }
@@ -404,8 +404,8 @@ public class TransitRegionStateProcedure
     // can do rolling upgraing.
     if (procId >= 0 && remoteProc.getProcId() != procId) {
       LOG.warn(
-        "The pid of remote region procedure for {} is {}, the reported pid={}, serverName={}," +
-          " code={}, seqId={}, proc={}, should be a retry, ignore",
+        "The pid of remote region procedure for {} is {}, the reported pid={}, serverName={},"
+            + " code={}, seqId={}, proc={}, should be a retry, ignore",
         regionNode, remoteProc.getProcId(), procId, serverName, code, seqId, this);
       return;
     }
@@ -499,7 +499,7 @@ public class TransitRegionStateProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     RegionStateTransitionStateData.Builder builder = RegionStateTransitionStateData.newBuilder()
-      .setType(convert(type)).setForceNewPlan(forceNewPlan);
+        .setType(convert(type)).setForceNewPlan(forceNewPlan);
     if (assignCandidate != null) {
       builder.setAssignCandidate(ProtobufUtil.toServerName(assignCandidate));
     }
@@ -510,7 +510,7 @@ public class TransitRegionStateProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     RegionStateTransitionStateData data =
-      serializer.deserialize(RegionStateTransitionStateData.class);
+        serializer.deserialize(RegionStateTransitionStateData.class);
     type = convert(data.getType());
     setInitialAndLastState();
     forceNewPlan = data.getForceNewPlan();
@@ -585,6 +585,6 @@ public class TransitRegionStateProcedure
   public static TransitRegionStateProcedure move(MasterProcedureEnv env, RegionInfo region,
       @Nullable ServerName targetServer) {
     return setOwner(env, new TransitRegionStateProcedure(env, region, targetServer,
-      targetServer == null, TransitionType.MOVE));
+        targetServer == null, TransitionType.MOVE));
   }
 }

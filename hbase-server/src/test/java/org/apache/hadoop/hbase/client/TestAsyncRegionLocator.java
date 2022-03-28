@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestAsyncRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionLocator.class);
+      HBaseClassTestRule.forClass(TestAsyncRegionLocator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -102,7 +102,7 @@ public class TestAsyncRegionLocator {
     ConnectionRegistry registry =
         ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), User.getCurrent());
+        registry.getClusterId().get(), User.getCurrent());
     LOCATOR = CONN.getLocator();
   }
 
@@ -146,9 +146,10 @@ public class TestAsyncRegionLocator {
     SLEEP_MS = 0;
     AtomicReference<Throwable> errorHolder = new AtomicReference<>();
     try {
-      LOCATOR.getRegionLocation(TableName.valueOf("NotExist"), EMPTY_START_ROW,
-        RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1))
-        .whenComplete((r, e) -> errorHolder.set(e)).join();
+      LOCATOR
+          .getRegionLocation(TableName.valueOf("NotExist"), EMPTY_START_ROW,
+            RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1))
+          .whenComplete((r, e) -> errorHolder.set(e)).join();
       fail();
     } catch (CompletionException e) {
       // join will return a CompletionException, which is OK

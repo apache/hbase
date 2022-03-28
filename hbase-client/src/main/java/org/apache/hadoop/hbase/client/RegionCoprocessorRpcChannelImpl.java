@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -104,9 +104,9 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
       Message responsePrototype, RpcCallback<Message> done) {
     addListener(
       conn.callerFactory.<Message> single().table(tableName).row(row)
-        .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
+          .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+          .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
+          .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
       (r, e) -> {
         if (e != null) {
           ((ClientCoprocessorRpcController) controller).setFailed(e);

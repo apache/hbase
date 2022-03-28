@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,10 +47,10 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogReplicaLoadBalanceSimpleSelector.class);
+      HBaseClassTestRule.forClass(TestCatalogReplicaLoadBalanceSimpleSelector.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    TestCatalogReplicaLoadBalanceSimpleSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCatalogReplicaLoadBalanceSimpleSelector.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -72,12 +72,12 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
     // Enable hbase:meta replication.
     HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
-      TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
+        .getRegions(TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
 
     registry = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    CONN = new AsyncConnectionImpl(conf, registry,
-      registry.getClusterId().get(), User.getCurrent());
+    CONN =
+        new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(), User.getCurrent());
   }
 
   @AfterClass
@@ -88,22 +88,22 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
   @Test
   public void testMetaChangeFromReplicaNoReplica() throws IOException, InterruptedException {
-    String replicaSelectorClass = CONN.getConfiguration().
-      get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
-        CatalogReplicaLoadBalanceSimpleSelector.class.getName());
+    String replicaSelectorClass =
+        CONN.getConfiguration().get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+          CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
     CatalogReplicaLoadBalanceSelector metaSelector = CatalogReplicaLoadBalanceSelectorFactory
-      .createSelector(replicaSelectorClass, META_TABLE_NAME, CONN.getChoreService(), () -> {
-        int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
-        try {
-          RegionLocations metaLocations = CONN.registry.getMetaRegionLocations().get
-            (CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
-          numOfReplicas = metaLocations.size();
-        } catch (Exception e) {
-          LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
-        }
-        return numOfReplicas;
-      });
+        .createSelector(replicaSelectorClass, META_TABLE_NAME, CONN.getChoreService(), () -> {
+          int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
+          try {
+            RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
+                .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+            numOfReplicas = metaLocations.size();
+          } catch (Exception e) {
+            LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+          }
+          return numOfReplicas;
+        });
 
     assertNotEquals(
       metaSelector.select(TableName.valueOf("test"), EMPTY_START_ROW, RegionLocateType.CURRENT),
@@ -111,24 +111,23 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
     // Change to No meta replica
     HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 1);
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
-      TableName.META_TABLE_NAME).size() == 1);
+    TEST_UTIL.waitFor(30000,
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size() == 1);
 
     CatalogReplicaLoadBalanceSelector metaSelectorWithNoReplica =
-      CatalogReplicaLoadBalanceSelectorFactory.createSelector(
-        replicaSelectorClass, META_TABLE_NAME, CONN.getChoreService(), () -> {
-        int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
-        try {
-          RegionLocations metaLocations = CONN.registry.getMetaRegionLocations().get(
-            CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
-          numOfReplicas = metaLocations.size();
-        } catch (Exception e) {
-          LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
-        }
-        return numOfReplicas;
-      });
-    assertEquals(
-      metaSelectorWithNoReplica.select(TableName.valueOf("test"), EMPTY_START_ROW,
-        RegionLocateType.CURRENT), RegionReplicaUtil.DEFAULT_REPLICA_ID);
+        CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass,
+          META_TABLE_NAME, CONN.getChoreService(), () -> {
+            int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
+            try {
+              RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
+                  .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+              numOfReplicas = metaLocations.size();
+            } catch (Exception e) {
+              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+            }
+            return numOfReplicas;
+          });
+    assertEquals(metaSelectorWithNoReplica.select(TableName.valueOf("test"), EMPTY_START_ROW,
+      RegionLocateType.CURRENT), RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 }
