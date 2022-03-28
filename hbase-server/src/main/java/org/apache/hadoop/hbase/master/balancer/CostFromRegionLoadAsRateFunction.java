@@ -42,7 +42,7 @@ abstract class CostFromRegionLoadAsRateFunction extends CostFromRegionLoadFuncti
     double cost = 0;
     do {
       double current = getCostFromRl(iter.next());
-      cost += current >= previous ? current - previous : current;
+      cost += current - previous;
       previous = current;
     } while (iter.hasNext());
     return Math.max(0, cost / (regionLoadList.size() - 1));
