@@ -2499,6 +2499,7 @@
               <expandEmptyElements>false</expandEmptyElements>
             </sortPom>
           </pom>
+          <removeUnusedImports/>
         </configuration>
       </plugin>
     </plugins>
