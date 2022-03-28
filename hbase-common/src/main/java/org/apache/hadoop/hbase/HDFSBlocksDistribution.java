@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Data structure to describe the distribution of HDFS blocks among hosts.
- *
+ * <p/>
  * Adding erroneous data will be ignored silently.
  */
 @InterfaceAudience.Private
