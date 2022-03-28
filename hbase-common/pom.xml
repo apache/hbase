@@ -83,24 +83,23 @@
               <goal>run</goal>
             </goals>
           </execution>
-                <!-- Generate web app sources -->
-                <execution>
-                    <id>generate-Version-information</id>
-                    <phase>generate-sources</phase>
-                    <configuration>
-                        <target>
-                            <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
-
-                            <exec executable="bash" failonerror="true">
-                                <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
-                            </exec>
-                        </target>
-                    </configuration>
-                    <goals>
-                        <goal>run</goal>
-                    </goals>
-                </execution>
-            </executions>
+            <!-- Generate web app sources -->
+            <execution>
+              <id>generate-Version-information</id>
+              <phase>generate-sources</phase>
+              <configuration>
+                <target>
+                  <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
+                  <exec executable="bash" failonerror="true">
+                    <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
+                  </exec>
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
             <groupId>org.codehaus.mojo</groupId>
