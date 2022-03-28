@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,16 +78,15 @@ public class SchemaResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+      MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      ResponseBuilder response =
-        Response.ok(new TableSchemaModel(getTableSchema()));
+      ResponseBuilder response = Response.ok(new TableSchemaModel(getTableSchema()));
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
@@ -100,19 +99,17 @@ public class SchemaResource extends ResourceBase {
   private Response replace(final TableName name, final TableSchemaModel model,
       final UriInfo uriInfo, final Admin admin) {
     if (servlet.isReadOnly()) {
-      return Response.status(Response.Status.FORBIDDEN)
-        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
-        .build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+          .entity("Forbidden" + CRLF).build();
     }
     try {
-      TableDescriptorBuilder tableDescriptorBuilder =
-        TableDescriptorBuilder.newBuilder(name);
+      TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(name);
       for (Map.Entry<QName, Object> e : model.getAny().entrySet()) {
         tableDescriptorBuilder.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
       for (ColumnSchemaModel family : model.getColumns()) {
         ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family.getName()));
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family.getName()));
         for (Map.Entry<QName, Object> e : family.getAny().entrySet()) {
           columnFamilyDescriptorBuilder.setValue(e.getKey().getLocalPart(),
             e.getValue().toString());
@@ -131,9 +128,8 @@ public class SchemaResource extends ResourceBase {
           servlet.getMetrics().incrementSucessfulPutRequests(1);
         } catch (TableExistsException e) {
           // race, someone else created a table with the same name
-          return Response.status(Response.Status.NOT_MODIFIED)
-            .type(MIMETYPE_TEXT).entity("Not modified" + CRLF)
-            .build();
+          return Response.status(Response.Status.NOT_MODIFIED).type(MIMETYPE_TEXT)
+              .entity("Not modified" + CRLF).build();
         }
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
@@ -144,21 +140,20 @@ public class SchemaResource extends ResourceBase {
     }
   }
 
-  private Response update(final TableName name, final TableSchemaModel model,
-      final UriInfo uriInfo, final Admin admin) {
+  private Response update(final TableName name, final TableSchemaModel model, final UriInfo uriInfo,
+      final Admin admin) {
     if (servlet.isReadOnly()) {
-      return Response.status(Response.Status.FORBIDDEN)
-        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
-        .build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+          .entity("Forbidden" + CRLF).build();
     }
     try {
       TableDescriptorBuilder tableDescriptorBuilder =
-        TableDescriptorBuilder.newBuilder(admin.getDescriptor(name));
+          TableDescriptorBuilder.newBuilder(admin.getDescriptor(name));
       admin.disableTable(name);
       try {
         for (ColumnSchemaModel family : model.getColumns()) {
           ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family.getName()));
+              ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family.getName()));
           for (Map.Entry<QName, Object> e : family.getAny().entrySet()) {
             columnFamilyDescriptorBuilder.setValue(e.getKey().getLocalPart(),
               e.getValue().toString());
@@ -172,9 +167,8 @@ public class SchemaResource extends ResourceBase {
           }
         }
       } catch (IOException e) {
-        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-          .build();
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
+            .entity("Unavailable" + CRLF).build();
       } finally {
         admin.enableTable(TableName.valueOf(tableResource.getName()));
       }
@@ -207,10 +201,8 @@ public class SchemaResource extends ResourceBase {
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response put(final TableSchemaModel model,
-      final @Context UriInfo uriInfo) {
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response put(final TableSchemaModel model, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
@@ -219,10 +211,8 @@ public class SchemaResource extends ResourceBase {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response post(final TableSchemaModel model,
-      final @Context UriInfo uriInfo) {
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response post(final TableSchemaModel model, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
@@ -230,8 +220,8 @@ public class SchemaResource extends ResourceBase {
     return update(model, false, uriInfo);
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
-      justification="Expected")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DE_MIGHT_IGNORE",
+      justification = "Expected")
   @DELETE
   public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
@@ -246,7 +236,8 @@ public class SchemaResource extends ResourceBase {
       Admin admin = servlet.getAdmin();
       try {
         admin.disableTable(TableName.valueOf(tableResource.getName()));
-      } catch (TableNotEnabledException e) { /* this is what we want anyway */ }
+      } catch (TableNotEnabledException e) {
+        /* this is what we want anyway */ }
       admin.deleteTable(TableName.valueOf(tableResource.getName()));
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return Response.ok().build();

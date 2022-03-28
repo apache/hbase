@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ public class OrderedString extends OrderedBytesBase<String> {
 
   /**
    * Creates a new variable-length {@link String}.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedString(Order order) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -55,7 +54,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestHFileCleaner {
 
   @ClassRule
@@ -96,7 +95,8 @@ public class TestHFileCleaner {
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 100);
     cleaner.setConf(conf);
     assertTrue("File not set deletable - check mod time:" + getFileStats(file, fs)
-        + " with create time:" + createTime, cleaner.isFileDeletable(fs.getFileStatus(file)));
+        + " with create time:" + createTime,
+      cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   @Test
@@ -105,8 +105,8 @@ public class TestHFileCleaner {
     Path root = UTIL.getDataTestDirOnTestFS();
     TableName table = TableName.valueOf("testManualMobCleanerStopsMobRemoval");
     Path mob = HFileArchiveUtil.getRegionArchiveDir(root, table,
-        MobUtils.getMobRegionInfo(table).getEncodedName());
-    Path family= new Path(mob, "family");
+      MobUtils.getMobRegionInfo(table).getEncodedName());
+    Path family = new Path(mob, "family");
 
     Path file = new Path(family, "someHFileThatWouldBeAUUID");
     fs.createNewFile(file);
@@ -114,8 +114,8 @@ public class TestHFileCleaner {
 
     ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
 
-    assertFalse("Mob File shouldn't have been deletable. check path. '"+file+"'",
-        cleaner.isFileDeletable(fs.getFileStatus(file)));
+    assertFalse("Mob File shouldn't have been deletable. check path. '" + file + "'",
+      cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   @Test
@@ -125,7 +125,7 @@ public class TestHFileCleaner {
     TableName table = TableName.valueOf("testManualMobCleanerLetsNonMobGo");
     Path nonmob = HFileArchiveUtil.getRegionArchiveDir(root, table,
       RegionInfoBuilder.newBuilder(table).build().getEncodedName());
-    Path family= new Path(nonmob, "family");
+    Path family = new Path(nonmob, "family");
 
     Path file = new Path(family, "someHFileThatWouldBeAUUID");
     fs.createNewFile(file);
@@ -133,8 +133,8 @@ public class TestHFileCleaner {
 
     ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
 
-    assertTrue("Non-Mob File should have been deletable. check path. '"+file+"'",
-        cleaner.isFileDeletable(fs.getFileStatus(file)));
+    assertTrue("Non-Mob File should have been deletable. check path. '" + file + "'",
+      cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   /**
@@ -155,12 +155,12 @@ public class TestHFileCleaner {
     // set TTL
     long ttl = 2000;
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-        "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner," +
-        "org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner");
+      "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,"
+          + "org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
     Path archivedHfileDir =
-      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+        new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
     FileSystem fs = FileSystem.get(conf);
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
@@ -226,7 +226,7 @@ public class TestHFileCleaner {
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
     Server server = new DummyServer();
     Path archivedHfileDir =
-      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+        new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
@@ -354,9 +354,9 @@ public class TestHFileCleaner {
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getLargeQueueInitSize());
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getSmallQueueInitSize());
     Assert.assertEquals(HFileCleaner.DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC,
-        cleaner.getCleanerThreadTimeoutMsec());
+      cleaner.getCleanerThreadTimeoutMsec());
     Assert.assertEquals(HFileCleaner.DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
-        cleaner.getCleanerThreadCheckIntervalMsec());
+      cleaner.getCleanerThreadCheckIntervalMsec());
 
     // clean up archive directory and create files for testing
     fs.delete(archivedHfileDir, true);
@@ -386,7 +386,7 @@ public class TestHFileCleaner {
     newConf.setInt(HFileCleaner.SMALL_HFILE_DELETE_THREAD_NUMBER, SMALL_THREAD_NUM);
     newConf.setLong(HFileCleaner.HFILE_DELETE_THREAD_TIMEOUT_MSEC, THREAD_TIMEOUT_MSEC);
     newConf.setLong(HFileCleaner.HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
-        THREAD_CHECK_INTERVAL_MSEC);
+      THREAD_CHECK_INTERVAL_MSEC);
 
     LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
         + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
@@ -410,11 +410,13 @@ public class TestHFileCleaner {
     t.join();
     LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
         + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
-    Assert.assertTrue("Should delete more than " + LARGE_FILE_NUM
-        + " files from large queue but actually " + cleaner.getNumOfDeletedLargeFiles(),
+    Assert.assertTrue(
+      "Should delete more than " + LARGE_FILE_NUM + " files from large queue but actually "
+          + cleaner.getNumOfDeletedLargeFiles(),
       cleaner.getNumOfDeletedLargeFiles() > LARGE_FILE_NUM);
-    Assert.assertTrue("Should delete less than " + SMALL_FILE_NUM
-        + " files from small queue but actually " + cleaner.getNumOfDeletedSmallFiles(),
+    Assert.assertTrue(
+      "Should delete less than " + SMALL_FILE_NUM + " files from small queue but actually "
+          + cleaner.getNumOfDeletedSmallFiles(),
       cleaner.getNumOfDeletedSmallFiles() < SMALL_FILE_NUM);
   }
 

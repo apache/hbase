@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @Category(IntegrationTests.class)
@@ -163,7 +163,6 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
         @Override
         public void run() {
 
-
           Table ht = null;
           try {
             ht = util.getConnection().getTable(tableName);
@@ -186,7 +185,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
               }
               span.addEvent("Accum = " + accum);
 
-            } catch (IOException|InterruptedException ie) {
+            } catch (IOException | InterruptedException ie) {
               // IGNORED
             } finally {
               span.end();

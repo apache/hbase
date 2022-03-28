@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -132,8 +132,8 @@ public class HFileArchiveTestingUtil {
 
   private static String assertArchiveEquality(List<String> expected, List<String> archived) {
     String compare = compareFileLists(expected, archived);
-    if (!(expected.size() == archived.size())) return "Not the same number of current files\n"
-        + compare;
+    if (!(expected.size() == archived.size()))
+      return "Not the same number of current files\n" + compare;
     if (!expected.equals(archived)) return "Different backup files, but same amount\n" + compare;
     return null;
   }
@@ -185,8 +185,8 @@ public class HFileArchiveTestingUtil {
 
   /* Get a pretty representation of the differences */
   private static String compareFileLists(List<String> expected, List<String> gotten) {
-    StringBuilder sb = new StringBuilder("Expected (" + expected.size() + "): \t\t Gotten ("
-        + gotten.size() + "):\n");
+    StringBuilder sb = new StringBuilder(
+        "Expected (" + expected.size() + "): \t\t Gotten (" + gotten.size() + "):\n");
     List<String> notFound = new ArrayList<>();
     for (String s : expected) {
       if (gotten.contains(s)) sb.append(s + "\t\t" + s + "\n");
@@ -224,11 +224,11 @@ public class HFileArchiveTestingUtil {
   public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
       throws IOException {
     return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
-        region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
+      region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
   }
 
-  public static Path getStoreArchivePath(HBaseTestingUtil util, String tableName,
-      byte[] storeName) throws IOException {
+  public static Path getStoreArchivePath(HBaseTestingUtil util, String tableName, byte[] storeName)
+      throws IOException {
     byte[] table = Bytes.toBytes(tableName);
     // get the RS and region serving our table
     List<HRegion> servingRegions = util.getHBaseCluster().getRegions(table);

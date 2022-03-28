@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,7 +81,7 @@ public class TestBulkLoadHFiles {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadHFiles.class);
+      HBaseClassTestRule.forClass(TestBulkLoadHFiles.class);
 
   @Rule
   public TestName tn = new TestName();
@@ -94,7 +94,7 @@ public class TestBulkLoadHFiles {
   static final int MAX_FILES_PER_REGION_PER_FAMILY = 4;
 
   private static final byte[][] SPLIT_KEYS =
-    new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
+      new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
 
   static HBaseTestingUtil util = new HBaseTestingUtil();
 
@@ -124,7 +124,7 @@ public class TestBulkLoadHFiles {
   public void testSimpleLoadWithMap() throws Exception {
     runTest("testSimpleLoadWithMap", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
+          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
       true);
   }
 
@@ -135,7 +135,7 @@ public class TestBulkLoadHFiles {
   public void testSimpleLoad() throws Exception {
     runTest("testSimpleLoad", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, });
+          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, });
   }
 
   @Test
@@ -144,7 +144,7 @@ public class TestBulkLoadHFiles {
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
     runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE), false, null,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
+          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
       false, true, 2);
   }
 
@@ -155,7 +155,7 @@ public class TestBulkLoadHFiles {
   public void testRegionCrossingLoad() throws Exception {
     runTest("testRegionCrossingLoad", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -165,7 +165,7 @@ public class TestBulkLoadHFiles {
   public void testRegionCrossingRowBloom() throws Exception {
     runTest("testRegionCrossingLoadRowBloom", BloomType.ROW,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -175,7 +175,7 @@ public class TestBulkLoadHFiles {
   public void testRegionCrossingRowColBloom() throws Exception {
     runTest("testRegionCrossingLoadRowColBloom", BloomType.ROWCOL,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -186,9 +186,9 @@ public class TestBulkLoadHFiles {
   public void testSimpleHFileSplit() throws Exception {
     runTest("testHFileSplit", BloomType.NONE,
       new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
-        Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
+          Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("lll") },
-        new byte[][] { Bytes.toBytes("mmm"), Bytes.toBytes("zzz") }, });
+          new byte[][] { Bytes.toBytes("mmm"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -222,27 +222,27 @@ public class TestBulkLoadHFiles {
   public void testSplitALot() throws Exception {
     runTest("testSplitALot", BloomType.NONE,
       new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"), Bytes.toBytes("ccc"),
-        Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"), Bytes.toBytes("ggg"),
-        Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
-        Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
-        Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
-        Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), },
+          Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"), Bytes.toBytes("ggg"),
+          Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
+          Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+          Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
+          Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("zzz") }, });
   }
 
   private void testRegionCrossingHFileSplit(BloomType bloomType) throws Exception {
     runTest("testHFileSplit" + bloomType + "Bloom", bloomType,
       new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
-        Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
+          Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   private TableDescriptor buildHTD(TableName tableName, BloomType bloomType) {
     return TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
-      .build();
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
+        .build();
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges)
@@ -387,15 +387,15 @@ public class TestBulkLoadHFiles {
   }
 
   private void runTest(String testName, TableDescriptor htd, boolean preCreateTable,
-    byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
-    throws Exception {
+      byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
+      throws Exception {
     loadHFiles(testName, htd, util, FAMILY, QUALIFIER, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, true, copyFiles, 0, 1000, depth);
 
     final TableName tableName = htd.getTableName();
     // verify staging folder has been cleaned up
     Path stagingBasePath = new Path(CommonFSUtils.getRootDir(util.getConfiguration()),
-      HConstants.BULKLOAD_STAGING_DIR_NAME);
+        HConstants.BULKLOAD_STAGING_DIR_NAME);
     FileSystem fs = util.getTestFileSystem();
     if (fs.exists(stagingBasePath)) {
       FileStatus[] files = fs.listStatus(stagingBasePath);
@@ -421,7 +421,7 @@ public class TestBulkLoadHFiles {
     Path familyDir = new Path(dir, Bytes.toString(FAMILY));
     // table has these split points
     byte[][] tableSplitKeys = new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"),
-      Bytes.toBytes("jjj"), Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), };
+        Bytes.toBytes("jjj"), Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), };
 
     // creating an hfile that has values that span the split points.
     byte[] from = Bytes.toBytes("ddd");
@@ -454,16 +454,16 @@ public class TestBulkLoadHFiles {
   public void testNonexistentColumnFamilyLoad() throws Exception {
     String testName = tn.getMethodName();
     byte[][][] hFileRanges =
-      new byte[][][] { new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
-        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, };
+        new byte[][][] { new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
+            new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, };
 
     byte[] TABLE = Bytes.toBytes("mytable_" + testName);
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder
-        .of(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT))))
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder
+            .of(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT))))
+        .build();
 
     try {
       runTest(testName, htd, true, SPLIT_KEYS, hFileRanges, false, false, 2);
@@ -473,8 +473,8 @@ public class TestBulkLoadHFiles {
       // further check whether the exception message is correct
       String errMsg = e.getMessage();
       assertTrue(
-        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY +
-          "], current message: [" + errMsg + "]",
+        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY
+            + "], current message: [" + errMsg + "]",
         errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
     }
   }
@@ -592,7 +592,7 @@ public class TestBulkLoadHFiles {
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     ColumnFamilyDescriptor familyDesc =
-      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setDataBlockEncoding(cfEncoding).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setDataBlockEncoding(cfEncoding).build();
     HFileTestUtil.createHFileWithDataBlockEncoding(util.getConfiguration(), fs, testIn,
       bulkloadEncoding, FAMILY, QUALIFIER, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
@@ -610,7 +610,7 @@ public class TestBulkLoadHFiles {
   private int verifyHFile(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader =
-      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
+        HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
     HFileScanner scanner = reader.getScanner(conf, false, false);
     scanner.seekTo();
     int count = 0;
@@ -708,11 +708,11 @@ public class TestBulkLoadHFiles {
 
     try {
       BulkLoadHFiles.create(util.getConfiguration())
-        .bulkLoad(TableName.valueOf("mytable_testLoadTooMayHFiles"), dir);
+          .bulkLoad(TableName.valueOf("mytable_testLoadTooMayHFiles"), dir);
       fail("Bulk loading too many files should fail");
     } catch (IOException ie) {
       assertTrue(ie.getMessage()
-        .contains("Trying to load more than " + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
+          .contains("Trying to load more than " + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
     }
   }
 

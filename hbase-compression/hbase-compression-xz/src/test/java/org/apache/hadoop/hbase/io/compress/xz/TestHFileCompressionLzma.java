@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileCompressionLzma extends HFileTestBase {
 
   @ClassRule
@@ -52,16 +52,16 @@ public class TestHFileCompressionLzma extends HFileTestBase {
   @Test
   public void test() throws Exception {
     Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
+        HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.LZMA);
   }
 
   @Test
   public void testReconfLevels() throws Exception {
     Path path_1 = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtil.getRandomUUID().toString() + ".1.hfile");
+        HBaseTestingUtil.getRandomUUID().toString() + ".1.hfile");
     Path path_2 = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtil.getRandomUUID().toString() + ".2.hfile");
+        HBaseTestingUtil.getRandomUUID().toString() + ".2.hfile");
     conf.setInt(LzmaCodec.LZMA_LEVEL_KEY, 1);
     doTest(conf, path_1, Compression.Algorithm.LZMA);
     long len_1 = FS.getFileStatus(path_1).getLen();

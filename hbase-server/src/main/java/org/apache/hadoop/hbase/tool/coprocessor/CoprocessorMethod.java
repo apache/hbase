@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool.coprocessor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -36,7 +33,7 @@ public class CoprocessorMethod {
     parameters = new ArrayList<>();
   }
 
-  public CoprocessorMethod withParameters(String ... parameters) {
+  public CoprocessorMethod withParameters(String... parameters) {
     for (String parameter : parameters) {
       this.parameters.add(parameter);
     }
@@ -44,7 +41,7 @@ public class CoprocessorMethod {
     return this;
   }
 
-  public CoprocessorMethod withParameters(Class<?> ... parameters) {
+  public CoprocessorMethod withParameters(Class<?>... parameters) {
     for (Class<?> parameter : parameters) {
       this.parameters.add(parameter.getCanonicalName());
     }
@@ -60,10 +57,9 @@ public class CoprocessorMethod {
       return false;
     }
 
-    CoprocessorMethod other = (CoprocessorMethod)obj;
+    CoprocessorMethod other = (CoprocessorMethod) obj;
 
-    return Objects.equals(name, other.name) &&
-        Objects.equals(parameters, other.parameters);
+    return Objects.equals(name, other.name) && Objects.equals(parameters, other.parameters);
   }
 
   @Override

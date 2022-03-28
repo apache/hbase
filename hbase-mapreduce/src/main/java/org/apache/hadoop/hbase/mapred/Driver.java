@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,12 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.util.ProgramDriver;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.util.ProgramDriver;
 
 /**
- * Driver for hbase mapreduce jobs. Select which to run by passing name of job
- * to this main.
+ * Driver for hbase mapreduce jobs. Select which to run by passing name of job to this main.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Stable
@@ -44,7 +42,7 @@ public class Driver {
    */
   public static void main(String[] args) throws Throwable {
     pgd.addClass(RowCounter.NAME, RowCounter.class, "Count rows in HBase table");
-    ProgramDriver.class.getMethod("driver", new Class[] { String[].class })
-        .invoke(pgd, new Object[] { args });
+    ProgramDriver.class.getMethod("driver", new Class[] { String[].class }).invoke(pgd,
+      new Object[] { args });
   }
 }

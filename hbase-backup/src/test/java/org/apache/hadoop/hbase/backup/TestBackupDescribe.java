@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,6 @@ public class TestBackupDescribe extends TestBackupBase {
 
   /**
    * Verify that describe works as expected if incorrect backup Id is supplied.
-   *
    * @throws Exception if creating the {@link BackupDriver} fails
    */
   @Test

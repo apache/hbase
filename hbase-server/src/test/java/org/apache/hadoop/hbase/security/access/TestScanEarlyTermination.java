@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestScanEarlyTermination extends SecureTestUtil {
 
   @ClassRule
@@ -90,14 +90,14 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     verifyConfiguration(conf);
 
     TEST_UTIL.startMiniCluster();
-    MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterCoprocessorHost();
+    MasterCoprocessorHost cpHost =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    AccessController ac = (AccessController)
-      cpHost.findCoprocessor(AccessController.class.getName());
+    AccessController ac =
+        (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
     cpHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
-    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-        .getRegionServerCoprocessorHost();
+    RegionServerCoprocessorHost rsHost =
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
     rsHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
@@ -118,8 +118,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(testTable.getTableName())
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
         .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(10).build())
         .setColumnFamily(
@@ -147,8 +146,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   @Test
   public void testEarlyScanTermination() throws Exception {
     // Grant USER_OTHER access to TEST_FAMILY1 only
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY1,
-      null, Action.READ);
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY1, null,
+      Action.READ);
 
     // Set up test data
     verifyAllowed(new AccessTestAction() {

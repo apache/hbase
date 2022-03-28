@@ -65,8 +65,8 @@ public class TestSeekBeforeWithReverseScan {
   public void setUp() throws Exception {
     TableName tableName = TableName.valueOf(getClass().getSimpleName());
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(cfName).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).build()).build();
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(cfName).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).build()).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtil.createRegionAndWAL(info, path, testUtil.getConfiguration(),
@@ -108,11 +108,11 @@ public class TestSeekBeforeWithReverseScan {
       count++;
     }
     assertEquals("b", Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(),
-        res.get(0).getRowLength()));
+      res.get(0).getRowLength()));
     assertEquals("ab", Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(),
-        res.get(1).getRowLength()));
+      res.get(1).getRowLength()));
     assertEquals("a", Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(),
-        res.get(2).getRowLength()));
+      res.get(2).getRowLength()));
     assertEquals(3, count);
   }
 

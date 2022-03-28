@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -179,7 +179,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static TransparentCryptoHelper createTransparentCryptoHelperWithoutHDFS12396()
       throws NoSuchMethodException {
     Method decryptEncryptedDataEncryptionKeyMethod = DFSClient.class
-      .getDeclaredMethod("decryptEncryptedDataEncryptionKey", FileEncryptionInfo.class);
+        .getDeclaredMethod("decryptEncryptedDataEncryptionKey", FileEncryptionInfo.class);
     decryptEncryptedDataEncryptionKeyMethod.setAccessible(true);
     return new TransparentCryptoHelper() {
 
@@ -188,7 +188,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           DFSClient client) throws IOException {
         try {
           KeyVersion decryptedKey =
-            (KeyVersion) decryptEncryptedDataEncryptionKeyMethod.invoke(client, feInfo);
+              (KeyVersion) decryptEncryptedDataEncryptionKeyMethod.invoke(client, feInfo);
           CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf, feInfo.getCipherSuite());
           Encryptor encryptor = cryptoCodec.createEncryptor();
           encryptor.init(decryptedKey.getMaterial(), feInfo.getIV());
@@ -218,7 +218,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           DFSClient client) throws IOException {
         try {
           KeyVersion decryptedKey = (KeyVersion) decryptEncryptedDataEncryptionKeyMethod
-            .invoke(null, feInfo, client.getKeyProvider());
+              .invoke(null, feInfo, client.getKeyProvider());
           CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf, feInfo.getCipherSuite());
           Encryptor encryptor = cryptoCodec.createEncryptor();
           encryptor.init(decryptedKey.getMaterial(), feInfo.getIV());
@@ -240,8 +240,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     try {
       return createTransparentCryptoHelperWithoutHDFS12396();
     } catch (NoSuchMethodException e) {
-      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient," +
-        " should be hadoop version with HDFS-12396", e);
+      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient,"
+          + " should be hadoop version with HDFS-12396",
+        e);
     }
     return createTransparentCryptoHelperWithHDFS12396();
   }
@@ -324,8 +325,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private int step = 0;
 
     public SaslNegotiateHandler(Configuration conf, String username, char[] password,
-        Map<String, String> saslProps, int timeoutMs, Promise<Void> promise,
-        DFSClient dfsClient) throws SaslException {
+        Map<String, String> saslProps, int timeoutMs, Promise<Void> promise, DFSClient dfsClient)
+        throws SaslException {
       this.conf = conf;
       this.saslProps = saslProps;
       this.saslClient = Sasl.createSaslClient(new String[] { MECHANISM }, username, PROTOCOL,
@@ -355,8 +356,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     /**
-     * The asyncfs subsystem emulates a HDFS client by sending protobuf messages via netty.
-     * After Hadoop 3.3.0, the protobuf classes are relocated to org.apache.hadoop.thirdparty.protobuf.*.
+     * The asyncfs subsystem emulates a HDFS client by sending protobuf messages via netty. After
+     * Hadoop 3.3.0, the protobuf classes are relocated to org.apache.hadoop.thirdparty.protobuf.*.
      * Use Reflection to check which ones to use.
      */
     private static class BuilderPayloadSetter {
@@ -366,13 +367,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       /**
        * Create a ByteString from byte array without copying (wrap), and then set it as the payload
        * for the builder.
-       *
        * @param builder builder for HDFS DataTransferEncryptorMessage.
        * @param payload byte array of payload.
        * @throws IOException
        */
-      static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder, byte[] payload)
-        throws IOException {
+      static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder,
+          byte[] payload) throws IOException {
         Object byteStringObject;
         try {
           // byteStringObject = new LiteralByteString(payload);
@@ -396,18 +396,19 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         try {
           // See if it can load the relocated ByteString, which comes from hadoop-thirdparty.
           byteStringClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString");
-          LOG.debug("Found relocated ByteString class from hadoop-thirdparty." +
-            " Assuming this is Hadoop 3.3.0+.");
+          LOG.debug("Found relocated ByteString class from hadoop-thirdparty."
+              + " Assuming this is Hadoop 3.3.0+.");
         } catch (ClassNotFoundException e) {
-          LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty." +
-            " Assuming this is below Hadoop 3.3.0", e);
+          LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty."
+              + " Assuming this is below Hadoop 3.3.0",
+            e);
         }
 
         // LiteralByteString is a package private class in protobuf. Make it accessible.
         Class<?> literalByteStringClass;
         try {
-          literalByteStringClass = Class.forName(
-            "org.apache.hadoop.thirdparty.protobuf.ByteString$LiteralByteString");
+          literalByteStringClass =
+              Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString$LiteralByteString");
           LOG.debug("Shaded LiteralByteString from hadoop-thirdparty is found.");
         } catch (ClassNotFoundException e) {
           try {
@@ -805,8 +806,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       doSaslNegotiation(conf, channel, timeoutMs, getUserNameFromEncryptionKey(encryptionKey),
         encryptionKeyToPassword(encryptionKey.encryptionKey),
-        createSaslPropertiesForEncryption(encryptionKey.encryptionAlgorithm), saslPromise,
-          client);
+        createSaslPropertiesForEncryption(encryptionKey.encryptionAlgorithm), saslPromise, client);
     } else if (!UserGroupInformation.isSecurityEnabled()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client skipping handshake in unsecured configuration for addr = " + addr
@@ -832,7 +832,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       doSaslNegotiation(conf, channel, timeoutMs, buildUsername(accessToken),
         buildClientPassword(accessToken), saslPropsResolver.getClientProperties(addr), saslPromise,
-          client);
+        client);
     } else {
       // It's a secured cluster using non-privileged ports, but no SASL. The only way this can
       // happen is if the DataNode has ignore.secure.ports.for.testing configured, so this is a rare

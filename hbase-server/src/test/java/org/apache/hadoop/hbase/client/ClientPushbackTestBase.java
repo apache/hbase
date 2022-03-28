@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -129,8 +129,8 @@ public abstract class ClientPushbackTestBase {
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
     assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
-    LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
-      server + " is " + backoffTime);
+    LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ "
+        + server + " is " + backoffTime);
 
     CountDownLatch latch = new CountDownLatch(1);
     AtomicLong endTime = new AtomicLong();

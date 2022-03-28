@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionWALCleaner.class);
+      HBaseClassTestRule.forClass(TestMasterRegionWALCleaner.class);
 
   private static long TTL_MS = 5000;
 
@@ -79,7 +79,7 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
   @Test
   public void test() throws IOException, InterruptedException {
     region
-      .update(r -> r.put(new Put(Bytes.toBytes(1)).addColumn(CF1, QUALIFIER, Bytes.toBytes(1))));
+        .update(r -> r.put(new Put(Bytes.toBytes(1)).addColumn(CF1, QUALIFIER, Bytes.toBytes(1))));
     region.flush(true);
     Path testDir = htu.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(htu.getConfiguration());

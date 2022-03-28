@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,19 +50,19 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
   private boolean useReplay;
 
   public AsyncRegionReplicationRetryingCaller(HashedWheelTimer retryTimer,
-    AsyncClusterConnectionImpl conn, int maxAttempts, long rpcTimeoutNs, long operationTimeoutNs,
-    RegionInfo replica, List<Entry> entries) {
+      AsyncClusterConnectionImpl conn, int maxAttempts, long rpcTimeoutNs, long operationTimeoutNs,
+      RegionInfo replica, List<Entry> entries) {
     super(retryTimer, conn, ConnectionUtils.getPriority(replica.getTable()),
-      conn.connConf.getPauseNs(), conn.connConf.getPauseForCQTBENs(), maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
+        conn.connConf.getPauseNs(), conn.connConf.getPauseForCQTBENs(), maxAttempts,
+        operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
     this.replica = replica;
     this.entries = entries.toArray(new Entry[0]);
   }
 
   @Override
   protected Throwable preProcessError(Throwable error) {
-    if (error instanceof DoNotRetryIOException &&
-      error.getCause() instanceof UnsupportedOperationException) {
+    if (error instanceof DoNotRetryIOException
+        && error.getCause() instanceof UnsupportedOperationException) {
       // fallback to use replay, and also return the cause to let the upper retry
       useReplay = true;
       return error.getCause();
@@ -91,7 +91,7 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
       return;
     }
     Pair<ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
-      .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
+        .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
     resetCallTimeout();
     controller.setCellScanner(pair.getSecond());
     if (useReplay) {

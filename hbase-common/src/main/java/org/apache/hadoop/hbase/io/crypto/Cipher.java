@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.crypto;
 
@@ -20,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -89,9 +89,8 @@ public abstract class Cipher {
    * @return the encrypting wrapper
    * @throws IOException
    */
-  public abstract OutputStream createEncryptionStream(OutputStream out, Context context,
-      byte[] iv)
-    throws IOException;
+  public abstract OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
+      throws IOException;
 
   /**
    * Create an encrypting output stream given an initialized encryptor
@@ -101,7 +100,7 @@ public abstract class Cipher {
    * @throws IOException
    */
   public abstract OutputStream createEncryptionStream(OutputStream out, Encryptor encryptor)
-    throws IOException;
+      throws IOException;
 
   /**
    * Create a decrypting input stream given a context and IV
@@ -111,9 +110,8 @@ public abstract class Cipher {
    * @return the decrypting wrapper
    * @throws IOException
    */
-  public abstract InputStream createDecryptionStream(InputStream in, Context context,
-      byte[] iv)
-    throws IOException;
+  public abstract InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
+      throws IOException;
 
   /**
    * Create a decrypting output stream given an initialized decryptor
@@ -123,6 +121,6 @@ public abstract class Cipher {
    * @throws IOException
    */
   public abstract InputStream createDecryptionStream(InputStream in, Decryptor decryptor)
-    throws IOException;
+      throws IOException;
 
 }

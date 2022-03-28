@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.fail;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -36,7 +37,7 @@ public class TestDeadServerMetricRegionChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeadServerMetricRegionChore.class);
+      HBaseClassTestRule.forClass(TestDeadServerMetricRegionChore.class);
 
   protected HBaseTestingUtil util;
 
@@ -45,7 +46,7 @@ public class TestDeadServerMetricRegionChore {
     util = new HBaseTestingUtil();
     // Disable DeadServerMetricRegionChore
     util.getConfiguration()
-      .setInt(AssignmentManager.DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY, -1);
+        .setInt(AssignmentManager.DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY, -1);
   }
 
   @After

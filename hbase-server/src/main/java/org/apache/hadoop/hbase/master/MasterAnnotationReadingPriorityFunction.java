@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction
-  extends AnnotationReadingPriorityFunction<MasterRpcServices> {
+    extends AnnotationReadingPriorityFunction<MasterRpcServices> {
 
   /**
    * We reference this value in SimpleRpcScheduler so this class have to be public instead of
@@ -79,7 +79,7 @@ public class MasterAnnotationReadingPriorityFunction
     if (param instanceof RegionServerStatusProtos.ReportRegionStateTransitionRequest) {
       // Regions are moving. Lets see which ones.
       RegionServerStatusProtos.ReportRegionStateTransitionRequest tRequest =
-        (RegionServerStatusProtos.ReportRegionStateTransitionRequest) param;
+          (RegionServerStatusProtos.ReportRegionStateTransitionRequest) param;
       for (RegionServerStatusProtos.RegionStateTransition rst : tRequest.getTransitionList()) {
         if (rst.getRegionInfoList() != null) {
           for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {

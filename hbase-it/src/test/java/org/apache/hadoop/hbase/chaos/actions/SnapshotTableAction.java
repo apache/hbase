@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -26,8 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to take a snapshot of a table.
-*/
+ * Action that tries to take a snapshot of a table.
+ */
 public class SnapshotTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
@@ -42,7 +41,8 @@ public class SnapshotTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

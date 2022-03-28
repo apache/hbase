@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -106,33 +106,33 @@ public class SyncReplicationTestBase {
     ZK_UTIL.startMiniZKCluster();
     initTestingUtility(UTIL1, "/cluster1");
     initTestingUtility(UTIL2, "/cluster2");
-    StartTestingClusterOption option =
-      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2)
+        .numRegionServers(3).numDataNodes(3).build();
     UTIL1.startMiniCluster(option);
     UTIL2.startMiniCluster(option);
     TableDescriptor td =
-      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
+        TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     UTIL1.getAdmin().createTable(td);
     UTIL2.getAdmin().createTable(td);
     FileSystem fs1 = UTIL1.getTestFileSystem();
     FileSystem fs2 = UTIL2.getTestFileSystem();
     REMOTE_WAL_DIR1 =
-      new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
-        "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
+        new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
+            "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
     REMOTE_WAL_DIR2 =
-      new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
-        "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
+        new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
+            "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     UTIL1.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
-        .setReplicateAllUserTables(false)
-        .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
-        .setRemoteWALDir(REMOTE_WAL_DIR2.toUri().toString()).build());
+          .setReplicateAllUserTables(false)
+          .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
+          .setRemoteWALDir(REMOTE_WAL_DIR2.toUri().toString()).build());
     UTIL2.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL1.getClusterKey())
-        .setReplicateAllUserTables(false)
-        .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
-        .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());
+          .setReplicateAllUserTables(false)
+          .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
+          .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());
   }
 
   private static void shutdown(HBaseTestingUtil util) throws Exception {
@@ -141,8 +141,8 @@ public class SyncReplicationTestBase {
     }
     Admin admin = util.getAdmin();
     if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
-      if (admin
-        .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
+      if (admin.getReplicationPeerSyncReplicationState(
+        PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
         admin.transitReplicationPeerSyncReplicationState(PEER_ID,
           SyncReplicationState.DOWNGRADE_ACTIVE);
       }
@@ -182,16 +182,15 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtil util, int start,
-      int end) throws IOException {
+  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtil util, int start, int end)
+      throws IOException {
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     for (int i = start; i < end; i++) {
       assertTrue(region.get(new Get(Bytes.toBytes(i))).isEmpty());
     }
   }
 
-  protected final void waitUntilReplicationDone(HBaseTestingUtil util, int end)
-      throws Exception {
+  protected final void waitUntilReplicationDone(HBaseTestingUtil util, int end) throws Exception {
     // The reject check is in RSRpcService so we can still read through HRegion
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
@@ -208,8 +207,8 @@ public class SyncReplicationTestBase {
     });
   }
 
-  protected final void writeAndVerifyReplication(HBaseTestingUtil util1,
-      HBaseTestingUtil util2, int start, int end) throws Exception {
+  protected final void writeAndVerifyReplication(HBaseTestingUtil util1, HBaseTestingUtil util2,
+      int start, int end) throws Exception {
     write(util1, start, end);
     waitUntilReplicationDone(util2, end);
     verifyThroughRegion(util2, start, end);
@@ -228,10 +227,10 @@ public class SyncReplicationTestBase {
     return new Path(remoteWALDir, peerId + "-replay");
   }
 
-  protected final void verifyRemovedPeer(String peerId, Path remoteWALDir,
-      HBaseTestingUtil utility) throws Exception {
+  protected final void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtil utility)
+      throws Exception {
     ReplicationPeerStorage rps = ReplicationStorageFactory
-      .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
+        .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
       rps.getPeerSyncReplicationState(peerId);
       fail("Should throw exception when get the sync replication state of a removed peer.");
@@ -263,7 +262,7 @@ public class SyncReplicationTestBase {
     Entry[] entries = new Entry[10];
     for (int i = 0; i < entries.length; i++) {
       entries[i] =
-        new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
+          new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
     }
     if (!expectedRejection) {
       ReplicationProtobufUtil.replicateWALEntry(

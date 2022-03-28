@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +74,7 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
   @Override
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-    TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
+      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
     return new HDFSBlocksDistribution();
   }
 
@@ -90,7 +90,7 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
   @Override
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
-    Predicate<ServerMetrics> filter) {
+      Predicate<ServerMetrics> filter) {
     return Collections.emptyList();
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateRSGroupInfo.class);
+      HBaseClassTestRule.forClass(TestMigrateRSGroupInfo.class);
 
   private static String TABLE_NAME_PREFIX = "Table_";
 
@@ -147,7 +147,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // confirm that before migrating, we could still get the correct rs group for a table.
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
+          RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }
@@ -172,18 +172,18 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
       try (Table table = TEST_UTIL.getConnection().getTable(RSGROUP_TABLE_NAME)) {
         Result result = table.get(new Get(Bytes.toBytes(rsGroupInfo.getName())));
         RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo
-          .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
+            .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
         RSGroupInfo gi = ProtobufUtil.toGroupInfo(proto);
         return gi.getTables().isEmpty();
       }
     });
     // make sure that the migrate thread has quit.
     TEST_UTIL.waitFor(30000, () -> Thread.getAllStackTraces().keySet().stream()
-      .noneMatch(t -> t.getName().equals(RSGroupInfoManagerImpl.MIGRATE_THREAD_NAME)));
+        .noneMatch(t -> t.getName().equals(RSGroupInfoManagerImpl.MIGRATE_THREAD_NAME)));
     // make sure we could still get the correct rs group info after migration
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
+          RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }

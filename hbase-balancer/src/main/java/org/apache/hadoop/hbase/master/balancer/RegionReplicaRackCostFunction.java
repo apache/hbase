@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class RegionReplicaRackCostFunction extends RegionReplicaGroupingCostFunction {
 
   private static final String REGION_REPLICA_RACK_COST_KEY =
-    "hbase.master.balancer.stochastic.regionReplicaRackCostKey";
+      "hbase.master.balancer.stochastic.regionReplicaRackCostKey";
   private static final float DEFAULT_REGION_REPLICA_RACK_COST_KEY = 10000;
 
   public RegionReplicaRackCostFunction(Configuration conf) {

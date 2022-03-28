@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -113,9 +113,9 @@ public class TestPassCustomCellViaRegionObserver {
         admin.deleteTable(name);
       }
       table = UTIL.createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setCoprocessor(RegionObserverImpl.class.getName())
-        .build(), null);
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+          .setCoprocessor(RegionObserverImpl.class.getName()).build(),
+        null);
     }
   }
 
@@ -142,10 +142,8 @@ public class TestPassCustomCellViaRegionObserver {
     append.addColumn(FAMILY, QUALIFIER, APPEND_VALUE);
     table.append(append);
     // 10L + "MB"
-    value = ByteBuffer.wrap(new byte[value.length + APPEND_VALUE.length])
-      .put(value)
-      .put(APPEND_VALUE)
-      .array();
+    value = ByteBuffer.wrap(new byte[value.length + APPEND_VALUE.length]).put(value)
+        .put(APPEND_VALUE).array();
     assertResult(table.get(new Get(ROW)), value, value);
     assertObserverHasExecuted();
 
@@ -169,15 +167,15 @@ public class TestPassCustomCellViaRegionObserver {
   @Test
   public void testMultiPut() throws Exception {
     List<Put> puts = IntStream.range(0, 10)
-      .mapToObj(i -> new Put(ROW).addColumn(FAMILY, Bytes.toBytes(i), VALUE))
-      .collect(Collectors.toList());
+        .mapToObj(i -> new Put(ROW).addColumn(FAMILY, Bytes.toBytes(i), VALUE))
+        .collect(Collectors.toList());
     table.put(puts);
     assertResult(table.get(new Get(ROW)), VALUE);
     assertObserverHasExecuted();
 
-    List<Delete> deletes = IntStream.range(0, 10)
-      .mapToObj(i -> new Delete(ROW).addColumn(FAMILY, Bytes.toBytes(i)))
-      .collect(Collectors.toList());
+    List<Delete> deletes =
+        IntStream.range(0, 10).mapToObj(i -> new Delete(ROW).addColumn(FAMILY, Bytes.toBytes(i)))
+            .collect(Collectors.toList());
     table.delete(deletes);
     assertTrue(table.get(new Get(ROW)).isEmpty());
     assertObserverHasExecuted();
@@ -211,8 +209,8 @@ public class TestPassCustomCellViaRegionObserver {
     }
   }
 
-  private static Cell createCustomCell(byte[] row, byte[] family, byte[] qualifier,
-    Cell.Type type, byte[] value) {
+  private static Cell createCustomCell(byte[] row, byte[] family, byte[] qualifier, Cell.Type type,
+      byte[] value) {
     return new Cell() {
 
       @Override
@@ -344,8 +342,8 @@ public class TestPassCustomCellViaRegionObserver {
   }
 
   private static Cell createCustomCell(Delete delete) {
-    return createCustomCell(delete.getRow(), FAMILY, QUALIFIER_FROM_CP,
-      Cell.Type.DeleteColumn, null);
+    return createCustomCell(delete.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.Type.DeleteColumn,
+      null);
   }
 
   public static class RegionObserverImpl implements RegionCoprocessor, RegionObserver {
@@ -358,22 +356,22 @@ public class TestPassCustomCellViaRegionObserver {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+        Durability durability) throws IOException {
       put.add(createCustomCell(put));
       COUNT.incrementAndGet();
     }
 
     @Override
     public void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
-      WALEdit edit, Durability durability) throws IOException {
+        WALEdit edit, Durability durability) throws IOException {
       delete.add(createCustomCell(delete));
       COUNT.incrementAndGet();
     }
 
     @Override
     public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-      byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put,
-      boolean result) throws IOException {
+        byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+        Put put, boolean result) throws IOException {
       put.add(createCustomCell(put));
       COUNT.incrementAndGet();
       return result;
@@ -381,8 +379,8 @@ public class TestPassCustomCellViaRegionObserver {
 
     @Override
     public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-      byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
-      Delete delete, boolean result) throws IOException {
+        byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+        Delete delete, boolean result) throws IOException {
       delete.add(createCustomCell(delete));
       COUNT.incrementAndGet();
       return result;
@@ -390,16 +388,15 @@ public class TestPassCustomCellViaRegionObserver {
 
     @Override
     public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
-      throws IOException {
+        throws IOException {
       append.add(createCustomCell(append));
       COUNT.incrementAndGet();
       return null;
     }
 
-
     @Override
     public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-      throws IOException {
+        throws IOException {
       increment.add(createCustomCell(increment));
       COUNT.incrementAndGet();
       return null;

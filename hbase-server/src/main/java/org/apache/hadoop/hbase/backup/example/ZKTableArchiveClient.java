@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.client.Connection;
@@ -138,8 +137,8 @@ public class ZKTableArchiveClient extends Configured {
    * @throws KeeperException if we can't reach zookeeper
    * @throws IOException if an unexpected network issue occurs
    */
-  private synchronized HFileArchiveManager createHFileArchiveManager() throws KeeperException,
-      IOException {
+  private synchronized HFileArchiveManager createHFileArchiveManager()
+      throws KeeperException, IOException {
     return new HFileArchiveManager(this.connection, this.getConf());
   }
 

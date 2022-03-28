@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,7 +39,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, SecurityTests.class})
+@Category({ SmallTests.class, SecurityTests.class })
 public class TestSaslServerAuthenticationProviders {
 
   @ClassRule
@@ -55,7 +54,7 @@ public class TestSaslServerAuthenticationProviders {
 
   @Test
   public void testCannotAddTheSameProviderTwice() {
-    HashMap<Byte,SaslServerAuthenticationProvider> registeredProviders = new HashMap<>();
+    HashMap<Byte, SaslServerAuthenticationProvider> registeredProviders = new HashMap<>();
     SimpleSaslServerAuthenticationProvider p1 = new SimpleSaslServerAuthenticationProvider();
     SimpleSaslServerAuthenticationProvider p2 = new SimpleSaslServerAuthenticationProvider();
 
@@ -64,10 +63,11 @@ public class TestSaslServerAuthenticationProviders {
 
     try {
       SaslServerAuthenticationProviders.addProviderIfNotExists(p2, registeredProviders);
-    } catch (RuntimeException e) {}
+    } catch (RuntimeException e) {
+    }
 
     assertSame("Expected the original provider to be present", p1,
-        registeredProviders.entrySet().iterator().next().getValue());
+      registeredProviders.entrySet().iterator().next().getValue());
   }
 
   @Test
@@ -91,7 +91,7 @@ public class TestSaslServerAuthenticationProviders {
   public void instancesAreInitialized() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(SaslServerAuthenticationProviders.EXTRA_PROVIDERS_KEY,
-        InitCheckingSaslServerAuthenticationProvider.class.getName());
+      InitCheckingSaslServerAuthenticationProvider.class.getName());
 
     SaslServerAuthenticationProviders providers =
         SaslServerAuthenticationProviders.getInstance(conf);
@@ -101,12 +101,12 @@ public class TestSaslServerAuthenticationProviders {
     assertEquals(InitCheckingSaslServerAuthenticationProvider.class, provider.getClass());
 
     assertTrue("Provider was not inititalized",
-        ((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized());
+      ((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized());
   }
 
   public static class InitCheckingSaslServerAuthenticationProvider
       implements SaslServerAuthenticationProvider {
-    public static final byte ID = (byte)88;
+    public static final byte ID = (byte) 88;
     private boolean initialized = false;
 
     public synchronized void init(Configuration conf) {
@@ -128,9 +128,9 @@ public class TestSaslServerAuthenticationProviders {
     }
 
     @Override
-    public AttemptingUserProvidingSaslServer createServer(
-        SecretManager<TokenIdentifier> secretManager,
-        Map<String, String> saslProps) throws IOException {
+    public AttemptingUserProvidingSaslServer
+        createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+            throws IOException {
       throw new UnsupportedOperationException();
     }
 
@@ -140,9 +140,8 @@ public class TestSaslServerAuthenticationProviders {
     }
 
     @Override
-    public UserGroupInformation getAuthorizedUgi(
-        String authzId, SecretManager<TokenIdentifier> secretManager)
-        throws IOException {
+    public UserGroupInformation getAuthorizedUgi(String authzId,
+        SecretManager<TokenIdentifier> secretManager) throws IOException {
       throw new UnsupportedOperationException();
     }
   }

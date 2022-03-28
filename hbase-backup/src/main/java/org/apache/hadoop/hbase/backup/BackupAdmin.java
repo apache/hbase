@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,8 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * The administrative API for HBase Backup. Construct an instance and call {@link #close()}
  * afterwards.
  * <p>
- * BackupAdmin can be used to create backups, restore data from backups and for other
- * backup-related operations.
+ * BackupAdmin can be used to create backups, restore data from backups and for other backup-related
+ * operations.
  * @since 2.0
  */
 @InterfaceAudience.Private
@@ -71,9 +69,8 @@ public interface BackupAdmin extends Closeable {
 
   /**
    * Merge backup images command
-   * @param backupIds array of backup ids of images to be merged
-   *        The resulting backup image will have the same backup id as the most
-   *        recent image from a list of images to be merged
+   * @param backupIds array of backup ids of images to be merged The resulting backup image will
+   *          have the same backup id as the most recent image from a list of images to be merged
    * @throws IOException exception
    */
   void mergeBackups(String[] backupIds) throws IOException;

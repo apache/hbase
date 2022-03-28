@@ -1,5 +1,5 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -40,13 +38,13 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      GssSaslServerAuthenticationProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GssSaslServerAuthenticationProvider.class);
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
-      SecretManager<TokenIdentifier> secretManager,
-      Map<String, String> saslProps) throws IOException {
+  public AttemptingUserProvidingSaslServer
+      createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+          throws IOException {
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     String fullName = current.getUserName();
     LOG.debug("Server's Kerberos principal name is {}", fullName);
@@ -59,9 +57,10 @@ public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationPr
       return current.doAs(new PrivilegedExceptionAction<AttemptingUserProvidingSaslServer>() {
         @Override
         public AttemptingUserProvidingSaslServer run() throws SaslException {
-          return new AttemptingUserProvidingSaslServer(Sasl.createSaslServer(
-              getSaslAuthMethod().getSaslMechanism(), names[0], names[1], saslProps,
-              new SaslGssCallbackHandler()), () -> null);
+          return new AttemptingUserProvidingSaslServer(
+              Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), names[0], names[1],
+                saslProps, new SaslGssCallbackHandler()),
+              () -> null);
         }
       });
     } catch (InterruptedException e) {

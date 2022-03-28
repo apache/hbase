@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -128,8 +128,8 @@ public class TestSuperUserQuotaPermissions {
           final TableName tn = helper.createTableWithRegions(admin, 5);
           // Grant the normal user permissions
           try {
-            AccessControlClient.grant(
-                conn, tn, REGULARUSER_NAME, null, null, Action.READ, Action.WRITE);
+            AccessControlClient.grant(conn, tn, REGULARUSER_NAME, null, null, Action.READ,
+              Action.WRITE);
           } catch (Throwable t) {
             if (t instanceof Exception) {
               throw (Exception) t;
@@ -156,8 +156,8 @@ public class TestSuperUserQuotaPermissions {
     });
 
     final long sizeLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, sizeLimit, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit,
+      SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
 
     try (Connection conn = getConnection()) {
       conn.getAdmin().setQuota(settings);
@@ -182,7 +182,7 @@ public class TestSuperUserQuotaPermissions {
       LOG.debug("message", e);
     }
 
-    try{
+    try {
       // Should not throw an exception (superuser can do anything)
       doAsSuperUser(new Callable<Void>() {
         @Override
@@ -213,13 +213,13 @@ public class TestSuperUserQuotaPermissions {
           final Admin admin = conn.getAdmin();
           final TableName tn = helper.createTableWithRegions(admin, 5);
           final long sizeLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
-          QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-              tn, sizeLimit, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+          QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit,
+            SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
           admin.setQuota(settings);
           // Grant the normal user permission to create a table and set a quota
           try {
-            AccessControlClient.grant(
-                conn, tn, REGULARUSER_NAME, null, null, Action.READ, Action.WRITE);
+            AccessControlClient.grant(conn, tn, REGULARUSER_NAME, null, null, Action.READ,
+              Action.WRITE);
           } catch (Throwable t) {
             if (t instanceof Exception) {
               throw (Exception) t;
@@ -305,7 +305,7 @@ public class TestSuperUserQuotaPermissions {
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, 1000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        Map<TableName,SpaceQuotaSnapshot> snapshots =
+        Map<TableName, SpaceQuotaSnapshot> snapshots =
             rs.getRegionServerSpaceQuotaManager().copyQuotaSnapshots();
         SpaceQuotaSnapshot snapshot = snapshots.get(tn);
         if (snapshot == null) {

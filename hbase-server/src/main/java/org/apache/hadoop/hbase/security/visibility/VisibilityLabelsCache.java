@@ -97,8 +97,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * @return Singleton instance of VisibilityLabelsCache
-   * @throws IllegalStateException
-   *           when this is called before calling
+   * @throws IllegalStateException when this is called before calling
    *           {@link #createAndGet(ZKWatcher, Configuration)}
    */
   public static VisibilityLabelsCache get() {
@@ -239,7 +238,6 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * Returns the list of ordinals of labels associated with the user
-   *
    * @param user Not null value.
    * @return the list of ordinals
    */
@@ -255,7 +253,6 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * Returns the list of ordinals of labels associated with the groups
-   *
    * @param groups
    * @return the list of ordinals
    */

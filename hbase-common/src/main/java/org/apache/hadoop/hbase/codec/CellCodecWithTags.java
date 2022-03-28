@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -34,8 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Basic Cell codec that just writes out all the individual elements of a Cell including the tags.
- * Uses ints delimiting all lengths. Profligate. Needs tune up.
- * <b>Use this Codec only at server side.</b>
+ * Uses ints delimiting all lengths. Profligate. Needs tune up. <b>Use this Codec only at server
+ * side.</b>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class CellCodecWithTags implements Codec {
@@ -67,7 +66,6 @@ public class CellCodecWithTags implements Codec {
 
     /**
      * Write int length followed by array bytes.
-     *
      * @param bytes
      * @param offset
      * @param length
@@ -80,7 +78,9 @@ public class CellCodecWithTags implements Codec {
   }
 
   static class CellDecoder extends BaseDecoder {
-    private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    private final ExtendedCellBuilder cellBuilder =
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+
     public CellDecoder(final InputStream in) {
       super(in);
     }
@@ -100,16 +100,9 @@ public class CellCodecWithTags implements Codec {
       byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, memstoreTSArray);
       long memstoreTS = Bytes.toLong(memstoreTSArray);
-      return cellBuilder.clear()
-              .setRow(row)
-              .setFamily(family)
-              .setQualifier(qualifier)
-              .setTimestamp(timestamp)
-              .setType(type)
-              .setValue(value)
-              .setSequenceId(memstoreTS)
-              .setTags(tags)
-              .build();
+      return cellBuilder.clear().setRow(row).setFamily(family).setQualifier(qualifier)
+          .setTimestamp(timestamp).setType(type).setValue(value).setSequenceId(memstoreTS)
+          .setTags(tags).build();
     }
 
     /**

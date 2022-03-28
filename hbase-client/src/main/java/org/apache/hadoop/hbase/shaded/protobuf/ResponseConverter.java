@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,8 +64,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleaner
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 
 /**
- * Helper utility to build protocol buffer responses,
- * or retrieve data from protocol buffer responses.
+ * Helper utility to build protocol buffer responses, or retrieve data from protocol buffer
+ * responses.
  */
 @InterfaceAudience.Private
 public final class ResponseConverter {
@@ -76,9 +76,7 @@ public final class ResponseConverter {
 
   // Start utilities for Client
   public static SingleResponse getResult(final ClientProtos.MutateRequest request,
-      final ClientProtos.MutateResponse response,
-      final CellScanner cells)
-          throws IOException {
+      final ClientProtos.MutateResponse response, final CellScanner cells) throws IOException {
     SingleResponse singleResponse = new SingleResponse();
     SingleResponse.Entry entry = new SingleResponse.Entry();
     entry.setResult(ProtobufUtil.toResult(response.getResult(), cells));
@@ -89,63 +87,60 @@ public final class ResponseConverter {
 
   /**
    * Get the results from a protocol buffer MultiResponse
-   *
    * @param request the original protocol buffer MultiRequest
    * @param response the protocol buffer MultiResponse to convert
-   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
+   * @param cells Cells to go with the passed in <code>proto</code>. Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
-      final MultiResponse response, final CellScanner cells)
-  throws IOException {
+      final MultiResponse response, final CellScanner cells) throws IOException {
     return getResults(request, null, response, cells);
   }
 
   /**
    * Get the results from a protocol buffer MultiResponse
-   *
    * @param request the original protocol buffer MultiRequest
    * @param indexMap Used to support RowMutations/CheckAndMutate in batch
    * @param response the protocol buffer MultiResponse to convert
-   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
+   * @param cells Cells to go with the passed in <code>proto</code>. Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
-      final Map<Integer, Integer> indexMap, final MultiResponse response,
-      final CellScanner cells) throws IOException {
+      final Map<Integer, Integer> indexMap, final MultiResponse response, final CellScanner cells)
+      throws IOException {
     int requestRegionActionCount = request.getRegionActionCount();
     int responseRegionActionResultCount = response.getRegionActionResultCount();
     if (requestRegionActionCount != responseRegionActionResultCount) {
-      throw new IllegalStateException("Request mutation count=" + requestRegionActionCount +
-          " does not match response mutation result count=" + responseRegionActionResultCount);
+      throw new IllegalStateException("Request mutation count=" + requestRegionActionCount
+          + " does not match response mutation result count=" + responseRegionActionResultCount);
     }
 
     org.apache.hadoop.hbase.client.MultiResponse results =
-      new org.apache.hadoop.hbase.client.MultiResponse();
+        new org.apache.hadoop.hbase.client.MultiResponse();
 
     for (int i = 0; i < responseRegionActionResultCount; i++) {
       RegionAction actions = request.getRegionAction(i);
       RegionActionResult actionResult = response.getRegionActionResult(i);
       HBaseProtos.RegionSpecifier rs = actions.getRegion();
-      if (rs.hasType() &&
-          (rs.getType() != HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)){
+      if (rs.hasType()
+          && (rs.getType() != HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)) {
         throw new IllegalArgumentException(
             "We support only encoded types for protobuf multi response.");
       }
       byte[] regionName = rs.getValue().toByteArray();
 
       if (actionResult.hasException()) {
-        Throwable regionException =  ProtobufUtil.toException(actionResult.getException());
+        Throwable regionException = ProtobufUtil.toException(actionResult.getException());
         results.addException(regionName, regionException);
         continue;
       }
 
       if (actions.getActionCount() != actionResult.getResultOrExceptionCount()) {
-        throw new IllegalStateException("actions.getActionCount=" + actions.getActionCount() +
-            ", actionResult.getResultOrExceptionCount=" +
-            actionResult.getResultOrExceptionCount() + " for region " + actions.getRegion());
+        throw new IllegalStateException("actions.getActionCount=" + actions.getActionCount()
+            + ", actionResult.getResultOrExceptionCount=" + actionResult.getResultOrExceptionCount()
+            + " for region " + actions.getRegion());
       }
 
       // For RowMutations/CheckAndMutate action, if there is an exception, the exception is set
@@ -197,7 +192,7 @@ public final class ResponseConverter {
   }
 
   private static CheckAndMutateResult getCheckAndMutateResult(RegionActionResult actionResult,
-    CellScanner cells) throws IOException {
+      CellScanner cells) throws IOException {
     Result result = null;
     if (actionResult.getResultOrExceptionCount() > 0) {
       // Get the result of the Increment/Append operations from the first element of the
@@ -214,7 +209,7 @@ public final class ResponseConverter {
   }
 
   private static Result getMutateRowResult(RegionActionResult actionResult, CellScanner cells)
-    throws IOException {
+      throws IOException {
     if (actionResult.getProcessed()) {
       Result result = null;
       if (actionResult.getResultOrExceptionCount() > 0) {
@@ -239,11 +234,10 @@ public final class ResponseConverter {
 
   /**
    * Create a CheckAndMutateResult object from a protocol buffer MutateResponse
-   *
    * @return a CheckAndMutateResult object
    */
   public static CheckAndMutateResult getCheckAndMutateResult(
-    ClientProtos.MutateResponse mutateResponse, CellScanner cells) throws IOException {
+      ClientProtos.MutateResponse mutateResponse, CellScanner cells) throws IOException {
     boolean success = mutateResponse.getProcessed();
     Result result = null;
     if (mutateResponse.hasResult()) {
@@ -254,7 +248,6 @@ public final class ResponseConverter {
 
   /**
    * Wrap a throwable to an action result.
-   *
    * @param t
    * @return an action result builder
    */
@@ -266,7 +259,6 @@ public final class ResponseConverter {
 
   /**
    * Wrap a throwable to an action result.
-   *
    * @param r
    * @return an action result builder
    */
@@ -283,8 +275,7 @@ public final class ResponseConverter {
   public static NameBytesPair buildException(final Throwable t) {
     NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();
     parameterBuilder.setName(t.getClass().getName());
-    parameterBuilder.setValue(
-      ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
+    parameterBuilder.setValue(ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
     return parameterBuilder.build();
   }
 
@@ -297,12 +288,11 @@ public final class ResponseConverter {
     return builder.build();
   }
 
-// End utilities for Client
-// Start utilities for Admin
+  // End utilities for Client
+  // Start utilities for Admin
 
   /**
    * Get the list of region info from a GetOnlineRegionResponse
-   *
    * @param proto the GetOnlineRegionResponse
    * @return the list of region info
    */
@@ -313,25 +303,22 @@ public final class ResponseConverter {
 
   /**
    * Check if the region is closed from a CloseRegionResponse
-   *
    * @param proto the CloseRegionResponse
    * @return the region close state
    */
-  public static boolean isClosed
-      (final CloseRegionResponse proto) {
+  public static boolean isClosed(final CloseRegionResponse proto) {
     if (proto == null || !proto.hasClosed()) return false;
     return proto.getClosed();
   }
 
   /**
    * A utility to build a GetServerInfoResponse.
-   *
    * @param serverName
    * @param webuiPort
    * @return the response
    */
-  public static GetServerInfoResponse buildGetServerInfoResponse(
-      final ServerName serverName, final int webuiPort) {
+  public static GetServerInfoResponse buildGetServerInfoResponse(final ServerName serverName,
+      final int webuiPort) {
     GetServerInfoResponse.Builder builder = GetServerInfoResponse.newBuilder();
     ServerInfo.Builder serverInfoBuilder = ServerInfo.newBuilder();
     serverInfoBuilder.setServerName(ProtobufUtil.toServerName(serverName));
@@ -344,14 +331,13 @@ public final class ResponseConverter {
 
   /**
    * A utility to build a GetOnlineRegionResponse.
-   *
    * @param regions
    * @return the response
    */
-  public static GetOnlineRegionResponse buildGetOnlineRegionResponse(
-      final List<RegionInfo> regions) {
+  public static GetOnlineRegionResponse
+      buildGetOnlineRegionResponse(final List<RegionInfo> regions) {
     GetOnlineRegionResponse.Builder builder = GetOnlineRegionResponse.newBuilder();
-    for (RegionInfo region: regions) {
+    for (RegionInfo region : regions) {
       builder.addRegionInfo(ProtobufUtil.toRegionInfo(region));
     }
     return builder.build();
@@ -381,30 +367,29 @@ public final class ResponseConverter {
     return RunCleanerChoreResponse.newBuilder().setCleanerChoreRan(ran).build();
   }
 
-// End utilities for Admin
+  // End utilities for Admin
 
   /**
    * Creates a response for the last flushed sequence Id request
    * @return A GetLastFlushedSequenceIdResponse
    */
-  public static GetLastFlushedSequenceIdResponse buildGetLastFlushedSequenceIdResponse(
-      RegionStoreSequenceIds ids) {
+  public static GetLastFlushedSequenceIdResponse
+      buildGetLastFlushedSequenceIdResponse(RegionStoreSequenceIds ids) {
     return GetLastFlushedSequenceIdResponse.newBuilder()
         .setLastFlushedSequenceId(ids.getLastFlushedSequenceId())
         .addAllStoreLastFlushedSequenceId(ids.getStoreSequenceIdList()).build();
   }
 
   /**
-   * Stores an exception encountered during RPC invocation so it can be passed back
-   * through to the client.
+   * Stores an exception encountered during RPC invocation so it can be passed back through to the
+   * client.
    * @param controller the controller instance provided by the client when calling the service
    * @param ioe the exception encountered
    */
-  public static void setControllerException(RpcController controller,
-      IOException ioe) {
+  public static void setControllerException(RpcController controller, IOException ioe) {
     if (controller != null) {
       if (controller instanceof ServerRpcController) {
-        ((ServerRpcController)controller).setFailedOn(ioe);
+        ((ServerRpcController) controller).setFailedOn(ioe);
       } else {
         controller.setFailed(StringUtils.stringifyException(ioe));
       }
@@ -415,20 +400,19 @@ public final class ResponseConverter {
    * Retreivies exception stored during RPC invocation.
    * @param controller the controller instance provided by the client when calling the service
    * @return exception if any, or null; Will return DoNotRetryIOException for string represented
-   * failure causes in controller.
+   *         failure causes in controller.
    */
   @Nullable
   public static IOException getControllerException(RpcController controller) throws IOException {
     if (controller != null && controller.failed()) {
       if (controller instanceof ServerRpcController) {
-        return ((ServerRpcController)controller).getFailedOn();
+        return ((ServerRpcController) controller).getFailedOn();
       } else {
         return new DoNotRetryIOException(controller.errorText());
       }
     }
     return null;
   }
-
 
   /**
    * Create Results from the cells using the cells meta data.
@@ -440,27 +424,28 @@ public final class ResponseConverter {
       throws IOException {
     if (response == null) return null;
     // If cellscanner, then the number of Results to return is the count of elements in the
-    // cellsPerResult list.  Otherwise, it is how many results are embedded inside the response.
-    int noOfResults = cellScanner != null?
-      response.getCellsPerResultCount(): response.getResultsCount();
+    // cellsPerResult list. Otherwise, it is how many results are embedded inside the response.
+    int noOfResults =
+        cellScanner != null ? response.getCellsPerResultCount() : response.getResultsCount();
     Result[] results = new Result[noOfResults];
     for (int i = 0; i < noOfResults; i++) {
       if (cellScanner != null) {
-        // Cells are out in cellblocks.  Group them up again as Results.  How many to read at a
+        // Cells are out in cellblocks. Group them up again as Results. How many to read at a
         // time will be found in getCellsLength -- length here is how many Cells in the i'th Result
         int noOfCells = response.getCellsPerResult(i);
         boolean isPartial =
-            response.getPartialFlagPerResultCount() > i ?
-                response.getPartialFlagPerResult(i) : false;
+            response.getPartialFlagPerResultCount() > i ? response.getPartialFlagPerResult(i)
+                : false;
         List<Cell> cells = new ArrayList<>(noOfCells);
         for (int j = 0; j < noOfCells; j++) {
           try {
             if (cellScanner.advance() == false) {
               // We are not able to retrieve the exact number of cells which ResultCellMeta says us.
-              // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
+              // We have to scan for the same results again. Throwing DNRIOE as a client retry on
+              // the
               // same scanner will result in OutOfOrderScannerNextException
               String msg = "Results sent from server=" + noOfResults + ". But only got " + i
-                + " results completely at client. Resetting the scanner to scan again.";
+                  + " results completely at client. Resetting the scanner to scan again.";
               LOG.error(msg);
               throw new DoNotRetryIOException(msg);
             }
@@ -468,8 +453,9 @@ public final class ResponseConverter {
             // We are getting IOE while retrieving the cells for Results.
             // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
             // same scanner will result in OutOfOrderScannerNextException
-            LOG.error("Exception while reading cells from result."
-              + "Resetting the scanner to scan again.", ioe);
+            LOG.error(
+              "Exception while reading cells from result." + "Resetting the scanner to scan again.",
+              ioe);
             throw new DoNotRetryIOException("Resetting the scanner.", ioe);
           }
           cells.add(cellScanner.current());
@@ -507,11 +493,11 @@ public final class ResponseConverter {
 
   /**
    * Creates a protocol buffer ClearRegionBlockCacheResponse
-   *
    * @return a ClearRegionBlockCacheResponse
    */
-  public static AdminProtos.ClearRegionBlockCacheResponse buildClearRegionBlockCacheResponse(final HBaseProtos.CacheEvictionStats
-                                                                                   cacheEvictionStats) {
-    return AdminProtos.ClearRegionBlockCacheResponse.newBuilder().setStats(cacheEvictionStats).build();
+  public static AdminProtos.ClearRegionBlockCacheResponse
+      buildClearRegionBlockCacheResponse(final HBaseProtos.CacheEvictionStats cacheEvictionStats) {
+    return AdminProtos.ClearRegionBlockCacheResponse.newBuilder().setStats(cacheEvictionStats)
+        .build();
   }
 }

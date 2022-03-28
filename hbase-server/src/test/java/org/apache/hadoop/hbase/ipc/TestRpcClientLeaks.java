@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestRpcClientLeaks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcClientLeaks.class);
+      HBaseClassTestRule.forClass(TestRpcClientLeaks.class);
 
   @Rule
   public TestName name = new TestName();
@@ -118,7 +118,7 @@ public class TestRpcClientLeaks {
     conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, MyRpcClientImpl.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection connection = ConnectionFactory.createConnection(conf);
-      Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+        Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
       MyRpcClientImpl.enableThrowExceptions();
       table.get(new Get(Bytes.toBytes("asd")));
       fail("Should fail because the injected error");

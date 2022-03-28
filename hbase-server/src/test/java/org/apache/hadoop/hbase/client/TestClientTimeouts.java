@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestClientTimeouts {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientTimeouts.class);
+      HBaseClassTestRule.forClass(TestClientTimeouts.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static int SLAVES = 1;
@@ -85,7 +85,7 @@ public class TestClientTimeouts {
     boolean lastFailed = false;
     int initialInvocations = invokations.get();
     RandomTimeoutRpcClient rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-      .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+        .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
 
     try {
       for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
@@ -108,7 +108,7 @@ public class TestClientTimeouts {
             admin.close();
             if (admin.getConnection().isClosed()) {
               rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+                  .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
             }
           }
           if (connection != null) {

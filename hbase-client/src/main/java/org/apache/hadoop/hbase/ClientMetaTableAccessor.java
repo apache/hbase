@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,12 +73,12 @@ public final class ClientMetaTableAccessor {
   }
 
   public static CompletableFuture<Boolean> tableExists(AsyncTable<?> metaTable,
-    TableName tableName) {
+      TableName tableName) {
     return getTableState(metaTable, tableName).thenApply(Optional::isPresent);
   }
 
   public static CompletableFuture<Optional<TableState>> getTableState(AsyncTable<?> metaTable,
-    TableName tableName) {
+      TableName tableName) {
     CompletableFuture<Optional<TableState>> future = new CompletableFuture<>();
     Get get = new Get(tableName.getName()).addColumn(HConstants.TABLE_FAMILY,
       HConstants.TABLE_STATE_QUALIFIER);
@@ -103,18 +103,19 @@ public final class ClientMetaTableAccessor {
    * @return HRegionLocation for the given region
    */
   public static CompletableFuture<Optional<HRegionLocation>>
-    getRegionLocation(AsyncTable<?> metaTable, byte[] regionName) {
+      getRegionLocation(AsyncTable<?> metaTable, byte[] regionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
       RegionInfo parsedRegionInfo = CatalogFamilyFormat.parseRegionInfoFromRegionName(regionName);
       addListener(metaTable.get(new Get(CatalogFamilyFormat.getMetaKeyForRegion(parsedRegionInfo))
-        .addFamily(HConstants.CATALOG_FAMILY)), (r, err) -> {
+          .addFamily(HConstants.CATALOG_FAMILY)),
+        (r, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
             return;
           }
           future.complete(getRegionLocations(r)
-            .map(locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
+              .map(locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
         });
     } catch (IOException parseEx) {
       LOG.warn("Failed to parse the passed region name: " + Bytes.toStringBinary(regionName));
@@ -130,11 +131,11 @@ public final class ClientMetaTableAccessor {
    * @return HRegionLocation for the given region
    */
   public static CompletableFuture<Optional<HRegionLocation>>
-    getRegionLocationWithEncodedName(AsyncTable<?> metaTable, byte[] encodedRegionName) {
+      getRegionLocationWithEncodedName(AsyncTable<?> metaTable, byte[] encodedRegionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     addListener(
       metaTable
-        .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)),
+          .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)),
       (results, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
@@ -142,17 +143,17 @@ public final class ClientMetaTableAccessor {
         }
         String encodedRegionNameStr = Bytes.toString(encodedRegionName);
         results.stream().filter(result -> !result.isEmpty())
-          .filter(result -> CatalogFamilyFormat.getRegionInfo(result) != null).forEach(result -> {
-            getRegionLocations(result).ifPresent(locations -> {
-              for (HRegionLocation location : locations.getRegionLocations()) {
-                if (location != null &&
-                  encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
-                  future.complete(Optional.of(location));
-                  return;
+            .filter(result -> CatalogFamilyFormat.getRegionInfo(result) != null).forEach(result -> {
+              getRegionLocations(result).ifPresent(locations -> {
+                for (HRegionLocation location : locations.getRegionLocations()) {
+                  if (location != null
+                      && encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
+                    future.complete(Optional.of(location));
+                    return;
+                  }
                 }
-              }
+              });
             });
-          });
         future.complete(Optional.empty());
       });
     return future;
@@ -170,7 +171,7 @@ public final class ClientMetaTableAccessor {
    *         {@link CompletableFuture}.
    */
   public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
-    AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName) {
+      AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName) {
     CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
     addListener(getTableRegionsAndLocations(metaTable, tableName, true), (locations, err) -> {
       if (err != null) {
@@ -179,8 +180,8 @@ public final class ClientMetaTableAccessor {
         future.complete(Collections.emptyList());
       } else {
         List<HRegionLocation> regionLocations =
-          locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
-            .collect(Collectors.toList());
+            locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+                .collect(Collectors.toList());
         future.complete(regionLocations);
       }
     });
@@ -196,17 +197,17 @@ public final class ClientMetaTableAccessor {
    *         {@link CompletableFuture}.
    */
   private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
-    final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
-    final boolean excludeOfflinedSplitParents) {
+      final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
+      final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       future.completeExceptionally(new IOException(
-        "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
+          "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
     }
 
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     CollectRegionLocationsVisitor visitor =
-      new CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
+        new CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
 
     addListener(scanMeta(metaTable, tableName, QueryType.REGION, visitor), (v, error) -> {
       if (error != null) {
@@ -226,7 +227,7 @@ public final class ClientMetaTableAccessor {
    * @param visitor Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
-    TableName tableName, QueryType type, final Visitor visitor) {
+      TableName tableName, QueryType type, final Visitor visitor) {
     return scanMeta(metaTable, getTableStartRowForMeta(tableName, type),
       getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, visitor);
   }
@@ -241,7 +242,7 @@ public final class ClientMetaTableAccessor {
    * @param visitor Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
-    byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
+      byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
     Scan scan = getMetaScan(metaTable, rowUpperLimit);
     for (byte[] family : type.getFamilies()) {
@@ -255,9 +256,9 @@ public final class ClientMetaTableAccessor {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanning META" + " starting at row=" + Bytes.toStringBinary(scan.getStartRow()) +
-        " stopping at row=" + Bytes.toStringBinary(scan.getStopRow()) + " for max=" +
-        rowUpperLimit + " with caching=" + scan.getCaching());
+      LOG.debug("Scanning META" + " starting at row=" + Bytes.toStringBinary(scan.getStartRow())
+          + " stopping at row=" + Bytes.toStringBinary(scan.getStopRow()) + " for max="
+          + rowUpperLimit + " with caching=" + scan.getCaching());
     }
 
     CompletableFuture<Void> future = new CompletableFuture<Void>();
@@ -276,7 +277,7 @@ public final class ClientMetaTableAccessor {
     private final CompletableFuture<Void> future;
 
     MetaTableScanResultConsumer(int rowUpperLimit, Visitor visitor,
-      CompletableFuture<Void> future) {
+        CompletableFuture<Void> future) {
       this.rowUpperLimit = rowUpperLimit;
       this.visitor = visitor;
       this.future = future;
@@ -290,7 +291,7 @@ public final class ClientMetaTableAccessor {
 
     @Override
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",
-      justification = "https://github.com/findbugsproject/findbugs/issues/79")
+        justification = "https://github.com/findbugsproject/findbugs/issues/79")
     public void onComplete() {
       future.complete(null);
     }
@@ -363,7 +364,7 @@ public final class ClientMetaTableAccessor {
   }
 
   static class CollectRegionLocationsVisitor
-    extends CollectingVisitor<Pair<RegionInfo, ServerName>> {
+      extends CollectingVisitor<Pair<RegionInfo, ServerName>> {
 
     private final boolean excludeOfflinedSplitParents;
 

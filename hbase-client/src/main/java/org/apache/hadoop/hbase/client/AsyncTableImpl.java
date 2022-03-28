@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
@@ -179,8 +181,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilder() {
 
-      private final CheckAndMutateWithFilterBuilder builder =
-        rawTable.checkAndMutate(row, filter);
+      private final CheckAndMutateWithFilterBuilder builder = rawTable.checkAndMutate(row, filter);
 
       @Override
       public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
@@ -211,10 +212,9 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
-    List<CheckAndMutate> checkAndMutates) {
-    return rawTable.checkAndMutate(checkAndMutates).stream()
-      .map(this::wrap).collect(toList());
+  public List<CompletableFuture<CheckAndMutateResult>>
+      checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream().map(this::wrap).collect(toList());
   }
 
   @Override
@@ -238,7 +238,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
       span = scanner.getSpan();
       try (Scope ignored = span.makeCurrent()) {
         consumer.onScanMetricsCreated(scanner.getScanMetrics());
-        for (Result result; (result = scanner.next()) != null; ) {
+        for (Result result; (result = scanner.next()) != null;) {
           if (!consumer.onNext(result)) {
             break;
           }
@@ -312,7 +312,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
       }
     };
     CoprocessorServiceBuilder<S, R> builder =
-      rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
+        rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
     return new CoprocessorServiceBuilder<S, R>() {
 
       @Override

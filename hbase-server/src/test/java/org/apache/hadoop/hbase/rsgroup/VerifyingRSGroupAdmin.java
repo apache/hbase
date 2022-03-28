@@ -140,7 +140,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
-    throws IOException {
+      throws IOException {
     return admin.listTableDescriptors(pattern, includeSysTables);
   }
 
@@ -153,12 +153,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public TableDescriptor getDescriptor(TableName tableName)
-    throws TableNotFoundException, IOException {
+      throws TableNotFoundException, IOException {
     return admin.getDescriptor(tableName);
   }
 
   public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
-    throws IOException {
+      throws IOException {
     admin.createTable(desc, startKey, endKey, numRegions);
   }
 
@@ -167,7 +167,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> createTableAsync(TableDescriptor desc, byte[][] splitKeys)
-    throws IOException {
+      throws IOException {
     return admin.createTableAsync(desc, splitKeys);
   }
 
@@ -176,7 +176,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> truncateTableAsync(TableName tableName, boolean preserveSplits)
-    throws IOException {
+      throws IOException {
     return admin.truncateTableAsync(tableName, preserveSplits);
   }
 
@@ -201,17 +201,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> addColumnFamilyAsync(TableName tableName, ColumnFamilyDescriptor columnFamily)
-    throws IOException {
+      throws IOException {
     return admin.addColumnFamilyAsync(tableName, columnFamily);
   }
 
   public Future<Void> deleteColumnFamilyAsync(TableName tableName, byte[] columnFamily)
-    throws IOException {
+      throws IOException {
     return admin.deleteColumnFamilyAsync(tableName, columnFamily);
   }
 
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-    ColumnFamilyDescriptor columnFamily) throws IOException {
+      ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamilyAsync(tableName, columnFamily);
   }
 
@@ -256,12 +256,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void compact(TableName tableName, CompactType compactType)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     admin.compact(tableName, compactType);
   }
 
   public void compact(TableName tableName, byte[] columnFamily, CompactType compactType)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     admin.compact(tableName, columnFamily, compactType);
   }
 
@@ -282,17 +282,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void majorCompact(TableName tableName, CompactType compactType)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     admin.majorCompact(tableName, compactType);
   }
 
   public void majorCompact(TableName tableName, byte[] columnFamily, CompactType compactType)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     admin.majorCompact(tableName, columnFamily, compactType);
   }
 
   public Map<ServerName, Boolean> compactionSwitch(boolean switchState,
-    List<String> serverNamesList) throws IOException {
+      List<String> serverNamesList) throws IOException {
     return admin.compactionSwitch(switchState, serverNamesList);
   }
 
@@ -378,7 +378,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> mergeRegionsAsync(byte[][] nameofRegionsToMerge, boolean forcible)
-    throws IOException {
+      throws IOException {
     return admin.mergeRegionsAsync(nameofRegionsToMerge, forcible);
   }
 
@@ -427,7 +427,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName)
-    throws IOException {
+      throws IOException {
     return admin.getRegionMetrics(serverName, tableName);
   }
 
@@ -448,7 +448,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public NamespaceDescriptor getNamespaceDescriptor(String name)
-    throws NamespaceNotFoundException, IOException {
+      throws NamespaceNotFoundException, IOException {
     return admin.getNamespaceDescriptor(name);
   }
 
@@ -481,7 +481,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Boolean> abortProcedureAsync(long procId, boolean mayInterruptIfRunning)
-    throws IOException {
+      throws IOException {
     return admin.abortProcedureAsync(procId, mayInterruptIfRunning);
   }
 
@@ -502,7 +502,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public CompactionState getCompactionState(TableName tableName, CompactType compactType)
-    throws IOException {
+      throws IOException {
     return admin.getCompactionState(tableName, compactType);
   }
 
@@ -519,17 +519,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void snapshot(SnapshotDescription snapshot)
-    throws IOException, SnapshotCreationException, IllegalArgumentException {
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
     admin.snapshot(snapshot);
   }
 
   public Future<Void> snapshotAsync(SnapshotDescription snapshot)
-    throws IOException, SnapshotCreationException {
+      throws IOException, SnapshotCreationException {
     return admin.snapshotAsync(snapshot);
   }
 
   public boolean isSnapshotFinished(SnapshotDescription snapshot)
-    throws IOException, HBaseSnapshotException, UnknownSnapshotException {
+      throws IOException, HBaseSnapshotException, UnknownSnapshotException {
     return admin.isSnapshotFinished(snapshot);
   }
 
@@ -538,28 +538,28 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-    throws IOException, RestoreSnapshotException {
+      throws IOException, RestoreSnapshotException {
     admin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl);
   }
 
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-    boolean restoreAcl, String customSFT)
-    throws IOException, TableExistsException, RestoreSnapshotException {
+      boolean restoreAcl, String customSFT)
+      throws IOException, TableExistsException, RestoreSnapshotException {
     return admin.cloneSnapshotAsync(snapshotName, tableName, restoreAcl, customSFT);
   }
 
   public void execProcedure(String signature, String instance, Map<String, String> props)
-    throws IOException {
+      throws IOException {
     admin.execProcedure(signature, instance, props);
   }
 
   public byte[] execProcedureWithReturn(String signature, String instance,
-    Map<String, String> props) throws IOException {
+      Map<String, String> props) throws IOException {
     return admin.execProcedureWithReturn(signature, instance, props);
   }
 
   public boolean isProcedureFinished(String signature, String instance, Map<String, String> props)
-    throws IOException {
+      throws IOException {
     return admin.isProcedureFinished(signature, instance, props);
   }
 
@@ -572,7 +572,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public List<SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
-    Pattern snapshotNamePattern) throws IOException {
+      Pattern snapshotNamePattern) throws IOException {
     return admin.listTableSnapshots(tableNamePattern, snapshotNamePattern);
   }
 
@@ -585,7 +585,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern)
-    throws IOException {
+      throws IOException {
     admin.deleteTableSnapshots(tableNamePattern, snapshotNamePattern);
   }
 
@@ -638,7 +638,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> addReplicationPeerAsync(String peerId, ReplicationPeerConfig peerConfig,
-    boolean enabled) throws IOException {
+      boolean enabled) throws IOException {
     return admin.addReplicationPeerAsync(peerId, peerConfig, enabled);
   }
 
@@ -659,7 +659,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> updateReplicationPeerConfigAsync(String peerId,
-    ReplicationPeerConfig peerConfig) throws IOException {
+      ReplicationPeerConfig peerConfig) throws IOException {
     return admin.updateReplicationPeerConfigAsync(peerId, peerConfig);
   }
 
@@ -672,12 +672,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> transitReplicationPeerSyncReplicationStateAsync(String peerId,
-    SyncReplicationState state) throws IOException {
+      SyncReplicationState state) throws IOException {
     return admin.transitReplicationPeerSyncReplicationStateAsync(peerId, state);
   }
 
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
-    throws IOException {
+      throws IOException {
     admin.decommissionRegionServers(servers, offload);
   }
 
@@ -686,7 +686,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void recommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
-    throws IOException {
+      throws IOException {
     admin.recommissionRegionServer(server, encodedRegionNames);
   }
 
@@ -703,7 +703,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void clearCompactionQueues(ServerName serverName, Set<String> queues)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     admin.clearCompactionQueues(serverName, queues);
   }
 
@@ -712,7 +712,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public void cloneTableSchema(TableName tableName, TableName newTableName, boolean preserveSplits)
-    throws IOException {
+      throws IOException {
     admin.cloneTableSchema(tableName, newTableName, preserveSplits);
   }
 
@@ -733,7 +733,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Map<TableName, ? extends SpaceQuotaSnapshotView>
-    getRegionServerSpaceQuotaSnapshots(ServerName serverName) throws IOException {
+      getRegionServerSpaceQuotaSnapshots(ServerName serverName) throws IOException {
     return admin.getRegionServerSpaceQuotaSnapshots(serverName);
   }
 
@@ -742,12 +742,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public SpaceQuotaSnapshotView getCurrentSpaceQuotaSnapshot(TableName tableName)
-    throws IOException {
+      throws IOException {
     return admin.getCurrentSpaceQuotaSnapshot(tableName);
   }
 
   public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
-    throws IOException {
+      throws IOException {
     admin.grant(userPermission, mergeExistingPermissions);
   }
 
@@ -756,12 +756,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public List<UserPermission>
-    getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
     return admin.getUserPermissions(getUserPermissionsRequest);
   }
 
   public List<Boolean> hasUserPermissions(String userName, List<Permission> permissions)
-    throws IOException {
+      throws IOException {
     return admin.hasUserPermissions(userName, permissions);
   }
 
@@ -801,7 +801,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   @Override
   public Pair<List<String>, List<TableName>>
-    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+      getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     return admin.getConfiguredNamespacesAndTablesInRSGroup(groupName);
   }
 
@@ -825,7 +825,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     verify();
   }
 
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+      throws IOException {
     return admin.balanceRSGroup(groupName, request);
   }
 
@@ -844,7 +845,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   @Override
   public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
-    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
+      ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
     return admin.getLogEntries(serverNames, logType, serverType, limit, filterParams);
   }
 
@@ -864,7 +865,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
       lives.remove(sn.getAddress());
     }
     try (Table table = conn.getTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(new Scan())) {
+        ResultScanner scanner = table.getScanner(new Scan())) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {
@@ -897,9 +898,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
         if (data.length > 0) {
           ProtobufUtil.expectPBMagicPrefix(data);
           ByteArrayInputStream bis =
-            new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
+              new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
           RSGroupInfo rsGroupInfo =
-            ProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis));
+              ProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis));
           zList.add(RSGroupUtil.fillTables(rsGroupInfo, tds));
         }
       }
@@ -924,13 +925,13 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   @Override
   public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
-    String dstSFT) throws IOException {
+      String dstSFT) throws IOException {
     return admin.modifyColumnFamilyStoreFileTrackerAsync(tableName, family, dstSFT);
   }
 
   @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
-    throws IOException {
+      throws IOException {
     return admin.modifyTableStoreFileTrackerAsync(tableName, dstSFT);
   }
 }

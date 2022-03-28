@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -154,7 +153,6 @@ public class TestMasterBalancerNPE {
       return invocation.callRealMethod();
     }).when(spiedAssignmentManager).balance(Mockito.any());
 
-
     try {
       final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
       Thread unassignThread = new Thread(() -> {
@@ -186,8 +184,8 @@ public class TestMasterBalancerNPE {
        */
       TEST_UTIL.getAdmin().balancerSwitch(true, false);
       /**
-       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
-       * which may throw NPE.
+       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)} which may
+       * throw NPE.
        */
       master.balanceOrUpdateMetrics();
 

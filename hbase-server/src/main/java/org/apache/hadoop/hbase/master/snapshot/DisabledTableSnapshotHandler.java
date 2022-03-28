@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,8 +54,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   /**
    * @param snapshot descriptor of the snapshot to take
    * @param masterServices master services provider
-   * @throws IOException if it cannot access the filesystem of the snapshot
-   *         temporary directory
+   * @throws IOException if it cannot access the filesystem of the snapshot temporary directory
    */
   public DisabledTableSnapshotHandler(SnapshotDescription snapshot,
       final MasterServices masterServices, final SnapshotManager snapshotManager)
@@ -117,10 +116,10 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           + " due to exception:" + e.getMessage();
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
-      status.abort("Snapshot of table: "+ snapshotTable + " failed because " + e.getMessage());
+      status.abort("Snapshot of table: " + snapshotTable + " failed because " + e.getMessage());
     } finally {
-      LOG.debug("Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot)
-          + " as finished.");
+      LOG.debug(
+        "Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot) + " as finished.");
     }
   }
 

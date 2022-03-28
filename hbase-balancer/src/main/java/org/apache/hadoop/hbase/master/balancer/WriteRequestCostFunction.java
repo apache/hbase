@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class WriteRequestCostFunction extends CostFromRegionLoadAsRateFunction {
 
   private static final String WRITE_REQUEST_COST_KEY =
-    "hbase.master.balancer.stochastic.writeRequestCost";
+      "hbase.master.balancer.stochastic.writeRequestCost";
   private static final float DEFAULT_WRITE_REQUEST_COST = 5;
 
   WriteRequestCostFunction(Configuration conf) {

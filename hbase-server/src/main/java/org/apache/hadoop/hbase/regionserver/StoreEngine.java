@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -93,8 +91,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * reduce the possible misuse.
  */
 @InterfaceAudience.Private
-public abstract class StoreEngine<SF extends StoreFlusher, CP extends CompactionPolicy,
-  C extends Compactor, SFM extends StoreFileManager> {
+public abstract class StoreEngine<SF extends StoreFlusher, CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreEngine.class);
 
@@ -117,7 +114,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public static final String STORE_ENGINE_CLASS_KEY = "hbase.hstore.engine.class";
 
   private static final Class<? extends StoreEngine<?, ?, ?, ?>> DEFAULT_STORE_ENGINE_CLASS =
-    DefaultStoreEngine.class;
+      DefaultStoreEngine.class;
 
   /**
    * Acquire read lock of this store.
@@ -197,20 +194,20 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * Create the StoreEngine's components.
    */
   protected abstract void createComponents(Configuration conf, HStore store,
-    CellComparator cellComparator) throws IOException;
+      CellComparator cellComparator) throws IOException;
 
   protected final void createComponentsOnce(Configuration conf, HStore store,
-    CellComparator cellComparator) throws IOException {
-    assert compactor == null && compactionPolicy == null && storeFileManager == null &&
-      storeFlusher == null && storeFileTracker == null;
+      CellComparator cellComparator) throws IOException {
+    assert compactor == null && compactionPolicy == null && storeFileManager == null
+        && storeFlusher == null && storeFileTracker == null;
     createComponents(conf, store, cellComparator);
     this.conf = conf;
     this.ctx = store.getStoreContext();
     this.coprocessorHost = store.getHRegion().getCoprocessorHost();
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
     this.storeFileTracker = createStoreFileTracker(conf, store);
-    assert compactor != null && compactionPolicy != null && storeFileManager != null &&
-      storeFlusher != null && storeFileTracker != null;
+    assert compactor != null && compactionPolicy != null && storeFileManager != null
+        && storeFlusher != null && storeFileTracker != null;
   }
 
   /**
@@ -223,14 +220,14 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
 
   public HStoreFile createStoreFileAndReader(Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, ctx.getRegionFileSystem().getFileSystem(), p,
-      ctx.isPrimaryReplicaStore());
+        ctx.isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
   }
 
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile =
-      new HStoreFile(info, ctx.getFamily().getBloomFilterType(), ctx.getCacheConf());
+        new HStoreFile(info, ctx.getFamily().getBloomFilterType(), ctx.getCacheConf());
     storeFile.initReader();
     return storeFile;
   }
@@ -255,16 +252,16 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   private List<HStoreFile> openStoreFiles(Collection<StoreFileInfo> files, boolean warmup)
-    throws IOException {
+      throws IOException {
     if (CollectionUtils.isEmpty(files)) {
       return Collections.emptyList();
     }
     // initialize the thread pool for opening store files in parallel..
     ExecutorService storeFileOpenerThreadPool =
-      openStoreFileThreadPoolCreator.apply("StoreFileOpener-" +
-        ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString());
+        openStoreFileThreadPoolCreator.apply("StoreFileOpener-"
+            + ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString());
     CompletionService<HStoreFile> completionService =
-      new ExecutorCompletionService<>(storeFileOpenerThreadPool);
+        new ExecutorCompletionService<>(storeFileOpenerThreadPool);
 
     int totalValidStoreFile = 0;
     for (StoreFileInfo storeFileInfo : files) {
@@ -304,7 +301,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     if (ioe != null) {
       // close StoreFile readers
       boolean evictOnClose =
-        ctx.getCacheConf() != null ? ctx.getCacheConf().shouldEvictOnClose() : true;
+          ctx.getCacheConf() != null ? ctx.getCacheConf().shouldEvictOnClose() : true;
       for (HStoreFile file : results) {
         try {
           if (file != null) {
@@ -325,8 +322,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
         if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
           LOG.warn("Clearing the compacted storefile {} from {}", storeFile, this);
           storeFile.getReader().close(
-            storeFile.getCacheConf() != null ? storeFile.getCacheConf().shouldEvictOnClose() :
-              true);
+            storeFile.getCacheConf() != null ? storeFile.getCacheConf().shouldEvictOnClose()
+                : true);
           filesToRemove.add(storeFile);
         }
       }
@@ -356,7 +353,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     List<StoreFileInfo> storeFiles = new ArrayList<>(newFiles.size());
     for (String file : newFiles) {
       storeFiles
-        .add(ctx.getRegionFileSystem().getStoreFileInfo(ctx.getFamily().getNameAsString(), file));
+          .add(ctx.getRegionFileSystem().getStoreFileInfo(ctx.getFamily().getNameAsString(), file));
     }
     refreshStoreFilesInternal(storeFiles);
   }
@@ -398,8 +395,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       return;
     }
 
-    LOG.info("Refreshing store files for " + this + " files to add: " + toBeAddedFiles +
-      " files to remove: " + toBeRemovedFiles);
+    LOG.info("Refreshing store files for " + this + " files to add: " + toBeAddedFiles
+        + " files to remove: " + toBeRemovedFiles);
 
     Set<HStoreFile> toBeRemovedStoreFiles = new HashSet<>(toBeRemovedFiles.size());
     for (StoreFileInfo sfi : toBeRemovedFiles) {
@@ -477,7 +474,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * the lock protection. Usually this is for clear the memstore snapshot.
    */
   public void addStoreFiles(Collection<HStoreFile> storeFiles,
-    IOExceptionRunnable actionAfterAdding) throws IOException {
+      IOExceptionRunnable actionAfterAdding) throws IOException {
     storeFileTracker.add(StoreUtils.toStoreFileInfo(storeFiles));
     writeLock();
     try {
@@ -494,7 +491,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   public void replaceStoreFiles(Collection<HStoreFile> compactedFiles,
-    Collection<HStoreFile> newFiles, Runnable actionUnderLock) throws IOException {
+      Collection<HStoreFile> newFiles, Runnable actionUnderLock) throws IOException {
     storeFileTracker.replace(StoreUtils.toStoreFileInfo(compactedFiles),
       StoreUtils.toStoreFileInfo(newFiles));
     writeLock();
@@ -524,11 +521,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * @return StoreEngine to use.
    */
   public static StoreEngine<?, ?, ?, ?> create(HStore store, Configuration conf,
-    CellComparator cellComparator) throws IOException {
+      CellComparator cellComparator) throws IOException {
     String className = conf.get(STORE_ENGINE_CLASS_KEY, DEFAULT_STORE_ENGINE_CLASS.getName());
     try {
       StoreEngine<?, ?, ?, ?> se =
-        ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {}, new Object[] {});
+          ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {}, new Object[] {});
       se.createComponentsOnce(conf, store, cellComparator);
       return se;
     } catch (Exception e) {
@@ -545,18 +542,18 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   /**
-   * Resets the compaction writer when the new file is committed and used as active storefile.
-   * This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
-   * CleanerChore know that compaction is done and the file can be cleaned up if compaction
-   * have failed. Currently called in
+   * Resets the compaction writer when the new file is committed and used as active storefile. This
+   * step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the CleanerChore
+   * know that compaction is done and the file can be cleaned up if compaction have failed.
+   * Currently called in
    * @see HStore#doCompaction(CompactionRequestImpl, Collection, User, long, List)
    */
-  public void resetCompactionWriter(){
+  public void resetCompactionWriter() {
     compactor.resetWriter();
   }
 
   @RestrictedApi(explanation = "Should only be called in TestHStore", link = "",
-    allowedOnPath = ".*/TestHStore.java")
+      allowedOnPath = ".*/TestHStore.java")
   ReadWriteLock getLock() {
     return storeLock;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The screen where we can change the displayed fields, the sort key and the order of the fields.
  */
@@ -41,11 +40,11 @@ public class FieldScreenView extends AbstractScreenView {
   private final FieldScreenPresenter fieldScreenPresenter;
 
   public FieldScreenView(Screen screen, Terminal terminal, Field sortField, List<Field> fields,
-    EnumMap<Field, Boolean> fieldDisplayMap, FieldScreenPresenter.ResultListener resultListener,
-    ScreenView nextScreenView) {
+      EnumMap<Field, Boolean> fieldDisplayMap, FieldScreenPresenter.ResultListener resultListener,
+      ScreenView nextScreenView) {
     super(screen, terminal);
     this.fieldScreenPresenter = new FieldScreenPresenter(this, sortField, fields, fieldDisplayMap,
-      resultListener, nextScreenView);
+        resultListener, nextScreenView);
   }
 
   @Override
@@ -118,11 +117,11 @@ public class FieldScreenView extends AbstractScreenView {
   }
 
   public void showFieldScreen(String sortFieldHeader, List<Field> fields,
-    EnumMap<Field, Boolean> fieldDisplayMap, int currentPosition, int headerMaxLength,
-    int descriptionMaxLength, boolean moveMode) {
+      EnumMap<Field, Boolean> fieldDisplayMap, int currentPosition, int headerMaxLength,
+      int descriptionMaxLength, boolean moveMode) {
     showScreenDescription(sortFieldHeader);
 
-    for (int i = 0; i < fields.size(); i ++) {
+    for (int i = 0; i < fields.size(); i++) {
       Field field = fields.get(i);
       showField(i, field, fieldDisplayMap.get(field), i == currentPosition, headerMaxLength,
         descriptionMaxLength, moveMode);
@@ -134,17 +133,17 @@ public class FieldScreenView extends AbstractScreenView {
     printer.startBold().print("Fields Management").stopBold().endOfLine();
     printer.print("Current Sort Field: ").startBold().print(sortFieldHeader).stopBold().endOfLine();
     printer.print("Navigate with up/down, Right selects for move then <Enter> or Left commits,")
-      .endOfLine();
+        .endOfLine();
     printer.print("'d' or <Space> toggles display, 's' sets sort. Use 'q' or <Esc> to end!")
-      .endOfLine();
+        .endOfLine();
   }
 
   public void showField(int pos, Field field, boolean display, boolean selected,
-    int fieldHeaderMaxLength, int fieldDescriptionMaxLength, boolean moveMode) {
+      int fieldHeaderMaxLength, int fieldDescriptionMaxLength, boolean moveMode) {
 
     String fieldHeader = String.format("%-" + fieldHeaderMaxLength + "s", field.getHeader());
-    String fieldDescription = String.format("%-" + fieldDescriptionMaxLength + "s",
-      field.getDescription());
+    String fieldDescription =
+        String.format("%-" + fieldDescriptionMaxLength + "s", field.getDescription());
 
     int row = FIELD_START_ROW + pos;
     TerminalPrinter printer = getTerminalPrinter(row);
@@ -157,8 +156,8 @@ public class FieldScreenView extends AbstractScreenView {
           printer.startBold();
         }
 
-        printer.startHighlight()
-          .printFormat("%s = %s", fieldHeader, fieldDescription).stopHighlight();
+        printer.startHighlight().printFormat("%s = %s", fieldHeader, fieldDescription)
+            .stopHighlight();
 
         if (display) {
           printer.stopBold();
@@ -172,8 +171,8 @@ public class FieldScreenView extends AbstractScreenView {
           printer.startBold();
         }
 
-        printer.startHighlight().print(fieldHeader).stopHighlight()
-          .printFormat(" = %s", fieldDescription);
+        printer.startHighlight().print(fieldHeader).stopHighlight().printFormat(" = %s",
+          fieldDescription);
 
         if (display) {
           printer.stopBold();
@@ -184,7 +183,7 @@ public class FieldScreenView extends AbstractScreenView {
     } else {
       if (display) {
         printer.print("* ").startBold().printFormat("%s = %s", fieldHeader, fieldDescription)
-          .stopBold().endOfLine();
+            .stopBold().endOfLine();
       } else {
         printer.printFormat("  %s = %s", fieldHeader, fieldDescription).endOfLine();
       }

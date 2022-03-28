@@ -47,7 +47,7 @@ public class TestDefaultMobStoreFlusher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
+      HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] row1 = Bytes.toBytes("row1");
@@ -75,8 +75,8 @@ public class TestDefaultMobStoreFlusher {
   public void testFlushNonMobFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build())
+        .build();
     testFlushFile(tableDescriptor);
   }
 
@@ -84,9 +84,9 @@ public class TestDefaultMobStoreFlusher {
   public void testFlushMobFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
-        .setMobThreshold(3L).setMaxVersions(4).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+            .setMobThreshold(3L).setMaxVersions(4).build())
+        .build();
     testFlushFile(tableDescriptor);
   }
 

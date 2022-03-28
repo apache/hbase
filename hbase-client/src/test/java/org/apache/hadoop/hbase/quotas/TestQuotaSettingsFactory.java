@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,8 +53,7 @@ public class TestQuotaSettingsFactory {
 
   @Test
   public void testAllQuotasAddedToList() {
-    final SpaceQuota spaceQuota = SpaceQuota.newBuilder()
-        .setSoftLimit(1024L * 1024L * 1024L * 50L) // 50G
+    final SpaceQuota spaceQuota = SpaceQuota.newBuilder().setSoftLimit(1024L * 1024L * 1024L * 50L) // 50G
         .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE) // Disable the table
         .build();
     final long readLimit = 1000;
@@ -67,8 +66,7 @@ public class TestQuotaSettingsFactory {
         .setWriteNum(TimedQuota.newBuilder().setSoftLimit(writeLimit)
             .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build())
         .build();
-    final Quotas quotas = Quotas.newBuilder()
-        .setSpace(spaceQuota) // Set the FS quotas
+    final Quotas quotas = Quotas.newBuilder().setSpace(spaceQuota) // Set the FS quotas
         .setThrottle(throttle) // Set some RPC limits
         .build();
     final TableName tn = TableName.valueOf("my_table");
@@ -125,19 +123,15 @@ public class TestQuotaSettingsFactory {
 
   @Test(expected = IllegalArgumentException.class)
   public void testNeitherTableNorNamespace() {
-    final SpaceQuota spaceQuota = SpaceQuota.newBuilder()
-        .setSoftLimit(1L)
-        .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE)
-        .build();
+    final SpaceQuota spaceQuota = SpaceQuota.newBuilder().setSoftLimit(1L)
+        .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build();
     QuotaSettingsFactory.fromSpace(null, null, spaceQuota);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testBothTableAndNamespace() {
-    final SpaceQuota spaceQuota = SpaceQuota.newBuilder()
-        .setSoftLimit(1L)
-        .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE)
-        .build();
+    final SpaceQuota spaceQuota = SpaceQuota.newBuilder().setSoftLimit(1L)
+        .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build();
     QuotaSettingsFactory.fromSpace(TableName.valueOf("foo"), "bar", spaceQuota);
   }
 
@@ -150,7 +144,7 @@ public class TestQuotaSettingsFactory {
         QuotaSettingsFactory.limitTableSpace(tableName, sizeLimit, violationPolicy);
     assertNotNull("QuotaSettings should not be null", settings);
     assertTrue("Should be an instance of SpaceLimitSettings",
-        settings instanceof SpaceLimitSettings);
+      settings instanceof SpaceLimitSettings);
     SpaceLimitSettings spaceLimitSettings = (SpaceLimitSettings) settings;
     SpaceLimitRequest protoRequest = spaceLimitSettings.getProto();
     assertTrue("Request should have a SpaceQuota", protoRequest.hasQuota());
@@ -167,7 +161,7 @@ public class TestQuotaSettingsFactory {
     QuotaSettings nsSettings = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
     assertNotNull("QuotaSettings should not be null", nsSettings);
     assertTrue("Should be an instance of SpaceLimitSettings",
-        nsSettings instanceof SpaceLimitSettings);
+      nsSettings instanceof SpaceLimitSettings);
     SpaceLimitRequest nsProto = ((SpaceLimitSettings) nsSettings).getProto();
     assertTrue("Request should have a SpaceQuota", nsProto.hasQuota());
     assertTrue("The remove attribute should be true", nsProto.getQuota().getRemove());
@@ -175,7 +169,7 @@ public class TestQuotaSettingsFactory {
     QuotaSettings tableSettings = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     assertNotNull("QuotaSettings should not be null", tableSettings);
     assertTrue("Should be an instance of SpaceLimitSettings",
-        tableSettings instanceof SpaceLimitSettings);
+      tableSettings instanceof SpaceLimitSettings);
     SpaceLimitRequest tableProto = ((SpaceLimitSettings) tableSettings).getProto();
     assertTrue("Request should have a SpaceQuota", tableProto.hasQuota());
     assertTrue("The remove attribute should be true", tableProto.getQuota().getRemove());

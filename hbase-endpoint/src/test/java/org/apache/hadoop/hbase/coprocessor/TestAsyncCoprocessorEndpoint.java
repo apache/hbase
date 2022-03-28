@@ -80,10 +80,9 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     TestProtos.EchoRequestProto request =
         TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
     TestProtos.EchoResponseProto response =
-        admin
-            .<TestRpcServiceProtos.TestProtobufRpcProto.Stub, TestProtos.EchoResponseProto>
-                coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto::newStub,
-                  (s, c, done) -> s.echo(c, request, done)).get();
+        admin.<TestRpcServiceProtos.TestProtobufRpcProto.Stub, TestProtos.EchoResponseProto> coprocessorService(
+          TestRpcServiceProtos.TestProtobufRpcProto::newStub,
+          (s, c, done) -> s.echo(c, request, done)).get();
     assertEquals("hello", response.getMessage());
   }
 
@@ -91,10 +90,9 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
   public void testMasterCoprocessorError() throws Exception {
     TestProtos.EmptyRequestProto emptyRequest = TestProtos.EmptyRequestProto.getDefaultInstance();
     try {
-      admin
-          .<TestRpcServiceProtos.TestProtobufRpcProto.Stub, TestProtos.EmptyResponseProto>
-              coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto::newStub,
-                (s, c, done) -> s.error(c, emptyRequest, done)).get();
+      admin.<TestRpcServiceProtos.TestProtobufRpcProto.Stub, TestProtos.EmptyResponseProto> coprocessorService(
+        TestRpcServiceProtos.TestProtobufRpcProto::newStub,
+        (s, c, done) -> s.error(c, emptyRequest, done)).get();
       fail("Should have thrown an exception");
     } catch (Exception e) {
     }
@@ -106,11 +104,9 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     DummyRegionServerEndpointProtos.DummyRequest request =
         DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
     DummyRegionServerEndpointProtos.DummyResponse response =
-        admin
-            .<DummyRegionServerEndpointProtos.DummyService.Stub,
-                DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
-              DummyRegionServerEndpointProtos.DummyService::newStub,
-                  (s, c, done) -> s.dummyCall(c, request, done), serverName).get();
+        admin.<DummyRegionServerEndpointProtos.DummyService.Stub, DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
+          DummyRegionServerEndpointProtos.DummyService::newStub,
+          (s, c, done) -> s.dummyCall(c, request, done), serverName).get();
     assertEquals(DUMMY_VALUE, response.getValue());
   }
 
@@ -120,11 +116,9 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     DummyRegionServerEndpointProtos.DummyRequest request =
         DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
     try {
-      admin
-          .<DummyRegionServerEndpointProtos.DummyService.Stub,
-              DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
-            DummyRegionServerEndpointProtos.DummyService::newStub,
-                (s, c, done) -> s.dummyThrow(c, request, done), serverName).get();
+      admin.<DummyRegionServerEndpointProtos.DummyService.Stub, DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
+        DummyRegionServerEndpointProtos.DummyService::newStub,
+        (s, c, done) -> s.dummyThrow(c, request, done), serverName).get();
       fail("Should have thrown an exception");
     } catch (Exception e) {
       assertTrue(e.getCause() instanceof RetriesExhaustedException);
@@ -133,8 +127,9 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
   }
 
   public static class DummyRegionServerEndpoint extends DummyService
-          implements RegionServerCoprocessor {
-    public DummyRegionServerEndpoint() {}
+      implements RegionServerCoprocessor {
+    public DummyRegionServerEndpoint() {
+    }
 
     @Override
     public Iterable<Service> getServices() {
@@ -156,8 +151,7 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     }
 
     @Override
-    public void dummyThrow(RpcController controller,
-        DummyRequest request,
+    public void dummyThrow(RpcController controller, DummyRequest request,
         RpcCallback<DummyResponse> done) {
       CoprocessorRpcUtils.setControllerException(controller, WHAT_TO_THROW);
     }

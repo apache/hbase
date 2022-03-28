@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -62,7 +61,7 @@ public class TestHBaseWalOnEC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
+      HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 

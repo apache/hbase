@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,10 @@ public class TestVerifyCellsReplicationEndpoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyCellsReplicationEndpoint.class);
+      HBaseClassTestRule.forClass(TestVerifyCellsReplicationEndpoint.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestVerifyCellsReplicationEndpoint.class);
+      LoggerFactory.getLogger(TestVerifyCellsReplicationEndpoint.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -74,7 +74,7 @@ public class TestVerifyCellsReplicationEndpoint {
     public boolean replicate(ReplicateContext replicateContext) {
       LOG.info(replicateContext.getEntries().toString());
       replicateContext.entries.stream().map(WAL.Entry::getEdit).map(WALEdit::getCells)
-        .forEachOrdered(CELLS::addAll);
+          .forEachOrdered(CELLS::addAll);
       return super.replicate(replicateContext);
     }
   }
@@ -87,7 +87,7 @@ public class TestVerifyCellsReplicationEndpoint {
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("zk1:8888:/hbase")
-        .setReplicationEndpointImpl(EndpointForTest.class.getName()).build());
+          .setReplicationEndpointImpl(EndpointForTest.class.getName()).build());
   }
 
   @AfterClass

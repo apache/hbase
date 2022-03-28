@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -113,9 +112,9 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   public static void createDirectory(MasterFileSystem mfs, NamespaceDescriptor nsDescriptor)
-    throws IOException {
+      throws IOException {
     mfs.getFileSystem()
-      .mkdirs(CommonFSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
+        .mkdirs(CommonFSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
   }
 
   protected void releaseSyncLatch() {
@@ -123,7 +122,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   protected final void checkNamespaceRSGroup(MasterProcedureEnv env, NamespaceDescriptor nd)
-    throws IOException {
+      throws IOException {
     Supplier<String> forWhom = () -> "namespace " + nd.getName();
     RSGroupInfo rsGroupInfo = MasterProcedureUtil.checkGroupExists(
       env.getMasterServices().getRSGroupInfoManager()::getRSGroup,

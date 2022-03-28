@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -112,6 +111,6 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
         cluster.getMaster().getAssignmentManager().getRegionsOnServer(newTestServer);
     LOG.debug("RegionServer {} has {} regions", newTestServer, newRegionInfos.size());
     assertTrue("Should not retain all regions when restart",
-        newRegionInfos.size() < regionInfos.size());
+      newRegionInfos.size() < regionInfos.size());
   }
 }

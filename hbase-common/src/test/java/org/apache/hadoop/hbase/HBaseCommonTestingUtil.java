@@ -48,20 +48,20 @@ public class HBaseCommonTestingUtil {
   /**
    * Compression algorithms to use in parameterized JUnit 4 tests
    */
-  public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
-    Arrays.asList(new Object[][] { { Compression.Algorithm.NONE }, { Compression.Algorithm.GZ } });
+  public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED = Arrays
+      .asList(new Object[][] { { Compression.Algorithm.NONE }, { Compression.Algorithm.GZ } });
 
   /**
    * This is for unit tests parameterized with a two booleans.
    */
   public static final List<Object[]> BOOLEAN_PARAMETERIZED =
-    Arrays.asList(new Object[][] { { false }, { true } });
+      Arrays.asList(new Object[][] { { false }, { true } });
 
   /**
    * Compression algorithms to use in testing
    */
   public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS =
-    { Compression.Algorithm.NONE, Compression.Algorithm.GZ };
+      { Compression.Algorithm.NONE, Compression.Algorithm.GZ };
 
   protected final Configuration conf;
 
@@ -243,7 +243,7 @@ public class HBaseCommonTestingUtil {
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
    */
   public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
-    throws E {
+      throws E {
     return Waiter.waitFor(this.conf, timeout, interval, predicate);
   }
 
@@ -251,7 +251,7 @@ public class HBaseCommonTestingUtil {
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
    */
   public <E extends Exception> long waitFor(long timeout, long interval, boolean failIfTimeout,
-    Predicate<E> predicate) throws E {
+      Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 

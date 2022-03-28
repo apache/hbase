@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,8 +93,8 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public SingleRequestCallerBuilder<T> action(
-        AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
+    public SingleRequestCallerBuilder<T>
+        action(AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -156,8 +156,8 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
       preCheck();
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn, tableName, row, replicaId,
-        locateType, callable, priority, pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs,
-        rpcTimeoutNs, startLogErrorsCnt);
+          locateType, callable, priority, pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs,
+          rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -291,9 +291,9 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncScanSingleRegionRpcRetryingCaller build() {
       preCheck();
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn, scan, scanMetrics,
-        scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
-        scannerLeaseTimeoutPeriodNs, pauseNs, pauseForCQTBENs, maxAttempts, scanTimeoutNs,
-        rpcTimeoutNs, startLogErrorsCnt);
+          scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
+          scannerLeaseTimeoutPeriodNs, pauseNs, pauseForCQTBENs, maxAttempts, scanTimeoutNs,
+          rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -364,7 +364,7 @@ class AsyncRpcRetryingCallerFactory {
 
     public <T> AsyncBatchRpcRetryingCaller<T> build() {
       return new AsyncBatchRpcRetryingCaller<>(retryTimer, conn, tableName, actions, pauseNs,
-        pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+          pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     public <T> List<CompletableFuture<T>> call() {
@@ -385,8 +385,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int priority = PRIORITY_UNSET;
 
-    public MasterRequestCallerBuilder<T> action(
-        AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
+    public MasterRequestCallerBuilder<T>
+        action(AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -438,7 +438,8 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncMasterRequestRpcRetryingCaller<T> build() {
       preCheck();
       return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, callable, priority,
-        pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+          pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+          startLogErrorsCnt);
     }
 
     /**
@@ -466,8 +467,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int priority;
 
-    public AdminRequestCallerBuilder<T> action(
-        AsyncAdminRequestRetryingCaller.Callable<T> callable) {
+    public AdminRequestCallerBuilder<T>
+        action(AsyncAdminRequestRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -514,8 +515,8 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncAdminRequestRetryingCaller<T> build() {
       return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, priority, pauseNs,
-        pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
-        checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
+          pauseForCQTBENs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
+          checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {
@@ -537,8 +538,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private ServerName serverName;
 
-    public ServerRequestCallerBuilder<T> action(
-        AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
+    public ServerRequestCallerBuilder<T>
+        action(AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -580,8 +581,8 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncServerRequestRpcRetryingCaller<T> build() {
       return new AsyncServerRequestRpcRetryingCaller<T>(retryTimer, conn, pauseNs, pauseForCQTBENs,
-        maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
-        checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
+          maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
+          checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {

@@ -53,7 +53,7 @@ public class TestMasterRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegistry.class);
+      HBaseClassTestRule.forClass(TestMasterRegistry.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
@@ -122,7 +122,7 @@ public class TestMasterRegistry {
         assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
-          Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
+            Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
         List<HRegionLocation> actualMetaLocations = activeMaster.getMetaLocations();
         Collections.sort(metaLocations);
         Collections.sort(actualMetaLocations);

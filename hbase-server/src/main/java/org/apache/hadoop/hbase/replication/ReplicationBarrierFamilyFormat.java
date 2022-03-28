@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,9 +68,9 @@ public final class ReplicationBarrierFamilyFormat {
 
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(HConstants.SEQNUM_QUALIFIER)
-      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
-      .build());
+        .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(HConstants.SEQNUM_QUALIFIER)
+        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
+        .build());
   }
 
   private static void writeRegionName(ByteArrayOutputStream out, byte[] regionName) {
@@ -118,12 +118,12 @@ public final class ReplicationBarrierFamilyFormat {
   public static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
     byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
-      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
+        .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
+        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
   }
 
   public static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
-    throws IOException {
+      throws IOException {
     Put put = new Put(regionInfo.getRegionName(), ts);
     addReplicationBarrier(put, openSeqNum);
     return put;
@@ -154,10 +154,10 @@ public final class ReplicationBarrierFamilyFormat {
 
     @Override
     public String toString() {
-      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" +
-        state + ", parentRegionNames=" +
-        parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")) +
-        "]";
+      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" + state
+          + ", parentRegionNames="
+          + parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", "))
+          + "]";
     }
   }
 
@@ -167,33 +167,34 @@ public final class ReplicationBarrierFamilyFormat {
 
   public static long[] getReplicationBarriers(Result result) {
     return result.getColumnCells(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
-      .stream().mapToLong(ReplicationBarrierFamilyFormat::getReplicationBarrier).sorted().distinct()
-      .toArray();
+        .stream().mapToLong(ReplicationBarrierFamilyFormat::getReplicationBarrier).sorted()
+        .distinct().toArray();
   }
 
   private static ReplicationBarrierResult getReplicationBarrierResult(Result result) {
     long[] barriers = getReplicationBarriers(result);
     byte[] stateBytes = result.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER);
     RegionState.State state =
-      stateBytes != null ? RegionState.State.valueOf(Bytes.toString(stateBytes)) : null;
+        stateBytes != null ? RegionState.State.valueOf(Bytes.toString(stateBytes)) : null;
     byte[] parentRegionsBytes =
-      result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
+        result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
     List<byte[]> parentRegionNames =
-      parentRegionsBytes != null ? parseParentsBytes(parentRegionsBytes) : Collections.emptyList();
+        parentRegionsBytes != null ? parseParentsBytes(parentRegionsBytes)
+            : Collections.emptyList();
     return new ReplicationBarrierResult(barriers, state, parentRegionNames);
   }
 
   public static ReplicationBarrierResult getReplicationBarrierResult(Connection conn,
-    TableName tableName, byte[] row, byte[] encodedRegionName) throws IOException {
+      TableName tableName, byte[] row, byte[] encodedRegionName) throws IOException {
     byte[] metaStartKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
     byte[] metaStopKey =
-      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
+        RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     Scan scan = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey)
-      .addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)
-      .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
-      .setCaching(10);
+        .addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)
+        .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
+        .setCaching(10);
     try (Table table = conn.getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(scan)) {
+        ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -213,24 +214,24 @@ public final class ReplicationBarrierFamilyFormat {
   }
 
   public static long[] getReplicationBarriers(Connection conn, byte[] regionName)
-    throws IOException {
+      throws IOException {
     try (Table table = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = table.get(new Get(regionName)
-        .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
-        .readAllVersions());
+          .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
+          .readAllVersions());
       return getReplicationBarriers(result);
     }
   }
 
   public static List<Pair<String, Long>> getTableEncodedRegionNameAndLastBarrier(Connection conn,
-    TableName tableName) throws IOException {
+      TableName tableName) throws IOException {
     List<Pair<String, Long>> list = new ArrayList<>();
     MetaTableAccessor.scanMeta(conn,
       ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REPLICATION),
       ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REPLICATION),
       QueryType.REPLICATION, r -> {
         byte[] value =
-          r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
+            r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
         if (value == null) {
           return true;
         }
@@ -243,7 +244,7 @@ public final class ReplicationBarrierFamilyFormat {
   }
 
   public static List<String> getTableEncodedRegionNamesForSerialReplication(Connection conn,
-    TableName tableName) throws IOException {
+      TableName tableName) throws IOException {
     List<String> list = new ArrayList<>();
     MetaTableAccessor.scanMeta(conn,
       ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REPLICATION),

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestSerialization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSerialization.class);
+      HBaseClassTestRule.forClass(TestSerialization.class);
 
   @Test
   public void testKeyValue() throws Exception {
@@ -92,10 +92,10 @@ public class TestSerialization {
   public void testCreateKeyValueInvalidNegativeLength() {
 
     KeyValue kv_0 = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"), // 51 bytes
-      Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my12345"));
+        Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my12345"));
 
     KeyValue kv_1 = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"), // 49 bytes
-      Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my123"));
+        Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my123"));
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -133,7 +133,7 @@ public class TestSerialization {
   @Test
   public void testCompareFilter() throws Exception {
     Filter f =
-      new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("testRowOne-2")));
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     byte[] bytes = f.toByteArray();
     Filter ff = RowFilter.parseFrom(bytes);
     assertNotNull(ff);
@@ -187,11 +187,11 @@ public class TestSerialization {
 
   private RegionInfo createRandomRegion(final String name) {
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     String[] families = new String[] { "info", "anchor" };
     for (int i = 0; i < families.length; i++) {
       ColumnFamilyDescriptor columnFamilyDescriptor =
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(families[i])).build();
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(families[i])).build();
       tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     }
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
@@ -308,12 +308,12 @@ public class TestSerialization {
   protected TableDescriptor createTableDescriptor(final String name, final int versions) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     builder
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).setMaxVersions(versions)
-        .setBlockCacheEnabled(false).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).setMaxVersions(versions)
-        .setBlockCacheEnabled(false).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam3).setMaxVersions(versions)
-        .setBlockCacheEnabled(false).build());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).setMaxVersions(versions)
+            .setBlockCacheEnabled(false).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).setMaxVersions(versions)
+            .setBlockCacheEnabled(false).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam3).setMaxVersions(versions)
+            .setBlockCacheEnabled(false).build());
     return builder.build();
   }
 }

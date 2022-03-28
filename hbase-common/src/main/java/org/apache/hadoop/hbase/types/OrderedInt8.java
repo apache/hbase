@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   /**
    * Creates a new 8-bit {@code byte} with a fixed-length encoding.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedInt8(Order order) {
@@ -78,7 +77,6 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   /**
    * Read a {@code byte} value from the buffer {@code src}.
-   *
    * @param src the {@link PositionedByteRange} to read the {@code byte} from
    * @return the {@code byte} read from the buffer
    */
@@ -88,7 +86,6 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
-   *
    * @param dst the {@link PositionedByteRange} to write to
    * @param val the value to write to {@code dst}
    * @return the number of bytes written

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestNamespacesResource {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -53,8 +53,7 @@ public class TestNamespacesResource {
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;
@@ -78,7 +77,7 @@ public class TestNamespacesResource {
 
   private static NamespacesModel fromXML(byte[] content) throws JAXBException {
     return (NamespacesModel) context.createUnmarshaller()
-      .unmarshal(new ByteArrayInputStream(content));
+        .unmarshal(new ByteArrayInputStream(content));
   }
 
   private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException {

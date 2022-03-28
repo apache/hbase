@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,8 +49,7 @@ public class TestProcedureCleanup {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureCleanup.class);
-
+      HBaseClassTestRule.forClass(TestProcedureCleanup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureCleanup.class);
 
@@ -95,8 +94,7 @@ public class TestProcedureCleanup {
     LOG.info("Begin to execute " + rootProc);
     // wait until the child procedure arrival
     htu.waitFor(10000, () -> procExecutor.getProcedures().size() >= 2);
-    SuspendProcedure suspendProcedure = (SuspendProcedure) procExecutor
-        .getProcedures().get(1);
+    SuspendProcedure suspendProcedure = (SuspendProcedure) procExecutor.getProcedures().get(1);
     // wait until the suspendProcedure executed
     suspendProcedure.latch.countDown();
     Thread.sleep(100);
@@ -181,13 +179,12 @@ public class TestProcedureCleanup {
     Path tmpFile = file.getPath().suffix(".tmp");
     // remove the last byte to make the trailer corrupted
     try (FSDataInputStream in = fs.open(file.getPath());
-      FSDataOutputStream out = fs.create(tmpFile)) {
+        FSDataOutputStream out = fs.create(tmpFile)) {
       ByteStreams.copy(ByteStreams.limit(in, file.getLen() - 1), out);
     }
     fs.delete(file.getPath(), false);
     fs.rename(tmpFile, file.getPath());
   }
-
 
   public static final class ExchangeProcedure extends ProcedureTestingUtility.NoopProcedure<Void> {
 

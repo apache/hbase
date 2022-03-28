@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -32,7 +30,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface BackupMergeJob extends Configurable {
   /**
    * Run backup merge operation.
-   *
    * @param backupIds backup image ids
    * @throws IOException if the backup merge operation fails
    */

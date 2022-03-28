@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,33 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
  * Pass results that have same row prefix.
  */
 @InterfaceAudience.Public
 public class PrefixFilter extends FilterBase {
-  protected byte [] prefix = null;
+  protected byte[] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
 
-  public PrefixFilter(final byte [] prefix) {
+  public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
   }
 
@@ -52,8 +50,7 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) {
-    if (firstRowCell == null || this.prefix == null)
-      return true;
+    if (firstRowCell == null || this.prefix == null) return true;
     if (filterAllRemaining()) return true;
     int length = firstRowCell.getRowLength();
     if (length < prefix.length) return true;
@@ -63,11 +60,11 @@ public class PrefixFilter extends FilterBase {
     int cmp;
     if (firstRowCell instanceof ByteBufferExtendedCell) {
       cmp = ByteBufferUtils.compareTo(((ByteBufferExtendedCell) firstRowCell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) firstRowCell).getRowPosition(), this.prefix.length,
-          this.prefix, 0, this.prefix.length);
+        ((ByteBufferExtendedCell) firstRowCell).getRowPosition(), this.prefix.length, this.prefix,
+        0, this.prefix.length);
     } else {
       cmp = Bytes.compareTo(firstRowCell.getRowArray(), firstRowCell.getRowOffset(),
-          this.prefix.length, this.prefix, 0, this.prefix.length);
+        this.prefix.length, this.prefix, 0, this.prefix.length);
     }
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
@@ -97,10 +94,10 @@ public class PrefixFilter extends FilterBase {
     return passedPrefix;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 1,
-                                "Expected 1 but got: %s", filterArguments.size());
-    byte [] prefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
+      filterArguments.size());
+    byte[] prefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     return new PrefixFilter(prefix);
   }
 
@@ -108,9 +105,8 @@ public class PrefixFilter extends FilterBase {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.PrefixFilter.Builder builder =
-      FilterProtos.PrefixFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.PrefixFilter.Builder builder = FilterProtos.PrefixFilter.newBuilder();
     if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
     return builder.build().toByteArray();
   }
@@ -121,28 +117,27 @@ public class PrefixFilter extends FilterBase {
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
-  public static PrefixFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static PrefixFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.PrefixFilter proto;
     try {
       proto = FilterProtos.PrefixFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    return new PrefixFilter(proto.hasPrefix()?proto.getPrefix().toByteArray():null);
+    return new PrefixFilter(proto.hasPrefix() ? proto.getPrefix().toByteArray() : null);
   }
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof PrefixFilter)) return false;
 
-    PrefixFilter other = (PrefixFilter)o;
+    PrefixFilter other = (PrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
   }
 

@@ -15,14 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
-
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,12 +27,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -47,15 +44,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Cache that keeps track of the quota settings for the users and tables that
- * are interacting with it.
- *
- * To avoid blocking the operations if the requested quota is not in cache
- * an "empty quota" will be returned and the request to fetch the quota information
- * will be enqueued for the next refresh.
- *
- * TODO: At the moment the Cache has a Chore that will be triggered every 5min
- * or on cache-miss events. Later the Quotas will be pushed using the notification system.
+ * Cache that keeps track of the quota settings for the users and tables that are interacting with
+ * it. To avoid blocking the operations if the requested quota is not in cache an "empty quota" will
+ * be returned and the request to fetch the quota information will be enqueued for the next refresh.
+ * TODO: At the moment the Cache has a Chore that will be triggered every 5min or on cache-miss
+ * events. Later the Quotas will be pushed using the notification system.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -114,7 +107,6 @@ public class QuotaCache implements Stoppable {
 
   /**
    * Returns the limiter associated to the specified user/table.
-   *
    * @param ugi the user to limit
    * @param table the table to limit
    * @return the limiter associated to the specified user/table
@@ -138,7 +130,6 @@ public class QuotaCache implements Stoppable {
 
   /**
    * Returns the limiter associated to the specified table.
-   *
    * @param table the table to limit
    * @return the limiter associated to the specified table
    */
@@ -148,7 +139,6 @@ public class QuotaCache implements Stoppable {
 
   /**
    * Returns the limiter associated to the specified namespace.
-   *
    * @param namespace the namespace to limit
    * @return the limiter associated to the specified namespace
    */
@@ -158,7 +148,6 @@ public class QuotaCache implements Stoppable {
 
   /**
    * Returns the limiter associated to the specified region server.
-   *
    * @param regionServer the region server to limit
    * @return the limiter associated to the specified region server
    */
@@ -174,8 +163,7 @@ public class QuotaCache implements Stoppable {
    * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
    * returned and the quota request will be enqueued for the next cache refresh.
    */
-  private <K> QuotaState getQuotaState(final ConcurrentMap<K, QuotaState> quotasMap,
-      final K key) {
+  private <K> QuotaState getQuotaState(final ConcurrentMap<K, QuotaState> quotasMap, final K key) {
     return computeIfAbsent(quotasMap, key, QuotaState::new, this::triggerCacheRefresh);
   }
 
@@ -212,11 +200,11 @@ public class QuotaCache implements Stoppable {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="GC_UNRELATED_TYPES",
-      justification="I do not understand why the complaints, it looks good to me -- FIX")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "GC_UNRELATED_TYPES",
+        justification = "I do not understand why the complaints, it looks good to me -- FIX")
     protected void chore() {
       // Prefetch online tables/namespaces
-      for (TableName table: ((HRegionServer)QuotaCache.this.rsServices).getOnlineTables()) {
+      for (TableName table : ((HRegionServer) QuotaCache.this.rsServices).getOnlineTables()) {
         if (table.isSystemTable()) {
           continue;
         }
@@ -227,8 +215,8 @@ public class QuotaCache implements Stoppable {
         QuotaCache.this.namespaceQuotaCache.computeIfAbsent(ns, key -> new QuotaState());
       }
 
-      QuotaCache.this.regionServerQuotaCache.computeIfAbsent(
-          QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, key -> new QuotaState());
+      QuotaCache.this.regionServerQuotaCache
+          .computeIfAbsent(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, key -> new QuotaState());
 
       updateQuotaFactors();
       fetchNamespaceQuotaState();
@@ -247,8 +235,7 @@ public class QuotaCache implements Stoppable {
         }
 
         @Override
-        public Map<String, QuotaState> fetchEntries(final List<Get> gets)
-            throws IOException {
+        public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
           return QuotaUtil.fetchNamespaceQuotas(rsServices.getConnection(), gets,
             machineQuotaFactor);
         }
@@ -263,8 +250,7 @@ public class QuotaCache implements Stoppable {
         }
 
         @Override
-        public Map<TableName, QuotaState> fetchEntries(final List<Get> gets)
-            throws IOException {
+        public Map<TableName, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
           return QuotaUtil.fetchTableQuotas(rsServices.getConnection(), gets,
             tableMachineQuotaFactors);
         }
@@ -281,8 +267,7 @@ public class QuotaCache implements Stoppable {
         }
 
         @Override
-        public Map<String, UserQuotaState> fetchEntries(final List<Get> gets)
-            throws IOException {
+        public Map<String, UserQuotaState> fetchEntries(final List<Get> gets) throws IOException {
           return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), gets,
             tableMachineQuotaFactors, machineQuotaFactor);
         }
@@ -322,7 +307,7 @@ public class QuotaCache implements Stoppable {
       // Find the quota entries to update
       List<Get> gets = new ArrayList<>();
       List<K> toRemove = new ArrayList<>();
-      for (Map.Entry<K, V> entry: quotasMap.entrySet()) {
+      for (Map.Entry<K, V> entry : quotasMap.entrySet()) {
         long lastUpdate = entry.getValue().getLastUpdate();
         long lastQuery = entry.getValue().getLastQuery();
         if (lastQuery > 0 && (now - lastQuery) >= evictPeriod) {
@@ -332,7 +317,7 @@ public class QuotaCache implements Stoppable {
         }
       }
 
-      for (final K key: toRemove) {
+      for (final K key : toRemove) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("evict " + type + " key=" + key);
         }
@@ -342,7 +327,7 @@ public class QuotaCache implements Stoppable {
       // fetch and update the quota entries
       if (!gets.isEmpty()) {
         try {
-          for (Map.Entry<K, V> entry: fetcher.fetchEntries(gets).entrySet()) {
+          for (Map.Entry<K, V> entry : fetcher.fetchEntries(gets).entrySet()) {
             V quotaInfo = quotasMap.putIfAbsent(entry.getKey(), entry.getValue());
             if (quotaInfo != null) {
               quotaInfo.update(entry.getValue());
@@ -359,11 +344,9 @@ public class QuotaCache implements Stoppable {
     }
 
     /**
-     * Update quota factors which is used to divide cluster scope quota into machine scope quota
-     *
-     * For user/namespace/user over namespace quota, use [1 / RSNum] as machine factor.
-     * For table/user over table quota, use [1 / TotalTableRegionNum * MachineTableRegionNum]
-     * as machine factor.
+     * Update quota factors which is used to divide cluster scope quota into machine scope quota For
+     * user/namespace/user over namespace quota, use [1 / RSNum] as machine factor. For table/user
+     * over table quota, use [1 / TotalTableRegionNum * MachineTableRegionNum] as machine factor.
      */
     private void updateQuotaFactors() {
       // Update machine quota factor
@@ -401,6 +384,7 @@ public class QuotaCache implements Stoppable {
 
   static interface Fetcher<Key, Value> {
     Get makeGet(Map.Entry<Key, Value> entry);
+
     Map<Key, Value> fetchEntries(List<Get> gets) throws IOException;
   }
 }

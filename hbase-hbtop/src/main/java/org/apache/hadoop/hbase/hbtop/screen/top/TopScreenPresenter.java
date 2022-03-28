@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The presentation logic for the top screen.
  */
@@ -63,7 +62,7 @@ public class TopScreenPresenter {
   private long iterations;
 
   public TopScreenPresenter(TopScreenView topScreenView, long initialRefreshDelay,
-    TopScreenModel topScreenModel, @Nullable List<Field> initialFields, long numberOfIterations) {
+      TopScreenModel topScreenModel, @Nullable List<Field> initialFields, long numberOfIterations) {
     this.topScreenView = Objects.requireNonNull(topScreenView);
     this.refreshDelay = new AtomicLong(initialRefreshDelay);
     this.topScreenModel = Objects.requireNonNull(topScreenModel);
@@ -78,7 +77,7 @@ public class TopScreenPresenter {
   }
 
   private void updateTerminalLengthAndPageSize(@Nullable TerminalSize terminalSize,
-    @Nullable Integer pageSize) {
+      @Nullable Integer pageSize) {
     if (terminalSize != null) {
       terminalLength = terminalSize.getColumns();
     } else {
@@ -132,8 +131,7 @@ public class TopScreenPresenter {
       for (Field f : topScreenModel.getFields()) {
         if (f.isAutoAdjust()) {
           int maxLength = topScreenModel.getRecords().stream()
-            .map(r -> r.get(f).asString().length())
-            .max(Integer::compareTo).orElse(0);
+              .map(r -> r.get(f).asString().length()).max(Integer::compareTo).orElse(0);
           fieldLengthMap.put(f, Math.max(maxLength, f.getHeader().length()));
         }
       }
@@ -141,9 +139,8 @@ public class TopScreenPresenter {
   }
 
   private List<Header> getDisplayedHeaders() {
-    List<Field> displayFields =
-      topScreenModel.getFields().stream()
-        .filter(fieldDisplayMap::get).collect(Collectors.toList());
+    List<Field> displayFields = topScreenModel.getFields().stream().filter(fieldDisplayMap::get)
+        .collect(Collectors.toList());
 
     if (displayFields.isEmpty()) {
       horizontalScroll = 0;
@@ -231,8 +228,7 @@ public class TopScreenPresenter {
   }
 
   private int getHeaderSize() {
-    return (int) topScreenModel.getFields().stream()
-      .filter(fieldDisplayMap::get).count();
+    return (int) topScreenModel.getFields().stream().filter(fieldDisplayMap::get).count();
   }
 
   public void switchSortOrder() {
@@ -246,18 +242,16 @@ public class TopScreenPresenter {
 
   public ScreenView transitionToModeScreen(Screen screen, Terminal terminal) {
     return new ModeScreenView(screen, terminal, topScreenModel.getCurrentMode(), this::switchMode,
-      topScreenView);
+        topScreenView);
   }
 
   public ScreenView transitionToFieldScreen(Screen screen, Terminal terminal) {
-    return new FieldScreenView(screen, terminal,
-      topScreenModel.getCurrentSortField(), topScreenModel.getFields(),
-      fieldDisplayMap,
-      (sortField, fields, fieldDisplayMap) -> {
-        topScreenModel.setSortFieldAndFields(sortField, fields);
-        this.fieldDisplayMap.clear();
-        this.fieldDisplayMap.putAll(fieldDisplayMap);
-      }, topScreenView);
+    return new FieldScreenView(screen, terminal, topScreenModel.getCurrentSortField(),
+        topScreenModel.getFields(), fieldDisplayMap, (sortField, fields, fieldDisplayMap) -> {
+          topScreenModel.setSortFieldAndFields(sortField, fields);
+          this.fieldDisplayMap.clear();
+          this.fieldDisplayMap.putAll(fieldDisplayMap);
+        }, topScreenView);
   }
 
   private void switchMode(Mode nextMode) {
@@ -303,42 +297,41 @@ public class TopScreenPresenter {
 
   public ScreenView goToInputModeForRefreshDelay(Screen screen, Terminal terminal, int row) {
     return new InputModeScreenView(screen, terminal, row,
-      "Change refresh delay from " + (double) refreshDelay.get() / 1000 + " to", null,
-      (inputString) -> {
-        if (inputString.isEmpty()) {
+        "Change refresh delay from " + (double) refreshDelay.get() / 1000 + " to", null,
+        (inputString) -> {
+          if (inputString.isEmpty()) {
+            return topScreenView;
+          }
+
+          double delay;
+          try {
+            delay = Double.parseDouble(inputString);
+          } catch (NumberFormatException e) {
+            return goToMessageMode(screen, terminal, row, "Unacceptable floating point");
+          }
+
+          refreshDelay.set((long) (delay * 1000));
           return topScreenView;
-        }
-
-        double delay;
-        try {
-          delay = Double.parseDouble(inputString);
-        } catch (NumberFormatException e) {
-          return goToMessageMode(screen, terminal, row, "Unacceptable floating point");
-        }
-
-        refreshDelay.set((long) (delay * 1000));
-        return topScreenView;
-      });
+        });
   }
 
   public ScreenView goToInputModeForFilter(Screen screen, Terminal terminal, int row,
-    boolean ignoreCase) {
+      boolean ignoreCase) {
     return new InputModeScreenView(screen, terminal, row,
-      "add filter #" + (topScreenModel.getFilters().size() + 1) +
-        " (" + (ignoreCase ? "ignoring case" : "case sensitive") + ") as: [!]FLD?VAL",
-      topScreenModel.getFilterHistories(),
-      (inputString) -> {
-        if (inputString.isEmpty()) {
+        "add filter #" + (topScreenModel.getFilters().size() + 1) + " ("
+            + (ignoreCase ? "ignoring case" : "case sensitive") + ") as: [!]FLD?VAL",
+        topScreenModel.getFilterHistories(), (inputString) -> {
+          if (inputString.isEmpty()) {
+            return topScreenView;
+          }
+
+          if (!topScreenModel.addFilter(inputString, ignoreCase)) {
+            return goToMessageMode(screen, terminal, row, "Unacceptable filter expression");
+          }
+
+          paging.init();
           return topScreenView;
-        }
-
-        if (!topScreenModel.addFilter(inputString, ignoreCase)) {
-          return goToMessageMode(screen, terminal, row, "Unacceptable filter expression");
-        }
-
-        paging.init();
-        return topScreenView;
-      });
+        });
   }
 
   public void clearFilters() {

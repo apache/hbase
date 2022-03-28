@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsWithDeletes.class);
+      HBaseClassTestRule.forClass(TestVisibilityLabelsWithDeletes.class);
 
   @Override
   protected Table createTable(byte[] fam) throws IOException {
@@ -98,7 +98,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
@@ -154,7 +154,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d1 = new Delete(row1);
             d1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d1.addColumns(fam, qual);
@@ -203,7 +203,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addColumns(fam, qual);
@@ -256,7 +256,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d1 = new Delete(row1);
             d1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d1.addFamily(fam);
@@ -309,7 +309,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -328,7 +328,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -358,7 +358,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -376,7 +376,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -405,7 +405,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -424,7 +424,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -454,7 +454,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -472,7 +472,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -501,7 +501,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             // The delete would not be able to apply it because of visibility mismatch
@@ -521,7 +521,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
@@ -552,7 +552,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addFamily(fam);
@@ -578,7 +578,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
             d.addFamily(fam);
@@ -622,7 +622,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addColumns(fam, qual);
@@ -648,7 +648,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
             d.addColumns(fam, qual);
@@ -691,7 +691,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
             d.addColumns(fam, qual, 126L);
@@ -701,7 +701,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           }
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addColumn(fam, qual, 123L);
@@ -748,7 +748,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addColumn(fam, qual, 123L);
@@ -756,7 +756,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           }
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
             d.addColumn(fam, qual, 123L);
@@ -801,7 +801,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           d3.addFamily(fam);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             table.delete(createList(d1, d2, d3));
           } catch (Throwable t) {
             throw new IOException(t);
@@ -846,7 +846,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           d2.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
           d2.addColumns(fam, qual);
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             table.delete(createList(d1, d2));
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1020,7 +1020,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
@@ -1085,7 +1085,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addColumn(fam, qual);
@@ -1148,7 +1148,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
             d.addColumn(fam, qual);
@@ -1232,7 +1232,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addColumn(fam, qual);
@@ -1298,7 +1298,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addFamily(fam);
@@ -1350,7 +1350,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
           d.addColumns(fam, qual, 125L);
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1420,7 +1420,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           d2.addColumns(fam, qual1, 125L);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             table.delete(createList(d1, d2));
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1463,7 +1463,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
           d2.addColumns(fam, qual1, 126L);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             table.delete(createList(d1, d2));
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1491,7 +1491,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addFamily(fam);
             table.delete(d);
@@ -1529,7 +1529,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addFamily(fam);
@@ -1592,7 +1592,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
@@ -1647,7 +1647,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
@@ -1700,7 +1700,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -1752,7 +1752,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -1794,17 +1794,17 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   @Test
   public void testMultipleDeleteFamilyVersionWithDiffLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        @Override
-        public VisibilityLabelsResponse run() throws Exception {
-          try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
-              SUPERUSER.getShortName());
-          } catch (Throwable e) {
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
+                SUPERUSER.getShortName());
+            } catch (Throwable e) {
+            }
+            return null;
           }
-          return null;
-        }
-      };
+        };
     SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -1812,7 +1812,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addFamilyVersion(fam, 123L);
@@ -1864,7 +1864,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -1910,7 +1910,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addFamily(fam);
@@ -1945,17 +1945,17 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   @Test
   public void testSpecificDeletesFollowedByDeleteFamily1() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        @Override
-        public VisibilityLabelsResponse run() throws Exception {
-          try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
-              SUPERUSER.getShortName());
-          } catch (Throwable e) {
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
+                SUPERUSER.getShortName());
+            } catch (Throwable e) {
+            }
+            return null;
           }
-          return null;
-        }
-      };
+        };
     SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -1963,7 +1963,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2010,7 +2010,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
             d.addFamily(fam);
@@ -2051,7 +2051,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addColumn(fam, qual, 125L);
@@ -2102,7 +2102,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2156,7 +2156,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")" + "|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2208,7 +2208,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addColumn(fam, qual, 127L);
@@ -2267,7 +2267,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2324,7 +2324,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2384,7 +2384,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
             d.addColumn(fam, qual, 125L);
@@ -2435,7 +2435,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2484,7 +2484,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2536,7 +2536,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
                 "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
@@ -2589,7 +2589,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addColumn(fam, qual, 125L);
             table.delete(d);
@@ -2613,7 +2613,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addColumns(fam, qual, 125L);
             table.delete(d);
@@ -2638,7 +2638,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addFamily(fam, 125L);
             table.delete(d);
@@ -2663,7 +2663,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addFamily(fam);
             table.delete(d);
@@ -2688,7 +2688,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addColumns(fam, qual);
             table.delete(d);
@@ -2713,7 +2713,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addFamilyVersion(fam, 126L);
             table.delete(d);
@@ -2788,7 +2788,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.addColumn(fam, qual, 124L);
             d.setCellVisibility(new CellVisibility(PRIVATE));

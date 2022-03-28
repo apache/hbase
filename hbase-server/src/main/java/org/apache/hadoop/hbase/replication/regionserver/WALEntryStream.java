@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -82,9 +81,9 @@ class WALEntryStream implements Closeable {
    * @param metrics the replication metrics
    * @throws IOException throw IO exception from stream
    */
-  public WALEntryStream(ReplicationSourceLogQueue logQueue, Configuration conf,
-      long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
-      MetricsSource metrics, String walGroupId) throws IOException {
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, Configuration conf, long startPosition,
+      WALFileLengthProvider walFileLengthProvider, ServerName serverName, MetricsSource metrics,
+      String walGroupId) throws IOException {
     this.logQueue = logQueue;
     this.fs = CommonFSUtils.getWALFileSystem(conf);
     this.conf = conf;
@@ -109,7 +108,7 @@ class WALEntryStream implements Closeable {
    * Returns the next WAL entry in this stream but does not advance.
    */
   public Entry peek() throws IOException {
-    return hasNext() ? currentEntry: null;
+    return hasNext() ? currentEntry : null;
   }
 
   /**
@@ -224,15 +223,15 @@ class WALEntryStream implements Closeable {
         if (currentPositionOfReader < stat.getLen()) {
           final long skippedBytes = stat.getLen() - currentPositionOfReader;
           // See the commits in HBASE-25924/HBASE-25932 for context.
-          LOG.warn("Reached the end of WAL {}. It was not closed cleanly," +
-              " so we did not parse {} bytes of data.", currentPath, skippedBytes);
+          LOG.warn("Reached the end of WAL {}. It was not closed cleanly,"
+              + " so we did not parse {} bytes of data.",
+            currentPath, skippedBytes);
           metrics.incrUncleanlyClosedWALs();
           metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
         }
       } else if (currentPositionOfReader + trailerSize < stat.getLen()) {
-        LOG.warn(
-          "Processing end of WAL {} at position {}, which is too far away from" +
-            " reported file length {}. Restarting WAL reading (see HBASE-15983 for details). {}",
+        LOG.warn("Processing end of WAL {} at position {}, which is too far away from"
+            + " reported file length {}. Restarting WAL reading (see HBASE-15983 for details). {}",
           currentPath, currentPositionOfReader, stat.getLen(), getCurrentPathStat());
         setPosition(0);
         resetReader();
@@ -242,8 +241,8 @@ class WALEntryStream implements Closeable {
       }
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Reached the end of " + this.currentPath + " and length of the file is " +
-        (stat == null ? "N/A" : stat.getLen()));
+      LOG.trace("Reached the end of " + this.currentPath + " and length of the file is "
+          + (stat == null ? "N/A" : stat.getLen()));
     }
     metrics.incrCompletedWAL();
     return true;
@@ -268,8 +267,8 @@ class WALEntryStream implements Closeable {
       // See HBASE-14004, for AsyncFSWAL which uses fan-out, it is possible that we read uncommitted
       // data, so we need to make sure that we do not read beyond the committed file length.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("The provider tells us the valid length for " + currentPath + " is " +
-            fileLength.getAsLong() + ", but we have advanced to " + readerPos);
+        LOG.debug("The provider tells us the valid length for " + currentPath + " is "
+            + fileLength.getAsLong() + ", but we have advanced to " + readerPos);
       }
       resetReader();
       return true;
@@ -341,12 +340,12 @@ class WALEntryStream implements Closeable {
       }
     } catch (FileNotFoundException fnfe) {
       handleFileNotFound(path, fnfe);
-    }  catch (RemoteException re) {
+    } catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
       if (!(ioe instanceof FileNotFoundException)) {
         throw ioe;
       }
-      handleFileNotFound(path, (FileNotFoundException)ioe);
+      handleFileNotFound(path, (FileNotFoundException) ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
       LOG.warn("Try to recover the WAL lease " + path, lnre);

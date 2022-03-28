@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.conf;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -29,7 +30,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestConfigurationManager {
 
   @ClassRule
@@ -71,8 +72,8 @@ public class TestConfigurationManager {
   }
 
   /**
-   * Test if observers get notified by the <code>ConfigurationManager</code>
-   * when the Configuration is reloaded.
+   * Test if observers get notified by the <code>ConfigurationManager</code> when the Configuration
+   * is reloaded.
    */
   @Test
   public void testCheckIfObserversNotified() {

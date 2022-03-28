@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -96,18 +96,18 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
 
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        @Override
-        public VisibilityLabelsResponse run() throws Exception {
-          String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
-          try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            VisibilityClient.addLabels(conn, labels);
-          } catch (Throwable t) {
-            throw new IOException(t);
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              VisibilityClient.addLabels(conn, labels);
+            } catch (Throwable t) {
+              throw new IOException(t);
+            }
+            return null;
           }
-          return null;
-        }
-      };
+        };
     SUPERUSER.runAs(action);
   }
 
@@ -115,17 +115,18 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
 
   protected final void setAuths() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        @Override
-        public VisibilityLabelsResponse run() throws Exception {
-          try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            return VisibilityClient.setAuths(conn,
-              new String[] { CONFIDENTIAL, PRIVATE, SECRET, TOPSECRET }, SUPERUSER.getShortName());
-          } catch (Throwable e) {
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              return VisibilityClient.setAuths(conn,
+                new String[] { CONFIDENTIAL, PRIVATE, SECRET, TOPSECRET },
+                SUPERUSER.getShortName());
+            } catch (Throwable e) {
+            }
+            return null;
           }
-          return null;
-        }
-      };
+        };
     SUPERUSER.runAs(action);
   }
 
@@ -172,7 +173,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "&" + SECRET));
             d.addColumns(fam, qual);
@@ -209,7 +210,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row2);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
             d.addFamily(fam);
@@ -241,13 +242,13 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     long[] ts = new long[] { 123L, 125L };
-    try (
-      Table table = createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
+    try (Table table =
+        createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
             d.addFamilyVersion(fam, 123L);
@@ -279,13 +280,13 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     long[] ts = new long[] { 123L, 125L };
-    try (
-      Table table = createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
+    try (Table table =
+        createTableAndWriteDataWithLabels(ts, CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
             d.addColumn(fam, qual, 123L);

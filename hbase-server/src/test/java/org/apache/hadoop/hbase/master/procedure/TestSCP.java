@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,7 @@ public class TestSCP extends TestSCPBase {
       HMaster master = util.getHBaseCluster().getMaster();
       final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
       ServerCrashProcedure procB =
-        new ServerCrashProcedure(pExecutor.getEnvironment(), rsToKill, false, false);
+          new ServerCrashProcedure(pExecutor.getEnvironment(), rsToKill, false, false);
       AssignmentTestingUtil.killRs(util, rsToKill);
       long procId = getSCPProcId(pExecutor);
       Procedure<?> procA = pExecutor.getProcedure(procId);

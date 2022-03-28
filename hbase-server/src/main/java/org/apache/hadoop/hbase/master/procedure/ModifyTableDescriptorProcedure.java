@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
  */
 @InterfaceAudience.Private
 public abstract class ModifyTableDescriptorProcedure
-  extends AbstractStateMachineTableProcedure<ModifyTableDescriptorState> {
+    extends AbstractStateMachineTableProcedure<ModifyTableDescriptorState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyTableDescriptorProcedure.class);
 
@@ -76,11 +76,11 @@ public abstract class ModifyTableDescriptorProcedure
    * you could just return {@link Optional#empty()}.
    */
   protected abstract Optional<TableDescriptor> modify(MasterProcedureEnv env,
-    TableDescriptor current) throws IOException;
+      TableDescriptor current) throws IOException;
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ModifyTableDescriptorState state)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     try {
       switch (state) {
         case MODIFY_TABLE_DESCRIPTOR_PREPARE:
@@ -126,7 +126,7 @@ public abstract class ModifyTableDescriptorProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, ModifyTableDescriptorState state)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     if (state == ModifyTableDescriptorState.MODIFY_TABLE_DESCRIPTOR_PREPARE) {
       return;
     }
@@ -157,7 +157,7 @@ public abstract class ModifyTableDescriptorProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     ModifyTableDescriptorStateData.Builder builder = ModifyTableDescriptorStateData.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(tableName));
+        .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (modifiedTableDescriptor != null) {
       builder.setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
     }
@@ -168,7 +168,7 @@ public abstract class ModifyTableDescriptorProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     ModifyTableDescriptorStateData data =
-      serializer.deserialize(ModifyTableDescriptorStateData.class);
+        serializer.deserialize(ModifyTableDescriptorStateData.class);
     tableName = ProtobufUtil.toTableName(data.getTableName());
     if (data.hasModifiedTableSchema()) {
       modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(data.getModifiedTableSchema());

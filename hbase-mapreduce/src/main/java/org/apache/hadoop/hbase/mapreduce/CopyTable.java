@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,9 +45,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tool used to copy a table to another one which can be on a different setup.
- * It is also configurable with a start and time as well as a specification
- * of the region server implementation if different from the local cluster.
+ * Tool used to copy a table to another one which can be on a different setup. It is also
+ * configurable with a start and time as well as a specification of the region server implementation
+ * if different from the local cluster.
  */
 @InterfaceAudience.Public
 public class CopyTable extends Configured implements Tool {
@@ -102,8 +101,7 @@ public class CopyTable extends Configured implements Tool {
 
   /**
    * Sets up the actual job.
-   *
-   * @param args  The command line parameters.
+   * @param args The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
@@ -146,20 +144,20 @@ public class CopyTable extends Configured implements Tool {
       scan.withStopRow(Bytes.toBytesBinary(stopRow));
     }
 
-    if(families != null) {
+    if (families != null) {
       String[] fams = families.split(",");
-      Map<String,String> cfRenameMap = new HashMap<>();
-      for(String fam : fams) {
+      Map<String, String> cfRenameMap = new HashMap<>();
+      for (String fam : fams) {
         String sourceCf;
-        if(fam.contains(":")) {
-            // fam looks like "sourceCfName:destCfName"
-            String[] srcAndDest = fam.split(":", 2);
-            sourceCf = srcAndDest[0];
-            String destCf = srcAndDest[1];
-            cfRenameMap.put(sourceCf, destCf);
+        if (fam.contains(":")) {
+          // fam looks like "sourceCfName:destCfName"
+          String[] srcAndDest = fam.split(":", 2);
+          sourceCf = srcAndDest[0];
+          String destCf = srcAndDest[1];
+          cfRenameMap.put(sourceCf, destCf);
         } else {
-            // fam is just "sourceCf"
-            sourceCf = fam;
+          // fam is just "sourceCf"
+          sourceCf = fam;
         }
         scan.addFamily(Bytes.toBytes(sourceCf));
       }
@@ -191,14 +189,14 @@ public class CopyTable extends Configured implements Tool {
   }
 
   /*
-   * @param errorMsg Error message.  Can be null.
+   * @param errorMsg Error message. Can be null.
    */
   private static void printUsage(final String errorMsg) {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] " +
-        "[--new.name=NEW] [--peer.adr=ADR] <tablename | snapshotName>");
+    System.err.println("Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] "
+        + "[--new.name=NEW] [--peer.adr=ADR] <tablename | snapshotName>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" rs.class     hbase.regionserver.class of the peer cluster");
@@ -218,18 +216,19 @@ public class CopyTable extends Configured implements Tool {
     System.err.println("              To copy from cf1 to cf2, give sourceCfName:destCfName. ");
     System.err.println("              To keep the same name, just give \"cfName\"");
     System.err.println(" all.cells    also copy delete markers and deleted cells");
-    System.err.println(" bulkload     Write input into HFiles and bulk load to the destination "
-        + "table");
+    System.err.println(
+      " bulkload     Write input into HFiles and bulk load to the destination " + "table");
     System.err.println(" snapshot     Copy the data from snapshot to destination table.");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename    Name of the table to copy");
     System.err.println();
     System.err.println("Examples:");
-    System.err.println(" To copy 'TestTable' to a cluster that uses replication for a 1 hour window:");
-    System.err.println(" $ hbase " +
-        "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 " +
-        "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
+    System.err
+        .println(" To copy 'TestTable' to a cluster that uses replication for a 1 hour window:");
+    System.err.println(" $ hbase "
+        + "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 "
+        + "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
     System.err.println(" To copy data from 'sourceTableSnapshot' to 'destTable': ");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
         + "--snapshot --new.name=destTable sourceTableSnapshot");
@@ -241,8 +240,7 @@ public class CopyTable extends Configured implements Tool {
         + "  decreases the round trip time to the server and may increase performance.\n"
         + "    -Dhbase.client.scanner.caching=100\n"
         + "  The following should always be set to false, to prevent writing data twice, which may produce \n"
-        + "  inaccurate results.\n"
-        + "    -Dmapreduce.map.speculative=false");
+        + "  inaccurate results.\n" + "    -Dmapreduce.map.speculative=false");
   }
 
   private boolean doCommandLine(final String[] args) {
@@ -333,7 +331,7 @@ public class CopyTable extends Configured implements Tool {
           continue;
         }
 
-        if(cmd.startsWith("--snapshot")){
+        if (cmd.startsWith("--snapshot")) {
           readingSnapshot = true;
           continue;
         }
@@ -393,8 +391,7 @@ public class CopyTable extends Configured implements Tool {
 
   /**
    * Main entry point.
-   *
-   * @param args  The command line parameters.
+   * @param args The command line parameters.
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
@@ -419,7 +416,7 @@ public class CopyTable extends Configured implements Tool {
       LOG.info("command: ./bin/hbase {} {} {}", BulkLoadHFilesTool.NAME,
         this.bulkloadDir.toString(), this.dstTableName);
       if (!BulkLoadHFiles.create(getConf()).bulkLoad(TableName.valueOf(dstTableName), bulkloadDir)
-        .isEmpty()) {
+          .isEmpty()) {
         // bulkloadDir is deleted only BulkLoadHFiles was successful so that one can rerun
         // BulkLoadHFiles.
         FileSystem fs = CommonFSUtils.getCurrentFileSystem(getConf());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestClientTokenUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientTokenUtil.class);
+      HBaseClassTestRule.forClass(TestClientTokenUtil.class);
 
   private URLClassLoader cl;
 
@@ -81,13 +81,13 @@ public class TestClientTokenUtil {
     shouldInjectFault.set(null, new ServiceException(injected));
 
     try {
-      ClientTokenUtil.obtainToken((Connection)null);
+      ClientTokenUtil.obtainToken((Connection) null);
       fail("Should have injected exception.");
     } catch (IOException e) {
       assertException(injected, e);
     }
 
-    CompletableFuture<?> future = ClientTokenUtil.obtainToken((AsyncConnection)null);
+    CompletableFuture<?> future = ClientTokenUtil.obtainToken((AsyncConnection) null);
     try {
       future.get();
       fail("Should have injected exception.");
@@ -95,7 +95,7 @@ public class TestClientTokenUtil {
       assertException(injected, e);
     }
     Boolean loaded = (Boolean) cl.loadClass(ProtobufUtil.class.getCanonicalName())
-      .getDeclaredMethod("isClassLoaderLoaded").invoke(null);
+        .getDeclaredMethod("isClassLoaderLoaded").invoke(null);
     assertFalse("Should not have loaded DynamicClassLoader", loaded);
   }
 }

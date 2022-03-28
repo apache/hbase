@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,8 +102,8 @@ class MasterRegionFlusherAndCompactor implements Closeable {
   private volatile boolean closed = false;
 
   MasterRegionFlusherAndCompactor(Configuration conf, Abortable abortable, HRegion region,
-    long flushSize, long flushPerChanges, long flushIntervalMs, int compactMin,
-    Path globalArchivePath, String archivedHFileSuffix) {
+      long flushSize, long flushPerChanges, long flushIntervalMs, int compactMin,
+      Path globalArchivePath, String archivedHFileSuffix) {
     this.conf = conf;
     this.abortable = abortable;
     this.region = region;
@@ -117,15 +117,15 @@ class MasterRegionFlusherAndCompactor implements Closeable {
     flushThread.setDaemon(true);
     flushThread.start();
     compactExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-      .setNameFormat(region.getRegionInfo().getTable() + "-Store-Compactor").setDaemon(true)
-      .build());
+        .setNameFormat(region.getRegionInfo().getTable() + "-Store-Compactor").setDaemon(true)
+        .build());
     LOG.info("Constructor flushSize={}, flushPerChanges={}, flushIntervalMs={}, compactMin={}",
       flushSize, flushPerChanges, flushIntervalMs, compactMin);
   }
 
   // inject our flush related configurations
   static void setupConf(Configuration conf, long flushSize, long flushPerChanges,
-    long flushIntervalMs) {
+      long flushIntervalMs) {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
     conf.setLong(HRegion.MEMSTORE_FLUSH_PER_CHANGES, flushPerChanges);
     conf.setLong(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, flushIntervalMs);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestRegionReplicaReplicationError {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaReplicationError.class);
+      HBaseClassTestRule.forClass(TestRegionReplicaReplicationError.class);
 
   public static final class ErrorReplayRSRpcServices extends RSRpcServices {
 
@@ -98,7 +98,7 @@ public class TestRegionReplicaReplicationError {
   }
 
   public static final class RSForTest
-    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+      extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public RSForTest(Configuration conf) throws IOException, InterruptedException {
       super(conf);
@@ -125,7 +125,7 @@ public class TestRegionReplicaReplicationError {
     HTU.startMiniCluster(
       StartTestingClusterOption.builder().rsClass(RSForTest.class).numRegionServers(3).build());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TN).setRegionReplication(3)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
     HTU.getAdmin().createTable(td);
   }
 

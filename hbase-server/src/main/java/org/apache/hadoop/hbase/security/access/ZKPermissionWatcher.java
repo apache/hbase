@@ -15,22 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKListener;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,15 +27,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * Handles synchronization of access control list entries and updates
- * throughout all nodes in the cluster.  The {@link AccessController} instance
- * on the {@code _acl_} table regions, creates a znode for each table as
- * {@code /hbase/acl/tablename}, with the znode data containing a serialized
- * list of the permissions granted for the table.  The {@code AccessController}
- * instances on all other cluster hosts watch the znodes for updates, which
- * trigger updates in the {@link AuthManager} permission cache.
+ * Handles synchronization of access control list entries and updates throughout all nodes in the
+ * cluster. The {@link AccessController} instance on the {@code _acl_} table regions, creates a
+ * znode for each table as {@code /hbase/acl/tablename}, with the znode data containing a serialized
+ * list of the permissions granted for the table. The {@code AccessController} instances on all
+ * other cluster hosts watch the znodes for updates, which trigger updates in the
+ * {@link AuthManager} permission cache.
  */
 @InterfaceAudience.Private
 public class ZKPermissionWatcher extends ZKListener implements Closeable {
@@ -63,15 +61,14 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
   private final ExecutorService executor;
   private Future<?> childrenChangedFuture;
 
-  public ZKPermissionWatcher(ZKWatcher watcher,
-      AuthManager authManager, Configuration conf) {
+  public ZKPermissionWatcher(ZKWatcher watcher, AuthManager authManager, Configuration conf) {
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
     this.aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder().setNameFormat("zk-permission-watcher-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   public void start() throws KeeperException {
@@ -92,7 +89,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
           }).get();
         } catch (ExecutionException ex) {
           if (ex.getCause() instanceof KeeperException) {
-            throw (KeeperException)ex.getCause();
+            throw (KeeperException) ex.getCause();
           } else {
             throw new RuntimeException(ex.getCause());
           }
@@ -182,7 +179,6 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
     }
   }
 
-
   @Override
   public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
@@ -194,14 +190,14 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
           // task may have finished between our check and attempted cancel, this is fine.
           if (!childrenChangedFuture.isDone()) {
             LOG.warn("Could not cancel processing node children changed event, "
-              + "please file a JIRA and attach logs if possible.");
+                + "please file a JIRA and attach logs if possible.");
           }
         }
       }
       childrenChangedFuture = asyncProcessNodeUpdate(() -> {
         try {
           final List<ZKUtil.NodeAndData> nodeList =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode, false);
+              ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode, false);
           refreshNodes(nodeList);
         } catch (KeeperException ke) {
           String msg = "ZooKeeper error while reading node children data for path " + path;
@@ -239,8 +235,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
       try {
         refreshAuthManager(entry, n.getData());
       } catch (IOException ioe) {
-        LOG.error("Failed parsing permissions for table '" + entry +
-            "' from zk", ioe);
+        LOG.error("Failed parsing permissions for table '" + entry + "' from zk", ioe);
       }
     }
   }
@@ -248,7 +243,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
   private void refreshAuthManager(String entry, byte[] nodeData) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Updating permissions cache from {} with data {}", entry,
-          Bytes.toStringBinary(nodeData));
+        Bytes.toStringBinary(nodeData));
     }
     if (PermissionStorage.isNamespaceEntry(entry)) {
       authManager.refreshNamespaceCacheFromWritable(PermissionStorage.fromNamespaceEntry(entry),
@@ -272,9 +267,8 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
       ZKUtil.createWithParents(watcher, zkNode);
       ZKUtil.updateExistingNodeData(watcher, zkNode, permsData, -1);
     } catch (KeeperException e) {
-      LOG.error("Failed updating permissions for entry '" +
-          entryName + "'", e);
-      watcher.abort("Failed writing node "+zkNode+" to zookeeper", e);
+      LOG.error("Failed updating permissions for entry '" + entryName + "'", e);
+      watcher.abort("Failed writing node " + zkNode + " to zookeeper", e);
     }
   }
 

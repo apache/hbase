@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.quotas;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 
@@ -63,10 +63,9 @@ public abstract class QuotaSettings {
   }
 
   /**
-   * Converts the protocol buffer request into a QuotaSetting POJO. Arbitrarily
-   * enforces that the request only contain one "limit", despite the message
-   * allowing multiple. The public API does not allow such use of the message.
-   *
+   * Converts the protocol buffer request into a QuotaSetting POJO. Arbitrarily enforces that the
+   * request only contain one "limit", despite the message allowing multiple. The public API does
+   * not allow such use of the message.
    * @param request The protocol buffer request.
    * @return A {@link QuotaSettings} POJO.
    */
@@ -94,8 +93,8 @@ public abstract class QuotaSettings {
         throw new IllegalStateException(
             "SetQuotaRequest has multiple limits: " + TextFormat.shortDebugString(request));
       }
-      return new QuotaGlobalsSettingsBypass(
-          username, tableName, namespace, regionServer, request.getBypassGlobals());
+      return new QuotaGlobalsSettingsBypass(username, tableName, namespace, regionServer,
+          request.getBypassGlobals());
     } else if (request.hasSpaceLimit()) {
       // Make sure we don't have the below limit as well
       if (request.hasThrottle()) {
@@ -104,11 +103,10 @@ public abstract class QuotaSettings {
       }
       // Sanity check on the pb received.
       if (!request.getSpaceLimit().hasQuota()) {
-        throw new IllegalArgumentException(
-            "SpaceLimitRequest is missing the expected SpaceQuota.");
+        throw new IllegalArgumentException("SpaceLimitRequest is missing the expected SpaceQuota.");
       }
-      return QuotaSettingsFactory.fromSpace(
-          tableName, namespace, request.getSpaceLimit().getQuota());
+      return QuotaSettingsFactory.fromSpace(tableName, namespace,
+        request.getSpaceLimit().getQuota());
     } else if (request.hasThrottle()) {
       return new ThrottleSettings(username, tableName, namespace, regionServer,
           request.getThrottle());
@@ -118,9 +116,8 @@ public abstract class QuotaSettings {
   }
 
   /**
-   * Convert a QuotaSettings to a protocol buffer SetQuotaRequest.
-   * This is used internally by the Admin client to serialize the quota settings
-   * and send them to the master.
+   * Convert a QuotaSettings to a protocol buffer SetQuotaRequest. This is used internally by the
+   * Admin client to serialize the quota settings and send them to the master.
    */
   @InterfaceAudience.Private
   public static SetQuotaRequest buildSetQuotaRequestProto(final QuotaSettings settings) {
@@ -142,9 +139,8 @@ public abstract class QuotaSettings {
   }
 
   /**
-   * Called by toSetQuotaRequestProto()
-   * the subclass should implement this method to set the specific SetQuotaRequest
-   * properties.
+   * Called by toSetQuotaRequestProto() the subclass should implement this method to set the
+   * specific SetQuotaRequest properties.
    */
   @InterfaceAudience.Private
   protected abstract void setupSetQuotaRequest(SetQuotaRequest.Builder builder);
@@ -174,40 +170,46 @@ public abstract class QuotaSettings {
 
   protected static String sizeToString(final long size) {
     if (size >= (1L << 50)) {
-      return String.format("%.2fP", (double)size / (1L << 50));
+      return String.format("%.2fP", (double) size / (1L << 50));
     }
     if (size >= (1L << 40)) {
-      return String.format("%.2fT", (double)size / (1L << 40));
+      return String.format("%.2fT", (double) size / (1L << 40));
     }
     if (size >= (1L << 30)) {
-      return String.format("%.2fG", (double)size / (1L << 30));
+      return String.format("%.2fG", (double) size / (1L << 30));
     }
     if (size >= (1L << 20)) {
-      return String.format("%.2fM", (double)size / (1L << 20));
+      return String.format("%.2fM", (double) size / (1L << 20));
     }
     if (size >= (1L << 10)) {
-      return String.format("%.2fK", (double)size / (1L << 10));
+      return String.format("%.2fK", (double) size / (1L << 10));
     }
-    return String.format("%.2fB", (double)size);
+    return String.format("%.2fB", (double) size);
   }
 
   protected static String timeToString(final TimeUnit timeUnit) {
     switch (timeUnit) {
-      case NANOSECONDS:  return "nsec";
-      case MICROSECONDS: return "usec";
-      case MILLISECONDS: return "msec";
-      case SECONDS:      return "sec";
-      case MINUTES:      return "min";
-      case HOURS:        return "hour";
-      case DAYS:         return "day";
+      case NANOSECONDS:
+        return "nsec";
+      case MICROSECONDS:
+        return "usec";
+      case MILLISECONDS:
+        return "msec";
+      case SECONDS:
+        return "sec";
+      case MINUTES:
+        return "min";
+      case HOURS:
+        return "hour";
+      case DAYS:
+        return "day";
     }
     throw new RuntimeException("Invalid TimeUnit " + timeUnit);
   }
 
   /**
-   * Merges the provided settings with {@code this} and returns a new settings
-   * object to the caller if the merged settings differ from the original.
-   *
+   * Merges the provided settings with {@code this} and returns a new settings object to the caller
+   * if the merged settings differ from the original.
    * @param newSettings The new settings to merge in.
    * @return The merged {@link QuotaSettings} object or null if the quota should be deleted.
    */
@@ -216,7 +218,6 @@ public abstract class QuotaSettings {
   /**
    * Validates that settings being merged into {@code this} is targeting the same "subject", e.g.
    * user, table, namespace.
-   *
    * @param mergee The quota settings to be merged into {@code this}.
    * @throws IllegalArgumentException if the subjects are not equal.
    */

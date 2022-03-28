@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaUpdatesGoToPriorityQueue.class);
+      HBaseClassTestRule.forClass(TestMetaUpdatesGoToPriorityQueue.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -83,15 +83,15 @@ public class TestMetaUpdatesGoToPriorityQueue {
           ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
       } else {
         throw new DoNotRetryIOException(
-          "multi in MetaEditor doesn't support " + mutation.getClass().getName());
+            "multi in MetaEditor doesn't support " + mutation.getClass().getName());
       }
     }
     MutateRowsRequest request = builder.build();
     AsyncTable<?> table = UTIL.getAsyncConnection().getTable(TableName.META_TABLE_NAME);
     CompletableFuture<MutateRowsResponse> future =
-      table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
-        MultiRowMutationService::newStub,
-        (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
+        table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
+          MultiRowMutationService::newStub,
+          (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
     FutureUtils.get(future);
   }
 
@@ -105,10 +105,10 @@ public class TestMetaUpdatesGoToPriorityQueue {
     long rid = 1000;
     byte[] splitKey = Bytes.toBytes("a");
     RegionInfo splitA =
-      RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(parent.getStartKey())
-        .setEndKey(splitKey).setSplit(false).setRegionId(rid).build();
+        RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(parent.getStartKey())
+            .setEndKey(splitKey).setSplit(false).setRegionId(rid).build();
     RegionInfo splitB = RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(splitKey)
-      .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
+        .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
 
     // find the meta server
     SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();

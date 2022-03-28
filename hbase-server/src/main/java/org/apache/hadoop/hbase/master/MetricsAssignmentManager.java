@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
@@ -38,8 +37,8 @@ public class MetricsAssignmentManager {
   private final ProcedureMetrics mergeProcMetrics;
 
   public MetricsAssignmentManager() {
-    assignmentManagerSource = CompatibilitySingletonFactory.getInstance(
-        MetricsAssignmentManagerSource.class);
+    assignmentManagerSource =
+        CompatibilitySingletonFactory.getInstance(MetricsAssignmentManagerSource.class);
 
     assignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getAssignMetrics());
     unassignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getUnassignMetrics());
@@ -64,8 +63,8 @@ public class MetricsAssignmentManager {
   }
 
   /**
-   * update RIT count that are in this state for more than the threshold
-   * as defined by the property rit.metrics.threshold.time.
+   * update RIT count that are in this state for more than the threshold as defined by the property
+   * rit.metrics.threshold.time.
    * @param ritCountOverThreshold
    */
   public void updateRITCountOverThreshold(final int ritCountOverThreshold) {

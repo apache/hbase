@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,11 +74,11 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
+      LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
+      HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   private static DistributedFileSystem FS;
 
@@ -131,7 +131,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
     URI keyProviderUri =
-      new URI("jceks://file" + UTIL.getDataTestDir("test.jks").toUri().toString());
+        new URI("jceks://file" + UTIL.getDataTestDir("test.jks").toUri().toString());
     conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
     KeyProvider keyProvider = KeyProviderFactory.get(keyProviderUri, conf);
     keyProvider.createKey(TEST_KEY_NAME, KeyProvider.options(conf));

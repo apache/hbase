@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -128,9 +128,9 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       // disable it first and then enable it.
       PeerState newState = peers.refreshPeerState(peerId);
       // RS need to start work with the new replication config change
-      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig) ||
-        oldConfig.isSerial() != newConfig.isSerial() ||
-        (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))) {
+      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig)
+          || oldConfig.isSerial() != newConfig.isSerial()
+          || (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))) {
         replicationSourceManager.refreshSources(peerId);
       }
       success = true;
@@ -160,8 +160,9 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       SyncReplicationState newSyncReplicationState = peer.getNewSyncReplicationState();
       if (stage == 0) {
         if (newSyncReplicationState != SyncReplicationState.NONE) {
-          LOG.warn("The new sync replication state for peer {} has already been set to {}, " +
-            "this should be a retry, give up", peerId, newSyncReplicationState);
+          LOG.warn("The new sync replication state for peer {} has already been set to {}, "
+              + "this should be a retry, give up",
+            peerId, newSyncReplicationState);
           return;
         }
         // refresh the peer state first, as when we transit to STANDBY, we may need to disable the
@@ -186,8 +187,8 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       } else {
         if (newSyncReplicationState == SyncReplicationState.NONE) {
           LOG.warn(
-            "The new sync replication state for peer {} has already been clear, and the " +
-              "current state is {}, this should be a retry, give up",
+            "The new sync replication state for peer {} has already been clear, and the "
+                + "current state is {}, this should be a retry, give up",
             peerId, newSyncReplicationState);
           return;
         }
@@ -210,7 +211,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
             // reset the interrupted flag
             Thread.currentThread().interrupt();
             throw (IOException) new InterruptedIOException(
-              "Interrupted while waiting for wal roll finish").initCause(e);
+                "Interrupted while waiting for wal roll finish").initCause(e);
           }
         }
         SyncReplicationState oldState = peer.getSyncReplicationState();
@@ -225,7 +226,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
 
   @Override
   public void claimReplicationQueue(ServerName crashedServer, String queue)
-    throws ReplicationException, IOException {
+      throws ReplicationException, IOException {
     replicationSourceManager.claimQueue(crashedServer, queue);
   }
 }

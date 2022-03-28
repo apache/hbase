@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,11 +22,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility scanner that wraps a sortable collection and serves as a KeyValueScanner.
@@ -43,8 +41,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
     this(set, CellComparator.getInstance());
   }
 
-  public CollectionBackedScanner(SortedSet<Cell> set,
-      CellComparator comparator) {
+  public CollectionBackedScanner(SortedSet<Cell> set, CellComparator comparator) {
     this.comparator = comparator;
     data = set;
     init();
@@ -54,16 +51,14 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
     this(list, CellComparator.getInstance());
   }
 
-  public CollectionBackedScanner(List<Cell> list,
-      CellComparator comparator) {
+  public CollectionBackedScanner(List<Cell> list, CellComparator comparator) {
     Collections.sort(list, comparator);
     this.comparator = comparator;
     data = list;
     init();
   }
 
-  public CollectionBackedScanner(CellComparator comparator,
-      Cell... array) {
+  public CollectionBackedScanner(CellComparator comparator, Cell... array) {
     this.comparator = comparator;
 
     List<Cell> tmp = new ArrayList<>(array.length);
@@ -75,7 +70,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
 
   private void init() {
     iter = data.iterator();
-    if(iter.hasNext()){
+    if (iter.hasNext()) {
       current = iter.next();
     }
   }
@@ -88,7 +83,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   @Override
   public Cell next() {
     Cell oldCurrent = current;
-    if(iter.hasNext()){
+    if (iter.hasNext()) {
       current = iter.next();
     } else {
       current = null;
@@ -105,17 +100,16 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
 
   @Override
   public boolean reseek(Cell seekCell) {
-    while(iter.hasNext()){
+    while (iter.hasNext()) {
       Cell next = iter.next();
       int ret = comparator.compare(next, seekCell);
-      if(ret >= 0){
+      if (ret >= 0) {
         current = next;
         return true;
       }
     }
     return false;
   }
-
 
   @Override
   public void close() {

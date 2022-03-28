@@ -42,32 +42,31 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
    * Configure for the max count the excluded datanodes.
    */
   public static final String WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY =
-    "hbase.regionserver.async.wal.max.exclude.datanode.count";
+      "hbase.regionserver.async.wal.max.exclude.datanode.count";
   public static final int DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT = 3;
 
   /**
    * Configure for the TTL time of the datanodes excluded
    */
   public static final String WAL_EXCLUDE_DATANODE_TTL_KEY =
-    "hbase.regionserver.async.wal.exclude.datanode.info.ttl.hour";
+      "hbase.regionserver.async.wal.exclude.datanode.info.ttl.hour";
   public static final int DEFAULT_WAL_EXCLUDE_DATANODE_TTL = 6; // 6 hours
 
   private volatile Cache<DatanodeInfo, Long> excludeDNsCache;
   private final int maxExcludeDNCount;
   private final Configuration conf;
   // This is a map of providerId->StreamSlowMonitor
-  private final Map<String, StreamSlowMonitor> streamSlowMonitors =
-    new ConcurrentHashMap<>(1);
+  private final Map<String, StreamSlowMonitor> streamSlowMonitors = new ConcurrentHashMap<>(1);
 
   public ExcludeDatanodeManager(Configuration conf) {
     this.conf = conf;
     this.maxExcludeDNCount = conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
       DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT);
     this.excludeDNsCache = CacheBuilder.newBuilder()
-      .expireAfterWrite(this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY,
-        DEFAULT_WAL_EXCLUDE_DATANODE_TTL), TimeUnit.HOURS)
-      .maximumSize(this.maxExcludeDNCount)
-      .build();
+        .expireAfterWrite(
+          this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
+          TimeUnit.HOURS)
+        .maximumSize(this.maxExcludeDNCount).build();
   }
 
   /**
@@ -85,15 +84,15 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
         datanodeInfo, cause, excludeDNsCache.size());
       return true;
     }
-    LOG.debug("Try add datanode {} to exclude cache by [{}] failed, "
-        + "current exclude DNs are {}", datanodeInfo, cause, getExcludeDNs().keySet());
+    LOG.debug(
+      "Try add datanode {} to exclude cache by [{}] failed, " + "current exclude DNs are {}",
+      datanodeInfo, cause, getExcludeDNs().keySet());
     return false;
   }
 
   public StreamSlowMonitor getStreamSlowMonitor(String name) {
     String key = name == null || name.isEmpty() ? "defaultMonitorName" : name;
-    return streamSlowMonitors
-      .computeIfAbsent(key, k -> new StreamSlowMonitor(conf, key, this));
+    return streamSlowMonitors.computeIfAbsent(key, k -> new StreamSlowMonitor(conf, key, this));
   }
 
   public Map<DatanodeInfo, Long> getExcludeDNs() {
@@ -105,10 +104,12 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
     for (StreamSlowMonitor monitor : streamSlowMonitors.values()) {
       monitor.onConfigurationChange(conf);
     }
-    this.excludeDNsCache = CacheBuilder.newBuilder().expireAfterWrite(
-      this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
-      TimeUnit.HOURS).maximumSize(this.conf
-      .getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY, DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
-      .build();
+    this.excludeDNsCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(
+          this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
+          TimeUnit.HOURS)
+        .maximumSize(this.conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
+          DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
+        .build();
   }
 }

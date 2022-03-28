@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,14 +50,14 @@ public class TestMigrateNamespaceTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateNamespaceTable.class);
+      HBaseClassTestRule.forClass(TestMigrateNamespaceTable.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(1).
-        numAlwaysStandByMasters(1).numRegionServers(1).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(1)
+        .numAlwaysStandByMasters(1).numRegionServers(1).build();
     UTIL.startMiniCluster(option);
   }
 
@@ -72,13 +72,13 @@ public class TestMigrateNamespaceTable {
     try (Table table = UTIL.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME)) {
       for (int i = 0; i < 5; i++) {
         NamespaceDescriptor nd = NamespaceDescriptor.create("Test-NS-" + i)
-          .addConfiguration("key-" + i, "value-" + i).build();
+            .addConfiguration("key-" + i, "value-" + i).build();
         table.put(new Put(Bytes.toBytes(nd.getName())).addColumn(
           TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES,
           TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES,
           ProtobufUtil.toProtoNamespaceDescriptor(nd).toByteArray()));
         AbstractStateMachineNamespaceProcedure
-          .createDirectory(UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem(), nd);
+            .createDirectory(UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem(), nd);
       }
     }
     MasterThread masterThread = UTIL.getMiniHBaseCluster().getMasterThread();

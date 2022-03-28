@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,23 +47,21 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.assertEquals;
 
 /**
- * Test for rsgroup enable, unloaded regions from decommissoned host of a rsgroup
- * should be assigned to those regionservers belonging to the same rsgroup.
+ * Test for rsgroup enable, unloaded regions from decommissoned host of a rsgroup should be assigned
+ * to those regionservers belonging to the same rsgroup.
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestRegionMoverWithRSGroupEnable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoverWithRSGroupEnable.class);
+      HBaseClassTestRule.forClass(TestRegionMoverWithRSGroupEnable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoverWithRSGroupEnable.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String TEST_RSGROUP = "test";
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -85,9 +85,9 @@ public class TestRegionMoverWithRSGroupEnable {
     Collection<ServerName> allServers = admin.getRegionServers();
     // Remove rs contains hbase:meta, otherwise test looks unstable and buggy in test env.
     ServerName rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get()
-      .getServerName();
+        .map(t -> t.getRegionServer())
+        .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get()
+        .getServerName();
     LOG.info("{} contains hbase:meta", rsContainMeta);
     List<ServerName> modifiable = new ArrayList<>(allServers);
     modifiable.remove(rsContainMeta);
@@ -108,9 +108,8 @@ public class TestRegionMoverWithRSGroupEnable {
       TEST_UTIL.deleteTable(tableName);
     }
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f"))
-      .setRegionServerGroup(TEST_RSGROUP)
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).setRegionServerGroup(TEST_RSGROUP)
+        .build();
     String startKey = "a";
     String endKey = "z";
     admin.createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
@@ -122,14 +121,14 @@ public class TestRegionMoverWithRSGroupEnable {
     Address online = rsservers.get(1);
     String filename = new Path(TEST_UTIL.getDataTestDir(), "testRSGroupUnload").toString();
     RegionMoverBuilder builder =
-      new RegionMoverBuilder(decommission.toString(), TEST_UTIL.getConfiguration());
+        new RegionMoverBuilder(decommission.toString(), TEST_UTIL.getConfiguration());
     try (RegionMover rm = builder.filename(filename).ack(true).build()) {
       LOG.info("Unloading " + decommission.getHostname());
       rm.unload();
     }
     HRegionServer onlineRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .filter(rs -> rs.getServerName().getAddress().equals(online)).findFirst().get();
+        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(rs -> rs.getServerName().getAddress().equals(online)).findFirst().get();
     assertEquals(9, onlineRS.getNumberOfOnlineRegions());
   }
 

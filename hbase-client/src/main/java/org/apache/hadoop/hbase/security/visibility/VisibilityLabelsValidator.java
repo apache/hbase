@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.regex.Pattern;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,7 +53,7 @@ public class VisibilityLabelsValidator {
     validAuthChars['.'] = true;
     validAuthChars['/'] = true;
   }
-  
+
   static final boolean isValidAuthChar(byte b) {
     return validAuthChars[0xff & b];
   }

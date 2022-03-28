@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +55,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @InterfaceStability.Evolving
 public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   private static final Logger LOG =
-    LoggerFactory.getLogger(SingleProcessHBaseCluster.class.getName());
+      LoggerFactory.getLogger(SingleProcessHBaseCluster.class.getName());
   public LocalHBaseCluster hbaseCluster;
   private static int index;
 
@@ -66,7 +65,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numRegionServers)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     this(conf, 1, numRegionServers);
   }
 
@@ -77,7 +76,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     this(conf, numMasters, numRegionServers, null, null);
   }
 
@@ -88,9 +87,9 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
-    Class<? extends HMaster> masterClass,
-    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-    throws IOException, InterruptedException {
+      Class<? extends HMaster> masterClass,
+      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
     this(conf, numMasters, 0, numRegionServers, null, masterClass, regionserverClass);
   }
 
@@ -101,9 +100,9 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    *          each cluster start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
-    int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-    throws IOException, InterruptedException {
+      int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
     super(conf);
 
     // Hadoop 2
@@ -134,14 +133,14 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
     static Set<ServerName> killedServers = new HashSet<>();
 
     public MiniHBaseClusterRegionServer(Configuration conf)
-      throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       super(conf);
       this.user = User.getCurrent();
     }
 
     @Override
     protected void handleReportForDutyResponse(final RegionServerStartupResponse c)
-      throws IOException {
+        throws IOException {
       super.handleReportForDutyResponse(c);
       // Run this thread to shutdown our filesystem on way out.
       this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());
@@ -220,9 +219,9 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   }
 
   private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
-    final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-    throws IOException, InterruptedException {
+      final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
     try {
       if (masterClass == null) {
         masterClass = HMaster.class;
@@ -233,7 +232,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
       // start up a LocalHBaseCluster
       hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, numAlwaysStandByMasters, 0,
-        masterClass, regionserverClass);
+          masterClass, regionserverClass);
 
       // manually add the regionservers as other users
       for (int i = 0; i < nRegionNodes; i++) {
@@ -406,12 +405,12 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   }
 
   private JVMClusterUtil.RegionServerThread startRegionServer(Configuration configuration)
-    throws IOException {
+      throws IOException {
     User rsUser = HBaseTestingUtil.getDifferentUser(configuration, ".hfs." + index++);
     JVMClusterUtil.RegionServerThread t = null;
     try {
-      t =
-        hbaseCluster.addRegionServer(configuration, hbaseCluster.getRegionServers().size(), rsUser);
+      t = hbaseCluster.addRegionServer(configuration, hbaseCluster.getRegionServers().size(),
+        rsUser);
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
@@ -427,7 +426,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    * @return New RegionServerThread
    */
   public JVMClusterUtil.RegionServerThread startRegionServerAndWait(long timeout)
-    throws IOException {
+      throws IOException {
 
     JVMClusterUtil.RegionServerThread t = startRegionServer();
     ServerName rsServerName = t.getRegionServer().getServerName();
@@ -476,7 +475,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
    * @return the region server that was stopped
    */
   public JVMClusterUtil.RegionServerThread stopRegionServer(int serverNumber,
-    final boolean shutdownFS) {
+      final boolean shutdownFS) {
     JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
     server.getRegionServer().stop("Stopping rs " + serverNumber);
@@ -762,7 +761,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   public HRegionServer getRegionServer(ServerName serverName) {
     return hbaseCluster.getRegionServers().stream().map(t -> t.getRegionServer())
-      .filter(r -> r.getServerName().equals(serverName)).findFirst().orElse(null);
+        .filter(r -> r.getServerName().equals(serverName)).findFirst().orElse(null);
   }
 
   public List<HRegion> getRegions(byte[] tableName) {
@@ -813,7 +812,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   @Override
   public ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-    throws IOException {
+      throws IOException {
     int index = getServerWith(regionName);
     if (index < 0) {
       return null;

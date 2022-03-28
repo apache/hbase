@@ -66,7 +66,7 @@ public class TestCanaryTool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCanaryTool.class);
+      HBaseClassTestRule.forClass(TestCanaryTool.class);
 
   private HBaseTestingUtil testingUtility;
   private static final byte[] FAMILY = Bytes.toBytes("f");
@@ -85,14 +85,14 @@ public class TestCanaryTool {
     when(mockAppender.getName()).thenReturn("mockAppender");
     when(mockAppender.isStarted()).thenReturn(true);
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger("org.apache.hadoop.hbase")).addAppender(mockAppender);
+        .getLogger("org.apache.hadoop.hbase")).addAppender(mockAppender);
   }
 
   @After
   public void tearDown() throws Exception {
     testingUtility.shutdownMiniCluster();
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger("org.apache.hadoop.hbase")).removeAppender(mockAppender);
+        .getLogger("org.apache.hadoop.hbase")).removeAppender(mockAppender);
   }
 
   @Test
@@ -104,7 +104,7 @@ public class TestCanaryTool {
   @Test
   public void testZookeeperCanaryPermittedFailuresArgumentWorks() throws Exception {
     final String[] args =
-      { "-t", "10000", "-zookeeper", "-treatFailureAsError", "-permittedZookeeperFailures", "1" };
+        { "-t", "10000", "-zookeeper", "-treatFailureAsError", "-permittedZookeeperFailures", "1" };
     testZookeeperCanaryWithArgs(args);
   }
 
@@ -154,7 +154,7 @@ public class TestCanaryTool {
       // the test table has two column family. If readAllCF set true,
       // we expect read count is double of region count
       int expectedReadCount =
-        readAllCF ? 2 * sink.getTotalExpectedRegions() : sink.getTotalExpectedRegions();
+          readAllCF ? 2 * sink.getTotalExpectedRegions() : sink.getTotalExpectedRegions();
       assertEquals("canary region success count should equal total expected read count",
         expectedReadCount, sink.getReadSuccessCount());
       Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
@@ -252,7 +252,7 @@ public class TestCanaryTool {
   @Test
   public void testReadTableTimeouts() throws Exception {
     final TableName[] tableNames = new TableName[] { TableName.valueOf(name.getMethodName() + "1"),
-      TableName.valueOf(name.getMethodName() + "2") };
+        TableName.valueOf(name.getMethodName() + "2") };
     // Create 2 test tables.
     for (int j = 0; j < 2; j++) {
       Table table = testingUtility.createTable(tableNames[j], new byte[][] { FAMILY });
@@ -267,10 +267,10 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
     CanaryTool canary = new CanaryTool(executor, sink);
-    String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
-      tableNames[1].getNameAsString() + "=0";
+    String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + ","
+        + tableNames[1].getNameAsString() + "=0";
     String[] args = { "-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1",
-      name.getMethodName() + "2" };
+        name.getMethodName() + "2" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
     for (int i = 0; i < 2; i++) {
@@ -281,20 +281,20 @@ public class TestCanaryTool {
     }
     // One table's timeout is set for 0 ms and thus, should lead to an error.
     verify(mockAppender, times(1))
-      .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
-        @Override
-        public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
-          return argument.getMessage().getFormattedMessage()
-            .contains("exceeded the configured read timeout.");
-        }
-      }));
+        .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
+          @Override
+          public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
+            return argument.getMessage().getFormattedMessage()
+                .contains("exceeded the configured read timeout.");
+          }
+        }));
     verify(mockAppender, times(2))
-      .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
-        @Override
-        public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
-          return argument.getMessage().getFormattedMessage().contains("Configured read timeout");
-        }
-      }));
+        .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
+          @Override
+          public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
+            return argument.getMessage().getFormattedMessage().contains("Configured read timeout");
+          }
+        }));
   }
 
   @Test
@@ -307,12 +307,12 @@ public class TestCanaryTool {
     assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
     assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
     verify(mockAppender, times(1))
-      .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
-        @Override
-        public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
-          return argument.getMessage().getFormattedMessage().contains("Configured write timeout");
-        }
-      }));
+        .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
+          @Override
+          public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
+            return argument.getMessage().getFormattedMessage().contains("Configured write timeout");
+          }
+        }));
   }
 
   // no table created, so there should be no regions
@@ -320,13 +320,13 @@ public class TestCanaryTool {
   public void testRegionserverNoRegions() throws Exception {
     runRegionserverCanary();
     verify(mockAppender)
-      .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
-        @Override
-        public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
-          return argument.getMessage().getFormattedMessage()
-            .contains("Regionserver not serving any regions");
-        }
-      }));
+        .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
+          @Override
+          public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
+            return argument.getMessage().getFormattedMessage()
+                .contains("Regionserver not serving any regions");
+          }
+        }));
   }
 
   // by creating a table, there shouldn't be any region servers not serving any regions
@@ -336,13 +336,13 @@ public class TestCanaryTool {
     testingUtility.createTable(tableName, new byte[][] { FAMILY });
     runRegionserverCanary();
     verify(mockAppender, never())
-      .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
-        @Override
-        public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
-          return argument.getMessage().getFormattedMessage()
-            .contains("Regionserver not serving any regions");
-        }
-      }));
+        .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
+          @Override
+          public boolean matches(org.apache.logging.log4j.core.LogEvent argument) {
+            return argument.getMessage().getFormattedMessage()
+                .contains("Regionserver not serving any regions");
+          }
+        }));
   }
 
   @Test
@@ -361,7 +361,7 @@ public class TestCanaryTool {
     CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-t", "10000", name.getMethodName() };
     org.apache.hadoop.conf.Configuration conf =
-      new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
+        new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     assertEquals(0, ToolRunner.run(conf, canary, args));
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),

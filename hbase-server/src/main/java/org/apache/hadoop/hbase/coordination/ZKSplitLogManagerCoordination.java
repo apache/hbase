@@ -1,5 +1,5 @@
-/**
-  * Licensed to the Apache Software Foundation (ASF) under one
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coordination;
 
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
@@ -28,7 +27,6 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -60,12 +58,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ZooKeeper based implementation of
- * {@link SplitLogManagerCoordination}
+ * ZooKeeper based implementation of {@link SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
-public class ZKSplitLogManagerCoordination extends ZKListener implements
-    SplitLogManagerCoordination {
+public class ZKSplitLogManagerCoordination extends ZKListener
+    implements SplitLogManagerCoordination {
 
   public static final int DEFAULT_TIMEOUT = 120000;
   public static final int DEFAULT_ZK_RETRIES = 3;
@@ -121,8 +118,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   public int remainingTasksInCoordination() {
     int count = 0;
     try {
-      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher,
-              watcher.getZNodePaths().splitLogZNode);
+      List<String> tasks =
+          ZKUtil.listChildrenNoWatch(watcher, watcher.getZNodePaths().splitLogZNode);
       if (tasks != null) {
         int listSize = tasks.size();
         for (int i = 0; i < listSize; i++) {
@@ -177,9 +174,9 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       // finished the task. This allows to continue if the worker cannot actually handle it,
       // for any reason.
       final long time = EnvironmentEdgeManager.currentTime() - task.last_update;
-      final boolean alive =
-          details.getMaster().getServerManager() != null ? details.getMaster().getServerManager()
-              .isServerOnline(task.cur_worker_name) : true;
+      final boolean alive = details.getMaster().getServerManager() != null
+          ? details.getMaster().getServerManager().isServerOnline(task.cur_worker_name)
+          : true;
       if (alive && time < timeout) {
         LOG.trace("Skipping the resubmit of " + task.toString() + "  because the server "
             + task.cur_worker_name + " is not marked as dead, we waited for " + time
@@ -219,7 +216,6 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     return true;
   }
 
-
   @Override
   public void checkTasks() {
     rescan(Long.MAX_VALUE);
@@ -237,11 +233,9 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     // Since the TimeoutMonitor will keep resubmitting UNASSIGNED tasks
     // therefore this behavior is safe.
     SplitLogTask slt = new SplitLogTask.Done(this.details.getServerName());
-    this.watcher
-        .getRecoverableZooKeeper()
-        .getZooKeeper()
-        .create(ZKSplitLog.getRescanNode(watcher), slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
-          CreateMode.EPHEMERAL_SEQUENTIAL, new CreateRescanAsyncCallback(), Long.valueOf(retries));
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().create(ZKSplitLog.getRescanNode(watcher),
+      slt.toByteArray(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL,
+      new CreateRescanAsyncCallback(), Long.valueOf(retries));
   }
 
   @Override
@@ -252,11 +246,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   @Override
   public void checkTaskStillAvailable(String path) {
     // A negative retry count will lead to ignoring all error processing.
-    this.watcher
-        .getRecoverableZooKeeper()
-        .getZooKeeper()
-        .getData(path, this.watcher, new GetDataAsyncCallback(),
-          Long.valueOf(-1) /* retry count */);
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().getData(path, this.watcher,
+      new GetDataAsyncCallback(), Long.valueOf(-1) /* retry count */);
     SplitLogCounters.tot_mgr_get_data_queued.increment();
   }
 
@@ -265,8 +256,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     // Once a task znode is ready for delete, that is it is in the TASK_DONE
     // state, then no one should be writing to it anymore. That is no one
     // will be updating the znode version any more.
-    this.watcher.getRecoverableZooKeeper().getZooKeeper()
-        .delete(path, -1, new DeleteAsyncCallback(), retries);
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().delete(path, -1,
+      new DeleteAsyncCallback(), retries);
   }
 
   private void deleteNodeSuccess(String path) {
@@ -339,8 +330,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   }
 
   private void getDataSetWatch(String path, Long retry_count) {
-    this.watcher.getRecoverableZooKeeper().getZooKeeper()
-        .getData(path, this.watcher, new GetDataAsyncCallback(), retry_count);
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().getData(path, this.watcher,
+      new GetDataAsyncCallback(), retry_count);
     SplitLogCounters.tot_mgr_get_data_queued.increment();
   }
 
@@ -382,8 +373,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       LOG.info("Task " + path + " entered state=" + slt.toString());
       resubmitOrFail(path, CHECK);
     } else {
-      LOG.error(HBaseMarkers.FATAL, "logic error - unexpected zk state for path = "
-          + path + " data = " + slt.toString());
+      LOG.error(HBaseMarkers.FATAL,
+        "logic error - unexpected zk state for path = " + path + " data = " + slt.toString());
       setDone(path, FAILURE);
     }
   }
@@ -466,8 +457,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   private void lookForOrphans() {
     List<String> orphans;
     try {
-      orphans = ZKUtil.listChildrenNoWatch(this.watcher,
-              this.watcher.getZNodePaths().splitLogZNode);
+      orphans =
+          ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.getZNodePaths().splitLogZNode);
       if (orphans == null) {
         LOG.warn("Could not get children of " + this.watcher.getZNodePaths().splitLogZNode);
         return;
@@ -509,8 +500,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   private boolean resubmit(String path, int version) {
     try {
       // blocking zk call but this is done from the timeout thread
-      SplitLogTask slt =
-          new SplitLogTask.Unassigned(this.details.getServerName());
+      SplitLogTask slt = new SplitLogTask.Unassigned(this.details.getServerName());
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
         LOG.debug("Failed to resubmit task " + path + " version changed");
         return false;
@@ -536,12 +526,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     return true;
   }
 
-
   /**
    * {@link org.apache.hadoop.hbase.master.SplitLogManager} can use objects implementing this
    * interface to finish off a partially done task by
-   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. This provides a
-   * serialization point at the end of the task processing. Must be restartable and idempotent.
+   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. This provides a serialization
+   * point at the end of the task processing. Must be restartable and idempotent.
    */
   public interface TaskFinisher {
     /**
@@ -639,8 +628,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
               + ". Ignoring error. No error handling. No retrying.");
           return;
         }
-        LOG.warn("Getdata rc=" + KeeperException.Code.get(rc) + " " + path
-            + " remaining retries=" + retry_count);
+        LOG.warn("Getdata rc=" + KeeperException.Code.get(rc) + " " + path + " remaining retries="
+            + retry_count);
         if (retry_count == 0) {
           SplitLogCounters.tot_mgr_get_data_err.increment();
           getDataSetWatchFailure(path);

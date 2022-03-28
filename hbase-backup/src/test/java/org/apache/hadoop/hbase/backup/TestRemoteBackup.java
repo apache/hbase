@@ -59,7 +59,6 @@ public class TestRemoteBackup extends TestBackupBase {
 
   /**
    * Setup Cluster with appropriate configurations before running tests.
-   *
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
   @BeforeClass
@@ -73,7 +72,6 @@ public class TestRemoteBackup extends TestBackupBase {
 
   /**
    * Verify that a remote full backup is created on a single table with data correctly.
-   *
    * @throws Exception if an operation on the table fails
    */
   @Test
@@ -106,10 +104,10 @@ public class TestRemoteBackup extends TestBackupBase {
     t.start();
     // family 2 is MOB enabled
     TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2Name).setMobEnabled(true)
-        .setMobThreshold(0L).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2Name).setMobEnabled(true)
+            .setMobThreshold(0L).build())
+        .build();
     TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     SnapshotTestingUtils.loadData(TEST_UTIL, table1, 50, fam2Name);

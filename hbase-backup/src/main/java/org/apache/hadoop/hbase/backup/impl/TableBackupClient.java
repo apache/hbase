@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,10 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for backup operation. Concrete implementation for
- * full and incremental backup are delegated to corresponding sub-classes:
- * {@link FullTableBackupClient} and {@link IncrementalTableBackupClient}
- *
+ * Base class for backup operation. Concrete implementation for full and incremental backup are
+ * delegated to corresponding sub-classes: {@link FullTableBackupClient} and
+ * {@link IncrementalTableBackupClient}
  */
 @InterfaceAudience.Private
 public abstract class TableBackupClient {
@@ -88,9 +87,8 @@ public abstract class TableBackupClient {
     this.conn = conn;
     this.conf = conn.getConfiguration();
     this.fs = CommonFSUtils.getCurrentFileSystem(conf);
-    backupInfo =
-        backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
-          request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth());
+    backupInfo = backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
+      request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth());
     if (tableList == null || tableList.isEmpty()) {
       this.tableList = new ArrayList<>(backupInfo.getTables());
     }
@@ -159,9 +157,8 @@ public abstract class TableBackupClient {
    */
   protected static void cleanupExportSnapshotLog(Configuration conf) throws IOException {
     FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
-    Path stagingDir =
-        new Path(conf.get(BackupRestoreConstants.CONF_STAGING_ROOT, fs.getWorkingDirectory()
-            .toString()));
+    Path stagingDir = new Path(
+        conf.get(BackupRestoreConstants.CONF_STAGING_ROOT, fs.getWorkingDirectory().toString()));
     FileStatus[] files = CommonFSUtils.listStatus(fs, stagingDir);
     if (files == null) {
       return;
@@ -177,30 +174,27 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Clean up the uncompleted data at target directory if the ongoing backup has already entered
-   * the copy phase.
+   * Clean up the uncompleted data at target directory if the ongoing backup has already entered the
+   * copy phase.
    */
   protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
     try {
       // clean up the uncompleted data at target directory if the ongoing backup has already entered
       // the copy phase
-      LOG.debug("Trying to cleanup up target dir. Current backup phase: "
-          + backupInfo.getPhase());
+      LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
       if (backupInfo.getPhase().equals(BackupPhase.SNAPSHOTCOPY)
           || backupInfo.getPhase().equals(BackupPhase.INCREMENTAL_COPY)
           || backupInfo.getPhase().equals(BackupPhase.STORE_MANIFEST)) {
-        FileSystem outputFs =
-            FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
+        FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
 
         // now treat one backup as a transaction, clean up data that has been partially copied at
         // table level
         for (TableName table : backupInfo.getTables()) {
-          Path targetDirPath =
-              new Path(HBackupFileSystem.getTableBackupDir(backupInfo.getBackupRootDir(),
-                backupInfo.getBackupId(), table));
+          Path targetDirPath = new Path(HBackupFileSystem
+              .getTableBackupDir(backupInfo.getBackupRootDir(), backupInfo.getBackupId(), table));
           if (outputFs.delete(targetDirPath, true)) {
-            LOG.debug("Cleaning up uncompleted backup data at " + targetDirPath.toString()
-                + " done.");
+            LOG.debug(
+              "Cleaning up uncompleted backup data at " + targetDirPath.toString() + " done.");
           } else {
             LOG.debug("No data has been copied to " + targetDirPath.toString() + ".");
           }
@@ -238,10 +232,9 @@ public abstract class TableBackupClient {
       // set overall backup status: failed
       backupInfo.setState(BackupState.FAILED);
       // compose the backup failed data
-      String backupFailedData =
-          "BackupId=" + backupInfo.getBackupId() + ",startts=" + backupInfo.getStartTs()
-              + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase=" + backupInfo.getPhase()
-              + ",failedmessage=" + backupInfo.getFailedMsg();
+      String backupFailedData = "BackupId=" + backupInfo.getBackupId() + ",startts="
+          + backupInfo.getStartTs() + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase="
+          + backupInfo.getPhase() + ",failedmessage=" + backupInfo.getFailedMsg();
       LOG.error(backupFailedData);
       cleanupAndRestoreBackupSystem(conn, backupInfo, conf);
       // If backup session is updated to FAILED state - means we
@@ -376,9 +369,8 @@ public abstract class TableBackupClient {
 
     // compose the backup complete data
     String backupCompleteData =
-        obtainBackupMetaDataStr(backupInfo) + ",startts=" + backupInfo.getStartTs()
-            + ",completets=" + backupInfo.getCompleteTs() + ",bytescopied="
-            + backupInfo.getTotalBytesCopied();
+        obtainBackupMetaDataStr(backupInfo) + ",startts=" + backupInfo.getStartTs() + ",completets="
+            + backupInfo.getCompleteTs() + ",bytescopied=" + backupInfo.getTotalBytesCopied();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Backup " + backupInfo.getBackupId() + " finished: " + backupCompleteData);
     }
@@ -404,19 +396,18 @@ public abstract class TableBackupClient {
 
   /**
    * Backup request execution.
-   *
    * @throws IOException if the execution of the backup fails
    */
   public abstract void execute() throws IOException;
 
   protected Stage getTestStage() {
-    return Stage.valueOf("stage_"+ conf.getInt(BACKUP_TEST_MODE_STAGE, 0));
+    return Stage.valueOf("stage_" + conf.getInt(BACKUP_TEST_MODE_STAGE, 0));
   }
 
   protected void failStageIf(Stage stage) throws IOException {
     Stage current = getTestStage();
     if (current == stage) {
-      throw new IOException("Failed stage " + stage+" in testing");
+      throw new IOException("Failed stage " + stage + " in testing");
     }
   }
 

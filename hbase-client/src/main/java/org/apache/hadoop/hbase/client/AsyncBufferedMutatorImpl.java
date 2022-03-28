@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -111,13 +111,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   @Override
   public List<CompletableFuture<Void>> mutate(List<? extends Mutation> mutations) {
     List<CompletableFuture<Void>> futures =
-      Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
-        .collect(Collectors.toList());
+        Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
+            .collect(Collectors.toList());
     long heapSize = 0;
     for (Mutation mutation : mutations) {
       heapSize += mutation.heapSize();
       if (mutation instanceof Put) {
-        validatePut((Put)mutation, maxKeyValueSize);
+        validatePut((Put) mutation, maxKeyValueSize);
       }
     }
     synchronized (this) {

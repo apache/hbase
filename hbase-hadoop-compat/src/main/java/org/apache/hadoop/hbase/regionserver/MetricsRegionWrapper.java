@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,36 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface of class that will wrap an HRegion and export numbers so they can be
- * used in MetricsRegionSource
+ * Interface of class that will wrap an HRegion and export numbers so they can be used in
+ * MetricsRegionSource
  */
 @InterfaceAudience.Private
 public interface MetricsRegionWrapper {
 
   /**
    * Get the name of the table the region belongs to.
-   *
    * @return The string version of the table name.
    */
   String getTableName();
 
   /**
    * Get the name of the namespace this table is in.
-   * @return String version of the namespace.  Can't be empty.
+   * @return String version of the namespace. Can't be empty.
    */
   String getNamespace();
 
   /**
    * Get the name of the region.
-   *
    * @return The encoded name of the region.
    */
   String getRegionName();
@@ -95,12 +91,12 @@ public interface MetricsRegionWrapper {
   long getMinStoreFileAge();
 
   /**
-   *  @return Average age of store files under this region
+   * @return Average age of store files under this region
    */
   long getAvgStoreFileAge();
 
   /**
-   *  @return Number of reference files under this region
+   * @return Number of reference files under this region
    */
   long getNumReferenceFiles();
 
@@ -118,14 +114,14 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsCompleted();
 
   /**
-   *  @return Age of the last major compaction
+   * @return Age of the last major compaction
    */
   long getLastMajorCompactionAge();
 
   /**
-   * Returns the total number of compactions that have been reported as failed on this region.
-   * Note that a given compaction can be reported as both completed and failed if an exception
-   * is thrown in the processing after {@code HRegion.compact()}.
+   * Returns the total number of compactions that have been reported as failed on this region. Note
+   * that a given compaction can be reported as both completed and failed if an exception is thrown
+   * in the processing after {@code HRegion.compact()}.
    */
   long getNumCompactionsFailed();
 
@@ -143,14 +139,12 @@ public interface MetricsRegionWrapper {
 
   /**
    * Note that this metric is updated periodically and hence might miss some data points.
-   *
    * @return the max number of compactions queued for this region
    */
   long getMaxCompactionQueueSize();
 
   /**
    * Note that this metric is updated periodically and hence might miss some data points.
-   *
    * @return the max number of flushes queued for this region
    */
   long getMaxFlushQueueSize();
@@ -168,8 +162,8 @@ public interface MetricsRegionWrapper {
   long getStoreRefCount();
 
   /**
-   * @return the max number of references active on any store file among
-   *   all compacted store files that belong to this region
+   * @return the max number of references active on any store file among all compacted store files
+   *         that belong to this region
    */
   long getMaxCompactedStoreFileRefCount();
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     SingleProcessHBaseCluster cluster = utility.getHBaseCluster();
     final HMaster master = cluster.getMaster();
 
-    //wait for balancer to come online
+    // wait for balancer to come online
     utility.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() {
-        return master.isInitialized() &&
-            ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
+        return master.isInitialized()
+            && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
       }
     });
     admin = utility.getAdmin();
@@ -94,8 +94,8 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     }
 
     RSGroupMajorCompactionTTL compactor = new RSGroupMajorCompactionTTL();
-    compactor.compactTTLRegionsOnGroup(utility.getConfiguration(),
-        RSGroupInfo.DEFAULT_GROUP, 1, 200, -1, -1, false, false);
+    compactor.compactTTLRegionsOnGroup(utility.getConfiguration(), RSGroupInfo.DEFAULT_GROUP, 1,
+      200, -1, -1, false, false);
 
     for (TableName tableName : tableNames) {
       int numberOfRegions = admin.getRegions(tableName).size();

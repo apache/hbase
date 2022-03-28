@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class RegionOfflineException extends RegionException {
   private static final long serialVersionUID = 466008402L;
+
   /** default constructor */
   public RegionOfflineException() {
     super();

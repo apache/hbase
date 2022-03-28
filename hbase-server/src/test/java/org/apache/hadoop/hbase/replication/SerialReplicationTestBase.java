@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -175,9 +175,7 @@ public class SerialReplicationTestBase {
 
       @Override
       public boolean evaluate() throws Exception {
-        return UTIL.getMiniHBaseCluster()
-            .getLiveRegionServerThreads()
-            .stream()
+        return UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
             .map(RegionServerThread::getRegionServer)
             .allMatch(HRegionServer::walRollRequestFinished);
       }
@@ -225,14 +223,14 @@ public class SerialReplicationTestBase {
   protected final void addPeer(boolean enabled) throws IOException {
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).setSerial(true)
-        .build(),
+          .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).setSerial(true)
+          .build(),
       enabled);
   }
 
   protected final void checkOrder(int expectedEntries) throws IOException {
     try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
+        WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
       long seqId = -1L;
       int count = 0;
       for (Entry entry;;) {
@@ -254,7 +252,7 @@ public class SerialReplicationTestBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+          .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     return tableName;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -42,18 +41,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
  * snapshot to a temporary empty directory, which will copy the snapshot reference files into that
  * directory. Actual data files are not copied.
- *
  * <p>
- * This also allows one to run the scan from an
- * online or offline hbase cluster. The snapshot files can be exported by using the
- * org.apache.hadoop.hbase.snapshot.ExportSnapshot tool,
- * to a pure-hdfs cluster, and this scanner can be used to
- * run the scan directly over the snapshot files. The snapshot should not be deleted while there
- * are open scanners reading from snapshot files.
- *
+ * This also allows one to run the scan from an online or offline hbase cluster. The snapshot files
+ * can be exported by using the org.apache.hadoop.hbase.snapshot.ExportSnapshot tool, to a pure-hdfs
+ * cluster, and this scanner can be used to run the scan directly over the snapshot files. The
+ * snapshot should not be deleted while there are open scanners reading from snapshot files.
  * <p>
- * An internal RegionScanner is used to execute the {@link Scan} obtained
- * from the user for each region in the snapshot.
+ * An internal RegionScanner is used to execute the {@link Scan} obtained from the user for each
+ * region in the snapshot.
  * <p>
  * HBase owns all the data and snapshot files on the filesystem. Only the HBase user can read from
  * snapshot files and data files. HBase also enforces security because all the requests are handled
@@ -62,8 +57,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  * permissions to access snapshot and reference files. This means that to run mapreduce over
  * snapshot files, the job has to be run as the HBase user or the user must have group or other
  * priviledges in the filesystem (See HBASE-8369). Note that, given other users access to read from
- * snapshot/data files will completely circumvent the access control enforced by HBase.
- * See org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.
+ * snapshot/data files will completely circumvent the access control enforced by HBase. See
+ * org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.
  */
 @InterfaceAudience.Private
 public class TableSnapshotScanner extends AbstractClientScanner {
@@ -80,10 +75,11 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private TableDescriptor htd;
   private final boolean snapshotAlreadyRestored;
 
-  private ClientSideRegionScanner currentRegionScanner  = null;
+  private ClientSideRegionScanner currentRegionScanner = null;
   private int currentRegion = -1;
 
   private int numOfCompleteRows = 0;
+
   /**
    * Creates a TableSnapshotScanner.
    * @param conf the configuration
@@ -150,7 +146,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
     regions = new ArrayList<>(regionManifests.size());
     regionManifests.stream().map(r -> ProtobufUtil.toRegionInfo(r.getRegionInfo()))
-      .filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
+        .filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
     htd = manifest.getTableDescriptor();
   }
 
@@ -184,8 +180,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         }
 
         RegionInfo hri = regions.get(currentRegion);
-        currentRegionScanner = new ClientSideRegionScanner(conf, fs,
-          restoreDir, htd, hri, scan, scanMetrics);
+        currentRegionScanner =
+            new ClientSideRegionScanner(conf, fs, restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {
           this.scanMetrics.countOfRegions.incrementAndGet();
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestYieldProcedures {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -70,8 +70,8 @@ public class TestYieldProcedures {
     logDir = new Path(testDir, "proc-logs");
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procRunnables = new TestScheduler();
-    procExecutor =
-      new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore, procRunnables);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore,
+        procRunnables);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
@@ -189,7 +189,9 @@ public class TestYieldProcedures {
 
   public static class TestStateMachineProcedure
       extends StateMachineProcedure<TestProcEnv, TestStateMachineProcedure.State> {
-    enum State { STATE_1, STATE_2, STATE_3 }
+    enum State {
+      STATE_1, STATE_2, STATE_3
+    }
 
     public static class ExecutionInfo {
       private final boolean rollback;
@@ -266,8 +268,7 @@ public class TestYieldProcedures {
     }
 
     @Override
-    protected void rollbackState(TestProcEnv env, final State state)
-        throws InterruptedException {
+    protected void rollbackState(TestProcEnv env, final State state) throws InterruptedException {
       final long ts = env.nextTimestamp();
       LOG.debug(getProcId() + " rollback state " + state + " ts=" + ts);
       executionInfo.add(new ExecutionInfo(ts, state, true));
@@ -347,13 +348,11 @@ public class TestYieldProcedures {
     }
 
     @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
   }
 
@@ -364,7 +363,8 @@ public class TestYieldProcedures {
     private int yieldCalls;
     private int pollCalls;
 
-    public TestScheduler() {}
+    public TestScheduler() {
+    }
 
     @Override
     public void addFront(final Procedure proc) {

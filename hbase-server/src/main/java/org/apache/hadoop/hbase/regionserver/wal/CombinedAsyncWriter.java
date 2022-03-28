@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,8 +68,8 @@ public final class CombinedAsyncWriter implements AsyncWriter {
       }
     }
     if (error != null) {
-      throw new IOException("Failed to close at least one writer, please see the warn log above. " +
-        "The cause is the first exception occurred", error);
+      throw new IOException("Failed to close at least one writer, please see the warn log above. "
+          + "The cause is the first exception occurred", error);
     }
   }
 
@@ -96,6 +96,6 @@ public final class CombinedAsyncWriter implements AsyncWriter {
 
   public static CombinedAsyncWriter create(AsyncWriter writer, AsyncWriter... writers) {
     return new CombinedAsyncWriter(
-      ImmutableList.<AsyncWriter> builder().add(writer).add(writers).build());
+        ImmutableList.<AsyncWriter> builder().add(writer).add(writers).build());
   }
 }

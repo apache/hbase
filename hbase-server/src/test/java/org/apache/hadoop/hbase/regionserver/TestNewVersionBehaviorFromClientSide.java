@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,8 +79,8 @@ public class TestNewVersionBehaviorFromClientSide {
   private Table createTable() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(FAMILY).setNewVersionBehavior(true).setMaxVersions(3).build()).build();
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(FAMILY).setNewVersionBehavior(true).setMaxVersions(3).build()).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     return TEST_UTIL.getConnection().getTable(tableName);
   }
@@ -312,8 +312,8 @@ public class TestNewVersionBehaviorFromClientSide {
   public void testGetColumnHint() throws IOException {
     createTable();
     try (Table t =
-      TEST_UTIL.getConnection().getTableBuilder(TableName.valueOf(name.getMethodName()), null)
-        .setOperationTimeout(10000).setRpcTimeout(10000).build()) {
+        TEST_UTIL.getConnection().getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+            .setOperationTimeout(10000).setRpcTimeout(10000).build()) {
       t.put(new Put(ROW).addColumn(FAMILY, col1, 100, value));
       t.put(new Put(ROW).addColumn(FAMILY, col1, 101, value));
       t.put(new Put(ROW).addColumn(FAMILY, col1, 102, value));

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -53,7 +52,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestSplitOrMergeStatus {
 
   @ClassRule
@@ -61,7 +60,7 @@ public class TestSplitOrMergeStatus {
       HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
   public TestName name = new TestName();
@@ -106,8 +105,8 @@ public class TestSplitOrMergeStatus {
     admin.close();
   }
 
-
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testMergeSwitch() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
@@ -122,7 +121,7 @@ public class TestSplitOrMergeStatus {
       Threads.sleep(1);
     }
     assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
-        originalCount != postSplitCount);
+      originalCount != postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
     boolean result = admin.mergeSwitch(false, false);
@@ -147,7 +146,7 @@ public class TestSplitOrMergeStatus {
       regions.get(1).getEncodedNameAsBytes(), true);
     f.get(10, TimeUnit.SECONDS);
     count = admin.getRegions(tableName).size();
-    assertTrue((postSplitCount / 2 /*Merge*/) == count);
+    assertTrue((postSplitCount / 2 /* Merge */) == count);
     admin.close();
   }
 

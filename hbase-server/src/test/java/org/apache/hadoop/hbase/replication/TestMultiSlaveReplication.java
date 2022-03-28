@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestMultiSlaveReplication {
 
   @ClassRule
@@ -94,14 +94,14 @@ public class TestMultiSlaveReplication {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // smaller block size and capacity to trigger more operations
     // and test them
-    conf1.setInt("hbase.regionserver.hlog.blocksize", 1024*20);
+    conf1.setInt("hbase.regionserver.hlog.blocksize", 1024 * 20);
     conf1.setInt("replication.source.size.capacity", 1024);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
+      "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
     conf1.setInt("hbase.master.cleaner.interval", 5 * 1000);
 
     utility1 = new HBaseTestingUtil(conf1);
@@ -125,9 +125,9 @@ public class TestMultiSlaveReplication {
     new ZKWatcher(conf3, "cluster3", null, true);
 
     table = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
   }
 
   @Test
@@ -137,7 +137,7 @@ public class TestMultiSlaveReplication {
     utility2.startMiniCluster();
     utility3.startMiniCluster();
     try (Connection conn = ConnectionFactory.createConnection(conf1);
-      Admin admin1 = conn.getAdmin()) {
+        Admin admin1 = conn.getAdmin()) {
       utility1.getAdmin().createTable(table);
       utility2.getAdmin().createTable(table);
       utility3.getAdmin().createTable(table);
@@ -146,7 +146,7 @@ public class TestMultiSlaveReplication {
       Table htable3 = utility3.getConnection().getTable(tableName);
 
       ReplicationPeerConfigBuilder rpcBuilder =
-        ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey());
+          ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey());
       admin1.addReplicationPeer("1", rpcBuilder.build());
 
       // put "row" and wait 'til it got around, then delete
@@ -224,11 +224,11 @@ public class TestMultiSlaveReplication {
 
     // listen for successful log rolls
     final WALActionsListener listener = new WALActionsListener() {
-          @Override
-          public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
-            latch.countDown();
-          }
-        };
+      @Override
+      public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+        latch.countDown();
+      }
+    };
     region.getWAL().registerWALActionsListener(listener);
 
     // request a roll
@@ -239,13 +239,12 @@ public class TestMultiSlaveReplication {
     try {
       latch.await();
     } catch (InterruptedException exception) {
-      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later " +
-          "replication tests fail, it's probably because we should still be waiting.");
+      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later "
+          + "replication tests fail, it's probably because we should still be waiting.");
       Thread.currentThread().interrupt();
     }
     region.getWAL().unregisterWALActionsListener(listener);
   }
-
 
   private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
@@ -258,8 +257,8 @@ public class TestMultiSlaveReplication {
       if (res.size() >= 1) {
         LOG.info("Row is replicated");
         rowReplicated = true;
-        assertEquals("Table '" + table + "' did not have the expected number of  results.",
-            count, res.size());
+        assertEquals("Table '" + table + "' did not have the expected number of  results.", count,
+          res.size());
         break;
       }
       if (rowReplicated) {
@@ -274,19 +273,18 @@ public class TestMultiSlaveReplication {
     Get get = new Get(row);
     for (Table table : tables) {
       Result res = table.get(get);
-      assertEquals("Table '" + table + "' did not have the expected number of results.",
-          count, res.size());
+      assertEquals("Table '" + table + "' did not have the expected number of results.", count,
+        res.size());
     }
   }
 
-  private void deleteAndWait(byte[] row, Table source, Table... targets)
-  throws Exception {
+  private void deleteAndWait(byte[] row, Table source, Table... targets) throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
 
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
-      if (i==NB_RETRIES-1) {
+      if (i == NB_RETRIES - 1) {
         fail("Waited too much time for del replication");
       }
       boolean removedFromAll = true;
@@ -306,15 +304,14 @@ public class TestMultiSlaveReplication {
     }
   }
 
-  private void putAndWait(byte[] row, byte[] fam, Table source, Table... targets)
-  throws Exception {
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table... targets) throws Exception {
     Put put = new Put(row);
     put.addColumn(fam, row, row);
     source.put(put);
 
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
-      if (i==NB_RETRIES-1) {
+      if (i == NB_RETRIES - 1) {
         fail("Waited too much time for put replication");
       }
       boolean replicatedToAll = true;
@@ -337,4 +334,3 @@ public class TestMultiSlaveReplication {
   }
 
 }
-

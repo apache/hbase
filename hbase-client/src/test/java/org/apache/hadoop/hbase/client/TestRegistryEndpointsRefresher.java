@@ -44,14 +44,14 @@ public class TestRegistryEndpointsRefresher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegistryEndpointsRefresher.class);
+      HBaseClassTestRule.forClass(TestRegistryEndpointsRefresher.class);
 
   private static final String INITIAL_DELAY_SECS_CONFIG_NAME =
-    "hbase.test.registry.initial.delay.secs";
+      "hbase.test.registry.initial.delay.secs";
   private static final String INTERVAL_SECS_CONFIG_NAME =
-    "hbase.test.registry.refresh.interval.secs";
+      "hbase.test.registry.refresh.interval.secs";
   private static final String MIN_INTERVAL_SECS_CONFIG_NAME =
-    "hbase.test.registry.refresh.min.interval.secs";
+      "hbase.test.registry.refresh.min.interval.secs";
 
   private Configuration conf;
   private RegistryEndpointsRefresher refresher;

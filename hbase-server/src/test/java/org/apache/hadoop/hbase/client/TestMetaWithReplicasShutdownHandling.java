@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,10 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaWithReplicasShutdownHandling.class);
+      HBaseClassTestRule.forClass(TestMetaWithReplicasShutdownHandling.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestMetaWithReplicasShutdownHandling.class);
+      LoggerFactory.getLogger(TestMetaWithReplicasShutdownHandling.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -80,9 +80,9 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
     conf.setBoolean(HConstants.USE_META_REPLICAS, true);
 
     String baseZNode =
-      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode =
-      ZNodePaths.joinZNode(baseZNode, conf.get("zookeeper.znode.metaserver", "meta-region-server"));
+        conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName primary = ProtobufUtil.toServerName(data);
     LOG.info("Primary=" + primary.toString());
@@ -156,7 +156,7 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
     conf.setBoolean(HConstants.USE_META_REPLICAS, false);
     LOG.info("Running GETs no replicas");
     try (Connection c = ConnectionFactory.createConnection(conf);
-      Table htable = c.getTable(TABLE)) {
+        Table htable = c.getTable(TABLE)) {
       Result r = htable.get(new Get(row));
       assertArrayEquals(row, r.getRow());
     }

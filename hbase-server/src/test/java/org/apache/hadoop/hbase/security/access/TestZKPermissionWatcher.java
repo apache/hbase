@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestZKPermissionWatcher {
 
   @ClassRule
@@ -75,8 +75,7 @@ public class TestZKPermissionWatcher {
     }
   };
 
-  private static TableName TEST_TABLE =
-      TableName.valueOf("perms_test");
+  private static TableName TEST_TABLE = TableName.valueOf("perms_test");
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -106,8 +105,8 @@ public class TestZKPermissionWatcher {
   @Test
   public void testPermissionsWatcher() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    User george = User.createUserForTesting(conf, "george", new String[] { });
-    User hubert = User.createUserForTesting(conf, "hubert", new String[] { });
+    User george = User.createUserForTesting(conf, "george", new String[] {});
+    User hubert = User.createUserForTesting(conf, "hubert", new String[] {});
 
     assertFalse(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
     assertFalse(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));

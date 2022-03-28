@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -163,8 +163,8 @@ class IPCUtil {
   }
 
   private static String getCallTarget(Address addr, RegionInfo regionInfo) {
-    return "address=" + addr +
-      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): "");
+    return "address=" + addr
+        + (regionInfo != null ? ", region=" + regionInfo.getRegionNameAsString() : "");
   }
 
   /**
@@ -187,14 +187,16 @@ class IPCUtil {
   static IOException wrapException(Address addr, RegionInfo regionInfo, Throwable error) {
     if (error instanceof ConnectException) {
       // connection refused; include the host:port in the error
-      return (IOException) new ConnectException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on connection exception: " + error).initCause(error);
+      return (IOException) new ConnectException("Call to " + getCallTarget(addr, regionInfo)
+          + " failed on connection exception: " + error).initCause(error);
     } else if (error instanceof SocketTimeoutException) {
       return (IOException) new SocketTimeoutException(
-        "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error).initCause(error);
+          "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error)
+              .initCause(error);
     } else if (error instanceof ConnectionClosingException) {
-      return new ConnectionClosingException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new ConnectionClosingException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     } else if (error instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) error;
@@ -202,45 +204,50 @@ class IPCUtil {
       // try our best to keep the original exception type
       try {
         return (IOException) error.getClass().asSubclass(DoNotRetryIOException.class)
-          .getConstructor(String.class)
-          .newInstance("Call to " + getCallTarget(addr, regionInfo) +
-            " failed on local exception: " + error).initCause(error);
+            .getConstructor(String.class)
+            .newInstance(
+              "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error)
+            .initCause(error);
       } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
           | InvocationTargetException | NoSuchMethodException | SecurityException e) {
         // just ignore, will just new a DoNotRetryIOException instead below
       }
-      return new DoNotRetryIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new DoNotRetryIOException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     } else if (error instanceof ConnectionClosedException) {
-      return new ConnectionClosedException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new ConnectionClosedException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     } else if (error instanceof CallTimeoutException) {
-      return new CallTimeoutException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new CallTimeoutException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     } else if (error instanceof ClosedChannelException) {
       // ClosedChannelException does not have a constructor which takes a String but it is a
       // connection exception so we keep its original type
       return (IOException) error;
     } else if (error instanceof TimeoutException) {
       // TimeoutException is not an IOException, let's convert it to TimeoutIOException.
-      return new TimeoutIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new TimeoutIOException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     } else {
       // try our best to keep the original exception type
       if (error instanceof IOException) {
         try {
           return (IOException) error.getClass().asSubclass(IOException.class)
-            .getConstructor(String.class)
-            .newInstance("Call to " + getCallTarget(addr, regionInfo) +
-              " failed on local exception: " + error)
-            .initCause(error);
+              .getConstructor(String.class).newInstance("Call to " + getCallTarget(addr, regionInfo)
+                  + " failed on local exception: " + error)
+              .initCause(error);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
             | InvocationTargetException | NoSuchMethodException | SecurityException e) {
           // just ignore, will just new an IOException instead below
         }
       }
-      return new HBaseIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new HBaseIOException(
+          "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+          error);
     }
   }
 

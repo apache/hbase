@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,18 +18,19 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Wraps together the mutations which are applied as a batch to the region and their operation
  * status and WALEdits.
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#preBatchMutate(
- * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
+ *      org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#postBatchMutate(
- * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
+ *      org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -47,7 +48,6 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfDeletes = 0;
   private int numOfIncrements = 0;
   private int numOfAppends = 0;
-
 
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
       WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive,
@@ -77,9 +77,9 @@ public class MiniBatchOperationInProgress<T> {
   }
 
   /**
-   * Sets the status code for the operation(Mutation) at the specified position.
-   * By setting this status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
-   * can make HRegion to skip Mutations.
+   * Sets the status code for the operation(Mutation) at the specified position. By setting this
+   * status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} can make HRegion to skip
+   * Mutations.
    * @param index
    * @param opStatus
    */
@@ -123,8 +123,8 @@ public class MiniBatchOperationInProgress<T> {
    * Add more Mutations corresponding to the Mutation at the given index to be committed atomically
    * in the same batch. These mutations are applied to the WAL and applied to the memstore as well.
    * The timestamp of the cells in the given Mutations MUST be obtained from the original mutation.
-   * <b>Note:</b> The durability from CP will be replaced by the durability of corresponding mutation.
-   * <b>Note:</b> Currently only supports Put and Delete operations.
+   * <b>Note:</b> The durability from CP will be replaced by the durability of corresponding
+   * mutation. <b>Note:</b> Currently only supports Put and Delete operations.
    * @param index the index that corresponds to the original mutation index in the batch
    * @param newOperations the Mutations to add
    */
@@ -137,8 +137,8 @@ public class MiniBatchOperationInProgress<T> {
   }
 
   public Mutation[] getOperationsFromCoprocessors(int index) {
-    return operationsFromCoprocessors == null ? null :
-        operationsFromCoprocessors[getAbsoluteIndex(index)];
+    return operationsFromCoprocessors == null ? null
+        : operationsFromCoprocessors[getAbsoluteIndex(index)];
   }
 
   public int getReadyToWriteCount() {

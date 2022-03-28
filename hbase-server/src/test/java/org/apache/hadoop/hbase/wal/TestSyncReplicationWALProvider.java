@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestSyncReplicationWALProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationWALProvider.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationWALProvider.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -116,12 +116,12 @@ public class TestSyncReplicationWALProvider {
     Path localFile = wal.getCurrentFileName();
     Path remoteFile = new Path(REMOTE_WAL_DIR + "/" + PEER_ID, localFile.getName());
     try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
+        (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
       ProtobufLogTestHelper.doRead(reader, false, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
     try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
+        (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
       ProtobufLogTestHelper.doRead(reader, false, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
@@ -147,12 +147,12 @@ public class TestSyncReplicationWALProvider {
       }
     });
     try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
+        (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
       ProtobufLogTestHelper.doRead(reader, true, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
     try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
+        (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
       ProtobufLogTestHelper.doRead(reader, true, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }

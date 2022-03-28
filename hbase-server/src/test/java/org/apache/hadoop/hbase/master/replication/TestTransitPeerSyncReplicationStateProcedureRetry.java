@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncRepli
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureRetry.class);
+      HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureRetry.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -86,10 +86,10 @@ public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncRepli
     };
     t.start();
     UTIL2.waitFor(30000, () -> procExec.getProcedures().stream()
-      .anyMatch(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished()));
+        .anyMatch(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished()));
     long procId = procExec.getProcedures().stream()
-      .filter(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished())
-      .mapToLong(Procedure::getProcId).min().getAsLong();
+        .filter(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished())
+        .mapToLong(Procedure::getProcId).min().getAsLong();
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,

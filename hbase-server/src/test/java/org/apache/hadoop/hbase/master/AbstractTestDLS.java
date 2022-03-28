@@ -132,8 +132,8 @@ public abstract class AbstractTestDLS {
     conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
+    StartTestingClusterOption option =
+        StartTestingClusterOption.builder().numMasters(NUM_MASTERS).numRegionServers(numRS).build();
     TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -199,13 +199,12 @@ public abstract class AbstractTestDLS {
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (HBaseTestingUtil.getAllOnlineRegions(cluster)
-              .size() >= (numRegionsToCreate + 1));
+          return (HBaseTestingUtil.getAllOnlineRegions(cluster).size() >= (numRegionsToCreate + 1));
         }
       });
 
-      LOG.info("Current Open Regions After Master Node Starts Up:" +
-          HBaseTestingUtil.getAllOnlineRegions(cluster).size());
+      LOG.info("Current Open Regions After Master Node Starts Up:"
+          + HBaseTestingUtil.getAllOnlineRegions(cluster).size());
 
       assertEquals(numLogLines, TEST_UTIL.countRows(ht));
     }
@@ -255,16 +254,16 @@ public abstract class AbstractTestDLS {
   @Test
   public void testDelayedDeleteOnFailure() throws Exception {
     if (!this.conf.getBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-        HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+      HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
       // This test depends on zk coordination....
-     return;
+      return;
     }
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path rootLogDir =
-      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+        new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
     final Path logDir = new Path(rootLogDir, ServerName.valueOf("x", 1, 1).toString());
     fs.mkdirs(logDir);
     ExecutorService executor = null;
@@ -434,10 +433,11 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
-          value));
+        e.add(
+          new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(), value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
-          tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
+            tableName, EnvironmentEdgeManager.currentTime(), mvcc),
+          e);
         if (0 == i % syncEvery) {
           log.sync();
         }

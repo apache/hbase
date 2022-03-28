@@ -56,7 +56,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Test the optimization that does not scan files where all key ranges are excluded.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestScannerSelectionUsingKeyRange {
 
   @ClassRule
@@ -90,7 +90,7 @@ public class TestScannerSelectionUsingKeyRange {
   }
 
   public TestScannerSelectionUsingKeyRange(Object type, Object count) {
-    bloomType = (BloomType)type;
+    bloomType = (BloomType) type;
     expectedCount = (Integer) count;
   }
 
@@ -104,9 +104,9 @@ public class TestScannerSelectionUsingKeyRange {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES)
-        .setBlockCacheEnabled(true).setBloomFilterType(bloomType).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES)
+            .setBlockCacheEnabled(true).setBloomFilterType(bloomType).build())
+        .build();
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
     HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
@@ -117,7 +117,7 @@ public class TestScannerSelectionUsingKeyRange {
         Put put = new Put(Bytes.toBytes("row" + iRow));
         for (int iCol = 0; iCol < NUM_COLS_PER_ROW; ++iCol) {
           put.addColumn(FAMILY_BYTES, Bytes.toBytes("col" + iCol),
-                  Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
+            Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
         }
         region.put(put);
       }
@@ -133,7 +133,7 @@ public class TestScannerSelectionUsingKeyRange {
     scanner.close();
     assertEquals(0, results.size());
     if (cache instanceof LruBlockCache) {
-      Set<String> accessedFiles = ((LruBlockCache)cache).getCachedFileNamesForTest();
+      Set<String> accessedFiles = ((LruBlockCache) cache).getCachedFileNamesForTest();
       assertEquals(expectedCount, accessedFiles.size());
     }
     HBaseTestingUtil.closeRegionAndWAL(region);

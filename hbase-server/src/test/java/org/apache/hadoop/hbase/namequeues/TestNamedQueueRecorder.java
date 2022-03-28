@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
@@ -29,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -64,12 +61,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
 /**
  * Tests for Online SlowLog Provider Service
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestNamedQueueRecorder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamedQueueRecorder.class);
+      HBaseClassTestRule.forClass(TestNamedQueueRecorder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
@@ -87,9 +84,8 @@ public class TestNamedQueueRecorder {
   }
 
   /**
-   * confirm that for a ringbuffer of slow logs, payload on given index of buffer
-   * has expected elements
-   *
+   * confirm that for a ringbuffer of slow logs, payload on given index of buffer has expected
+   * elements
    * @param i index of ringbuffer logs
    * @param j data value that was put on index i
    * @param slowLogPayloads list of payload retrieved from {@link NamedQueueRecorder}
@@ -103,15 +99,15 @@ public class TestNamedQueueRecorder {
   }
 
   @Test
-  public void testOnlieSlowLogConsumption() throws Exception{
+  public void testOnlieSlowLogConsumption() throws Exception {
 
     Configuration conf = applySlowLogRecorderConf(8);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
@@ -122,7 +118,7 @@ public class TestNamedQueueRecorder {
     // add 5 records initially
     for (; i < 5; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
@@ -138,97 +134,81 @@ public class TestNamedQueueRecorder {
     // add 2 more records
     for (; i < 7; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 7));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 7));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
-        return slowLogPayloadsList.size() == 7
-          && confirmPayloadParams(0, 7, slowLogPayloadsList)
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
+      return slowLogPayloadsList.size() == 7 && confirmPayloadParams(0, 7, slowLogPayloadsList)
           && confirmPayloadParams(5, 2, slowLogPayloadsList)
           && confirmPayloadParams(6, 1, slowLogPayloadsList);
-      })
-    );
+    }));
 
     // add 3 more records
     for (; i < 10; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 8));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 8));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
-        // confirm ringbuffer is full
-        return slowLogPayloadsList.size() == 8
-          && confirmPayloadParams(7, 3, slowLogPayloadsList)
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
+      // confirm ringbuffer is full
+      return slowLogPayloadsList.size() == 8 && confirmPayloadParams(7, 3, slowLogPayloadsList)
           && confirmPayloadParams(0, 10, slowLogPayloadsList)
           && confirmPayloadParams(1, 9, slowLogPayloadsList);
-      })
-    );
+    }));
 
     // add 4 more records
     for (; i < 14; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 8));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 8));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
-        // confirm ringbuffer is full
-        // and ordered events
-        return slowLogPayloadsList.size() == 8
-          && confirmPayloadParams(0, 14, slowLogPayloadsList)
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
+      // confirm ringbuffer is full
+      // and ordered events
+      return slowLogPayloadsList.size() == 8 && confirmPayloadParams(0, 14, slowLogPayloadsList)
           && confirmPayloadParams(1, 13, slowLogPayloadsList)
           && confirmPayloadParams(2, 12, slowLogPayloadsList)
           && confirmPayloadParams(3, 11, slowLogPayloadsList);
-      })
-    );
+    }));
 
     AdminProtos.SlowLogResponseRequest largeLogRequest =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
-        .build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(largeLogRequest);
-        // confirm ringbuffer is full
-        // and ordered events
-        return slowLogPayloadsList.size() == 8
-          && confirmPayloadParams(0, 14, slowLogPayloadsList)
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15)
+            .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(largeLogRequest);
+      // confirm ringbuffer is full
+      // and ordered events
+      return slowLogPayloadsList.size() == 8 && confirmPayloadParams(0, 14, slowLogPayloadsList)
           && confirmPayloadParams(1, 13, slowLogPayloadsList)
           && confirmPayloadParams(2, 12, slowLogPayloadsList)
           && confirmPayloadParams(3, 11, slowLogPayloadsList);
-      })
-    );
+    }));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        boolean isRingBufferCleaned = namedQueueRecorder.clearNamedQueue(
-          NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      boolean isRingBufferCleaned =
+          namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
 
-        LOG.debug("cleared the ringbuffer of Online Slow Log records");
+      LOG.debug("cleared the ringbuffer of Online Slow Log records");
 
-        List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
-        // confirm ringbuffer is empty
-        return slowLogPayloadsList.size() == 0 && isRingBufferCleaned;
-      })
-    );
+      List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
+      // confirm ringbuffer is empty
+      return slowLogPayloadsList.size() == 0 && isRingBufferCleaned;
+    }));
 
   }
 
@@ -237,9 +217,9 @@ public class TestNamedQueueRecorder {
     namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    return namedQueueGetResponse == null ?
-      Collections.emptyList() : namedQueueGetResponse.getSlowLogPayloads();
+        namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    return namedQueueGetResponse == null ? Collections.emptyList()
+        : namedQueueGetResponse.getSlowLogPayloads();
   }
 
   @Test
@@ -247,32 +227,30 @@ public class TestNamedQueueRecorder {
 
     Configuration conf = applySlowLogRecorderConf(14);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     for (int i = 0; i < 14 * 11; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
     LOG.debug("Added 14 * 11 records, ringbuffer should only provide latest 14 records");
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 14));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
 
-        // confirm strict order of slow log payloads
-        return slowLogPayloads.size() == 14
-          && confirmPayloadParams(0, 154, slowLogPayloads)
+      // confirm strict order of slow log payloads
+      return slowLogPayloads.size() == 14 && confirmPayloadParams(0, 154, slowLogPayloads)
           && confirmPayloadParams(1, 153, slowLogPayloads)
           && confirmPayloadParams(2, 152, slowLogPayloads)
           && confirmPayloadParams(3, 151, slowLogPayloads)
@@ -286,11 +264,10 @@ public class TestNamedQueueRecorder {
           && confirmPayloadParams(11, 143, slowLogPayloads)
           && confirmPayloadParams(12, 142, slowLogPayloads)
           && confirmPayloadParams(13, 141, slowLogPayloads);
-      })
-    );
+    }));
 
-    boolean isRingBufferCleaned = namedQueueRecorder.clearNamedQueue(
-      NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    boolean isRingBufferCleaned =
+        namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     Assert.assertTrue(isRingBufferCleaned);
     LOG.debug("cleared the ringbuffer of Online Slow Log records");
     List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
@@ -305,24 +282,22 @@ public class TestNamedQueueRecorder {
     conf.unset(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY);
 
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().build();
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     for (int i = 0; i < 300; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
-        return slowLogPayloads.size() == 0;
-      })
-    );
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
+      return slowLogPayloads.size() == 0;
+    }));
 
   }
 
@@ -331,25 +306,23 @@ public class TestNamedQueueRecorder {
     Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, false);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
 
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().build();
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     for (int i = 0; i < 300; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
-        return slowLogPayloads.size() == 0;
-      })
-    );
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
+      return slowLogPayloads.size() == 0;
+    }));
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
   }
 
@@ -358,14 +331,11 @@ public class TestNamedQueueRecorder {
 
     Configuration conf = applySlowLogRecorderConf(30);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setUserName("userName_87")
-        .build();
+    AdminProtos.SlowLogResponseRequest request = AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15).setUserName("userName_87").build();
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
@@ -373,28 +343,23 @@ public class TestNamedQueueRecorder {
 
     for (int i = 0; i < 100; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
     LOG.debug("Added 100 records, ringbuffer should only 1 record with matching filter");
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 1));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 1));
 
-    AdminProtos.SlowLogResponseRequest requestClient =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setClientAddress("client_85")
-        .build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(requestClient).size() == 1));
+    AdminProtos.SlowLogResponseRequest requestClient = AdminProtos.SlowLogResponseRequest
+        .newBuilder().setLimit(15).setClientAddress("client_85").build();
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestClient).size() == 1));
 
     AdminProtos.SlowLogResponseRequest requestSlowLog =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(requestSlowLog).size() == 15));
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestSlowLog).size() == 15));
   }
 
   @Test
@@ -402,16 +367,14 @@ public class TestNamedQueueRecorder {
 
     Configuration conf = applySlowLogRecorderConf(50000);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000).build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000).build();
     AdminProtos.SlowLogResponseRequest largeLogRequest =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(500000)
-        .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
-        .build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000)
+            .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
@@ -420,7 +383,7 @@ public class TestNamedQueueRecorder {
       CompletableFuture.runAsync(() -> {
         for (int i = 0; i < 3500; i++) {
           RpcLogDetails rpcLogDetails =
-            getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+              getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
           namedQueueRecorder.addRecord(rpcLogDetails);
         }
       });
@@ -429,22 +392,22 @@ public class TestNamedQueueRecorder {
 
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(
-      5000, () -> getSlowLogPayloads(request).size() > 10000));
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(
-      5000, () -> getSlowLogPayloads(largeLogRequest).size() > 10000));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(5000, () -> getSlowLogPayloads(request).size() > 10000));
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(5000,
+      () -> getSlowLogPayloads(largeLogRequest).size() > 10000));
   }
 
   @Test
   public void testSlowLargeLogEvents() throws Exception {
     Configuration conf = applySlowLogRecorderConf(28);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
 
     AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
@@ -459,23 +422,20 @@ public class TestNamedQueueRecorder {
         isSlowLog = false;
         isLargeLog = true;
       }
-      RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1),
-          isSlowLog, isLargeLog);
+      RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1),
+        "class_" + (i + 1), isSlowLog, isLargeLog);
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
     LOG.debug("Added 14 * 11 records, ringbuffer should only provide latest 14 records");
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 14));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
 
-        // confirm strict order of slow log payloads
-        return slowLogPayloads.size() == 14
-          && confirmPayloadParams(0, 153, slowLogPayloads)
+      // confirm strict order of slow log payloads
+      return slowLogPayloads.size() == 14 && confirmPayloadParams(0, 153, slowLogPayloads)
           && confirmPayloadParams(1, 151, slowLogPayloads)
           && confirmPayloadParams(2, 149, slowLogPayloads)
           && confirmPayloadParams(3, 147, slowLogPayloads)
@@ -489,25 +449,20 @@ public class TestNamedQueueRecorder {
           && confirmPayloadParams(11, 131, slowLogPayloads)
           && confirmPayloadParams(12, 129, slowLogPayloads)
           && confirmPayloadParams(13, 127, slowLogPayloads);
-      })
-    );
+    }));
 
     AdminProtos.SlowLogResponseRequest largeLogRequest =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(14 * 11)
-        .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
-        .build();
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11)
+            .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(largeLogRequest).size() == 14));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(largeLogRequest).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> {
-        List<SlowLogPayload> largeLogPayloads = getSlowLogPayloads(largeLogRequest);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      List<SlowLogPayload> largeLogPayloads = getSlowLogPayloads(largeLogRequest);
 
-        // confirm strict order of slow log payloads
-        return largeLogPayloads.size() == 14
-          && confirmPayloadParams(0, 154, largeLogPayloads)
+      // confirm strict order of slow log payloads
+      return largeLogPayloads.size() == 14 && confirmPayloadParams(0, 154, largeLogPayloads)
           && confirmPayloadParams(1, 152, largeLogPayloads)
           && confirmPayloadParams(2, 150, largeLogPayloads)
           && confirmPayloadParams(3, 148, largeLogPayloads)
@@ -521,8 +476,7 @@ public class TestNamedQueueRecorder {
           && confirmPayloadParams(11, 132, largeLogPayloads)
           && confirmPayloadParams(12, 130, largeLogPayloads)
           && confirmPayloadParams(13, 128, largeLogPayloads);
-      })
-    );
+    }));
   }
 
   @Test
@@ -530,67 +484,46 @@ public class TestNamedQueueRecorder {
 
     Configuration conf = applySlowLogRecorderConf(30);
     Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+        NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
     constructor.setAccessible(true);
     namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.SlowLogResponseRequest request =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setUserName("userName_87")
-        .setClientAddress("client_88")
-        .build();
+    AdminProtos.SlowLogResponseRequest request = AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15).setUserName("userName_87").setClientAddress("client_88").build();
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
     for (int i = 0; i < 100; i++) {
       RpcLogDetails rpcLogDetails =
-        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+          getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(request).size() == 2));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 2));
 
     AdminProtos.SlowLogResponseRequest request2 = AdminProtos.SlowLogResponseRequest.newBuilder()
-      .setLimit(15)
-      .setUserName("userName_1")
-      .setClientAddress("client_2")
-      .build();
+        .setLimit(15).setUserName("userName_1").setClientAddress("client_2").build();
     Assert.assertEquals(0, getSlowLogPayloads(request2).size());
 
-    AdminProtos.SlowLogResponseRequest request3 =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setUserName("userName_87")
-        .setClientAddress("client_88")
-        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)
-        .build();
+    AdminProtos.SlowLogResponseRequest request3 = AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15).setUserName("userName_87").setClientAddress("client_88")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND).build();
     Assert.assertEquals(0, getSlowLogPayloads(request3).size());
 
-    AdminProtos.SlowLogResponseRequest request4 =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setUserName("userName_87")
-        .setClientAddress("client_87")
-        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)
-        .build();
+    AdminProtos.SlowLogResponseRequest request4 = AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15).setUserName("userName_87").setClientAddress("client_87")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND).build();
     Assert.assertEquals(1, getSlowLogPayloads(request4).size());
 
-    AdminProtos.SlowLogResponseRequest request5 =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .setUserName("userName_88")
-        .setClientAddress("client_89")
-        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.OR)
-        .build();
+    AdminProtos.SlowLogResponseRequest request5 = AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15).setUserName("userName_88").setClientAddress("client_89")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.OR).build();
     Assert.assertEquals(2, getSlowLogPayloads(request5).size());
 
     AdminProtos.SlowLogResponseRequest requestSlowLog =
-      AdminProtos.SlowLogResponseRequest.newBuilder()
-        .setLimit(15)
-        .build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getSlowLogPayloads(requestSlowLog).size() == 15));
+        AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestSlowLog).size() == 15));
   }
 
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
@@ -598,11 +531,11 @@ public class TestNamedQueueRecorder {
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, true, true);
   }
 
-  private RpcLogDetails getRpcLogDetails(String userName, String clientAddress,
-      String className, boolean isSlowLog, boolean isLargeLog) {
+  private RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
+      boolean isSlowLog, boolean isLargeLog) {
     RpcCall rpcCall = getRpcCall(userName);
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, isSlowLog,
-      isLargeLog);
+        isLargeLog);
   }
 
   private static RpcCall getRpcCall(String userName) {
@@ -673,8 +606,8 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
-      public void setResponse(Message param, CellScanner cells,
-        Throwable errorThrowable, String error) {
+      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+          String error) {
       }
 
       @Override
@@ -763,34 +696,32 @@ public class TestNamedQueueRecorder {
     switch (i) {
 
       case 0: {
-        message = ClientProtos.ScanRequest.newBuilder()
-          .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
-            .setValue(ByteString.copyFromUtf8("region1"))
-            .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)
-            .build())
-          .build();
+        message =
+            ClientProtos.ScanRequest.newBuilder()
+                .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
+                    .setValue(ByteString.copyFromUtf8("region1"))
+                    .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).build())
+                .build();
         break;
       }
       case 1: {
-        message = ClientProtos.MutateRequest.newBuilder()
-          .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
-            .setValue(ByteString.copyFromUtf8("region2"))
-            .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME))
-          .setMutation(ClientProtos.MutationProto.newBuilder()
-            .setRow(ByteString.copyFromUtf8("row123"))
-            .build())
-          .build();
+        message =
+            ClientProtos.MutateRequest.newBuilder()
+                .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
+                    .setValue(ByteString.copyFromUtf8("region2"))
+                    .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME))
+                .setMutation(ClientProtos.MutationProto.newBuilder()
+                    .setRow(ByteString.copyFromUtf8("row123")).build())
+                .build();
         break;
       }
       case 2: {
         message = ClientProtos.GetRequest.newBuilder()
-          .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
-            .setValue(ByteString.copyFromUtf8("region2"))
-            .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME))
-          .setGet(ClientProtos.Get.newBuilder()
-            .setRow(ByteString.copyFromUtf8("row123"))
-            .build())
-          .build();
+            .setRegion(
+              HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFromUtf8("region2"))
+                  .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME))
+            .setGet(ClientProtos.Get.newBuilder().setRow(ByteString.copyFromUtf8("row123")).build())
+            .build();
         break;
       }
       default:

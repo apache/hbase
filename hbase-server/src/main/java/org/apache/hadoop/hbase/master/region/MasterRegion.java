@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -114,7 +114,7 @@ public final class MasterRegion {
   private MasterRegionWALRoller walRoller;
 
   private MasterRegion(HRegion region, WALFactory walFactory,
-    MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
+      MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.region = region;
     this.walFactory = walFactory;
     this.flusherAndCompactor = flusherAndCompactor;
@@ -187,18 +187,18 @@ public final class MasterRegion {
   }
 
   private static WAL createWAL(WALFactory walFactory, MasterRegionWALRoller walRoller,
-    String serverName, FileSystem walFs, Path walRootDir, RegionInfo regionInfo)
-    throws IOException {
+      String serverName, FileSystem walFs, Path walRootDir, RegionInfo regionInfo)
+      throws IOException {
     String logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     Path walDir = new Path(walRootDir, logName);
     LOG.debug("WALDir={}", walDir);
     if (walFs.exists(walDir)) {
       throw new HBaseIOException(
-        "Already created wal directory at " + walDir + " for local region " + regionInfo);
+          "Already created wal directory at " + walDir + " for local region " + regionInfo);
     }
     if (!walFs.mkdirs(walDir)) {
       throw new IOException(
-        "Can not create wal directory " + walDir + " for local region " + regionInfo);
+          "Can not create wal directory " + walDir + " for local region " + regionInfo);
     }
     WAL wal = walFactory.getWAL(regionInfo);
     walRoller.addWAL(wal);
@@ -206,9 +206,9 @@ public final class MasterRegion {
   }
 
   private static HRegion bootstrap(Configuration conf, TableDescriptor td, FileSystem fs,
-    Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName, boolean touchInitializingFlag)
-    throws IOException {
+      Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
+      MasterRegionWALRoller walRoller, String serverName, boolean touchInitializingFlag)
+      throws IOException {
     TableName tn = td.getTableName();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).setRegionId(REGION_ID).build();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
@@ -229,14 +229,14 @@ public final class MasterRegion {
 
   private static RegionInfo loadRegionInfo(FileSystem fs, Path tableDir) throws IOException {
     Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
+        fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
+            .getPath();
     return HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
   }
 
   private static HRegion open(Configuration conf, TableDescriptor td, RegionInfo regionInfo,
-    FileSystem fs, Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName) throws IOException {
+      FileSystem fs, Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
+      MasterRegionWALRoller walRoller, String serverName) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path walRegionDir = FSUtils.getRegionDirFromRootDir(walRootDir, regionInfo);
     Path replayEditsDir = new Path(walRegionDir, REPLAY_EDITS_DIR);
@@ -254,8 +254,9 @@ public final class MasterRegion {
     if (walFs.exists(walsDir)) {
       replayWALs(conf, walFs, walRootDir, walsDir, regionInfo, serverName, replayEditsDir);
     } else {
-      LOG.error("UNEXPECTED: WAL directory for MasterRegion is missing."
-          + " {} is unexpectedly missing.", walsDir);
+      LOG.error(
+        "UNEXPECTED: WAL directory for MasterRegion is missing." + " {} is unexpectedly missing.",
+        walsDir);
     }
 
     // Create a new WAL
@@ -267,22 +268,22 @@ public final class MasterRegion {
 
   private static void replayWALs(Configuration conf, FileSystem walFs, Path walRootDir,
       Path walsDir, RegionInfo regionInfo, String serverName, Path replayEditsDir)
-          throws IOException {
+      throws IOException {
     for (FileStatus walDir : walFs.listStatus(walsDir)) {
       if (!walDir.isDirectory()) {
         continue;
       }
       if (walDir.getPath().getName().startsWith(serverName)) {
-        LOG.warn("This should not happen in real production as we have not created our WAL " +
-          "directory yet, ignore if you are running a local region related UT");
+        LOG.warn("This should not happen in real production as we have not created our WAL "
+            + "directory yet, ignore if you are running a local region related UT");
       }
       Path deadWALDir;
       if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
-        deadWALDir =
-          new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
+        deadWALDir = new Path(walDir.getPath().getParent(),
+            walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
         if (!walFs.rename(walDir.getPath(), deadWALDir)) {
-          throw new IOException("Can not rename " + walDir + " to " + deadWALDir +
-            " when recovering lease of proc store");
+          throw new IOException("Can not rename " + walDir + " to " + deadWALDir
+              + " when recovering lease of proc store");
         }
         LOG.info("Renamed {} to {} as it is dead", walDir.getPath(), deadWALDir);
       } else {
@@ -293,8 +294,8 @@ public final class MasterRegion {
         Path replayEditsFile = new Path(replayEditsDir, walFile.getPath().getName());
         RecoverLeaseFSUtils.recoverFileLease(walFs, walFile.getPath(), conf);
         if (!walFs.rename(walFile.getPath(), replayEditsFile)) {
-          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile +
-            " when recovering lease for local region");
+          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile
+              + " when recovering lease for local region");
         }
         LOG.info("Renamed {} to {}", walFile.getPath(), replayEditsFile);
       }
@@ -304,11 +305,11 @@ public final class MasterRegion {
   }
 
   private static void tryMigrate(Configuration conf, FileSystem fs, Path tableDir,
-    RegionInfo regionInfo, TableDescriptor oldTd, TableDescriptor newTd) throws IOException {
-    Class<? extends StoreFileTracker> oldSft =
-      StoreFileTrackerFactory.getTrackerClass(oldTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
-    Class<? extends StoreFileTracker> newSft =
-      StoreFileTrackerFactory.getTrackerClass(newTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+      RegionInfo regionInfo, TableDescriptor oldTd, TableDescriptor newTd) throws IOException {
+    Class<? extends StoreFileTracker> oldSft = StoreFileTrackerFactory
+        .getTrackerClass(oldTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+    Class<? extends StoreFileTracker> newSft = StoreFileTrackerFactory
+        .getTrackerClass(newTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
     if (oldSft.equals(newSft)) {
       LOG.debug("old store file tracker {} is the same with new store file tracker, skip migration",
         StoreFileTrackerFactory.getStoreFileTrackerName(oldSft));
@@ -323,7 +324,7 @@ public final class MasterRegion {
     LOG.info("Migrate store file tracker from {} to {}", oldSft.getSimpleName(),
       newSft.getSimpleName());
     HRegionFileSystem hfs =
-      HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false);
+        HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false);
     for (ColumnFamilyDescriptor oldCfd : oldTd.getColumnFamilies()) {
       StoreFileTracker oldTracker = StoreFileTrackerFactory.create(conf, oldTd, oldCfd, hfs);
       StoreFileTracker newTracker = StoreFileTrackerFactory.create(conf, oldTd, oldCfd, hfs);
@@ -388,8 +389,8 @@ public final class MasterRegion {
           // the store file tracker must be DEFAULT
           LOG.info("No {} or {} file, try upgrading", INITIALIZING_FLAG, INITIALIZED_FLAG);
           TableDescriptor oldTd =
-            TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-              StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+              TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+                StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
           FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, oldTd, true);
           if (!fs.mkdirs(initializedFlag)) {
             throw new IOException("Can not touch initialized flag: " + initializedFlag);
@@ -424,13 +425,15 @@ public final class MasterRegion {
 
     Path globalArchiveDir = HFileArchiveUtil.getArchivePath(baseConf);
     MasterRegionFlusherAndCompactor flusherAndCompactor = new MasterRegionFlusherAndCompactor(conf,
-      server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),
-      params.compactMin(), globalArchiveDir, params.archivedHFileSuffix());
+        server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),
+        params.compactMin(), globalArchiveDir, params.archivedHFileSuffix());
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     if (!fs.mkdirs(archiveDir)) {
-      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
-        " be created again when we actually archive the hfiles later, so continue", archiveDir);
+      LOG.warn(
+        "Failed to create archive directory {}. Usually this should not happen but it will"
+            + " be created again when we actually archive the hfiles later, so continue",
+        archiveDir);
     }
     return new MasterRegion(region, walFactory, flusherAndCompactor, walRoller);
   }

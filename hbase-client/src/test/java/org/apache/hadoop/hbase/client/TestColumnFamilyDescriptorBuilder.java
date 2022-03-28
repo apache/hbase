@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -40,19 +41,18 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.util.Map;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestColumnFamilyDescriptorBuilder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
+      HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
 
   @Test
   public void testBuilder() throws DeserializationException {
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).setInMemory(true)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE);
+        ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).setInMemory(true)
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE);
     final int v = 123;
     builder.setBlocksize(v);
     builder.setTimeToLive(v);
@@ -109,7 +109,7 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testAddGetRemoveConfiguration() {
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
     String key = "Some";
     String value = "value";
     builder.setConfiguration(key, value);
@@ -131,7 +131,7 @@ public class TestColumnFamilyDescriptorBuilder {
       ColumnFamilyDescriptorBuilder.getUnit(ColumnFamilyDescriptorBuilder.MOB_THRESHOLD));
     String policyString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(policy)),
       ColumnFamilyDescriptorBuilder
-        .getUnit(ColumnFamilyDescriptorBuilder.MOB_COMPACT_PARTITION_POLICY));
+          .getUnit(ColumnFamilyDescriptorBuilder.MOB_COMPACT_PARTITION_POLICY));
     assertEquals(String.valueOf(isMob), isMobString);
     assertEquals(String.valueOf(threshold), thresholdString);
     assertEquals(String.valueOf(policy), policyString);
@@ -153,7 +153,7 @@ public class TestColumnFamilyDescriptorBuilder {
   public void testSetTimeToLive() throws HBaseException {
     String ttl;
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
 
     ttl = "50000";
     builder.setTimeToLive(ttl);
@@ -188,7 +188,7 @@ public class TestColumnFamilyDescriptorBuilder {
   public void testSetBlocksize() throws HBaseException {
     String blocksize;
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
 
     blocksize = "131072";
     builder.setBlocksize(blocksize);
@@ -244,7 +244,7 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testSetEmptyValue() {
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY);
+        ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY);
     String testConf = "TestConfiguration";
     String testValue = "TestValue";
     // test set value

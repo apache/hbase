@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,14 +102,13 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     }
     if (conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) != null) {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
-          CPMasterObserver.class.getName());
+        conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
+            + CPMasterObserver.class.getName());
     } else {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CPMasterObserver.class.getName());
     }
 
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      NUM_SLAVES_BASE - 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE - 1);
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.rpc.timeout", 100000);
 
@@ -126,8 +125,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return MASTER.isInitialized() &&
-          ((RSGroupBasedLoadBalancer) MASTER.getLoadBalancer()).isOnline();
+        return MASTER.isInitialized()
+            && ((RSGroupBasedLoadBalancer) MASTER.getLoadBalancer()).isOnline();
       }
     });
     ADMIN.balancerSwitch(false, true);
@@ -185,7 +184,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   }
 
   protected final RSGroupInfo addGroup(String groupName, int serverCount)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     RSGroupInfo defaultInfo = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
     ADMIN.addRSGroup(groupName);
     Set<Address> set = new HashSet<>();
@@ -222,7 +221,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
   protected final void deleteTableIfNecessary() throws IOException {
     for (TableDescriptor desc : TEST_UTIL.getAdmin()
-      .listTableDescriptors(Pattern.compile(TABLE_PREFIX + ".*"))) {
+        .listTableDescriptors(Pattern.compile(TABLE_PREFIX + ".*"))) {
       TEST_UTIL.deleteTable(desc.getTableName());
     }
   }
@@ -258,16 +257,17 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   }
 
   protected Map<TableName, Map<ServerName, List<String>>> getTableServerRegionMap()
-    throws IOException {
+      throws IOException {
     Map<TableName, Map<ServerName, List<String>>> map = Maps.newTreeMap();
     Admin admin = TEST_UTIL.getAdmin();
     ClusterMetrics metrics =
-      admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME));
+        admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME));
     for (ServerName serverName : metrics.getServersName()) {
       for (RegionInfo region : admin.getRegions(serverName)) {
         TableName tableName = region.getTable();
         map.computeIfAbsent(tableName, k -> new TreeMap<>())
-          .computeIfAbsent(serverName, k -> new ArrayList<>()).add(region.getRegionNameAsString());
+            .computeIfAbsent(serverName, k -> new ArrayList<>())
+            .add(region.getRegionNameAsString());
       }
     }
     return map;
@@ -287,8 +287,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   }
 
   protected final String getGroupName(String baseName) {
-    return GROUP_PREFIX + "_" + getNameWithoutIndex(baseName) + "_" +
-      ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+    return GROUP_PREFIX + "_" + getNameWithoutIndex(baseName) + "_"
+        + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
   }
 
   /**
@@ -297,8 +297,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
    */
   protected final ServerName getServerName(Address addr) {
     return TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer().getServerName()).filter(sn -> sn.getAddress().equals(addr))
-      .findFirst().get();
+        .map(t -> t.getRegionServer().getServerName()).filter(sn -> sn.getAddress().equals(addr))
+        .findFirst().get();
   }
 
   protected final void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
@@ -387,73 +387,73 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
     @Override
     public void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
       preMoveServersAndTables = true;
     }
 
     @Override
     public void postMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
       postMoveServersAndTables = true;
     }
 
     @Override
     public void preRemoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers) throws IOException {
+        Set<Address> servers) throws IOException {
       preRemoveServersCalled = true;
     }
 
     @Override
     public void postRemoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers) throws IOException {
+        Set<Address> servers) throws IOException {
       postRemoveServersCalled = true;
     }
 
     @Override
     public void preRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String name) throws IOException {
+        String name) throws IOException {
       preRemoveRSGroupCalled = true;
     }
 
     @Override
     public void postRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String name) throws IOException {
+        String name) throws IOException {
       postRemoveRSGroupCalled = true;
     }
 
     @Override
     public void preAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
+        throws IOException {
       preAddRSGroupCalled = true;
     }
 
     @Override
     public void postAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
+        throws IOException {
       postAddRSGroupCalled = true;
     }
 
     @Override
     public void preMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroup) throws IOException {
+        Set<TableName> tables, String targetGroup) throws IOException {
       preMoveTablesCalled = true;
     }
 
     @Override
     public void postMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroup) throws IOException {
+        Set<TableName> tables, String targetGroup) throws IOException {
       postMoveTablesCalled = true;
     }
 
     @Override
     public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
+        Set<Address> servers, String targetGroup) throws IOException {
       preMoveServersCalled = true;
     }
 
     @Override
     public void postMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
+        Set<Address> servers, String targetGroup) throws IOException {
       postMoveServersCalled = true;
     }
 
@@ -471,97 +471,97 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
     @Override
     public void preGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String groupName) throws IOException {
+        final String groupName) throws IOException {
       preGetRSGroupInfoCalled = true;
     }
 
     @Override
     public void postGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String groupName) throws IOException {
+        final String groupName) throws IOException {
       postGetRSGroupInfoCalled = true;
     }
 
     @Override
     public void preGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName) throws IOException {
+        final TableName tableName) throws IOException {
       preGetRSGroupInfoOfTableCalled = true;
     }
 
     @Override
     public void postGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName) throws IOException {
+        final TableName tableName) throws IOException {
       postGetRSGroupInfoOfTableCalled = true;
     }
 
     @Override
     public void preListRSGroups(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
+        throws IOException {
       preListRSGroupsCalled = true;
     }
 
     @Override
     public void postListRSGroups(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
+        throws IOException {
       postListRSGroupsCalled = true;
     }
 
     @Override
     public void preGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final Address server) throws IOException {
+        final Address server) throws IOException {
       preGetRSGroupInfoOfServerCalled = true;
     }
 
     @Override
     public void postGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final Address server) throws IOException {
+        final Address server) throws IOException {
       postGetRSGroupInfoOfServerCalled = true;
     }
 
     @Override
     public void preListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
+        String groupName) throws IOException {
       preListTablesInRSGroupCalled = true;
     }
 
     @Override
     public void postListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
+        String groupName) throws IOException {
       postListTablesInRSGroupCalled = true;
     }
 
     @Override
     public void preGetConfiguredNamespacesAndTablesInRSGroup(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+        ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
       preGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
     }
 
     @Override
     public void postGetConfiguredNamespacesAndTablesInRSGroup(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+        ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
     }
 
     @Override
     public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
-      String newName) throws IOException {
+        String newName) throws IOException {
       preRenameRSGroup = true;
     }
 
     @Override
     public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
-      String newName) throws IOException {
+        String newName) throws IOException {
       postRenameRSGroup = true;
     }
 
     @Override
     public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String groupName, final Map<String, String> configuration) throws IOException {
+        final String groupName, final Map<String, String> configuration) throws IOException {
       preUpdateRSGroupConfig = true;
     }
 
     @Override
     public void postUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String groupName, final Map<String, String> configuration) throws IOException {
+        final String groupName, final Map<String, String> configuration) throws IOException {
       postUpdateRSGroupConfig = true;
     }
   }

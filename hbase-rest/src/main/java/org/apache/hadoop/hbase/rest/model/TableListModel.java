@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableListMessage.TableList;
@@ -36,7 +32,7 @@ import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableListMessage.T
 /**
  * Simple representation of a list of table names.
  */
-@XmlRootElement(name="TableList")
+@XmlRootElement(name = "TableList")
 @InterfaceAudience.Private
 public class TableListModel implements Serializable, ProtobufMessageHandler {
 
@@ -47,7 +43,8 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   /**
    * Default constructor
    */
-  public TableListModel() {}
+  public TableListModel() {
+  }
 
   /**
    * Add the table name model to the list
@@ -68,7 +65,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   /**
    * @return the tables
    */
-  @XmlElementRef(name="table")
+  @XmlElementRef(name = "table")
   public List<TableModel> getTables() {
     return tables;
   }
@@ -80,13 +77,14 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
     this.tables = tables;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    for(TableModel aTable : tables) {
+    for (TableModel aTable : tables) {
       sb.append(aTable.toString());
       sb.append('\n');
     }
@@ -103,11 +101,10 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableList.Builder builder = TableList.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
-    for (String table: builder.getNameList()) {
+    for (String table : builder.getNameList()) {
       this.add(new TableModel(table));
     }
     return this;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestPBCell {
   @Test
   public void testRoundTrip() {
     CellMessage.Cell cell =
-      CellMessage.Cell.newBuilder().setRow(ByteString.copyFromUtf8("row")).build();
+        CellMessage.Cell.newBuilder().setRow(ByteString.copyFromUtf8("row")).build();
     PositionedByteRange pbr = new SimplePositionedByteRange(cell.getSerializedSize());
     pbr.setPosition(0);
     int encodedLength = CODEC.encode(pbr, cell);

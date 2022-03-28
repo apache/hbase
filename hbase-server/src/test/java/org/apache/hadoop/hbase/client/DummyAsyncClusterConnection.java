@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -138,8 +138,8 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<Boolean> bulkLoad(TableName tableName,
-    List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-    String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
+      List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
+      String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
     return null;
   }
 
@@ -155,7 +155,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<List<ServerName>>
-    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+      getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
     return null;
   }
 
@@ -165,9 +165,8 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public CompletableFuture<Void> replicate(RegionInfo replica,
-    List<Entry> entries, int numRetries, long rpcTimeoutNs,
-    long operationTimeoutNs) {
+  public CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int numRetries,
+      long rpcTimeoutNs, long operationTimeoutNs) {
     return null;
   }
 }

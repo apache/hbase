@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -69,11 +69,9 @@ public class AccessControlClient {
         .contains(SecurityCapability.CELL_AUTHORIZATION);
   }
 
-  private static BlockingInterface getAccessControlServiceStub(Table ht)
-      throws IOException {
+  private static BlockingInterface getAccessControlServiceStub(Table ht) throws IOException {
     CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
-    BlockingInterface protocol =
-        AccessControlProtos.AccessControlService.newBlockingStub(service);
+    BlockingInterface protocol = AccessControlProtos.AccessControlService.newBlockingStub(service);
     return protocol;
   }
 
@@ -90,8 +88,8 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
-  private static void grant(Connection connection, final TableName tableName,
-      final String userName, final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
+  private static void grant(Connection connection, final TableName tableName, final String userName,
+      final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
       final Permission.Action... actions) throws Throwable {
     connection.getAdmin().grant(new UserPermission(userName, Permission.newBuilder(tableName)
         .withFamily(family).withQualifier(qual).withActions(actions).build()),
@@ -99,8 +97,8 @@ public class AccessControlClient {
   }
 
   /**
-   * Grants permission on the specified table for the specified user.
-   * If permissions for a specified user exists, later granted permissions will override previous granted permissions.
+   * Grants permission on the specified table for the specified user. If permissions for a specified
+   * user exists, later granted permissions will override previous granted permissions.
    * @param connection The Connection instance to use
    * @param tableName
    * @param userName
@@ -133,8 +131,8 @@ public class AccessControlClient {
   }
 
   /**
-   * Grants permission on the specified namespace for the specified user.
-   * If permissions on the specified namespace exists, later granted permissions will override previous granted
+   * Grants permission on the specified namespace for the specified user. If permissions on the
+   * specified namespace exists, later granted permissions will override previous granted
    * permissions.
    * @param connection The Connection instance to use
    * @param namespace
@@ -165,9 +163,8 @@ public class AccessControlClient {
   }
 
   /**
-   * Grant global permissions for the specified user.
-   * If permissions for the specified user exists, later granted permissions will override previous granted
-   * permissions.
+   * Grant global permissions for the specified user. If permissions for the specified user exists,
+   * later granted permissions will override previous granted permissions.
    * @param connection
    * @param userName
    * @param actions
@@ -195,9 +192,9 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
-  public static void revoke(Connection connection, final TableName tableName,
-      final String username, final byte[] family, final byte[] qualifier,
-      final Permission.Action... actions) throws Throwable {
+  public static void revoke(Connection connection, final TableName tableName, final String username,
+      final byte[] family, final byte[] qualifier, final Permission.Action... actions)
+      throws Throwable {
     connection.getAdmin().revoke(new UserPermission(username, Permission.newBuilder(tableName)
         .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
   }
@@ -210,8 +207,8 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
-  public static void revoke(Connection connection, final String namespace,
-      final String userName, final Permission.Action... actions) throws Throwable {
+  public static void revoke(Connection connection, final String namespace, final String userName,
+      final Permission.Action... actions) throws Throwable {
     connection.getAdmin().revoke(
       new UserPermission(userName, Permission.newBuilder(namespace).withActions(actions).build()));
   }

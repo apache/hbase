@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,13 +27,12 @@ public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy
   }
 
   /**
-   * @return flushSize * 2 if there's exactly one region of the table in question
-   * found on this regionserver. Otherwise max file size.
-   * This allows a table to spread quickly across servers, while avoiding creating
-   * too many regions.
+   * @return flushSize * 2 if there's exactly one region of the table in question found on this
+   *         regionserver. Otherwise max file size. This allows a table to spread quickly across
+   *         servers, while avoiding creating too many regions.
    */
   @Override
   protected long getSizeToCheck(final int tableRegionsCount) {
-    return tableRegionsCount == 1  ? this.initialSize : getDesiredMaxFileSize();
+    return tableRegionsCount == 1 ? this.initialSize : getDesiredMaxFileSize();
   }
 }

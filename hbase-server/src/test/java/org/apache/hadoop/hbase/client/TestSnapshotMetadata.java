@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test class to verify that metadata is consistent before and after a snapshot attempt.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestSnapshotMetadata {
 
   @ClassRule
@@ -80,9 +80,8 @@ public class TestSnapshotMetadata {
   private static final String TEST_CONF_CUSTOM_VALUE = "TestCustomConf";
   private static final String TEST_CUSTOM_VALUE = "TestCustomValue";
 
-  private static final byte[][] families = {
-    MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM
-  };
+  private static final byte[][] families =
+      { MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM };
 
   private static final DataBlockEncoding DATA_BLOCK_ENCODING_TYPE = DataBlockEncoding.FAST_DIFF;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
@@ -147,7 +146,7 @@ public class TestSnapshotMetadata {
   }
 
   /*
-   *  Create a table that has non-default properties so we can see if they hold
+   * Create a table that has non-default properties so we can see if they hold
    */
   private void createTableWithNonDefaultProperties() throws Exception {
     final long startTime = EnvironmentEdgeManager.currentTime();
@@ -156,19 +155,19 @@ public class TestSnapshotMetadata {
 
     // enable replication on a column family
     ColumnFamilyDescriptor maxVersionsColumn = ColumnFamilyDescriptorBuilder
-      .newBuilder(MAX_VERSIONS_FAM).setMaxVersions(MAX_VERSIONS).build();
+        .newBuilder(MAX_VERSIONS_FAM).setMaxVersions(MAX_VERSIONS).build();
     ColumnFamilyDescriptor bloomFilterColumn = ColumnFamilyDescriptorBuilder
-      .newBuilder(BLOOMFILTER_FAM).setBloomFilterType(BLOOM_TYPE).build();
+        .newBuilder(BLOOMFILTER_FAM).setBloomFilterType(BLOOM_TYPE).build();
     ColumnFamilyDescriptor dataBlockColumn = ColumnFamilyDescriptorBuilder
-      .newBuilder(COMPRESSED_FAM).setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE).build();
+        .newBuilder(COMPRESSED_FAM).setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE).build();
     ColumnFamilyDescriptor blockSizeColumn =
-      ColumnFamilyDescriptorBuilder.newBuilder(BLOCKSIZE_FAM).setBlocksize(BLOCK_SIZE).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(BLOCKSIZE_FAM).setBlocksize(BLOCK_SIZE).build();
 
     TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(sourceTableNameAsString)).setColumnFamily(maxVersionsColumn)
-      .setColumnFamily(bloomFilterColumn).setColumnFamily(dataBlockColumn)
-      .setColumnFamily(blockSizeColumn).setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE)
-      .setValue(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE).build();
+        .newBuilder(TableName.valueOf(sourceTableNameAsString)).setColumnFamily(maxVersionsColumn)
+        .setColumnFamily(bloomFilterColumn).setColumnFamily(dataBlockColumn)
+        .setColumnFamily(blockSizeColumn).setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE)
+        .setValue(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE).build();
     assertTrue(tableDescriptor.getValues().size() > 0);
 
     admin.createTable(tableDescriptor);
@@ -180,7 +179,6 @@ public class TestSnapshotMetadata {
     original.close();
   }
 
-
   /**
    * Verify that the describe for a cloned table matches the describe from the original.
    */
@@ -189,8 +187,8 @@ public class TestSnapshotMetadata {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableName;
     final TableName clonedTableName = TableName.valueOf(clonedTableNameAsString);
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + EnvironmentEdgeManager.currentTime();
+    final String snapshotNameAsString =
+        "snapshot" + originalTableName + EnvironmentEdgeManager.currentTime();
     final String snapshotName = snapshotNameAsString;
 
     // restore the snapshot into a cloned table and examine the output
@@ -198,19 +196,17 @@ public class TestSnapshotMetadata {
     Collections.addAll(familiesList, families);
 
     // Create a snapshot in which all families are empty
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null,
-      familiesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null, familiesList,
+      snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     Table clonedTable = UTIL.getConnection().getTable(clonedTableName);
     TableDescriptor cloneHtd = admin.getDescriptor(clonedTableName);
-    assertEquals(
-      originalTableDescription.replace(originalTableName.getNameAsString(),clonedTableNameAsString),
-      cloneHtd.toStringCustomizedValues());
+    assertEquals(originalTableDescription.replace(originalTableName.getNameAsString(),
+      clonedTableNameAsString), cloneHtd.toStringCustomizedValues());
 
     // Verify the custom fields
-    assertEquals(originalTableDescriptor.getValues().size(),
-                        cloneHtd.getValues().size());
+    assertEquals(originalTableDescriptor.getValues().size(), cloneHtd.getValues().size());
     assertEquals(TEST_CUSTOM_VALUE, cloneHtd.getValue(TEST_CUSTOM_VALUE));
     assertEquals(TEST_CONF_CUSTOM_VALUE, cloneHtd.getValue(TEST_CONF_CUSTOM_VALUE));
     assertEquals(originalTableDescriptor.getValues(), cloneHtd.getValues());
@@ -278,12 +274,11 @@ public class TestSnapshotMetadata {
     }
 
     // take a "disabled" snapshot
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + EnvironmentEdgeManager.currentTime();
+    final String snapshotNameAsString =
+        "snapshot" + originalTableName + EnvironmentEdgeManager.currentTime();
 
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName,
-      familiesWithDataList, emptyFamiliesList, snapshotNameAsString, rootDir, fs,
-      /* onlineSnapshot= */ false);
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, familiesWithDataList,
+      emptyFamiliesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.enableTable(originalTableName);
 

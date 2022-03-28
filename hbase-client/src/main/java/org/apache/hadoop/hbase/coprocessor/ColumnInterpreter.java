@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
@@ -28,26 +26,20 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
- * Defines how value for specific column is interpreted and provides utility
- * methods like compare, add, multiply etc for them. Takes column family, column
- * qualifier and return the cell value. Its concrete implementation should
- * handle null case gracefully. 
- * Refer to {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter} 
- * for an example.
+ * Defines how value for specific column is interpreted and provides utility methods like compare,
+ * add, multiply etc for them. Takes column family, column qualifier and return the cell value. Its
+ * concrete implementation should handle null case gracefully. Refer to
+ * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter} for an example.
  * <p>
- * Takes two generic parameters and three Message parameters. 
- * The cell value type of the interpreter is &lt;T&gt;.
- * During some computations like sum, average, the return type can be different
- * than the cell value data type, for eg, sum of int cell values might overflow
- * in case of a int result, we should use Long for its result. Therefore, this
- * class mandates to use a different (promoted) data type for result of these
- * computations &lt;S&gt;. All computations are performed on the promoted data type
- * &lt;S&gt;. There is a conversion method
- * {@link ColumnInterpreter#castToReturnType(Object)} which takes a &lt;T&gt; type and
- * returns a &lt;S&gt; type.
- * The AggregateIm&gt;lementation uses PB messages to initialize the
- * user's ColumnInterpreter implementation, and for sending the responses
- * back to AggregationClient.
+ * Takes two generic parameters and three Message parameters. The cell value type of the interpreter
+ * is &lt;T&gt;. During some computations like sum, average, the return type can be different than
+ * the cell value data type, for eg, sum of int cell values might overflow in case of a int result,
+ * we should use Long for its result. Therefore, this class mandates to use a different (promoted)
+ * data type for result of these computations &lt;S&gt;. All computations are performed on the
+ * promoted data type &lt;S&gt;. There is a conversion method
+ * {@link ColumnInterpreter#castToReturnType(Object)} which takes a &lt;T&gt; type and returns a
+ * &lt;S&gt; type. The AggregateIm&gt;lementation uses PB messages to initialize the user's
+ * ColumnInterpreter implementation, and for sending the responses back to AggregationClient.
  * @param T Cell value data type
  * @param S Promoted data type
  * @param P PB message that is used to transport initializer specific bytes
@@ -56,25 +48,21 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class ColumnInterpreter<T, S, P extends Message, 
-Q extends Message, R extends Message> {
+public abstract class ColumnInterpreter<T, S, P extends Message, Q extends Message, R extends Message> {
 
   /**
-   * 
    * @param colFamily
    * @param colQualifier
    * @param c
    * @return value of type T
    * @throws IOException
    */
-  public abstract T getValue(byte[] colFamily, byte[] colQualifier, Cell c)
-      throws IOException;
+  public abstract T getValue(byte[] colFamily, byte[] colQualifier, Cell c) throws IOException;
 
   /**
    * @param l1
    * @param l2
-   * @return sum or non null value among (if either of them is null); otherwise
-   * returns a null.
+   * @return sum or non null value among (if either of them is null); otherwise returns a null.
    */
   public abstract S add(S l1, S l2);
 
@@ -108,8 +96,7 @@ Q extends Message, R extends Message> {
   public abstract S castToReturnType(T o);
 
   /**
-   * This takes care if either of arguments are null. returns 0 if they are
-   * equal or both are null;
+   * This takes care if either of arguments are null. returns 0 if they are equal or both are null;
    * <ul>
    * <li>&gt; 0 if l1 &gt; l2 or l1 is not null and l2 is null.</li>
    * <li>&lt; 0 if l1 &lt; l2 or l1 is null and l2 is not null.</li>
@@ -118,8 +105,8 @@ Q extends Message, R extends Message> {
   public abstract int compare(final T l1, final T l2);
 
   /**
-   * used for computing average of &lt;S&gt; data values. Not providing the divide
-   * method that takes two &lt;S&gt; values as it is not needed as of now.
+   * used for computing average of &lt;S&gt; data values. Not providing the divide method that takes
+   * two &lt;S&gt; values as it is not needed as of now.
    * @param o
    * @param l
    * @return Average
@@ -127,23 +114,22 @@ Q extends Message, R extends Message> {
   public abstract double divideForAvg(S o, Long l);
 
   /**
-   * This method should return any additional data that is needed on the
-   * server side to construct the ColumnInterpreter. The server
-   * will pass this to the {@link #initialize}
-   * method. If there is no ColumnInterpreter specific data (for e.g.,
-   * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter})
-   *  then null should be returned.
+   * This method should return any additional data that is needed on the server side to construct
+   * the ColumnInterpreter. The server will pass this to the {@link #initialize} method. If there is
+   * no ColumnInterpreter specific data (for e.g.,
+   * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter}) then null should be
+   * returned.
    * @return the PB message
    */
   public abstract P getRequestData();
 
   /**
-   * This method should initialize any field(s) of the ColumnInterpreter with
-   * a parsing of the passed message bytes (used on the server side).
+   * This method should initialize any field(s) of the ColumnInterpreter with a parsing of the
+   * passed message bytes (used on the server side).
    * @param msg
    */
   public abstract void initialize(P msg);
-  
+
   /**
    * This method gets the PB message corresponding to the cell type
    * @param t
@@ -173,8 +159,8 @@ Q extends Message, R extends Message> {
   public abstract S getPromotedValueFromProto(R r);
 
   /**
-   * The response message comes as type S. This will convert/cast it to T.
-   * In some sense, performs the opposite of {@link #castToReturnType(Object)}
+   * The response message comes as type S. This will convert/cast it to T. In some sense, performs
+   * the opposite of {@link #castToReturnType(Object)}
    * @param response
    * @return cast
    */

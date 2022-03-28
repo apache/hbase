@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
 import org.apache.commons.codec.binary.Hex;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility class for MD5
- * MD5 hash produces a 128-bit digest.
+ * Utility class for MD5 MD5 hash produces a 128-bit digest.
  */
 @InterfaceAudience.Public
 public class MD5Hash {
@@ -43,15 +39,13 @@ public class MD5Hash {
   public static String getMD5AsHex(byte[] key) {
     return getMD5AsHex(key, 0, key.length);
   }
-  
+
   /**
-   * Given a byte array, returns its MD5 hash as a hex string.
-   * Only "length" number of bytes starting at "offset" within the
-   * byte array are used.
-   *
+   * Given a byte array, returns its MD5 hash as a hex string. Only "length" number of bytes
+   * starting at "offset" within the byte array are used.
    * @param key the key to hash (variable length byte array)
    * @param offset
-   * @param length 
+   * @param length
    * @return MD5 hash as a 32 character hex string.
    */
   public static String getMD5AsHex(byte[] key, int offset, int length) {

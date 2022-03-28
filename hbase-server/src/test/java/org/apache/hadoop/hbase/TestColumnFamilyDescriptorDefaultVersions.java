@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestColumnFamilyDescriptorDefaultVersions {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnFamilyDescriptorDefaultVersions.class);
+      HBaseClassTestRule.forClass(TestColumnFamilyDescriptorDefaultVersions.class);
 
   @Rule
   public TestName name = new TestName();
@@ -82,7 +82,7 @@ public class TestColumnFamilyDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -102,9 +102,10 @@ public class TestColumnFamilyDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
-        .setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1)).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+            .setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1))
+            .build())
+        .build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -124,8 +125,8 @@ public class TestColumnFamilyDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build())
+        .build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -140,19 +141,19 @@ public class TestColumnFamilyDescriptorDefaultVersions {
   @Test
   public void testHColumnDescriptorCachedMaxVersions() throws Exception {
     ColumnFamilyDescriptor familyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build();
     // Verify the max version
     assertEquals(5, familyDescriptor.getMaxVersions());
 
     // modify the max version
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(familyDescriptor)
-      .setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8")).build();
+        .setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8")).build();
     // Verify the max version
     assertEquals(8, familyDescriptor.getMaxVersions());
   }
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
-    final byte[]... families) throws IOException {
+      final byte[]... families) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
@@ -169,7 +170,7 @@ public class TestColumnFamilyDescriptorDefaultVersions {
   }
 
   private void verifyColumnFamilyDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
-    final TableName tableName, final byte[]... families) {
+      final TableName tableName, final byte[]... families) {
     for (ColumnFamilyDescriptor hcd : hcds) {
       assertEquals(expected, hcd.getMaxVersions());
     }

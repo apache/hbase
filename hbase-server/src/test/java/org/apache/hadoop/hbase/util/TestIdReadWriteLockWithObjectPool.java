@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLockWithObjectPool {
 
@@ -66,9 +66,9 @@ public class TestIdReadWriteLockWithObjectPool {
 
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] {
-      { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.WEAK) },
-      { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.SOFT) } });
+    return Arrays
+        .asList(new Object[][] { { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.WEAK) },
+            { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.SOFT) } });
   }
 
   private Map<Long, String> idOwner = new ConcurrentHashMap<>();
@@ -133,17 +133,17 @@ public class TestIdReadWriteLockWithObjectPool {
       LOG.debug("Size of entry pool after gc and purge: " + entryPoolSize);
       ReferenceType refType = idLock.getReferenceType();
       switch (refType) {
-      case WEAK:
-        // make sure the entry pool will be cleared after GC and purge call
-        assertEquals(0, entryPoolSize);
-        break;
-      case SOFT:
-        // make sure the entry pool won't be cleared when JVM memory is enough
-        // even after GC and purge call
-        assertEquals(NUM_IDS, entryPoolSize);
-        break;
-      default:
-        break;
+        case WEAK:
+          // make sure the entry pool will be cleared after GC and purge call
+          assertEquals(0, entryPoolSize);
+          break;
+        case SOFT:
+          // make sure the entry pool won't be cleared when JVM memory is enough
+          // even after GC and purge call
+          assertEquals(NUM_IDS, entryPoolSize);
+          break;
+        default:
+          break;
       }
     } finally {
       exec.shutdown();
@@ -151,6 +151,4 @@ public class TestIdReadWriteLockWithObjectPool {
     }
   }
 
-
 }
-

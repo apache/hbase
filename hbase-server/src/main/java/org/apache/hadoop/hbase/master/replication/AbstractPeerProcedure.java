@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,8 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
 
   protected final void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
     addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
-      .map(sn -> new RefreshPeerProcedure(peerId, type, sn)).toArray(RefreshPeerProcedure[]::new));
+        .map(sn -> new RefreshPeerProcedure(peerId, type, sn))
+        .toArray(RefreshPeerProcedure[]::new));
   }
 
   // will be override in test to simulate error
@@ -158,7 +159,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
       return;
     }
     for (Pair<String, Long> name2Barrier : ReplicationBarrierFamilyFormat
-      .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
+        .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
       LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
         queueStorage);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -114,7 +114,7 @@ public class SyncReplicationReplayWALManager {
 
     public Optional<ServerName> acquire(ServerManager serverManager) {
       Optional<ServerName> worker = serverManager.getOnlineServers().keySet().stream()
-        .filter(server -> !usedWorkers.contains(server)).findAny();
+          .filter(server -> !usedWorkers.contains(server)).findAny();
       worker.ifPresent(usedWorkers::add);
       return worker;
     }
@@ -136,7 +136,7 @@ public class SyncReplicationReplayWALManager {
   }
 
   private final ConcurrentMap<String, UsedReplayWorkersForPeer> usedWorkersByPeer =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   public SyncReplicationReplayWALManager(MasterServices services)
       throws IOException, ReplicationException {
@@ -149,7 +149,7 @@ public class SyncReplicationReplayWALManager {
       @Override
       public void serverAdded(ServerName serverName) {
         MasterProcedureScheduler scheduler =
-          services.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler();
+            services.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler();
         for (UsedReplayWorkersForPeer usedWorkers : usedWorkersByPeer.values()) {
           synchronized (usedWorkers) {
             usedWorkers.wake(scheduler);
@@ -216,12 +216,12 @@ public class SyncReplicationReplayWALManager {
       deleteDir(dst, peerId);
       if (!fs.rename(src, dst)) {
         throw new IOException(
-          "Failed to rename dir from " + src + " to " + dst + " for peer id=" + peerId);
+            "Failed to rename dir from " + src + " to " + dst + " for peer id=" + peerId);
       }
       LOG.info("Renamed dir from {} to {} for peer id={}", src, dst, peerId);
     } else if (!fs.exists(dst)) {
       throw new IOException(
-        "Want to rename from " + src + " to " + dst + ", but they both do not exist");
+          "Want to rename from " + src + " to " + dst + ", but they both do not exist");
     }
   }
 
@@ -242,7 +242,7 @@ public class SyncReplicationReplayWALManager {
       Path src = status.getPath();
       String srcName = src.getName();
       String dstName =
-        srcName.substring(0, srcName.length() - ReplicationUtils.RENAME_WAL_SUFFIX.length());
+          srcName.substring(0, srcName.length() - ReplicationUtils.RENAME_WAL_SUFFIX.length());
       FSUtils.renameFile(fs, src, new Path(src.getParent(), dstName));
     }
     List<Path> wals = new ArrayList<>();

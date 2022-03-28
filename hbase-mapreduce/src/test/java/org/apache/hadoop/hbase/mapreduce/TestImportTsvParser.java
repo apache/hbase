@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 /**
  * Tests for {@link TsvParser}.
  */
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestImportTsvParser {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -58,7 +58,7 @@ public class TestImportTsvParser {
     ArrayList<String> parsedCols = new ArrayList<>();
     for (int i = 0; i < parsed.getColumnCount(); i++) {
       parsedCols.add(Bytes.toString(parsed.getLineBytes(), parsed.getColumnOffset(i),
-          parsed.getColumnLength(i)));
+        parsed.getColumnLength(i)));
     }
     if (!Iterables.elementsEqual(parsedCols, expected)) {
       fail("Expected: " + Joiner.on(",").join(expected) + "\n" + "Got:"
@@ -293,7 +293,7 @@ public class TestImportTsvParser {
     assertEquals(6, parse.getAttributeKeyOffset());
     String[] attr = parse.getIndividualAttributes();
     int i = 0;
-    for (String str :  attr) {
+    for (String str : attr) {
       assertEquals(("key" + i + "=>" + "value" + i), str);
       i++;
     }

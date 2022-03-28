@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,7 +70,7 @@ public class TestAsyncFSWALRollStuck {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWALRollStuck.class);
+      HBaseClassTestRule.forClass(TestAsyncFSWALRollStuck.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncFSWALRollStuck.class);
 
@@ -143,11 +143,11 @@ public class TestAsyncFSWALRollStuck {
     MVCC = new MultiVersionConcurrencyControl();
 
     EXECUTOR =
-      Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setDaemon(true).build());
+        Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setDaemon(true).build());
 
     Path rootDir = UTIL.getDataTestDir();
     ROLL_EXEC =
-      Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
+        Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     WALActionsListener listener = new WALActionsListener() {
 
       @Override
@@ -163,7 +163,7 @@ public class TestAsyncFSWALRollStuck {
 
     };
     WAL = new AsyncFSWAL(UTIL.getTestFileSystem(), rootDir, "log", "oldlog", conf,
-      Arrays.asList(listener), true, null, null, EVENT_LOOP_GROUP, CHANNEL_CLASS);
+        Arrays.asList(listener), true, null, null, EVENT_LOOP_GROUP, CHANNEL_CLASS);
     WAL.init();
   }
 
@@ -180,10 +180,10 @@ public class TestAsyncFSWALRollStuck {
     byte[] row = Bytes.toBytes("family");
     WALEdit edit = new WALEdit();
     edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setFamily(row)
-      .setQualifier(row).setRow(row).setValue(row)
-      .setTimestamp(EnvironmentEdgeManager.currentTime()).setType(Type.Put).build());
+        .setQualifier(row).setRow(row).setValue(row)
+        .setTimestamp(EnvironmentEdgeManager.currentTime()).setType(Type.Put).build());
     WALKeyImpl key1 =
-      new WALKeyImpl(RI.getEncodedNameAsBytes(), TN, EnvironmentEdgeManager.currentTime(), MVCC);
+        new WALKeyImpl(RI.getEncodedNameAsBytes(), TN, EnvironmentEdgeManager.currentTime(), MVCC);
     WAL.appendData(RI, key1, edit);
 
     WALKeyImpl key2 = new WALKeyImpl(RI.getEncodedNameAsBytes(), TN, key1.getWriteTime() + 1, MVCC);

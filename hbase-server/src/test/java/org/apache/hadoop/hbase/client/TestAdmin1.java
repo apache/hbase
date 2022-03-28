@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -104,7 +104,7 @@ public class TestAdmin1 extends TestAdminBase {
   public void testCompactATableWithSuperLongTableName() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     try {
       ADMIN.createTable(htd);
       assertThrows(IllegalArgumentException.class,
@@ -122,7 +122,7 @@ public class TestAdmin1 extends TestAdminBase {
   public void testCompactionTimestamps() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     ADMIN.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     long ts = ADMIN.getLastMajorCompactionTimestamp(tableName);
@@ -362,13 +362,14 @@ public class TestAdmin1 extends TestAdminBase {
           // check if splitKey is based on the largest column family
           // in terms of it store size
           int deltaForLargestFamily = Math.abs(rowCount / 2 - splitKey);
-          LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily +
-            ", r=" + regions.get(0).getRegion());
+          LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily
+              + ", r=" + regions.get(0).getRegion());
           for (int index = 0; index < familyNames.length; index++) {
             int delta = Math.abs(rowCounts[index] / 2 - splitKey);
             if (delta < deltaForLargestFamily) {
-              assertTrue("Delta " + delta + " for family " + index + " should be at least " +
-                "deltaForLargestFamily " + deltaForLargestFamily, false);
+              assertTrue("Delta " + delta + " for family " + index + " should be at least "
+                  + "deltaForLargestFamily " + deltaForLargestFamily,
+                false);
             }
           }
         }
@@ -386,7 +387,7 @@ public class TestAdmin1 extends TestAdminBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] cf = Bytes.toBytes("f");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf)).build();
     byte[][] splitRows = new byte[2][];
     splitRows[0] = new byte[] { (byte) '4' };
     splitRows[1] = new byte[] { (byte) '7' };
@@ -412,13 +413,13 @@ public class TestAdmin1 extends TestAdminBase {
     ht.put(puts);
     ht.close();
     List<Pair<RegionInfo, ServerName>> regions =
-      MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tableName);
+        MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tableName);
     boolean gotException = false;
     // the element at index 1 would be a replica (since the metareader gives us ordered
     // regions). Try splitting that region via the split API . Should fail
     try {
-      FutureUtils.get(
-        TEST_UTIL.getAdmin().splitRegionAsync(regions.get(1).getFirst().getRegionName()));
+      FutureUtils
+          .get(TEST_UTIL.getAdmin().splitRegionAsync(regions.get(1).getFirst().getRegionName()));
     } catch (IllegalArgumentException ex) {
       gotException = true;
     }
@@ -439,7 +440,7 @@ public class TestAdmin1 extends TestAdminBase {
     // testing Sync split operation
     try {
       FutureUtils.get(TEST_UTIL.getAdmin()
-        .splitRegionAsync(regions.get(1).getFirst().getRegionName(), new byte[] { (byte) '1' }));
+          .splitRegionAsync(regions.get(1).getFirst().getRegionName(), new byte[] { (byte) '1' }));
     } catch (IllegalArgumentException ex) {
       gotException = true;
     }
@@ -448,10 +449,9 @@ public class TestAdmin1 extends TestAdminBase {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
-      FutureUtils.get(TEST_UTIL.getAdmin().mergeRegionsAsync(
-        regions.get(1).getFirst().getEncodedNameAsBytes(),
-        regions.get(2).getFirst().getEncodedNameAsBytes(),
-        true));
+      FutureUtils.get(
+        TEST_UTIL.getAdmin().mergeRegionsAsync(regions.get(1).getFirst().getEncodedNameAsBytes(),
+          regions.get(2).getFirst().getEncodedNameAsBytes(), true));
     } catch (IllegalArgumentException m) {
       gotException = true;
     }
@@ -493,10 +493,10 @@ public class TestAdmin1 extends TestAdminBase {
     String fn1 = "rep1";
     String fn = "defaultRep";
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fn))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(fn1))
-        .setDFSReplication((short) 1).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fn))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(fn1))
+            .setDFSReplication((short) 1).build())
+        .build();
     Table table = TEST_UTIL.createTable(htd, null);
     TEST_UTIL.waitTableAvailable(tableName);
     Put p = new Put(Bytes.toBytes("defaultRep_rk"));
@@ -541,7 +541,7 @@ public class TestAdmin1 extends TestAdminBase {
   public void testMergeRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
     byte[][] splitRows = new byte[2][];
     splitRows[0] = new byte[] { (byte) '3' };
     splitRows[1] = new byte[] { (byte) '6' };
@@ -562,8 +562,8 @@ public class TestAdmin1 extends TestAdminBase {
       regionB = tableRegions.get(1);
       regionC = tableRegions.get(2);
       // TODO convert this to version that is synchronous (See HBASE-16668)
-      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(),
-        false).get(60, TimeUnit.SECONDS);
+      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false).get(60,
+        TimeUnit.SECONDS);
 
       tableRegions = ADMIN.getRegions(tableName);
 
@@ -587,8 +587,7 @@ public class TestAdmin1 extends TestAdminBase {
 
       // TODO convert this to version that is synchronous (See HBASE-16668)
       ADMIN.mergeRegionsAsync(regionC.getEncodedNameAsBytes(),
-        mergedChildRegion.getEncodedNameAsBytes(), false)
-        .get(60, TimeUnit.SECONDS);
+        mergedChildRegion.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
 
       assertEquals(1, ADMIN.getRegions(tableName).size());
     } finally {
@@ -602,7 +601,7 @@ public class TestAdmin1 extends TestAdminBase {
       throws IOException, InterruptedException, ExecutionException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
     byte[][] splitRows = new byte[2][];
     splitRows[0] = new byte[] { (byte) '3' };
     splitRows[1] = new byte[] { (byte) '6' };
@@ -620,8 +619,8 @@ public class TestAdmin1 extends TestAdminBase {
       }
       // 1
       try {
-        FutureUtils.get(ADMIN
-          .mergeRegionsAsync(new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false));
+        FutureUtils.get(ADMIN.mergeRegionsAsync(
+          new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false));
         fail();
       } catch (IllegalArgumentException e) {
         // expected
@@ -636,8 +635,8 @@ public class TestAdmin1 extends TestAdminBase {
   public void testSplitShouldNotHappenIfSplitIsDisabledForTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     Table table = TEST_UTIL.createTable(htd, null);
     for (int i = 0; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -655,7 +654,7 @@ public class TestAdmin1 extends TestAdminBase {
     }
     // Split should not happen.
     List<RegionInfo> allRegions =
-      MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName, true);
+        MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName, true);
     assertEquals(1, allRegions.size());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestBufferedMutator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferedMutator.class);
+      HBaseClassTestRule.forClass(TestBufferedMutator.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -67,14 +67,14 @@ public class TestBufferedMutator {
   @Test
   public void test() throws Exception {
     try (BufferedMutator mutator = TEST_UTIL.getConnection()
-      .getBufferedMutator(new BufferedMutatorParams(TABLE_NAME).writeBufferSize(64 * 1024))) {
+        .getBufferedMutator(new BufferedMutatorParams(TABLE_NAME).writeBufferSize(64 * 1024))) {
       mutator.mutate(IntStream.range(0, COUNT / 2)
-        .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
-        .collect(Collectors.toList()));
+          .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
+          .collect(Collectors.toList()));
       mutator.flush();
       mutator.mutate(IntStream.range(COUNT / 2, COUNT)
-        .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
-        .collect(Collectors.toList()));
+          .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
+          .collect(Collectors.toList()));
       mutator.close();
       verifyData();
     }

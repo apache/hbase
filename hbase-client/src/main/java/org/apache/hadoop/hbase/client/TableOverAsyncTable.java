@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -69,6 +71,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -131,7 +134,7 @@ class TableOverAsyncTable implements Table {
       } catch (IOException e) {
         results[i] = e;
         errors.add(new ThrowableWithExtraContext(e, EnvironmentEdgeManager.currentTime(),
-          "Error when processing " + actions.get(i)));
+            "Error when processing " + actions.get(i)));
       }
     }
     if (!errors.isEmpty()) {
@@ -151,7 +154,7 @@ class TableOverAsyncTable implements Table {
       FutureUtils.addListener(futures.get(i), (r, e) -> {
         if (e != null) {
           errors.add(new ThrowableWithExtraContext(e, EnvironmentEdgeManager.currentTime(),
-            "Error when processing " + actions.get(index)));
+              "Error when processing " + actions.get(index)));
           if (!ArrayUtils.isEmpty(results)) {
             results[index] = e;
           }
@@ -164,8 +167,8 @@ class TableOverAsyncTable implements Table {
             (l, le) -> {
               if (le != null) {
                 errors.add(new ThrowableWithExtraContext(le, EnvironmentEdgeManager.currentTime(),
-                  "Error when finding the region for row " +
-                    Bytes.toStringBinary(actions.get(index).getRow())));
+                    "Error when finding the region for row "
+                        + Bytes.toStringBinary(actions.get(index).getRow())));
               } else {
                 callback.update(l.getRegion().getRegionName(), actions.get(index).getRow(), r);
               }
@@ -177,7 +180,7 @@ class TableOverAsyncTable implements Table {
     latch.await();
     if (!errors.isEmpty()) {
       throw new RetriesExhaustedException(errors.size(),
-        errors.stream().collect(Collectors.toList()));
+          errors.stream().collect(Collectors.toList()));
     }
   }
 
@@ -277,7 +280,7 @@ class TableOverAsyncTable implements Table {
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilder() {
       private final AsyncTable.CheckAndMutateWithFilterBuilder builder =
-        table.checkAndMutate(row, filter);
+          table.checkAndMutate(row, filter);
 
       @Override
       public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
@@ -309,7 +312,7 @@ class TableOverAsyncTable implements Table {
 
   @Override
   public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
-    throws IOException {
+      throws IOException {
     return FutureUtils.get(table.checkAndMutateAll(checkAndMutates));
   }
 
@@ -395,7 +398,7 @@ class TableOverAsyncTable implements Table {
   @Override
   public RegionCoprocessorRpcChannel coprocessorService(byte[] row) {
     return new RegionCoprocessorRpcChannel(conn, getName(), null, row,
-      getRpcTimeout(TimeUnit.NANOSECONDS), getOperationTimeout(TimeUnit.NANOSECONDS));
+        getRpcTimeout(TimeUnit.NANOSECONDS), getOperationTimeout(TimeUnit.NANOSECONDS));
   }
 
   /**
@@ -428,21 +431,21 @@ class TableOverAsyncTable implements Table {
       final byte[] endKey, final boolean includeEndKey, final boolean reload) throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
-      throw new IllegalArgumentException(
-        "Invalid range: " + Bytes.toStringBinary(startKey) + " > " + Bytes.toStringBinary(endKey));
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(startKey) + " > "
+          + Bytes.toStringBinary(endKey));
     }
     List<byte[]> keysInRange = new ArrayList<>();
     List<HRegionLocation> regionsInRange = new ArrayList<>();
     byte[] currentKey = startKey;
     do {
       HRegionLocation regionLocation =
-        FutureUtils.get(conn.getRegionLocator(getName()).getRegionLocation(currentKey, reload));
+          FutureUtils.get(conn.getRegionLocator(getName()).getRegionLocation(currentKey, reload));
       keysInRange.add(currentKey);
       regionsInRange.add(regionLocation);
       currentKey = regionLocation.getRegion().getEndKey();
-    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
-      (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0 ||
-        (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
+    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
+        && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
+            || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
     return new Pair<>(keysInRange, regionsInRange);
   }
 
@@ -496,8 +499,8 @@ class TableOverAsyncTable implements Table {
           Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
-        throw new InterruptedIOException("Interrupted calling coprocessor service " + serviceName +
-          " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
+        throw new InterruptedIOException("Interrupted calling coprocessor service " + serviceName
+            + " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
       }
     }
   }
@@ -506,8 +509,7 @@ class TableOverAsyncTable implements Table {
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
       byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
-      .setTableName(table.getName())
-      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+        .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       coprocessorService(service.getName(), startKey, endKey, callback, channel -> {
@@ -525,14 +527,12 @@ class TableOverAsyncTable implements Table {
       Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
       throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
-      .setTableName(table.getName())
-      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+        .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       coprocessorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
         try (Scope ignored = context.makeCurrent()) {
-          return (R) channel.callBlockingMethod(
-            methodDescriptor, null, request, responsePrototype);
+          return (R) channel.callBlockingMethod(methodDescriptor, null, request, responsePrototype);
         }
       });
     }, supplier);

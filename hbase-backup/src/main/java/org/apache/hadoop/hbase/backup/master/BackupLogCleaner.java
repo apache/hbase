@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
@@ -62,8 +62,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
   @Override
   public void init(Map<String, Object> params) {
-    MasterServices master = (MasterServices) MapUtils.getObject(params,
-      HMaster.MASTER);
+    MasterServices master = (MasterServices) MapUtils.getObject(params, HMaster.MASTER);
     if (master != null) {
       conn = master.getConnection();
       if (getConf() == null) {
@@ -79,9 +78,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-
   private Map<Address, Long> getServersToOldestBackupMapping(List<BackupInfo> backups)
-    throws IOException {
+      throws IOException {
     Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
 
     Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
@@ -91,7 +89,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         if (tableNameBackupInfoMap.get(table) <= backupInfo.getStartTs()) {
           tableNameBackupInfoMap.put(table, backupInfo.getStartTs());
           for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-            .entrySet()) {
+              .entrySet()) {
             serverAddressToLastBackupMap.put(Address.fromString(entry.getKey()), entry.getValue());
           }
         }
@@ -117,7 +115,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     try {
       try (BackupManager backupManager = new BackupManager(conn, getConf())) {
         addressToLastBackupMap =
-          getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
+            getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
       }
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
@@ -133,11 +131,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
       try {
         Address walServerAddress =
-          Address.fromString(BackupUtils.parseHostNameFromLogFile(file.getPath()));
+            Address.fromString(BackupUtils.parseHostNameFromLogFile(file.getPath()));
         long walTimestamp = AbstractFSWALProvider.getTimestamp(file.getPath().getName());
 
         if (!addressToLastBackupMap.containsKey(walServerAddress)
-          || addressToLastBackupMap.get(walServerAddress) >= walTimestamp) {
+            || addressToLastBackupMap.get(walServerAddress) >= walTimestamp) {
           filteredFiles.add(file);
         }
       } catch (Exception ex) {
@@ -147,8 +145,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       }
     }
 
-    LOG
-      .info("Total files: {}, Filtered Files: {}", IterableUtils.size(files), filteredFiles.size());
+    LOG.info("Total files: {}, Filtered Files: {}", IterableUtils.size(files),
+      filteredFiles.size());
     return filteredFiles;
   }
 

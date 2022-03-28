@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestRegionLocations {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLocations.class);
+      HBaseClassTestRule.forClass(TestRegionLocations.class);
 
   ServerName sn0 = ServerName.valueOf("host0", 10, 10);
   ServerName sn1 = ServerName.valueOf("host1", 10, 10);
@@ -90,7 +90,7 @@ public class TestRegionLocations {
     byte[] startKey = HConstants.EMPTY_START_ROW;
     byte[] endKey = HConstants.EMPTY_END_ROW;
     RegionInfo info = RegionInfoBuilder.newBuilder(table).setStartKey(startKey).setEndKey(endKey)
-      .setRegionId(regionId).setReplicaId(replicaId).build();
+        .setRegionId(regionId).setReplicaId(replicaId).build();
     return info;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestConstraints {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConstraints.class);
+      HBaseClassTestRule.forClass(TestConstraints.class);
 
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
@@ -57,7 +57,7 @@ public class TestConstraints {
     Constraints.add(builder, WorksConstraint.class);
 
     List<? extends Constraint> constraints =
-      Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
+        Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
     assertEquals(1, constraints.size());
 
     assertEquals(WorksConstraint.class, constraints.get(0).getClass());
@@ -78,10 +78,10 @@ public class TestConstraints {
   public void testReadWriteWithConf() throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
     Constraints.add(builder, new Pair<>(CheckConfigurationConstraint.class,
-      CheckConfigurationConstraint.getConfiguration()));
+        CheckConfigurationConstraint.getConfiguration()));
 
     List<? extends Constraint> c =
-      Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
+        Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
     assertEquals(1, c.size());
 
     assertEquals(CheckConfigurationConstraint.class, c.get(0).getClass());
@@ -142,7 +142,7 @@ public class TestConstraints {
       CheckConfigurationConstraint.getConfiguration());
 
     List<? extends Constraint> constraints =
-      Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
+        Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
 
     assertEquals(2, constraints.size());
 
@@ -172,7 +172,7 @@ public class TestConstraints {
     Constraints.add(builder, WorksConstraint.class);
     assertFalse(Constraints.enabled(builder.build(), AlsoWorks.class));
     List<? extends Constraint> constraints =
-      Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
+        Constraints.getConstraints(builder.build(), this.getClass().getClassLoader());
     for (Constraint c : constraints) {
       Configuration storedConf = c.getConf();
       if (c instanceof AlsoWorks) {

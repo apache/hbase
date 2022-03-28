@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -145,7 +145,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     private long lastAckTimestamp = -1;
 
     public Callback(CompletableFuture<Long> future, long ackedLength,
-      final Collection<Channel> replicas, long packetDataLen) {
+        final Collection<Channel> replicas, long packetDataLen) {
       this.future = future;
       this.ackedLength = ackedLength;
       this.packetDataLen = packetDataLen;
@@ -154,7 +154,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
         this.unfinishedReplicas = Collections.emptySet();
       } else {
         this.unfinishedReplicas =
-          Collections.newSetFromMap(new ConcurrentHashMap<ChannelId, Boolean>(replicas.size()));
+            Collections.newSetFromMap(new ConcurrentHashMap<ChannelId, Boolean>(replicas.size()));
         replicas.stream().map(Channel::id).forEachOrdered(unfinishedReplicas::add);
       }
     }
@@ -196,7 +196,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       if (c.unfinishedReplicas.remove(channel.id())) {
         long current = EnvironmentEdgeManager.currentTime();
         streamSlowMonitor.checkProcessTimeAndSpeed(datanodeInfoMap.get(channel), c.packetDataLen,
-            current - c.flushTimestamp, c.lastAckTimestamp, c.unfinishedReplicas.size());
+          current - c.flushTimestamp, c.lastAckTimestamp, c.unfinishedReplicas.size());
         c.lastAckTimestamp = current;
         if (c.unfinishedReplicas.isEmpty()) {
           // we need to remove first before complete the future. It is possible that after we
@@ -284,13 +284,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     protected void channelRead0(ChannelHandlerContext ctx, PipelineAckProto ack) throws Exception {
       Status reply = getStatus(ack);
       if (reply != Status.SUCCESS) {
-        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " + block
+            + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (PipelineAck.isRestartOOBStatus(reply)) {
-        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block "
+            + block + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (ack.getSeqno() == HEART_BEAT_SEQNO) {
@@ -345,8 +345,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
   }
 
-  FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
-      DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
+  FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
+      ClientProtocol namenode, String clientName, String src, long fileId,
       LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
       DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
@@ -418,8 +418,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     ByteBuf headerBuf = alloc.buffer(headerLen);
     header.putInBuffer(headerBuf.nioBuffer(0, headerLen));
     headerBuf.writerIndex(headerLen);
-    Callback c = new Callback(future, nextPacketOffsetInBlock + dataLen,
-        datanodeInfoMap.keySet(), dataLen);
+    Callback c =
+        new Callback(future, nextPacketOffsetInBlock + dataLen, datanodeInfoMap.keySet(), dataLen);
     waitingAckQueue.addLast(c);
     // recheck again after we pushed the callback to queue
     if (state != State.STREAMING && waitingAckQueue.peekFirst() == c) {
@@ -429,7 +429,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       return;
     }
     // TODO: we should perhaps measure time taken per DN here;
-    //       we could collect statistics per DN, and/or exclude bad nodes in createOutput.
+    // we could collect statistics per DN, and/or exclude bad nodes in createOutput.
     datanodeInfoMap.keySet().forEach(ch -> {
       ch.write(headerBuf.retainedDuplicate());
       ch.write(checksumBuf.retainedDuplicate());

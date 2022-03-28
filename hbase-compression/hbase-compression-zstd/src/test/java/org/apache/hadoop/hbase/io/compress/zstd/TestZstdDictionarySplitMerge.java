@@ -53,7 +53,7 @@ public class TestZstdDictionarySplitMerge {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdDictionarySplitMerge.class);
+      HBaseClassTestRule.forClass(TestZstdDictionarySplitMerge.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
@@ -83,11 +83,10 @@ public class TestZstdDictionarySplitMerge {
     final byte[] cfName = Bytes.toBytes("info");
     final String dictionaryPath = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
     final TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfName)
-        .setCompressionType(Compression.Algorithm.ZSTD)
-        .setConfiguration(ZstdCodec.ZSTD_DICTIONARY_KEY, dictionaryPath)
-        .build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfName)
+            .setCompressionType(Compression.Algorithm.ZSTD)
+            .setConfiguration(ZstdCodec.ZSTD_DICTIONARY_KEY, dictionaryPath).build())
+        .build();
     final Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(td, new byte[][] { Bytes.toBytes(1) });
     TEST_UTIL.waitTableAvailable(tableName);
@@ -108,6 +107,7 @@ public class TestZstdDictionarySplitMerge {
       public boolean evaluate() throws Exception {
         return TEST_UTIL.getMiniHBaseCluster().getRegions(tableName).size() == 3;
       }
+
       @Override
       public String explainFailure() throws Exception {
         return "Split has not finished yet";
@@ -120,7 +120,7 @@ public class TestZstdDictionarySplitMerge {
 
     RegionInfo regionA = null;
     RegionInfo regionB = null;
-    for (RegionInfo region: admin.getRegions(tableName)) {
+    for (RegionInfo region : admin.getRegions(tableName)) {
       if (region.getStartKey().length == 0) {
         regionA = region;
       } else if (Bytes.equals(region.getStartKey(), Bytes.toBytes(1))) {
@@ -129,18 +129,16 @@ public class TestZstdDictionarySplitMerge {
     }
     assertNotNull(regionA);
     assertNotNull(regionB);
-    admin.mergeRegionsAsync(new byte[][] {
-        regionA.getRegionName(),
-        regionB.getRegionName()
-      }, false).get(30, TimeUnit.SECONDS);
+    admin
+        .mergeRegionsAsync(new byte[][] { regionA.getRegionName(), regionB.getRegionName() }, false)
+        .get(30, TimeUnit.SECONDS);
     assertEquals(2, admin.getRegions(tableName).size());
     ServerName expected = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
     assertEquals(expected, TEST_UTIL.getConnection().getRegionLocator(tableName)
-      .getRegionLocation(Bytes.toBytes(1), true).getServerName());
-    try (AsyncConnection asyncConn =
-      ConnectionFactory.createAsyncConnection(conf).get()) {
+        .getRegionLocation(Bytes.toBytes(1), true).getServerName());
+    try (AsyncConnection asyncConn = ConnectionFactory.createAsyncConnection(conf).get()) {
       assertEquals(expected, asyncConn.getRegionLocator(tableName)
-        .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
+          .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
     }
     TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
   }

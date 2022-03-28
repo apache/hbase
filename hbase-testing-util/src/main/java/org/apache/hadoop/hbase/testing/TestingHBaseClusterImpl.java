@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   private final StartTestingClusterOption option;
 
   private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
-    .setNameFormat(getClass().getSuperclass() + "-%d").setDaemon(true).build());
+      .setNameFormat(getClass().getSuperclass() + "-%d").setDaemon(true).build());
 
   private boolean miniClusterRunning = false;
 
@@ -111,8 +111,8 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
     CompletableFuture<Void> future = new CompletableFuture<>();
     int index = getRegionServerIndex(serverName);
     if (index == -1) {
-      future
-        .completeExceptionally(new IllegalArgumentException("Unknown region server " + serverName));
+      future.completeExceptionally(
+        new IllegalArgumentException("Unknown region server " + serverName));
     }
     join(util.getMiniHBaseCluster().stopRegionServer(index), future);
     return future;
@@ -188,13 +188,13 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   @Override
   public List<ServerName> getBackupMasterAddresses() {
     return util.getMiniHBaseCluster().getMasterThreads().stream().map(MasterThread::getMaster)
-      .filter(m -> !m.isActiveMaster()).map(HMaster::getServerName).collect(Collectors.toList());
+        .filter(m -> !m.isActiveMaster()).map(HMaster::getServerName).collect(Collectors.toList());
   }
 
   @Override
   public List<ServerName> getRegionServerAddresses() {
     return util.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+        .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
   }
 
   @Override

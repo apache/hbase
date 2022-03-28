@@ -60,7 +60,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestReplicaWithCluster {
 
   @ClassRule
@@ -96,8 +96,8 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-                         final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+        final List<Cell> results) throws IOException {
 
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
         CountDownLatch latch = cdl.get();
@@ -136,16 +136,16 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+        final List<Cell> results) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
       // Fail for the primary replica and replica 1
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
         LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
-        throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
-            + " not running");
+        throw new RegionServerStoppedException(
+            "Server " + e.getEnvironment().getServerName() + " not running");
       } else {
         LOG.info("We're replica region " + replicaId);
       }
@@ -158,8 +158,8 @@ public class TestReplicaWithCluster {
       // Fail for the primary replica and replica 1
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
         LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
-        throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
-            + " not running");
+        throw new RegionServerStoppedException(
+            "Server " + e.getEnvironment().getServerName() + " not running");
       } else {
         LOG.info("We're replica region " + replicaId);
       }
@@ -180,18 +180,18 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+        final List<Cell> results) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
       // Fail for the primary replica, but not for meta
       if (throwException) {
         if (!e.getEnvironment().getRegion().getRegionInfo().isMetaRegion() && (replicaId == 0)) {
-          LOG.info("Get, throw Region Server Stopped Exceptoin for region " + e.getEnvironment()
-              .getRegion().getRegionInfo());
-          throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
-                  + " not running");
+          LOG.info("Get, throw Region Server Stopped Exceptoin for region "
+              + e.getEnvironment().getRegion().getRegionInfo());
+          throw new RegionServerStoppedException(
+              "Server " + e.getEnvironment().getServerName() + " not running");
         }
       } else {
         LOG.info("Get, We're replica region " + replicaId);
@@ -217,11 +217,11 @@ public class TestReplicaWithCluster {
 
         // Fail for the primary replica
         if (throwException) {
-          LOG.info("Scan, throw Region Server Stopped Exceptoin for replica " + e.getEnvironment()
-              .getRegion().getRegionInfo());
+          LOG.info("Scan, throw Region Server Stopped Exceptoin for replica "
+              + e.getEnvironment().getRegion().getRegionInfo());
 
-          throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
-               + " not running");
+          throw new RegionServerStoppedException(
+              "Server " + e.getEnvironment().getServerName() + " not running");
         } else {
           LOG.info("Scan, We're replica region " + replicaId);
         }
@@ -235,7 +235,7 @@ public class TestReplicaWithCluster {
   public static void beforeClass() throws Exception {
     // enable store file refreshing
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
-        REFRESH_PERIOD);
+      REFRESH_PERIOD);
 
     HTU.getConfiguration().setFloat("hbase.regionserver.logroll.multiplier", 0.0001f);
     HTU.getConfiguration().setInt("replication.source.size.capacity", 10240);
@@ -254,10 +254,10 @@ public class TestReplicaWithCluster {
 
     // Set system coprocessor so it can be applied to meta regions
     HTU.getConfiguration().set("hbase.coprocessor.region.classes",
-        RegionServerHostingPrimayMetaRegionSlowOrStopCopro.class.getName());
+      RegionServerHostingPrimayMetaRegionSlowOrStopCopro.class.getName());
 
     HTU.getConfiguration().setInt(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
-        META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
+      META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
 
     HTU.startMiniCluster(NB_SERVERS);
     // Enable meta replica at server side
@@ -268,8 +268,7 @@ public class TestReplicaWithCluster {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    if (HTU2 != null)
-      HTU2.shutdownMiniCluster();
+    if (HTU2 != null) HTU2.shutdownMiniCluster();
     HTU.shutdownMiniCluster();
   }
 
@@ -277,9 +276,9 @@ public class TestReplicaWithCluster {
   public void testCreateDeleteTable() throws IOException {
     // Create table then get the single region for our new table.
     TableDescriptorBuilder builder =
-      HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+        HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setRegionReplication(NB_SERVERS);
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor hdt = builder.build();
@@ -313,10 +312,8 @@ public class TestReplicaWithCluster {
   @Test
   public void testChangeTable() throws Exception {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testChangeTable"))
-            .setRegionReplication(NB_SERVERS)
-            .setCoprocessor(SlowMeCopro.class.getName())
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f))
-            .build();
+        .setRegionReplication(NB_SERVERS).setCoprocessor(SlowMeCopro.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f)).build();
     HTU.getAdmin().createTable(td);
     Table table = HTU.getConnection().getTable(td.getTableName());
     // basic test: it should work.
@@ -331,14 +328,13 @@ public class TestReplicaWithCluster {
     // Add a CF, it should work.
     TableDescriptor bHdt = HTU.getAdmin().getDescriptor(td.getTableName());
     td = TableDescriptorBuilder.newBuilder(td)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(row))
-            .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(row)).build();
     HTU.getAdmin().disableTable(td.getTableName());
     HTU.getAdmin().modifyTable(td);
     HTU.getAdmin().enableTable(td.getTableName());
     TableDescriptor nHdt = HTU.getAdmin().getDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-        bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
+      bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
     p = new Put(row);
     p.addColumn(row, row, row);
@@ -360,9 +356,9 @@ public class TestReplicaWithCluster {
     }
 
     Admin admin = HTU.getAdmin();
-    nHdt =admin.getDescriptor(td.getTableName());
+    nHdt = admin.getDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-        bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
+      bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
     admin.disableTable(td.getTableName());
     admin.deleteTable(td.getTableName());
@@ -373,10 +369,10 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaAndReplication() throws Exception {
     TableDescriptorBuilder builder =
-      HTU.createModifyableTableDescriptor("testReplicaAndReplication");
+        HTU.createModifyableTableDescriptor("testReplicaAndReplication");
     builder.setRegionReplication(NB_SERVERS);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(row)
-      .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
 
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor tableDescriptor = builder.build();
@@ -394,9 +390,9 @@ public class TestReplicaWithCluster {
     HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
 
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-      Admin admin = connection.getAdmin()) {
-      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(HTU2.getClusterKey()).build();
+        Admin admin = connection.getAdmin()) {
+      ReplicationPeerConfig rpc =
+          ReplicationPeerConfig.newBuilder().setClusterKey(HTU2.getClusterKey()).build();
       admin.addReplicationPeer("2", rpc);
     }
 
@@ -409,7 +405,8 @@ public class TestReplicaWithCluster {
     LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
 
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
@@ -428,7 +425,8 @@ public class TestReplicaWithCluster {
 
     final Table table2 = HTU.getConnection().getTable(tableDescriptor.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
@@ -471,7 +469,7 @@ public class TestReplicaWithCluster {
     Path dir = HTU.getDataTestDirOnTestFS("testBulkLoad");
     final int numRows = 10;
     final byte[] qual = Bytes.toBytes("qual");
-    final byte[] val  = Bytes.toBytes("val");
+    final byte[] val = Bytes.toBytes("val");
     Map<byte[], List<Path>> family2Files = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (ColumnFamilyDescriptor col : hdt.getColumnFamilies()) {
       Path hfile = new Path(dir, col.getNameAsString());
@@ -518,9 +516,9 @@ public class TestReplicaWithCluster {
   public void testReplicaGetWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
     TableDescriptorBuilder builder =
-      HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+        HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setRegionReplication(NB_SERVERS);
     builder.setCoprocessor(RegionServerStoppedCopro.class.getName());
     TableDescriptor hdt = builder.build();
@@ -556,9 +554,9 @@ public class TestReplicaWithCluster {
   public void testReplicaScanWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
     TableDescriptorBuilder builder =
-      HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+        HTU.createModifyableTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setRegionReplication(NB_SERVERS);
     builder.setCoprocessor(RegionServerStoppedCopro.class.getName());
     TableDescriptor hdt = builder.build();
@@ -605,10 +603,10 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().set("hbase.rpc.client.impl",
       "org.apache.hadoop.hbase.ipc.AsyncRpcClient");
     // Create table then get the single region for our new table.
-    TableDescriptorBuilder builder =
-      HTU.createModifyableTableDescriptor(TableName.valueOf("testReplicaGetWithAsyncRpcClientImpl"),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+    TableDescriptorBuilder builder = HTU.createModifyableTableDescriptor(
+      TableName.valueOf("testReplicaGetWithAsyncRpcClientImpl"),
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setRegionReplication(NB_SERVERS);
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor hdt = builder.build();

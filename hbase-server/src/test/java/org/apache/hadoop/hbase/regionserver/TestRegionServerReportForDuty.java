@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,7 +95,7 @@ public class TestRegionServerReportForDuty {
     LogCapturer(org.apache.logging.log4j.core.Logger logger) {
       this.logger = logger;
       this.appender = org.apache.logging.log4j.core.appender.WriterAppender.newBuilder()
-        .setName("test").setTarget(sw).build();
+          .setName("test").setTarget(sw).build();
       this.logger.addAppender(this.appender);
     }
 
@@ -132,8 +132,8 @@ public class TestRegionServerReportForDuty {
     master.start();
 
     LogCapturer capturer =
-      new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-        .getLogger(HRegionServer.class));
+        new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+            .getLogger(HRegionServer.class));
     // Set sleep interval relatively low so that exponential backoff is more demanding.
     int msginterval = 100;
     cluster.getConfiguration().setInt("hbase.regionserver.msginterval", msginterval);
@@ -150,16 +150,16 @@ public class TestRegionServerReportForDuty {
 
     // Following asserts the actual retry number is in range (expectedRetry/2, expectedRetry*2).
     // Ideally we can assert the exact retry count. We relax here to tolerate contention error.
-    int expectedRetry = (int)Math.ceil(Math.log(interval - msginterval));
-    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d",
-        count, expectedRetry / 2), count > expectedRetry / 2);
-    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d",
-        count, expectedRetry * 2), count < expectedRetry * 2);
+    int expectedRetry = (int) Math.ceil(Math.log(interval - msginterval));
+    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d", count,
+      expectedRetry / 2), count > expectedRetry / 2);
+    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d", count,
+      expectedRetry * 2), count < expectedRetry * 2);
   }
 
   /**
-   * Tests region sever reportForDuty with backup master becomes primary master after
-   * the first master goes away.
+   * Tests region sever reportForDuty with backup master becomes primary master after the first
+   * master goes away.
    */
   @Test
   public void testReportForDutyWithMasterChange() throws Exception {
@@ -209,15 +209,15 @@ public class TestRegionServerReportForDuty {
     assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(), 2);
 
   }
-  
+
   /**
    * Tests region sever reportForDuty with RS RPC retry
    */
   @Test
   public void testReportForDutyWithRSRpcRetry() throws Exception {
     ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1,
-      new ThreadFactoryBuilder().setNameFormat("RSDelayedStart-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        new ThreadFactoryBuilder().setNameFormat("RSDelayedStart-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
@@ -301,8 +301,8 @@ public class TestRegionServerReportForDuty {
     private boolean rpcStubCreatedFlag = false;
     private boolean masterChanged = false;
 
-    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
-        InterruptedException {
+    public MyRegionServer(Configuration conf)
+        throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 

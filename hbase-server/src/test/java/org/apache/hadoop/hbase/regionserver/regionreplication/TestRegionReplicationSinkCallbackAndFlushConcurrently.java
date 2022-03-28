@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -121,13 +121,11 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   public void test() throws Exception {
     final HRegionForTest[] regions = this.createTable();
     final AtomicBoolean completedRef = new AtomicBoolean(false);
-    RegionReplicationSink regionReplicationSink =
-        regions[0].getRegionReplicationSink().get();
+    RegionReplicationSink regionReplicationSink = regions[0].getRegionReplicationSink().get();
     assertTrue(regionReplicationSink != null);
 
-    RegionReplicationSink spiedRegionReplicationSink = this.setUpSpiedRegionReplicationSink(
-      regionReplicationSink, regions[0],
-      completedRef);
+    RegionReplicationSink spiedRegionReplicationSink =
+        this.setUpSpiedRegionReplicationSink(regionReplicationSink, regions[0], completedRef);
 
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName(HRegionForTest.USER_THREAD_NAME);
@@ -179,8 +177,8 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
       if (primaryRegion.prepareFlush
           && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
         int count = getStartFlushAllDescriptorCounter.incrementAndGet();
-        if(count == 1) {
-          //onComplete could execute
+        if (count == 1) {
+          // onComplete could execute
           primaryRegion.cyclicBarrier.await();
           return invocationOnMock.callRealMethod();
         }
@@ -193,9 +191,9 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   }
 
   private HRegionForTest[] createTable() throws Exception {
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setRegionReplication(NB_SERVERS).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .build();
+    TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     HTU.getAdmin().createTable(tableDescriptor);
     final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
     for (int i = 0; i < NB_SERVERS; i++) {
@@ -247,13 +245,11 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
         this.prepareFlush = true;
       }
       try {
-        PrepareFlushResult result =
-            super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
-          writeFlushWalMarker, tracker);
+        PrepareFlushResult result = super.internalPrepareFlushCache(wal, myseqid, storesToFlush,
+          status, writeFlushWalMarker, tracker);
 
         return result;
-      }
-      finally {
+      } finally {
         if (this.getRegionInfo().getReplicaId() == 0
             && Thread.currentThread().getName().equals(USER_THREAD_NAME)) {
           this.prepareFlush = false;

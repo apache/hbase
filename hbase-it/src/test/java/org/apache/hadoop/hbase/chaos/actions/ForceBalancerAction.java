@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to force a balancer run.
-*/
+ * Action that tries to force a balancer run.
+ */
 public class ForceBalancerAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(ForceBalancerAction.class);
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

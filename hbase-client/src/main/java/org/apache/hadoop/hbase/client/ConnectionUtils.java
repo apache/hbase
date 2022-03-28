@@ -310,7 +310,7 @@ public final class ConnectionUtils {
 
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 
   public static ScanResultCache createScanResultCache(Scan scan) {
@@ -458,8 +458,8 @@ public final class ConnectionUtils {
       (locs, error) -> {
         if (error != null) {
           LOG.warn(
-            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
-              " give up timeline consistent read",
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}"
+                + " give up timeline consistent read",
             tableName, Bytes.toStringBinary(row), locateType, error);
           return;
         }

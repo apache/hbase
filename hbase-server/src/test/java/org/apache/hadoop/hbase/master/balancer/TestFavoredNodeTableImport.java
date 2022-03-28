@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /*
- * This case tests a scenario when a cluster with tables is moved from Stochastic Load Balancer
- * to FavoredStochasticLoadBalancer and the generation of favored nodes after switch.
+ * This case tests a scenario when a cluster with tables is moved from Stochastic Load Balancer to
+ * FavoredStochasticLoadBalancer and the generation of favored nodes after switch.
  */
 @Category(MediumTests.class)
 public class TestFavoredNodeTableImport {
@@ -86,8 +86,8 @@ public class TestFavoredNodeTableImport {
 
     String tableName = "testFNImport";
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(tableDescriptor, Bytes.toBytes("a"), Bytes.toBytes("z"), REGION_NUM);
     UTIL.waitTableAvailable(tableDescriptor.getTableName());
     admin.balancerSwitch(true, true);
@@ -98,7 +98,7 @@ public class TestFavoredNodeTableImport {
     Thread.sleep(2000);
     LOG.info("Starting cluster again with FN Balancer");
     UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        FavoredStochasticBalancer.class.getName());
+      FavoredStochasticBalancer.class.getName());
     UTIL.restartHBaseCluster(SLAVES);
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     while (!master.isInitialized()) {

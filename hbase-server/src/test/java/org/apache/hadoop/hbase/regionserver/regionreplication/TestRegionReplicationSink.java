@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ public class TestRegionReplicationSink {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicationSink.class);
+      HBaseClassTestRule.forClass(TestRegionReplicationSink.class);
 
   private Configuration conf;
 
@@ -97,7 +97,7 @@ public class TestRegionReplicationSink {
     conf.setLong(RegionReplicationSink.BATCH_COUNT_CAPACITY, 5);
     conf.setLong(RegionReplicationSink.BATCH_SIZE_CAPACITY, 1024 * 1024);
     td = TableDescriptorBuilder.newBuilder(name.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).setRegionReplication(3).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).setRegionReplication(3).build();
     primary = RegionInfoBuilder.newBuilder(name.getTableName()).build();
     flushRequester = mock(Runnable.class);
     conn = mock(AsyncClusterConnection.class);
@@ -115,9 +115,9 @@ public class TestRegionReplicationSink {
   public void testNormal() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Arrays.asList(new CompletableFuture<>(), new CompletableFuture<>());
+        Arrays.asList(new CompletableFuture<>(), new CompletableFuture<>());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
     ServerCall<?> rpcCall = mock(ServerCall.class);
     WALKeyImpl key = mock(WALKeyImpl.class);
     when(key.estimatedSerializedSizeOf()).thenReturn(100L);
@@ -151,9 +151,9 @@ public class TestRegionReplicationSink {
   public void testDropEdits() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Arrays.asList(new CompletableFuture<>(), new CompletableFuture<>());
+        Arrays.asList(new CompletableFuture<>(), new CompletableFuture<>());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
     ServerCall<?> rpcCall1 = mock(ServerCall.class);
     WALKeyImpl key1 = mock(WALKeyImpl.class);
     when(key1.estimatedSerializedSizeOf()).thenReturn(100L);
@@ -215,9 +215,9 @@ public class TestRegionReplicationSink {
   public void testNotAddToFailedReplicas() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Stream.generate(() -> new CompletableFuture<Void>()).limit(4).collect(Collectors.toList());
+        Stream.generate(() -> new CompletableFuture<Void>()).limit(4).collect(Collectors.toList());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
 
     ServerCall<?> rpcCall1 = mock(ServerCall.class);
     WALKeyImpl key1 = mock(WALKeyImpl.class);
@@ -234,11 +234,11 @@ public class TestRegionReplicationSink {
     when(key2.getSequenceId()).thenReturn(3L);
 
     Map<byte[], List<Path>> committedFiles = td.getColumnFamilyNames().stream()
-      .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
-        throw new IllegalStateException();
-      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+        .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
+          throw new IllegalStateException();
+        }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
     FlushDescriptor fd =
-      ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 2L, committedFiles);
+        ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 2L, committedFiles);
     WALEdit edit2 = WALEdit.createFlushWALEdit(primary, fd);
     sink.add(key2, edit2, rpcCall2);
 
@@ -261,9 +261,9 @@ public class TestRegionReplicationSink {
   public void testAddToFailedReplica() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Stream.generate(() -> new CompletableFuture<Void>()).limit(5).collect(Collectors.toList());
+        Stream.generate(() -> new CompletableFuture<Void>()).limit(5).collect(Collectors.toList());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
 
     ServerCall<?> rpcCall1 = mock(ServerCall.class);
     WALKeyImpl key1 = mock(WALKeyImpl.class);
@@ -298,11 +298,11 @@ public class TestRegionReplicationSink {
     when(key3.estimatedSerializedSizeOf()).thenReturn(200L);
     when(key3.getSequenceId()).thenReturn(3L);
     Map<byte[], List<Path>> committedFiles = td.getColumnFamilyNames().stream()
-      .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
-        throw new IllegalStateException();
-      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+        .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
+          throw new IllegalStateException();
+        }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
     FlushDescriptor fd =
-      ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 2L, committedFiles);
+        ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 2L, committedFiles);
     WALEdit edit3 = WALEdit.createFlushWALEdit(primary, fd);
     sink.add(key3, edit3, rpcCall3);
 
@@ -320,9 +320,9 @@ public class TestRegionReplicationSink {
   public void testSizeCapacity() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
+        Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
     for (int i = 0; i < 3; i++) {
       ServerCall<?> rpcCall = mock(ServerCall.class);
       WALKeyImpl key = mock(WALKeyImpl.class);
@@ -362,9 +362,9 @@ public class TestRegionReplicationSink {
   public void testCountCapacity() {
     MutableInt next = new MutableInt(0);
     List<CompletableFuture<Void>> futures =
-      Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
+        Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
     when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
-      .then(i -> futures.get(next.getAndIncrement()));
+        .then(i -> futures.get(next.getAndIncrement()));
     for (int i = 0; i < 7; i++) {
       ServerCall<?> rpcCall = mock(ServerCall.class);
       WALKeyImpl key = mock(WALKeyImpl.class);

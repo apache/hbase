@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,7 +63,7 @@ public class TestFallbackToUseReplay {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFallbackToUseReplay.class);
+      HBaseClassTestRule.forClass(TestFallbackToUseReplay.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -72,7 +72,7 @@ public class TestFallbackToUseReplay {
   private static AsyncRegionReplicationRetryingCaller CALLER;
 
   private static RegionInfo REPLICA =
-    RegionInfoBuilder.newBuilder(TableName.valueOf("test")).setReplicaId(1).build();
+      RegionInfoBuilder.newBuilder(TableName.valueOf("test")).setReplicaId(1).build();
 
   private static AtomicBoolean REPLAY_CALLED = new AtomicBoolean(false);
 
@@ -81,8 +81,8 @@ public class TestFallbackToUseReplay {
     CONF.setInt(AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
     when(locator.getRegionLocation(any(), any(), anyInt(), any(), anyLong()))
-      .thenReturn(CompletableFuture.completedFuture(new HRegionLocation(REPLICA,
-        ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()))));
+        .thenReturn(CompletableFuture.completedFuture(new HRegionLocation(REPLICA,
+            ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()))));
     AdminService.Interface stub = mock(AdminService.Interface.class);
     // fail the call to replicateToReplica
     doAnswer(i -> {
@@ -99,7 +99,7 @@ public class TestFallbackToUseReplay {
       return null;
     }).when(stub).replay(any(), any(), any());
     CONN = new AsyncClusterConnectionImpl(CONF, mock(ConnectionRegistry.class), "test", null,
-      User.getCurrent()) {
+        User.getCurrent()) {
 
       @Override
       AsyncRegionLocator getLocator() {
@@ -112,8 +112,8 @@ public class TestFallbackToUseReplay {
       }
     };
     CALLER = new AsyncRegionReplicationRetryingCaller(AsyncClusterConnectionImpl.RETRY_TIMER, CONN,
-      10, TimeUnit.SECONDS.toNanos(1), TimeUnit.SECONDS.toNanos(10), REPLICA,
-      Collections.emptyList());
+        10, TimeUnit.SECONDS.toNanos(1), TimeUnit.SECONDS.toNanos(10), REPLICA,
+        Collections.emptyList());
   }
 
   @AfterClass

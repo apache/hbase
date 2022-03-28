@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestJul2Slf4j {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJul2Slf4j.class);
+      HBaseClassTestRule.forClass(TestJul2Slf4j.class);
 
   static {
     System.setProperty("java.util.logging.config.class", JulToSlf4jInitializer.class.getName());
@@ -63,13 +63,13 @@ public class TestJul2Slf4j {
     when(mockAppender.getName()).thenReturn("mockAppender");
     when(mockAppender.isStarted()).thenReturn(true);
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(loggerName)).addAppender(mockAppender);
+        .getLogger(loggerName)).addAppender(mockAppender);
   }
 
   @After
   public void tearDown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(loggerName)).removeAppender(mockAppender);
+        .getLogger(loggerName)).removeAppender(mockAppender);
   }
 
   @Test
@@ -81,7 +81,7 @@ public class TestJul2Slf4j {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         org.apache.logging.log4j.core.LogEvent logEvent =
-          invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
+            invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
         level.set(logEvent.getLevel());
         msg.set(logEvent.getMessage().getFormattedMessage());
         return null;

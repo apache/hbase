@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.procedure2;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used internally signaling failed queue of a remote procedure operation.
- * In particular, no dispatch Node was found for the passed server name
- * key AFTER queuing dispatch.
+ * Used internally signaling failed queue of a remote procedure operation. In particular, no
+ * dispatch Node was found for the passed server name key AFTER queuing dispatch.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

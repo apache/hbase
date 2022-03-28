@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,15 +63,14 @@ public class TestRegionReplicaFailover {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRegionReplicaReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaReplication.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   private static final int NB_SERVERS = 3;
 
   protected final byte[][] families =
-    new byte[][] { HBaseTestingUtil.fam1, HBaseTestingUtil.fam2, HBaseTestingUtil.fam3 };
+      new byte[][] { HBaseTestingUtil.fam1, HBaseTestingUtil.fam2, HBaseTestingUtil.fam3 };
   protected final byte[] fam = HBaseTestingUtil.fam1;
   protected final byte[] qual1 = Bytes.toBytes("qual1");
   protected final byte[] value1 = Bytes.toBytes("value1");
@@ -86,7 +85,7 @@ public class TestRegionReplicaFailover {
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
-   // Up the handlers; this test needs more than usual.
+    // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
@@ -186,7 +185,8 @@ public class TestRegionReplicaFailover {
     HTU.getMiniHBaseCluster().startRegionServer();
   }
 
-  /** wal replication is async, we have to wait until the replication catches up, or we timeout
+  /**
+   * wal replication is async, we have to wait until the replication catches up, or we timeout
    */
   private void verifyNumericRowsWithTimeout(final Table table, final byte[] f, final int startRow,
       final int endRow, final int replicaId, final long timeout) throws Exception {
@@ -250,9 +250,9 @@ public class TestRegionReplicaFailover {
   }
 
   /**
-   * Tests the case where there are 3 region replicas and the primary is continuously accepting
-   * new writes while one of the secondaries is killed. Verification is done for both of the
-   * secondary replicas.
+   * Tests the case where there are 3 region replicas and the primary is continuously accepting new
+   * writes while one of the secondaries is killed. Verification is done for both of the secondary
+   * replicas.
    */
   @Test
   public void testSecondaryRegionKillWhilePrimaryIsAcceptingWrites() throws Exception {
@@ -273,7 +273,7 @@ public class TestRegionReplicaFailover {
         public void run() {
           while (!done.get()) {
             try {
-              HTU.loadNumericRows(table, fam, key.get(), key.get()+1000);
+              HTU.loadNumericRows(table, fam, key.get(), key.get() + 1000);
               key.addAndGet(1000);
             } catch (Throwable e) {
               ex.compareAndSet(null, e);
@@ -332,10 +332,10 @@ public class TestRegionReplicaFailover {
     int regionReplication = 10;
     String tableName = htd.getTableName().getNameAsString() + "2";
     htd = HTU
-      .createModifyableTableDescriptor(TableName.valueOf(tableName),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
-      .setRegionReplication(regionReplication).build();
+        .createModifyableTableDescriptor(TableName.valueOf(tableName),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+        .setRegionReplication(regionReplication).build();
 
     // dont care about splits themselves too much
     byte[] startKey = Bytes.toBytes("aaa");

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,7 +85,7 @@ public class CatalogFamilyFormat {
 
   /** A regex for parsing server columns from meta. See above javadoc for meta layout */
   private static final Pattern SERVER_COLUMN_PATTERN =
-    Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
+      Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
 
   /**
    * Returns an HRI parsed from this regionName. Not all the fields of the HRI is stored in the
@@ -99,7 +99,7 @@ public class CatalogFamilyFormat {
     long regionId = Long.parseLong(Bytes.toString(fields[2]));
     int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
     return RegionInfoBuilder.newBuilder(TableName.valueOf(fields[0])).setStartKey(fields[1])
-      .setRegionId(regionId).setReplicaId(replicaId).build();
+        .setRegionId(regionId).setReplicaId(replicaId).build();
   }
 
   /**
@@ -138,7 +138,7 @@ public class CatalogFamilyFormat {
    * @return HRegionLocation parsed from the given meta row Result for the given replicaId
    */
   public static HRegionLocation getRegionLocation(final Result r, final RegionInfo regionInfo,
-    final int replicaId) {
+      final int replicaId) {
     ServerName serverName = getServerName(r, replicaId);
     long seqNum = getSeqNumDuringOpen(r, replicaId);
     RegionInfo replicaInfo = RegionReplicaUtil.getRegionInfoForReplica(regionInfo, replicaId);
@@ -211,7 +211,7 @@ public class CatalogFamilyFormat {
       return null;
     }
     String hostAndPort =
-      Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+        Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     byte[] startcodeColumn = getStartCodeColumn(replicaId);
     cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, startcodeColumn);
     if (cell == null || cell.getValueLength() == 0) {
@@ -232,9 +232,9 @@ public class CatalogFamilyFormat {
    * @return a byte[] for server column qualifier
    */
   public static byte[] getServerColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SERVER_QUALIFIER :
-      Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SERVER_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -243,9 +243,9 @@ public class CatalogFamilyFormat {
    * @return a byte[] for server start code column qualifier
    */
   public static byte[] getStartCodeColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.STARTCODE_QUALIFIER :
-      Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.STARTCODE_QUALIFIER
+        : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -268,9 +268,9 @@ public class CatalogFamilyFormat {
    * @return a byte[] for seqNum column qualifier
    */
   public static byte[] getSeqNumColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SEQNUM_QUALIFIER :
-      Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SEQNUM_QUALIFIER
+        : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
@@ -308,9 +308,9 @@ public class CatalogFamilyFormat {
    * @return a byte[] for state qualifier
    */
   public static byte[] getRegionStateColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.STATE_QUALIFIER :
-      Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.STATE_QUALIFIER
+        : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -319,9 +319,9 @@ public class CatalogFamilyFormat {
    * @return a byte[] for sn column qualifier
    */
   public static byte[] getServerNameColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER :
-      Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -398,7 +398,7 @@ public class CatalogFamilyFormat {
    */
   public static boolean isMergeQualifierPrefix(Cell cell) {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
-    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
-      PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
+    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY)
+        && PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
   }
 }

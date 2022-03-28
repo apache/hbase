@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
 
   protected static StochasticLoadBalancer loadBalancer;
 
-  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer = new
-    DummyMetricsStochasticBalancer();
+  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer =
+      new DummyMetricsStochasticBalancer();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -55,32 +55,32 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
   }
 
   protected void testWithCluster(int numNodes, int numRegions, int numRegionsPerServer,
-    int replication, int numTables, boolean assertFullyBalanced,
-    boolean assertFullyBalancedForReplicas) {
+      int replication, int numTables, boolean assertFullyBalanced,
+      boolean assertFullyBalancedForReplicas) {
     Map<ServerName, List<RegionInfo>> serverMap =
-      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
-    testWithCluster(serverMap, null, assertFullyBalanced,
-      assertFullyBalancedForReplicas);
+        createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+    testWithCluster(serverMap, null, assertFullyBalanced, assertFullyBalancedForReplicas);
   }
 
   protected void testWithClusterWithIteration(int numNodes, int numRegions, int numRegionsPerServer,
-    int replication, int numTables, boolean assertFullyBalanced,
-    boolean assertFullyBalancedForReplicas) {
+      int replication, int numTables, boolean assertFullyBalanced,
+      boolean assertFullyBalancedForReplicas) {
     Map<ServerName, List<RegionInfo>> serverMap =
-      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+        createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     testWithClusterWithIteration(serverMap, null, assertFullyBalanced,
       assertFullyBalancedForReplicas);
   }
 
   protected void testWithCluster(Map<ServerName, List<RegionInfo>> serverMap,
-    RackManager rackManager, boolean assertFullyBalanced, boolean assertFullyBalancedForReplicas) {
+      RackManager rackManager, boolean assertFullyBalanced,
+      boolean assertFullyBalancedForReplicas) {
     List<ServerAndLoad> list = convertToList(serverMap);
     LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(serverMap);
+        (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull("Initial cluster balance should produce plans.", plans);
 
@@ -96,8 +96,9 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
         assertClusterAsBalanced(balancedCluster);
         LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
         List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
-        assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
-          "produce none.", secondPlans);
+        assertNull("Given a requirement to be fully balanced, second attempt at plans should "
+            + "produce none.",
+          secondPlans);
       }
 
       if (assertFullyBalancedForReplicas) {
@@ -107,14 +108,15 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
   }
 
   protected void testWithClusterWithIteration(Map<ServerName, List<RegionInfo>> serverMap,
-    RackManager rackManager, boolean assertFullyBalanced, boolean assertFullyBalancedForReplicas) {
+      RackManager rackManager, boolean assertFullyBalanced,
+      boolean assertFullyBalancedForReplicas) {
     List<ServerAndLoad> list = convertToList(serverMap);
     LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-      (Map) mockClusterServersWithTables(serverMap);
+        (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull("Initial cluster balance should produce plans.", plans);
 
@@ -135,8 +137,9 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     LOG.info("Mock Final balance: " + printMock(balancedCluster));
 
     if (assertFullyBalanced) {
-      assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
-        "produce none.", plans);
+      assertNull("Given a requirement to be fully balanced, second attempt at plans should "
+          + "produce none.",
+        plans);
     }
     if (assertFullyBalancedForReplicas) {
       assertRegionReplicaPlacement(serverMap, rackManager);

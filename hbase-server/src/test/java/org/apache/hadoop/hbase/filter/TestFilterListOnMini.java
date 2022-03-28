@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,10 +80,8 @@ public class TestFilterListOnMini {
     Put put2 = new Put(Bytes.toBytes("0"));
     put2.addColumn(CF2, Bytes.toBytes("col_b"), Bytes.toBytes(0));
     table.put(put2);
-    FamilyFilter filterCF1 =
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(CF1));
-    FamilyFilter filterCF2 =
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(CF2));
+    FamilyFilter filterCF1 = new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(CF1));
+    FamilyFilter filterCF2 = new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(CF2));
     FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     filterList.addFilter(filterCF1);
     filterList.addFilter(filterCF2);
@@ -105,23 +103,12 @@ public class TestFilterListOnMini {
     byte[] cf1 = Bytes.toBytes("f1");
     byte[] row = Bytes.toBytes("row");
     byte[] value = Bytes.toBytes("value");
-    String[] columns = new String[]{
-      "1544768273917010001_lt",
-      "1544768273917010001_w_1",
-      "1544768723910010001_ca_1",
-      "1544768723910010001_lt",
-      "1544768723910010001_ut_1",
-      "1544768723910010001_w_5",
-      "1544769779710010001_lt",
-      "1544769779710010001_w_5",
-      "1544769883529010001_lt",
-      "1544769883529010001_w_5",
-      "1544769915805010001_lt",
-      "1544769915805010001_w_5",
-      "1544779883529010001_lt",
-      "1544770422942010001_lt",
-      "1544770422942010001_w_5"
-    };
+    String[] columns = new String[] { "1544768273917010001_lt", "1544768273917010001_w_1",
+        "1544768723910010001_ca_1", "1544768723910010001_lt", "1544768723910010001_ut_1",
+        "1544768723910010001_w_5", "1544769779710010001_lt", "1544769779710010001_w_5",
+        "1544769883529010001_lt", "1544769883529010001_w_5", "1544769915805010001_lt",
+        "1544769915805010001_w_5", "1544779883529010001_lt", "1544770422942010001_lt",
+        "1544770422942010001_w_5" };
     Table table = TEST_UTIL.createTable(tn, cf1);
     for (int i = 0; i < columns.length; i++) {
       Put put = new Put(row).addColumn(cf1, Bytes.toBytes(columns[i]), value);

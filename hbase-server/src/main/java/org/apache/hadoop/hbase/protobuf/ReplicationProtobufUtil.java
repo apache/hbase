@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,8 +65,8 @@ public class ReplicationProtobufUtil {
    * @param entries the WAL entries to be replicated
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
-  public static Pair<ReplicateWALEntryRequest, CellScanner> buildReplicateWALEntryRequest(
-      final Entry[] entries) {
+  public static Pair<ReplicateWALEntryRequest, CellScanner>
+      buildReplicateWALEntryRequest(final Entry[] entries) {
     return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
 
@@ -90,24 +89,23 @@ public class ReplicationProtobufUtil {
     WALEntry.Builder entryBuilder = WALEntry.newBuilder();
     ReplicateWALEntryRequest.Builder builder = ReplicateWALEntryRequest.newBuilder();
 
-    for (Entry entry: entries) {
+    for (Entry entry : entries) {
       entryBuilder.clear();
       WALProtos.WALKey.Builder keyBuilder;
       try {
         keyBuilder = entry.getKey().getBuilder(WALCellCodec.getNoneCompressor());
       } catch (IOException e) {
         throw new AssertionError(
-          "There should not throw exception since NoneCompressor do not throw any exceptions", e);
+            "There should not throw exception since NoneCompressor do not throw any exceptions", e);
       }
-      if(encodedRegionName != null){
-        keyBuilder.setEncodedRegionName(
-            UnsafeByteOperations.unsafeWrap(encodedRegionName));
+      if (encodedRegionName != null) {
+        keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(encodedRegionName));
       }
       entryBuilder.setKey(keyBuilder.build());
       WALEdit edit = entry.getEdit();
       List<Cell> cells = edit.getCells();
-      // Add up the size.  It is used later serializing out the kvs.
-      for (Cell cell: cells) {
+      // Add up the size. It is used later serializing out the kvs.
+      for (Cell cell : cells) {
         size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       // Collect up the cells
@@ -127,8 +125,7 @@ public class ReplicationProtobufUtil {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
     }
 
-    return new Pair<>(builder.build(),
-      getCellScanner(allCells, size));
+    return new Pair<>(builder.build(), getCellScanner(allCells, size));
   }
 
   /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ProcedureTestUtil;
@@ -40,7 +39,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureBackoff.class);
+      HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureBackoff.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -66,8 +65,8 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
     }
 
     @Override
-    protected <T extends Procedure<MasterProcedureEnv>> void addChildProcedure(
-        @SuppressWarnings("unchecked") T... subProcedure) {
+    protected <T extends Procedure<MasterProcedureEnv>> void
+        addChildProcedure(@SuppressWarnings("unchecked") T... subProcedure) {
       // Make it a no-op
     }
 

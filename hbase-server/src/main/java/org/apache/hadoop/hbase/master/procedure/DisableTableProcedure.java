@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -44,8 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
 
 @InterfaceAudience.Private
-public class DisableTableProcedure
-    extends AbstractStateMachineTableProcedure<DisableTableState> {
+public class DisableTableProcedure extends AbstractStateMachineTableProcedure<DisableTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(DisableTableProcedure.class);
 
   private TableName tableName;
@@ -113,9 +111,9 @@ public class DisableTableProcedure
               .hasGlobalReplicationScope()) {
             MasterFileSystem fs = env.getMasterFileSystem();
             try (BufferedMutator mutator = env.getMasterServices().getConnection()
-              .getBufferedMutator(TableName.META_TABLE_NAME)) {
+                .getBufferedMutator(TableName.META_TABLE_NAME)) {
               for (RegionInfo region : env.getAssignmentManager().getRegionStates()
-                .getRegionsOfTable(tableName)) {
+                  .getRegionsOfTable(tableName)) {
                 long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(
                   env.getMasterConfiguration(), region, fs::getFileSystem, fs::getWALFileSystem);
                 long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
@@ -192,8 +190,7 @@ public class DisableTableProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DisableTableStateData.Builder disableTableMsg =
@@ -206,8 +203,7 @@ public class DisableTableProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DisableTableStateData disableTableMsg =
@@ -236,8 +232,8 @@ public class DisableTableProcedure
   }
 
   /**
-   * Action before any real action of disabling table. Set the exception in the procedure instead
-   * of throwing it.  This approach is to deal with backward compatible with 1.0.
+   * Action before any real action of disabling table. Set the exception in the procedure instead of
+   * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {

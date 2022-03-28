@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.util;
 
 import java.io.FileNotFoundException;
@@ -83,8 +82,8 @@ public final class BackupUtils {
    * @param rsLogTimestampMap timestamp map
    * @return the min timestamp of each RS
    */
-  public static Map<String, Long> getRSLogTimestampMins(
-      Map<TableName, Map<String, Long>> rsLogTimestampMap) {
+  public static Map<String, Long>
+      getRSLogTimestampMins(Map<TableName, Map<String, Long>> rsLogTimestampMap) {
     if (rsLogTimestampMap == null || rsLogTimestampMap.isEmpty()) {
       return null;
     }
@@ -120,7 +119,7 @@ public final class BackupUtils {
    * @throws IOException exception
    */
   public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
-          throws IOException {
+      throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
@@ -138,17 +137,17 @@ public final class BackupUtils {
         Path target = new Path(backupInfo.getTableBackupDir(table));
         FileSystem targetFs = target.getFileSystem(conf);
         FSTableDescriptors descriptors =
-          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
+            new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
         descriptors.createTableDescriptorForTableDirectory(target, orig, false);
-        LOG.debug("Attempting to copy table info for:" + table + " target: " + target +
-          " descriptor: " + orig);
+        LOG.debug("Attempting to copy table info for:" + table + " target: " + target
+            + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
         List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
         // For each region, write the region info to disk
         LOG.debug("Starting to write region info for table " + table);
         for (RegionInfo regionInfo : regions) {
           Path regionDir = FSUtils
-            .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
+              .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
           regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
           writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
         }
@@ -324,9 +323,8 @@ public final class BackupUtils {
       String expMsg = e.getMessage();
       String newMsg = null;
       if (expMsg.contains("No FileSystem for scheme")) {
-        newMsg =
-            "Unsupported filesystem scheme found in the backup target url. Error Message: "
-                + expMsg;
+        newMsg = "Unsupported filesystem scheme found in the backup target url. Error Message: "
+            + expMsg;
         LOG.error(newMsg);
         throw new IOException(newMsg);
       } else {
@@ -449,9 +447,8 @@ public final class BackupUtils {
       FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
 
       for (TableName table : backupInfo.getTables()) {
-        Path targetDirPath =
-            new Path(getTableBackupDir(backupInfo.getBackupRootDir(), backupInfo.getBackupId(),
-              table));
+        Path targetDirPath = new Path(
+            getTableBackupDir(backupInfo.getBackupRootDir(), backupInfo.getBackupId(), table));
         if (outputFs.delete(targetDirPath, true)) {
           LOG.info("Cleaning up backup data at " + targetDirPath.toString() + " done.");
         } else {
@@ -482,7 +479,7 @@ public final class BackupUtils {
    * @return backupPath String for the particular table
    */
   public static String getTableBackupDir(String backupRootDir, String backupId,
-          TableName tableName) {
+      TableName tableName) {
     return backupRootDir + Path.SEPARATOR + backupId + Path.SEPARATOR
         + tableName.getNamespaceAsString() + Path.SEPARATOR + tableName.getQualifierAsString()
         + Path.SEPARATOR;
@@ -516,7 +513,7 @@ public final class BackupUtils {
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
   public static FileStatus[] listStatus(final FileSystem fs, final Path dir,
-          final PathFilter filter) throws IOException {
+      final PathFilter filter) throws IOException {
     FileStatus[] status = null;
     try {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
@@ -535,8 +532,8 @@ public final class BackupUtils {
   }
 
   /**
-   * Return the 'path' component of a Path. In Hadoop, Path is a URI. This method returns the
-   * 'path' component of a Path's URI: e.g. If a Path is
+   * Return the 'path' component of a Path. In Hadoop, Path is a URI. This method returns the 'path'
+   * component of a Path's URI: e.g. If a Path is
    * <code>hdfs://example.org:9000/hbase_trunk/TestTable/compaction.dir</code>, this method returns
    * <code>/hbase_trunk/TestTable/compaction.dir</code>. This method is useful if you want to print
    * out a Path without qualifying Filesystem instance.
@@ -693,11 +690,10 @@ public final class BackupUtils {
   public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    String tmp = conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
-            fs.getHomeDirectory() + "/hbase-staging");
-    Path path =
-        new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
-            + EnvironmentEdgeManager.currentTime());
+    String tmp =
+        conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
+    Path path = new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
+        + EnvironmentEdgeManager.currentTime());
     if (deleteOnExit) {
       fs.deleteOnExit(path);
     }

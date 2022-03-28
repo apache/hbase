@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes fixed-length values encoded using
- * {@link org.apache.hadoop.hbase.util.Bytes#putBytes(
- * byte[], int, byte[], int, int)}. Intended to make it
- * easier to transition away from direct use of 
- * {@link org.apache.hadoop.hbase.util.Bytes}.
+ * {@link org.apache.hadoop.hbase.util.Bytes#putBytes( byte[], int, byte[], int, int)}. Intended to
+ * make it easier to transition away from direct use of {@link org.apache.hadoop.hbase.util.Bytes}.
  * @see org.apache.hadoop.hbase.util.Bytes#putBytes(byte[], int, byte[], int, int)
  * @see RawBytes
  * @see OrderedBlob
@@ -36,8 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RawBytesFixedLength extends FixedLengthWrapper<byte[]> {
 
   /**
-   * Create a {@code RawBytesFixedLength} using the specified {@code order}
-   * and {@code length}.
+   * Create a {@code RawBytesFixedLength} using the specified {@code order} and {@code length}.
    */
   public RawBytesFixedLength(Order order, int length) {
     super(new RawBytes(order), length);
@@ -58,8 +55,7 @@ public class RawBytesFixedLength extends FixedLengthWrapper<byte[]> {
   }
 
   /**
-   * Write {@code val} into {@code buff}, respecting {@code offset} and
-   * {@code length}.
+   * Write {@code val} into {@code buff}, respecting {@code offset} and {@code length}.
    */
   public int encode(PositionedByteRange dst, byte[] val, int voff, int vlen) {
     return ((RawBytes) base).encode(dst, val, voff, vlen);

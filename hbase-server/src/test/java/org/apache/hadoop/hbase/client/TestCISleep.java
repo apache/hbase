@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,11 +54,11 @@ public class TestCISleep extends AbstractTestCITimeout {
   @Test
   public void testRpcRetryingCallerSleep() throws Exception {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM))
-      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SleepAndFailFirstTime.class.getName())
-        .setProperty(SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY, String.valueOf(2000))
-        .build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM))
+        .setCoprocessor(
+          CoprocessorDescriptorBuilder.newBuilder(SleepAndFailFirstTime.class.getName())
+              .setProperty(SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY, String.valueOf(2000)).build())
+        .build();
     TEST_UTIL.getAdmin().createTable(htd);
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());

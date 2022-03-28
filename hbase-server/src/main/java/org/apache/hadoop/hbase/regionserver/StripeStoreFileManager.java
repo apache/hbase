@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -44,29 +42,27 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
- * Stripe implementation of {@link StoreFileManager}.
- * Not thread safe - relies on external locking (in HStore). Collections that this class
- * returns are immutable or unique to the call, so they should be safe.
- * Stripe store splits the key space of the region into non-overlapping stripes, as well as
- * some recent files that have all the keys (level 0). Each stripe contains a set of files.
- * When L0 is compacted, it's split into the files corresponding to existing stripe boundaries,
- * that can thus be added to stripes.
- * When scan or get happens, it only has to read the files from the corresponding stripes.
- * See {@link StripeCompactionPolicy} on how the stripes are determined; this class doesn't care.
- *
- * This class should work together with {@link StripeCompactionPolicy} and
- * {@link org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor}.
- * With regard to how they work, we make at least the following (reasonable) assumptions:
- *  - Compaction produces one file per new stripe (if any); that is easy to change.
- *  - Compaction has one contiguous set of stripes both in and out, except if L0 is involved.
+ * Stripe implementation of {@link StoreFileManager}. Not thread safe - relies on external locking
+ * (in HStore). Collections that this class returns are immutable or unique to the call, so they
+ * should be safe. Stripe store splits the key space of the region into non-overlapping stripes, as
+ * well as some recent files that have all the keys (level 0). Each stripe contains a set of files.
+ * When L0 is compacted, it's split into the files corresponding to existing stripe boundaries, that
+ * can thus be added to stripes. When scan or get happens, it only has to read the files from the
+ * corresponding stripes. See {@link StripeCompactionPolicy} on how the stripes are determined; this
+ * class doesn't care. This class should work together with {@link StripeCompactionPolicy} and
+ * {@link org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor}. With regard to how they
+ * work, we make at least the following (reasonable) assumptions: - Compaction produces one file per
+ * new stripe (if any); that is easy to change. - Compaction has one contiguous set of stripes both
+ * in and out, except if L0 is involved.
  */
 @InterfaceAudience.Private
 public class StripeStoreFileManager
-  implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
+    implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(StripeStoreFileManager.class);
 
   /**
@@ -84,8 +80,8 @@ public class StripeStoreFileManager
   final static byte[] INVALID_KEY = null;
 
   /**
-   * The state class. Used solely to replace results atomically during
-   * compactions and avoid complicated error handling.
+   * The state class. Used solely to replace results atomically during compactions and avoid
+   * complicated error handling.
    */
   private static class State {
     /**
@@ -96,9 +92,9 @@ public class StripeStoreFileManager
     public byte[][] stripeEndRows = new byte[0][];
 
     /**
-     * Files by stripe. Each element of the list corresponds to stripeEndRow element with the
-     * same index, except the last one. Inside each list, the files are in reverse order by
-     * seqNum. Note that the length of this is one higher than that of stripeEndKeys.
+     * Files by stripe. Each element of the list corresponds to stripeEndRow element with the same
+     * index, except the last one. Inside each list, the files are in reverse order by seqNum. Note
+     * that the length of this is one higher than that of stripeEndKeys.
      */
     public ArrayList<ImmutableList<HStoreFile>> stripeFiles = new ArrayList<>();
     /** Level 0. The files are in reverse order by seqNum. */
@@ -108,14 +104,17 @@ public class StripeStoreFileManager
     public ImmutableList<HStoreFile> allFilesCached = ImmutableList.of();
     private ImmutableList<HStoreFile> allCompactedFilesCached = ImmutableList.of();
   }
+
   private State state = null;
 
   /** Cached file metadata (or overrides as the case may be) */
   private HashMap<HStoreFile, byte[]> fileStarts = new HashMap<>();
   private HashMap<HStoreFile, byte[]> fileEnds = new HashMap<>();
-  /** Normally invalid key is null, but in the map null is the result for "no key"; so use
-   * the following constant value in these maps instead. Note that this is a constant and
-   * we use it to compare by reference when we read from the map. */
+  /**
+   * Normally invalid key is null, but in the map null is the result for "no key"; so use the
+   * following constant value in these maps instead. Note that this is a constant and we use it to
+   * compare by reference when we read from the map.
+   */
   private static final byte[] INVALID_KEY_IN_MAP = new byte[0];
 
   private final CellComparator cellComparator;
@@ -123,12 +122,12 @@ public class StripeStoreFileManager
 
   private final int blockingFileCount;
 
-  public StripeStoreFileManager(
-      CellComparator kvComparator, Configuration conf, StripeStoreConfig config) {
+  public StripeStoreFileManager(CellComparator kvComparator, Configuration conf,
+      StripeStoreConfig config) {
     this.cellComparator = kvComparator;
     this.config = config;
-    this.blockingFileCount = conf.getInt(
-        HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    this.blockingFileCount =
+        conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
   }
 
   @Override
@@ -179,8 +178,10 @@ public class StripeStoreFileManager
     return state.allFilesCached.size();
   }
 
-  /** See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)}
-   * for details on this methods. */
+  /**
+   * See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)} for details on this
+   * methods.
+   */
   @Override
   public Iterator<HStoreFile> getCandidateFilesForRowKeyBefore(final KeyValue targetKey) {
     KeyBeforeConcatenatedLists result = new KeyBeforeConcatenatedLists();
@@ -195,14 +196,16 @@ public class StripeStoreFileManager
     return result.iterator();
   }
 
-  /** See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)} and
-   * {@link StoreFileManager#updateCandidateFilesForRowKeyBefore(Iterator, KeyValue, Cell)}
-   * for details on this methods. */
+  /**
+   * See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)} and
+   * {@link StoreFileManager#updateCandidateFilesForRowKeyBefore(Iterator, KeyValue, Cell)} for
+   * details on this methods.
+   */
   @Override
   public Iterator<HStoreFile> updateCandidateFilesForRowKeyBefore(
       Iterator<HStoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
     KeyBeforeConcatenatedLists.Iterator original =
-        (KeyBeforeConcatenatedLists.Iterator)candidateFiles;
+        (KeyBeforeConcatenatedLists.Iterator) candidateFiles;
     assert original != null;
     ArrayList<List<HStoreFile>> components = original.getComponents();
     for (int firstIrrelevant = 0; firstIrrelevant < components.size(); ++firstIrrelevant) {
@@ -211,8 +214,7 @@ public class StripeStoreFileManager
       // Entries are ordered as such: L0, then stripes in reverse order. We never remove
       // level 0; we remove the stripe, and all subsequent ones, as soon as we find the
       // first one that cannot possibly have better candidates.
-      if (!isInvalid(endKey) && !isOpen(endKey)
-          && (nonOpenRowCompare(targetKey, endKey) >= 0)) {
+      if (!isInvalid(endKey) && !isOpen(endKey) && (nonOpenRowCompare(targetKey, endKey) >= 0)) {
         original.removeComponents(firstIrrelevant);
         break;
       }
@@ -221,10 +223,9 @@ public class StripeStoreFileManager
   }
 
   /**
-   * Override of getSplitPoint that determines the split point as the boundary between two
-   * stripes, unless it causes significant imbalance between split sides' sizes. In that
-   * case, the split boundary will be chosen from the middle of one of the stripes to
-   * minimize imbalance.
+   * Override of getSplitPoint that determines the split point as the boundary between two stripes,
+   * unless it causes significant imbalance between split sides' sizes. In that case, the split
+   * boundary will be chosen from the middle of one of the stripes to minimize imbalance.
    * @return The split point, or null if no split is possible.
    */
   @Override
@@ -250,13 +251,14 @@ public class StripeStoreFileManager
       }
     }
     if (leftSize == 0 || rightSize == 0) {
-      String errMsg = String.format("Cannot split on a boundary - left index %d size %d, "
-          + "right index %d size %d", leftIndex, leftSize, rightIndex, rightSize);
+      String errMsg = String.format(
+        "Cannot split on a boundary - left index %d size %d, " + "right index %d size %d",
+        leftIndex, leftSize, rightIndex, rightSize);
       debugDumpState(errMsg);
       LOG.warn(errMsg);
       return getSplitPointFromAllFiles();
     }
-    double ratio = (double)rightSize / leftSize;
+    double ratio = (double) rightSize / leftSize;
     if (ratio < 1) {
       ratio = 1 / ratio;
     }
@@ -269,8 +271,7 @@ public class StripeStoreFileManager
     // moment, and it's not extremely important.
     // See if we can achieve better ratio if we split the bigger side in half.
     boolean isRightLarger = rightSize >= leftSize;
-    double newRatio = isRightLarger
-        ? getMidStripeSplitRatio(leftSize, rightSize, lastRightSize)
+    double newRatio = isRightLarger ? getMidStripeSplitRatio(leftSize, rightSize, lastRightSize)
         : getMidStripeSplitRatio(rightSize, leftSize, lastLeftSize);
     if (newRatio < 1) {
       newRatio = 1 / newRatio;
@@ -278,8 +279,8 @@ public class StripeStoreFileManager
     if (newRatio >= ratio) {
       return Optional.of(state.stripeEndRows[leftIndex]);
     }
-    LOG.debug("Splitting the stripe - ratio w/o split " + ratio + ", ratio with split "
-        + newRatio + " configured ratio " + config.getMaxSplitImbalance());
+    LOG.debug("Splitting the stripe - ratio w/o split " + ratio + ", ratio with split " + newRatio
+        + " configured ratio " + config.getMaxSplitImbalance());
     // OK, we may get better ratio, get it.
     return StoreUtils.getSplitPoint(state.stripeFiles.get(isRightLarger ? rightIndex : leftIndex),
       cellComparator);
@@ -293,7 +294,7 @@ public class StripeStoreFileManager
   }
 
   private double getMidStripeSplitRatio(long smallerSize, long largerSize, long lastLargerSize) {
-    return (double)(largerSize - lastLargerSize / 2f) / (smallerSize + lastLargerSize / 2f);
+    return (double) (largerSize - lastLargerSize / 2f) / (smallerSize + lastLargerSize / 2f);
   }
 
   @Override
@@ -321,10 +322,10 @@ public class StripeStoreFileManager
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> compactedFiles,
-    Collection<HStoreFile> results) {
+      Collection<HStoreFile> results) {
     // See class comment for the assumptions we make here.
-    LOG.debug("Attempting to merge compaction results: " + compactedFiles.size() +
-      " files replaced by " + results.size());
+    LOG.debug("Attempting to merge compaction results: " + compactedFiles.size()
+        + " files replaced by " + results.size());
     // In order to be able to fail in the middle of the operation, we'll operate on lazy
     // copies and apply the result at the end.
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(false);
@@ -367,7 +368,7 @@ public class StripeStoreFileManager
     // many files we have, so do an approximate mapping to normal priority range; L0 counts
     // for all stripes.
     int l0 = state.level0Files.size(), sc = state.stripeFiles.size();
-    int priority = (int)Math.ceil(((double)(this.blockingFileCount - fc + l0) / sc) - l0);
+    int priority = (int) Math.ceil(((double) (this.blockingFileCount - fc + l0) / sc) - l0);
     return (priority <= HStore.PRIORITY_USER) ? (HStore.PRIORITY_USER + 1) : priority;
   }
 
@@ -385,10 +386,9 @@ public class StripeStoreFileManager
   }
 
   /**
-   * Loads initial store files that were picked up from some physical location pertaining to
-   * this store (presumably). Unlike adding files after compaction, assumes empty initial
-   * sets, and is forgiving with regard to stripe constraints - at worst, many/all files will
-   * go to level 0.
+   * Loads initial store files that were picked up from some physical location pertaining to this
+   * store (presumably). Unlike adding files after compaction, assumes empty initial sets, and is
+   * forgiving with regard to stripe constraints - at worst, many/all files will go to level 0.
    * @param storeFiles Store files to add.
    */
   private void loadUnclassifiedStoreFiles(List<HStoreFile> storeFiles) {
@@ -403,10 +403,9 @@ public class StripeStoreFileManager
       if (isInvalid(startRow) || isInvalid(endRow)) {
         insertFileIntoStripe(level0Files, sf); // No metadata - goes to L0.
         ensureLevel0Metadata(sf);
-      } else if (!isOpen(startRow) && !isOpen(endRow) &&
-          nonOpenRowCompare(startRow, endRow) >= 0) {
+      } else if (!isOpen(startRow) && !isOpen(endRow) && nonOpenRowCompare(startRow, endRow) >= 0) {
         LOG.error("Unexpected metadata - start row [" + Bytes.toString(startRow) + "], end row ["
-          + Bytes.toString(endRow) + "] in file [" + sf.getPath() + "], pushing to L0");
+            + Bytes.toString(endRow) + "] in file [" + sf.getPath() + "], pushing to L0");
         insertFileIntoStripe(level0Files, sf); // Bad metadata - goes to L0 also.
         ensureLevel0Metadata(sf);
       } else {
@@ -517,23 +516,16 @@ public class StripeStoreFileManager
     if (!LOG.isDebugEnabled()) return;
     StringBuilder sb = new StringBuilder();
     sb.append("\n" + string + "; current stripe state is as such:");
-    sb.append("\n level 0 with ")
-        .append(state.level0Files.size())
-        .append(
-          " files: "
-              + TraditionalBinaryPrefix.long2String(
-                StripeCompactionPolicy.getTotalFileSize(state.level0Files), "", 1) + ";");
+    sb.append("\n level 0 with ").append(state.level0Files.size())
+        .append(" files: " + TraditionalBinaryPrefix
+            .long2String(StripeCompactionPolicy.getTotalFileSize(state.level0Files), "", 1) + ";");
     for (int i = 0; i < state.stripeFiles.size(); ++i) {
-      String endRow = (i == state.stripeEndRows.length)
-          ? "(end)" : "[" + Bytes.toString(state.stripeEndRows[i]) + "]";
-      sb.append("\n stripe ending in ")
-          .append(endRow)
-          .append(" with ")
+      String endRow = (i == state.stripeEndRows.length) ? "(end)"
+          : "[" + Bytes.toString(state.stripeEndRows[i]) + "]";
+      sb.append("\n stripe ending in ").append(endRow).append(" with ")
           .append(state.stripeFiles.get(i).size())
-          .append(
-            " files: "
-                + TraditionalBinaryPrefix.long2String(
-                  StripeCompactionPolicy.getTotalFileSize(state.stripeFiles.get(i)), "", 1) + ";");
+          .append(" files: " + TraditionalBinaryPrefix.long2String(
+            StripeCompactionPolicy.getTotalFileSize(state.stripeFiles.get(i)), "", 1) + ";");
     }
     sb.append("\n").append(state.stripeFiles.size()).append(" stripes total.");
     sb.append("\n").append(getStorefileCount()).append(" files total.");
@@ -606,15 +598,14 @@ public class StripeStoreFileManager
 
   @Override
   public final byte[] getStartRow(int stripeIndex) {
-    return (stripeIndex == 0  ? OPEN_KEY : state.stripeEndRows[stripeIndex - 1]);
+    return (stripeIndex == 0 ? OPEN_KEY : state.stripeEndRows[stripeIndex - 1]);
   }
 
   @Override
   public final byte[] getEndRow(int stripeIndex) {
-    return (stripeIndex == state.stripeEndRows.length
-        ? OPEN_KEY : state.stripeEndRows[stripeIndex]);
+    return (stripeIndex == state.stripeEndRows.length ? OPEN_KEY
+        : state.stripeEndRows[stripeIndex]);
   }
-
 
   private byte[] startOf(HStoreFile sf) {
     byte[] result = fileStarts.get(sf);
@@ -622,9 +613,8 @@ public class StripeStoreFileManager
     // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
     // serves only as a marker and is not to be confused with other empty byte arrays.
     // See Javadoc of INVALID_KEY_IN_MAP for more information
-    return (result == null)
-             ? sf.getMetadataValue(STRIPE_START_KEY)
-             : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
+    return (result == null) ? sf.getMetadataValue(STRIPE_START_KEY)
+        : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
   }
 
   private byte[] endOf(HStoreFile sf) {
@@ -633,9 +623,8 @@ public class StripeStoreFileManager
     // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
     // serves only as a marker and is not to be confused with other empty byte arrays.
     // See Javadoc of INVALID_KEY_IN_MAP for more information
-    return (result == null)
-             ? sf.getMetadataValue(STRIPE_END_KEY)
-             : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
+    return (result == null) ? sf.getMetadataValue(STRIPE_END_KEY)
+        : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
   }
 
   /**
@@ -646,7 +635,7 @@ public class StripeStoreFileManager
   private static void insertFileIntoStripe(ArrayList<HStoreFile> stripe, HStoreFile sf) {
     // The only operation for which sorting of the files matters is KeyBefore. Therefore,
     // we will store the file in reverse order by seqNum from the outset.
-    for (int insertBefore = 0; ; ++insertBefore) {
+    for (int insertBefore = 0;; ++insertBefore) {
       if (insertBefore == stripe.size()
           || (StoreFileComparators.SEQ_ID.compare(sf, stripe.get(insertBefore)) >= 0)) {
         stripe.add(insertBefore, sf);
@@ -656,13 +645,12 @@ public class StripeStoreFileManager
   }
 
   /**
-   * An extension of ConcatenatedLists that has several peculiar properties.
-   * First, one can cut the tail of the logical list by removing last several sub-lists.
-   * Second, items can be removed thru iterator.
-   * Third, if the sub-lists are immutable, they are replaced with mutable copies when needed.
-   * On average KeyBefore operation will contain half the stripes as potential candidates,
-   * but will quickly cut down on them as it finds something in the more likely ones; thus,
-   * the above allow us to avoid unnecessary copying of a bunch of lists.
+   * An extension of ConcatenatedLists that has several peculiar properties. First, one can cut the
+   * tail of the logical list by removing last several sub-lists. Second, items can be removed thru
+   * iterator. Third, if the sub-lists are immutable, they are replaced with mutable copies when
+   * needed. On average KeyBefore operation will contain half the stripes as potential candidates,
+   * but will quickly cut down on them as it finds something in the more likely ones; thus, the
+   * above allow us to avoid unnecessary copying of a bunch of lists.
    */
   private static class KeyBeforeConcatenatedLists extends ConcatenatedLists<HStoreFile> {
     @Override
@@ -706,9 +694,9 @@ public class StripeStoreFileManager
   }
 
   /**
-   * Non-static helper class for merging compaction or flush results.
-   * Since we want to merge them atomically (more or less), it operates on lazy copies,
-   * then creates a new state object and puts it in place.
+   * Non-static helper class for merging compaction or flush results. Since we want to merge them
+   * atomically (more or less), it operates on lazy copies, then creates a new state object and puts
+   * it in place.
    */
   private class CompactionOrFlushMergeCopy {
     private ArrayList<List<HStoreFile>> stripeFiles = null;
@@ -728,7 +716,7 @@ public class StripeStoreFileManager
     }
 
     private void mergeResults(Collection<HStoreFile> compactedFiles,
-      Collection<HStoreFile> results) {
+        Collection<HStoreFile> results) {
       assert this.compactedFiles == null && this.results == null;
       this.compactedFiles = compactedFiles;
       this.results = results;
@@ -765,8 +753,9 @@ public class StripeStoreFileManager
           : this.stripeEndRows.toArray(new byte[this.stripeEndRows.size()][]);
       newState.stripeFiles = new ArrayList<>(this.stripeFiles.size());
       for (List<HStoreFile> newStripe : this.stripeFiles) {
-        newState.stripeFiles.add(newStripe instanceof ImmutableList<?>
-            ? (ImmutableList<HStoreFile>)newStripe : ImmutableList.copyOf(newStripe));
+        newState.stripeFiles
+            .add(newStripe instanceof ImmutableList<?> ? (ImmutableList<HStoreFile>) newStripe
+                : ImmutableList.copyOf(newStripe));
       }
 
       List<HStoreFile> newAllFiles = new ArrayList<>(oldState.allFilesCached);
@@ -813,7 +802,7 @@ public class StripeStoreFileManager
         result = new ArrayList<>(stripeCopy);
         this.stripeFiles.set(index, result);
       } else {
-        result = (ArrayList<HStoreFile>)stripeCopy;
+        result = (ArrayList<HStoreFile>) stripeCopy;
       }
       return result;
     }
@@ -861,8 +850,9 @@ public class StripeStoreFileManager
         HStoreFile oldSf = newStripes.put(endRow, sf);
         if (oldSf != null) {
           throw new IllegalStateException(
-            "Compactor has produced multiple files for the stripe ending in [" +
-              Bytes.toString(endRow) + "], found " + sf.getPath() + " and " + oldSf.getPath());
+              "Compactor has produced multiple files for the stripe ending in ["
+                  + Bytes.toString(endRow) + "], found " + sf.getPath() + " and "
+                  + oldSf.getPath());
         }
       }
       return newStripes;
@@ -881,8 +871,8 @@ public class StripeStoreFileManager
           int stripeIndex = findStripeIndexByEndRow(oldEndRow);
           if (stripeIndex < 0) {
             throw new IllegalStateException(
-              "An allegedly compacted file [" + oldFile + "] does not belong" +
-                " to a known stripe (end row - [" + Bytes.toString(oldEndRow) + "])");
+                "An allegedly compacted file [" + oldFile + "] does not belong"
+                    + " to a known stripe (end row - [" + Bytes.toString(oldEndRow) + "])");
           }
           source = getStripeCopy(stripeIndex);
         }
@@ -893,14 +883,15 @@ public class StripeStoreFileManager
     }
 
     /**
-     * See {@link #addCompactionResults(Collection, Collection)} - updates the stripe list with
-     * new candidate stripes/removes old stripes; produces new set of stripe end rows.
-     * @param newStripes  New stripes - files by end row.
+     * See {@link #addCompactionResults(Collection, Collection)} - updates the stripe list with new
+     * candidate stripes/removes old stripes; produces new set of stripe end rows.
+     * @param newStripes New stripes - files by end row.
      */
     private void processNewCandidateStripes(TreeMap<byte[], HStoreFile> newStripes) {
       // Validate that the removed and added aggregate ranges still make for a full key space.
       boolean hasStripes = !this.stripeFiles.isEmpty();
-      this.stripeEndRows = new ArrayList<>(Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
+      this.stripeEndRows =
+          new ArrayList<>(Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
       int removeFrom = 0;
       byte[] firstStartRow = startOf(newStripes.firstEntry().getValue());
       byte[] lastEndRow = newStripes.lastKey();
@@ -980,8 +971,8 @@ public class StripeStoreFileManager
           assert !isOpen(previousEndRow);
           byte[] startRow = startOf(newStripe.getValue());
           if (!rowEquals(previousEndRow, startRow)) {
-            throw new IllegalStateException("The new stripes produced by " +
-              (isFlush ? "flush" : "compaction") + " are not contiguous");
+            throw new IllegalStateException("The new stripes produced by "
+                + (isFlush ? "flush" : "compaction") + " are not contiguous");
           }
         }
         // Add the new stripe.
@@ -1073,9 +1064,8 @@ public class StripeStoreFileManager
     double max = 0.0;
     for (ImmutableList<HStoreFile> stripeFile : stateLocal.stripeFiles) {
       int stripeFileCount = stripeFile.size();
-      double normCount =
-          (double) (stripeFileCount + delta - config.getStripeCompactMinFiles())
-              / (blockingFilePerStripe - config.getStripeCompactMinFiles());
+      double normCount = (double) (stripeFileCount + delta - config.getStripeCompactMinFiles())
+          / (blockingFilePerStripe - config.getStripeCompactMinFiles());
       if (normCount >= 1.0) {
         // This could happen if stripe is not split evenly. Do not return values that larger than
         // 1.0 because we have not reached the blocking file count actually.

@@ -68,13 +68,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
- * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
+ * Basic mock region server services. Should only be instantiated by HBaseTestingUtility.b
  */
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
   private final Map<String, HRegion> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
-    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+      new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
   private final Configuration conf;
   private ZKWatcher zkw = null;
@@ -94,7 +94,7 @@ public class MockRegionServerServices implements RegionServerServices {
     this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
   }
 
-  public MockRegionServerServices(){
+  public MockRegionServerServices() {
     this(null, null);
   }
 
@@ -226,7 +226,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   public void setFileSystem(FileSystem hfs) {
-    this.hfs = (HFileSystem)hfs;
+    this.hfs = (HFileSystem) hfs;
   }
 
   @Override
@@ -335,8 +335,8 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean reportFileArchivalForQuotas(
-      TableName tableName, Collection<Entry<String,Long>> archivedFiles) {
+  public boolean reportFileArchivalForQuotas(TableName tableName,
+      Collection<Entry<String, Long>> archivedFiles) {
     return true;
   }
 

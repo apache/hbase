@@ -170,8 +170,8 @@ public interface AsyncAdmin {
 
   /**
    * Creates a new table with an initial set of empty regions defined by the specified split keys.
-   * The total number of regions created will be the number of split keys plus one.
-   * Note : Avoid passing empty split key.
+   * The total number of regions created will be the number of split keys plus one. Note : Avoid
+   * passing empty split key.
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    */
@@ -241,8 +241,7 @@ public interface AsyncAdmin {
    * @param tableName name of the table to add column family to
    * @param columnFamily column family descriptor of column family to be added
    */
-  CompletableFuture<Void> addColumnFamily(TableName tableName,
-      ColumnFamilyDescriptor columnFamily);
+  CompletableFuture<Void> addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily);
 
   /**
    * Delete a column family from a table.
@@ -266,7 +265,7 @@ public interface AsyncAdmin {
    * @param dstSFT the destination store file tracker
    */
   CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family,
-    String dstSFT);
+      String dstSFT);
 
   /**
    * Create a new namespace.
@@ -322,8 +321,8 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flush(TableName tableName);
 
   /**
-   * Flush the specified column family stores on all regions of the passed table.
-   * This runs as a synchronous operation.
+   * Flush the specified column family stores on all regions of the passed table. This runs as a
+   * synchronous operation.
    * @param tableName table to flush
    * @param columnFamily column family within a table
    */
@@ -351,8 +350,8 @@ public interface AsyncAdmin {
 
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
-   * was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to compact
    */
   default CompletableFuture<Void> compact(TableName tableName) {
@@ -362,8 +361,7 @@ public interface AsyncAdmin {
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to compact
    * @param columnFamily column family within a table. If not present, compact the table's all
    *          column families.
@@ -374,9 +372,9 @@ public interface AsyncAdmin {
 
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
-   * was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
-   * normal compaction type.
+   * was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for normal compaction
+   * type.
    * @param tableName table to compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
@@ -385,8 +383,7 @@ public interface AsyncAdmin {
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
    * normal compaction type.
    * @param tableName table to compact
    * @param columnFamily column family within a table
@@ -414,8 +411,8 @@ public interface AsyncAdmin {
 
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
-   * request was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * request was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to major compact
    */
   default CompletableFuture<Void> majorCompact(TableName tableName) {
@@ -425,8 +422,7 @@ public interface AsyncAdmin {
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
    * normal compaction. type.
    * @param tableName table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
@@ -438,9 +434,9 @@ public interface AsyncAdmin {
 
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
-   * request was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
-   * normal compaction type.
+   * request was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for normal compaction
+   * type.
    * @param tableName table to major compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
@@ -449,8 +445,7 @@ public interface AsyncAdmin {
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
    *          column families.
@@ -615,8 +610,7 @@ public interface AsyncAdmin {
    * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
    *          present. If results in double assignment use hbck -fix to resolve. To be used by
    *          experts).
-   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
-   *   instead.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])} instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
   @Deprecated
@@ -678,8 +672,8 @@ public interface AsyncAdmin {
    * @param peerConfig configuration for the replication slave cluster
    * @param enabled peer state, true if ENABLED and false if DISABLED
    */
-  CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig, boolean enabled);
+  CompletableFuture<Void> addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig,
+      boolean enabled);
 
   /**
    * Remove a peer and stop the replication
@@ -727,15 +721,15 @@ public interface AsyncAdmin {
    * @param peerId a short name that identifies the peer
    * @return the current cluster state wrapped by a {@link CompletableFuture}.
    */
-  default CompletableFuture<SyncReplicationState> getReplicationPeerSyncReplicationState(
-      String peerId) {
+  default CompletableFuture<SyncReplicationState>
+      getReplicationPeerSyncReplicationState(String peerId) {
     CompletableFuture<SyncReplicationState> future = new CompletableFuture<>();
     addListener(listReplicationPeers(Pattern.compile(peerId)), (peers, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
       } else if (peers.isEmpty() || !peers.get(0).getPeerId().equals(peerId)) {
-        future
-          .completeExceptionally(new IOException("Replication peer " + peerId + " does not exist"));
+        future.completeExceptionally(
+          new IOException("Replication peer " + peerId + " does not exist"));
       } else {
         future.complete(peers.get(0).getSyncReplicationState());
       }
@@ -795,10 +789,10 @@ public interface AsyncAdmin {
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
-   * taken. If the table is disabled, an offline snapshot is taken. Snapshots are taken
-   * sequentially even when requested concurrently, across all tables. Snapshots are considered
-   * unique based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same
-   * name (even a different type or with different parameters) will fail with a
+   * taken. If the table is disabled, an offline snapshot is taken. Snapshots are taken sequentially
+   * even when requested concurrently, across all tables. Snapshots are considered unique based on
+   * <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even a
+   * different type or with different parameters) will fail with a
    * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
    * naming. Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
@@ -812,11 +806,10 @@ public interface AsyncAdmin {
   /**
    * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
    * snapshot</b>. Snapshots are taken sequentially even when requested concurrently, across all
-   * tables. Attempts to take a snapshot with the same name (even a different type or with
-   * different parameters) will fail with a
-   * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
-   * naming. Snapshot names follow the same naming constraints as tables in HBase. See
-   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * tables. Attempts to take a snapshot with the same name (even a different type or with different
+   * parameters) will fail with a {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException}
+   * indicating the duplicate naming. Snapshot names follow the same naming constraints as tables in
+   * HBase. See {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
    * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
    *          snapshots stored on the cluster
    * @param tableName name of the table to snapshot
@@ -828,15 +821,15 @@ public interface AsyncAdmin {
   }
 
   /**
-   * Take a snapshot and wait for the server to complete that snapshot asynchronously. Snapshots
-   * are taken sequentially even when requested concurrently, across all tables. Snapshots are
-   * considered unique based on <b>the name of the snapshot</b>.
-   * Attempts to take a snapshot with the same name (even a different type or with different
-   * parameters) will fail with a {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException}
-   * indicating the duplicate naming. Snapshot names follow the same naming constraints as tables in
-   * HBase. See {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
-   * You should probably use {@link #snapshot(String, org.apache.hadoop.hbase.TableName)} unless you
-   * are sure about the type of snapshot that you want to take.
+   * Take a snapshot and wait for the server to complete that snapshot asynchronously. Snapshots are
+   * taken sequentially even when requested concurrently, across all tables. Snapshots are
+   * considered unique based on <b>the name of the snapshot</b>. Attempts to take a snapshot with
+   * the same name (even a different type or with different parameters) will fail with a
+   * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
+   * naming. Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}. You should
+   * probably use {@link #snapshot(String, org.apache.hadoop.hbase.TableName)} unless you are sure
+   * about the type of snapshot that you want to take.
    * @param snapshot snapshot to take
    */
   CompletableFuture<Void> snapshot(SnapshotDescription snapshot);
@@ -1031,8 +1024,8 @@ public interface AsyncAdmin {
       Map<String, String> props);
 
   /**
-   * Abort a procedure
-   * Do not use. Usually it is ignored but if not, it can do more damage than good. See hbck2.
+   * Abort a procedure Do not use. Usually it is ignored but if not, it can do more damage than
+   * good. See hbck2.
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist. the value is
@@ -1056,10 +1049,10 @@ public interface AsyncAdmin {
   CompletableFuture<String> getLocks();
 
   /**
-   * Mark region server(s) as decommissioned to prevent additional regions from getting
-   * assigned to them. Optionally unload the regions on the servers. If there are multiple servers
-   * to be decommissioned, decommissioning them at the same time can prevent wasteful region
-   * movements. Region unloading is asynchronous.
+   * Mark region server(s) as decommissioned to prevent additional regions from getting assigned to
+   * them. Optionally unload the regions on the servers. If there are multiple servers to be
+   * decommissioned, decommissioning them at the same time can prevent wasteful region movements.
+   * Region unloading is asynchronous.
    * @param servers The list of servers to decommission.
    * @param offload True to offload the regions from the decommissioned servers
    */
@@ -1102,7 +1095,7 @@ public interface AsyncAdmin {
    */
   default CompletableFuture<Collection<ServerName>> getBackupMasters() {
     return getClusterMetrics(EnumSet.of(Option.BACKUP_MASTERS))
-      .thenApply(ClusterMetrics::getBackupMasterNames);
+        .thenApply(ClusterMetrics::getBackupMasterNames);
   }
 
   /**
@@ -1113,8 +1106,8 @@ public interface AsyncAdmin {
         .thenApply(ClusterMetrics::getServersName);
   }
 
-  default CompletableFuture<Collection<ServerName>> getRegionServers(
-    boolean excludeDecommissionedRS) {
+  default CompletableFuture<Collection<ServerName>>
+      getRegionServers(boolean excludeDecommissionedRS) {
     CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
     addListener(
       getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
@@ -1130,7 +1123,7 @@ public interface AsyncAdmin {
                 future.completeExceptionally(decomErr);
               } else {
                 future.complete(allServers.stream().filter(s -> !decomServers.contains(s))
-                  .collect(ImmutableList.toImmutableList()));
+                    .collect(ImmutableList.toImmutableList()));
               }
             });
           }
@@ -1152,8 +1145,8 @@ public interface AsyncAdmin {
    * @return master info port
    */
   default CompletableFuture<Integer> getMasterInfoPort() {
-    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT)).thenApply(
-      ClusterMetrics::getMasterInfoPort);
+    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT))
+        .thenApply(ClusterMetrics::getMasterInfoPort);
   }
 
   /**
@@ -1185,8 +1178,8 @@ public interface AsyncAdmin {
   CompletableFuture<Void> updateConfiguration();
 
   /**
-   * Update the configuration and trigger an online config change on all the regionservers in
-   * the RSGroup.
+   * Update the configuration and trigger an online config change on all the regionservers in the
+   * RSGroup.
    * @param groupName the group name
    */
   CompletableFuture<Void> updateConfiguration(String groupName);
@@ -1223,7 +1216,7 @@ public interface AsyncAdmin {
    * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
-    TableName tableName);
+      TableName tableName);
 
   /**
    * Check whether master is in maintenance mode
@@ -1315,8 +1308,7 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> balance() {
-    return balance(BalanceRequest.defaultInstance())
-      .thenApply(BalanceResponse::isBalancerRan);
+    return balance(BalanceRequest.defaultInstance()).thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
@@ -1326,21 +1318,17 @@ public interface AsyncAdmin {
    * @param forcible whether we should force balance even if there is region in transition.
    * @return True if balancer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}.
-   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
-   *  Use {@link #balance(BalanceRequest)} instead.
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0. Use {@link #balance(BalanceRequest)}
+   *             instead.
    */
   default CompletableFuture<Boolean> balance(boolean forcible) {
-    return balance(
-      BalanceRequest.newBuilder()
-        .setIgnoreRegionsInTransition(forcible)
-        .build()
-    ).thenApply(BalanceResponse::isBalancerRan);
+    return balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(forcible).build())
+        .thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
-   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
-   * balancer will run. See {@link BalanceRequest} for more details.
-   *
+   * Invoke the balancer with the given balance request. The BalanceRequest defines how the balancer
+   * will run. See {@link BalanceRequest} for more details.
    * @param request defines how the balancer should run
    * @return {@link BalanceResponse} with details about the results of the invocation.
    */
@@ -1348,8 +1336,8 @@ public interface AsyncAdmin {
 
   /**
    * Query the current state of the balancer.
-   * @return true if the balance switch is on, false otherwise. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * @return true if the balance switch is on, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isBalancerEnabled();
 
@@ -1393,8 +1381,8 @@ public interface AsyncAdmin {
 
   /**
    * Query the current state of the cleaner chore.
-   * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}
+   * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isCleanerChoreEnabled();
 
@@ -1414,8 +1402,8 @@ public interface AsyncAdmin {
 
   /**
    * Query on the catalog janitor state.
-   * @return true if the catalog janitor is on, false otherwise. The return value will be
-   *         wrapped by a {@link CompletableFuture}
+   * @return true if the catalog janitor is on, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isCatalogJanitorEnabled();
 
@@ -1437,6 +1425,7 @@ public interface AsyncAdmin {
    * channel -> xxxService.newStub(channel)
    * </code>
    * </pre>
+   * 
    * @param stubMaker a delegation to the actual {@code newStub} call.
    * @param callable a delegation to the actual protobuf rpc call. See the comment of
    *          {@link ServiceCaller} for more details.
@@ -1459,6 +1448,7 @@ public interface AsyncAdmin {
    * channel -> xxxService.newStub(channel)
    * </code>
    * </pre>
+   * 
    * @param stubMaker a delegation to the actual {@code newStub} call.
    * @param callable a delegation to the actual protobuf rpc call. See the comment of
    *          {@link ServiceCaller} for more details.
@@ -1469,7 +1459,7 @@ public interface AsyncAdmin {
    * @see ServiceCaller
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, ServerName serverName);
+      ServiceCaller<S, R> callable, ServerName serverName);
 
   /**
    * List all the dead region servers.
@@ -1498,21 +1488,19 @@ public interface AsyncAdmin {
 
   /**
    * Create a new table by cloning the existent table schema.
-   *
    * @param tableName name of the table to be cloned
    * @param newTableName name of the new table where the table will be created
    * @param preserveSplits True if the splits should be preserved
    */
-  CompletableFuture<Void> cloneTableSchema(final TableName tableName,
-      final TableName newTableName, final boolean preserveSplits);
+  CompletableFuture<Void> cloneTableSchema(final TableName tableName, final TableName newTableName,
+      final boolean preserveSplits);
 
   /**
    * Turn the compaction on or off. Disabling compactions will also interrupt any currently ongoing
-   * compactions. This state is ephemeral. The setting will be lost on restart. Compaction
-   * can also be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled
-   * in hbase-site.xml.
-   *
-   * @param switchState     Set to <code>true</code> to enable, <code>false</code> to disable.
+   * compactions. This state is ephemeral. The setting will be lost on restart. Compaction can also
+   * be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled in
+   * hbase-site.xml.
+   * @param switchState Set to <code>true</code> to enable, <code>false</code> to disable.
    * @param serverNamesList list of region servers.
    * @return Previous compaction states for region servers
    */
@@ -1533,8 +1521,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> isRpcThrottleEnabled();
 
   /**
-   * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
-   * can be exceeded if region server has availble quota.
+   * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota can be
+   * exceeded if region server has availble quota.
    * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
    * @return Previous exceed throttle enabled value
    */
@@ -1562,8 +1550,8 @@ public interface AsyncAdmin {
    * Returns the Master's view of a quota on the given {@code tableName} or null if the Master has
    * no quota information on that table.
    */
-  CompletableFuture<? extends SpaceQuotaSnapshotView> getCurrentSpaceQuotaSnapshot(
-      TableName tableName);
+  CompletableFuture<? extends SpaceQuotaSnapshotView>
+      getCurrentSpaceQuotaSnapshot(TableName tableName);
 
   /**
    * Grants user specific permissions
@@ -1613,35 +1601,31 @@ public interface AsyncAdmin {
    * Notice that, the method itself is always non-blocking, which means it will always return
    * immediately. The {@code sync} parameter only effects when will we complete the returned
    * {@link CompletableFuture}.
-   *
    * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
-   * @param sync If <code>true</code>, it waits until current snapshot cleanup is completed,
-   *   if outstanding.
+   * @param sync If <code>true</code>, it waits until current snapshot cleanup is completed, if
+   *          outstanding.
    * @return Previous auto snapshot cleanup value wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> snapshotCleanupSwitch(boolean on, boolean sync);
 
   /**
    * Query the current state of the auto snapshot cleanup based on TTL.
-   *
-   * @return true if the auto snapshot cleanup is enabled, false otherwise.
-   *   The return value will be wrapped by a {@link CompletableFuture}.
+   * @return true if the auto snapshot cleanup is enabled, false otherwise. The return value will be
+   *         wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isSnapshotCleanupEnabled();
 
   /**
-   * Retrieves online slow RPC logs from the provided list of
-   * RegionServers
-   *
+   * Retrieves online slow RPC logs from the provided list of RegionServers
    * @param serverNames Server names to get slowlog responses from
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
-   * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *             {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
    */
   @Deprecated
-  default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+  default CompletableFuture<List<OnlineLogRecord>>
+      getSlowLogResponses(final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     String logType;
     if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
       logType = "LARGE_LOG";
@@ -1654,21 +1638,17 @@ public interface AsyncAdmin {
     filterParams.put("tableName", logQueryFilter.getTableName());
     filterParams.put("userName", logQueryFilter.getUserName());
     filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
-    CompletableFuture<List<LogEntry>> logEntries =
-      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
-        filterParams);
-    return logEntries.thenApply(
-      logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
-        .collect(Collectors.toList()));
+    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(serverNames, logType,
+      ServerType.REGION_SERVER, logQueryFilter.getLimit(), filterParams);
+    return logEntries.thenApply(logEntryList -> logEntryList.stream()
+        .map(logEntry -> (OnlineLogRecord) logEntry).collect(Collectors.toList()));
   }
 
   /**
-   * Clears online slow RPC logs from the provided list of
-   * RegionServers
-   *
+   * Clears online slow RPC logs from the provided list of RegionServers
    * @param serverNames Set of Server names to clean slowlog responses from
-   * @return List of booleans representing if online slowlog response buffer is cleaned
-   *   from each RegionServer. The return value wrapped by a {@link CompletableFuture}
+   * @return List of booleans representing if online slowlog response buffer is cleaned from each
+   *         RegionServer. The return value wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<List<Boolean>> clearSlowLogResponses(final Set<ServerName> serverNames);
 
@@ -1729,7 +1709,7 @@ public interface AsyncAdmin {
    * @see #listTablesInRSGroup(String)
    */
   CompletableFuture<Pair<List<String>, List<TableName>>>
-    getConfiguredNamespacesAndTablesInRSGroup(String groupName);
+      getConfiguredNamespacesAndTablesInRSGroup(String groupName);
 
   /**
    * Remove RegionServer group associated with the given name
@@ -1739,11 +1719,10 @@ public interface AsyncAdmin {
   CompletableFuture<Void> removeRSGroup(String groupName);
 
   /**
-   * Remove decommissioned servers from group
-   *  1. Sometimes we may find the server aborted due to some hardware failure and we must offline
-   *     the server for repairing. Or we need to move some servers to join other clusters.
-   *     So we need to remove these servers from the group.
-   *  2. Dead/recovering/live servers will be disallowed.
+   * Remove decommissioned servers from group 1. Sometimes we may find the server aborted due to
+   * some hardware failure and we must offline the server for repairing. Or we need to move some
+   * servers to join other clusters. So we need to remove these servers from the group. 2.
+   * Dead/recovering/live servers will be disallowed.
    * @param servers set of servers to remove
    * @throws IOException if a remote or network exception occurs
    */
@@ -1801,12 +1780,11 @@ public interface AsyncAdmin {
   CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
 
   /**
-   * Retrieve recent online records from HMaster / RegionServers.
-   * Examples include slow/large RPC logs, balancer decisions by master.
-   *
-   * @param serverNames servers to retrieve records from, useful in case of records maintained
-   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
-   *   only come from the currently active master.
+   * Retrieve recent online records from HMaster / RegionServers. Examples include slow/large RPC
+   * logs, balancer decisions by master.
+   * @param serverNames servers to retrieve records from, useful in case of records maintained by
+   *          RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *          only come from the currently active master.
    * @param logType string representing type of log records
    * @param serverType enum for server type: HMaster or RegionServer
    * @param limit put a limit to list of records that server should send in response
@@ -1814,5 +1792,5 @@ public interface AsyncAdmin {
    * @return Log entries representing online records from servers
    */
   CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
-    ServerType serverType, int limit, Map<String, Object> filterParams);
+      ServerType serverType, int limit, Map<String, Object> filterParams);
 }

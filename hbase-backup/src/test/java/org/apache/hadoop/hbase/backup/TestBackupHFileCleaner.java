@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -121,8 +121,9 @@ public class TestBackupHFileCleaner {
         found = true;
       }
     }
-    assertTrue("Cleaner should allow to delete this file as there is no hfile reference "
-        + "for it.", found);
+    assertTrue(
+      "Cleaner should allow to delete this file as there is no hfile reference " + "for it.",
+      found);
 
     // 4. Add the file as bulk load
     List<Path> list = new ArrayList<>(1);
@@ -146,7 +147,8 @@ public class TestBackupHFileCleaner {
         found = true;
       }
     }
-    assertFalse("Cleaner should not allow to delete this file as there is a hfile reference "
-        + "for it.", found);
+    assertFalse(
+      "Cleaner should not allow to delete this file as there is a hfile reference " + "for it.",
+      found);
   }
 }

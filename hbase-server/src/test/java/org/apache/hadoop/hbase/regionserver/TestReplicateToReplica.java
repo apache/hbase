@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,7 +86,7 @@ public class TestReplicateToReplica {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicateToReplica.class);
+      HBaseClassTestRule.forClass(TestReplicateToReplica.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -128,20 +128,20 @@ public class TestReplicateToReplica {
   public static final class HRegionForTest extends HRegion {
 
     public HRegionForTest(HRegionFileSystem fs, WAL wal, Configuration confParam,
-      TableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 
     @SuppressWarnings("deprecation")
     public HRegionForTest(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
     @Override
     protected PrepareFlushResult internalPrepareFlushCache(WAL wal, long myseqid,
-      Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
-      FlushLifeCycleTracker tracker) throws IOException {
+        Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
+        FlushLifeCycleTracker tracker) throws IOException {
       PrepareFlushResult result = super.internalPrepareFlushCache(wal, myseqid, storesToFlush,
         status, writeFlushWalMarker, tracker);
       for (Put put : TO_ADD_AFTER_PREPARE_FLUSH) {
@@ -162,7 +162,7 @@ public class TestReplicateToReplica {
     conf.setClass(HConstants.REGION_IMPL, HRegionForTest.class, HRegion.class);
     EXEC = new ExecutorService("test");
     EXEC.startExecutorService(EXEC.new ExecutorConfig().setCorePoolSize(1)
-      .setExecutorType(ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
+        .setExecutorType(ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
@@ -182,8 +182,8 @@ public class TestReplicateToReplica {
     conf.set(HConstants.HBASE_DIR, testDir.toString());
 
     td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2)
-      .setRegionMemStoreReplication(true).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2)
+        .setRegionMemStoreReplication(true).build();
 
     reqAndResps = new ArrayDeque<>();
     queueReqAndResps = true;
@@ -251,8 +251,8 @@ public class TestReplicateToReplica {
 
   private void replicate(Pair<List<WAL.Entry>, CompletableFuture<Void>> pair) throws IOException {
     Pair<ReplicateWALEntryRequest, CellScanner> params = ReplicationProtobufUtil
-      .buildReplicateWALEntryRequest(pair.getFirst().toArray(new WAL.Entry[0]),
-        secondary.getRegionInfo().getEncodedNameAsBytes(), null, null, null);
+        .buildReplicateWALEntryRequest(pair.getFirst().toArray(new WAL.Entry[0]),
+          secondary.getRegionInfo().getEncodedNameAsBytes(), null, null, null);
     for (WALEntry entry : params.getFirst().getEntryList()) {
       secondary.replayWALEntry(entry, params.getSecond());
     }
@@ -328,7 +328,7 @@ public class TestReplicateToReplica {
     primary.put(new Put(Bytes.toBytes(0)).addColumn(FAMILY, QUAL, Bytes.toBytes(1)));
     replicateAll();
     TO_ADD_AFTER_PREPARE_FLUSH
-      .add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, QUAL, Bytes.toBytes(2)));
+        .add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, QUAL, Bytes.toBytes(2)));
     flushPrimary();
     // replicate the start flush edit
     replicateOne();

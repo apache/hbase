@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestLoadProcedureError {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLoadProcedureError.class);
+      HBaseClassTestRule.forClass(TestLoadProcedureError.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -120,7 +120,7 @@ public class TestLoadProcedureError {
   @Test
   public void testLoadError() throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     ARRIVE = new CountDownLatch(1);
     long procId = procExec.submitProcedure(new TestProcedure());
     ARRIVE.await();

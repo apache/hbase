@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -39,13 +38,12 @@ public class ClassLoaderBase extends URLClassLoader {
   protected final ClassLoader parent;
 
   /**
-   * Creates a DynamicClassLoader that can load classes dynamically
-   * from jar files under a specific folder.
-   *
+   * Creates a DynamicClassLoader that can load classes dynamically from jar files under a specific
+   * folder.
    * @param parent the parent ClassLoader to set.
    */
   public ClassLoaderBase(final ClassLoader parent) {
-    super(new URL[]{}, parent);
+    super(new URL[] {}, parent);
     Preconditions.checkNotNull(parent, "No parent classloader!");
     this.parent = parent;
   }

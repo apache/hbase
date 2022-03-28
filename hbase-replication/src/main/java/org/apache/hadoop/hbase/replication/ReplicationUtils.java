@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public final class ReplicationUtils {
   public static final String RENAME_WAL_SUFFIX = ".ren";
 
   public static final String LEGACY_REGION_REPLICATION_ENDPOINT_NAME =
-    "org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint";
+      "org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint";
 
   private ReplicationUtils() {
   }
@@ -140,11 +140,11 @@ public final class ReplicationUtils {
       return false;
     }
     if (rpc1.replicateAllUserTables()) {
-      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
-        isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
+      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces())
+          && isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
     } else {
-      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces()) &&
-        isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
+      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces())
+          && isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
     }
   }
 

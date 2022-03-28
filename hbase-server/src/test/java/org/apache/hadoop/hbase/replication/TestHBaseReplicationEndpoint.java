@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -41,12 +40,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ReplicationTests.class, SmallTests.class})
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestHBaseReplicationEndpoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseReplicationEndpoint.class);
+      HBaseClassTestRule.forClass(TestHBaseReplicationEndpoint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseReplicationEndpoint.class);
 
@@ -58,8 +57,8 @@ public class TestHBaseReplicationEndpoint {
   public void setUp() throws Exception {
     try {
       ReplicationEndpoint.Context context =
-        new ReplicationEndpoint.Context(null, UTIL.getConfiguration(), UTIL.getConfiguration(),
-          null, null, null, null, null, null, null);
+          new ReplicationEndpoint.Context(null, UTIL.getConfiguration(), UTIL.getConfiguration(),
+              null, null, null, null, null, null, null);
       endpoint = new DummyHBaseReplicationEndpoint();
       endpoint.init(context);
     } catch (Exception e) {
@@ -82,8 +81,8 @@ public class TestHBaseReplicationEndpoint {
 
   @Test
   public void testChooseSinksLessThanRatioAvailable() {
-    List<ServerName> serverNames = Lists.newArrayList(mock(ServerName.class),
-      mock(ServerName.class));
+    List<ServerName> serverNames =
+        Lists.newArrayList(mock(ServerName.class), mock(ServerName.class));
     ((DummyHBaseReplicationEndpoint) endpoint).setRegionServers(serverNames);
     endpoint.chooseSinks();
     assertEquals(1, endpoint.getNumSinks());
@@ -94,7 +93,7 @@ public class TestHBaseReplicationEndpoint {
     ServerName serverNameA = mock(ServerName.class);
     ServerName serverNameB = mock(ServerName.class);
     ((DummyHBaseReplicationEndpoint) endpoint)
-      .setRegionServers(Lists.newArrayList(serverNameA, serverNameB));
+        .setRegionServers(Lists.newArrayList(serverNameA, serverNameB));
     endpoint.chooseSinks();
     // Sanity check
     assertEquals(1, endpoint.getNumSinks());
@@ -106,8 +105,8 @@ public class TestHBaseReplicationEndpoint {
   }
 
   /**
-   * Once a SinkPeer has been reported as bad more than BAD_SINK_THRESHOLD times, it should not
-   * be replicated to anymore.
+   * Once a SinkPeer has been reported as bad more than BAD_SINK_THRESHOLD times, it should not be
+   * replicated to anymore.
    */
   @Test
   public void testReportBadSinkPastThreshold() {
@@ -180,7 +179,7 @@ public class TestHBaseReplicationEndpoint {
     // should have been refreshed now, so out of 4 servers, 2 are not considered as they are
     // reported as bad.
     expected =
-      (int) ((totalServers - 2) * HBaseReplicationEndpoint.DEFAULT_REPLICATION_SOURCE_RATIO);
+        (int) ((totalServers - 2) * HBaseReplicationEndpoint.DEFAULT_REPLICATION_SOURCE_RATIO);
     assertEquals(expected, endpoint.getNumSinks());
   }
 

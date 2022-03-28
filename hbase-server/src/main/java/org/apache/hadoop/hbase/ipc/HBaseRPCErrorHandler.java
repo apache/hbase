@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,5 +29,5 @@ public interface HBaseRPCErrorHandler {
    * @param e the throwable
    * @return if the server should be shut down
    */
-  boolean checkOOME(final Throwable e) ;
+  boolean checkOOME(final Throwable e);
 }

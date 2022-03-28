@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestCreateTableWithMasterFailover extends MasterFailoverWithProcedu
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCreateTableWithMasterFailover.class);
+      HBaseClassTestRule.forClass(TestCreateTableWithMasterFailover.class);
 
   // ==========================================================================
   // Test Create Table
@@ -65,7 +65,7 @@ public class TestCreateTableWithMasterFailover extends MasterFailoverWithProcedu
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId =
-      procExec.submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+        procExec.submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),

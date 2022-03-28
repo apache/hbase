@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSyncUpTool.class);
+      HBaseClassTestRule.forClass(TestReplicationSyncUpTool.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSyncUpTool.class);
 
@@ -204,8 +204,9 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
         LOG.info("SyncUpAfterDelete succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterDelete failed at retry = " + i + ", with rowCount_ht1TargetPeer1 =" +
-          rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
+        LOG.debug("SyncUpAfterDelete failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
+            + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
+            + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }
@@ -280,8 +281,9 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
         LOG.info("SyncUpAfterPut succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterPut failed at retry = " + i + ", with rowCount_ht1TargetPeer1 =" +
-          rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
+        LOG.debug("SyncUpAfterPut failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
+            + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
+            + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }

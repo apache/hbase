@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public class TestAsyncTableNoncedRetry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableNoncedRetry.class);
+      HBaseClassTestRule.forClass(TestAsyncTableNoncedRetry.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -97,7 +97,7 @@ public class TestAsyncTableNoncedRetry {
 
     @Override
     public void postBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-      MiniBatchOperationInProgress<Mutation> miniBatchOp) {
+        MiniBatchOperationInProgress<Mutation> miniBatchOp) {
       // We sleep when the last of the miniBatchOperation is executed
       if (CALLED.getAndIncrement() == miniBatchOperationCount - 1) {
         Threads.sleepWithoutInterrupt(SLEEP_TIME);
@@ -109,9 +109,9 @@ public class TestAsyncTableNoncedRetry {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getAdmin()
-      .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setCoprocessor(SleepOnceCP.class.getName()).build());
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setCoprocessor(SleepOnceCP.class.getName()).build());
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
@@ -132,7 +132,7 @@ public class TestAsyncTableNoncedRetry {
   public void testAppend() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
     Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
@@ -143,15 +143,15 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testAppendWhenReturnResultsEqualsFalse() throws InterruptedException,
-    ExecutionException {
+  public void testAppendWhenReturnResultsEqualsFalse()
+      throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)
-      .setReturnResults(false)).get();
+    Result result = table
+        .append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE).setReturnResults(false)).get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -162,7 +162,7 @@ public class TestAsyncTableNoncedRetry {
   public void testIncrement() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
     long result = table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get();
@@ -173,15 +173,16 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testIncrementWhenReturnResultsEqualsFalse() throws InterruptedException,
-    ExecutionException {
+  public void testIncrementWhenReturnResultsEqualsFalse()
+      throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    Result result = table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)
-      .setReturnResults(false)).get();
+    Result result =
+        table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L).setReturnResults(false))
+            .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -190,15 +191,16 @@ public class TestAsyncTableNoncedRetry {
 
   @Test
   public void testIncrementInRowMutations()
-    throws InterruptedException, ExecutionException, IOException {
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-      .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))).get();
+    Result result = table
+        .mutateRow(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+            .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))
+        .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -207,15 +209,16 @@ public class TestAsyncTableNoncedRetry {
 
   @Test
   public void testAppendInRowMutations()
-    throws InterruptedException, ExecutionException, IOException {
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
-      .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))).get();
+    Result result = table
+        .mutateRow(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+            .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))
+        .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -224,15 +227,16 @@ public class TestAsyncTableNoncedRetry {
 
   @Test
   public void testIncrementAndAppendInRowMutations()
-    throws InterruptedException, ExecutionException, IOException {
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-      .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE))).get();
+    Result result = table
+        .mutateRow(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+            .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE)))
+        .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -244,12 +248,12 @@ public class TestAsyncTableNoncedRetry {
   public void testIncrementInCheckAndMutate() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER2)
-      .build(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))).get();
+    CheckAndMutateResult result =
+        table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER2)
+            .build(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))).get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -261,12 +265,12 @@ public class TestAsyncTableNoncedRetry {
   public void testAppendInCheckAndMutate() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER2)
-      .build(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))).get();
+    CheckAndMutateResult result =
+        table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER2)
+            .build(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))).get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -275,17 +279,18 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testIncrementInRowMutationsInCheckAndMutate() throws InterruptedException,
-    ExecutionException, IOException {
+  public void testIncrementInRowMutationsInCheckAndMutate()
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-        .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))).get();
+    CheckAndMutateResult result =
+        table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+            .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+                .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))))
+            .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -294,17 +299,18 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testAppendInRowMutationsInCheckAndMutate() throws InterruptedException,
-    ExecutionException, IOException {
+  public void testAppendInRowMutationsInCheckAndMutate()
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
-        .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))).get();
+    CheckAndMutateResult result =
+        table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+            .build(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+                .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))))
+            .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -313,17 +319,18 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testIncrementAndAppendInRowMutationsInCheckAndMutate() throws InterruptedException,
-    ExecutionException, IOException {
+  public void testIncrementAndAppendInRowMutationsInCheckAndMutate()
+      throws InterruptedException, ExecutionException, IOException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-        .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE)))).get();
+    CheckAndMutateResult result =
+        table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+            .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+                .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE))))
+            .get();
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -333,8 +340,7 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
-  public void testBatch() throws InterruptedException,
-    ExecutionException, IOException {
+  public void testBatch() throws InterruptedException, ExecutionException, IOException {
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
     byte[] row3 = Bytes.toBytes(Bytes.toString(row) + "3");
     byte[] row4 = Bytes.toBytes(Bytes.toString(row) + "4");
@@ -344,25 +350,22 @@ public class TestAsyncTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+        .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
 
     miniBatchOperationCount = 6;
-    List<Object> results = table.batchAll(Arrays.asList(
-      new Append(row).addColumn(FAMILY, QUALIFIER, VALUE),
-      new Increment(row2).addColumn(FAMILY, QUALIFIER, 1L),
-      new RowMutations(row3)
-        .add(new Increment(row3).addColumn(FAMILY, QUALIFIER, 1L))
-        .add(new Append(row3).addColumn(FAMILY, QUALIFIER2, VALUE)),
-      CheckAndMutate.newBuilder(row4)
-        .ifNotExists(FAMILY, QUALIFIER2)
-        .build(new Increment(row4).addColumn(FAMILY, QUALIFIER, 1L)),
-      CheckAndMutate.newBuilder(row5)
-        .ifNotExists(FAMILY, QUALIFIER2)
-        .build(new Append(row5).addColumn(FAMILY, QUALIFIER, VALUE)),
-      CheckAndMutate.newBuilder(row6)
-        .ifNotExists(FAMILY, QUALIFIER3)
-        .build(new RowMutations(row6).add(new Increment(row6).addColumn(FAMILY, QUALIFIER, 1L))
-          .add(new Append(row6).addColumn(FAMILY, QUALIFIER2, VALUE))))).get();
+    List<Object> results = table.batchAll(
+      Arrays.asList(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE),
+        new Increment(row2).addColumn(FAMILY, QUALIFIER, 1L),
+        new RowMutations(row3).add(new Increment(row3).addColumn(FAMILY, QUALIFIER, 1L))
+            .add(new Append(row3).addColumn(FAMILY, QUALIFIER2, VALUE)),
+        CheckAndMutate.newBuilder(row4).ifNotExists(FAMILY, QUALIFIER2)
+            .build(new Increment(row4).addColumn(FAMILY, QUALIFIER, 1L)),
+        CheckAndMutate.newBuilder(row5).ifNotExists(FAMILY, QUALIFIER2)
+            .build(new Append(row5).addColumn(FAMILY, QUALIFIER, VALUE)),
+        CheckAndMutate.newBuilder(row6).ifNotExists(FAMILY, QUALIFIER3)
+            .build(new RowMutations(row6).add(new Increment(row6).addColumn(FAMILY, QUALIFIER, 1L))
+                .add(new Append(row6).addColumn(FAMILY, QUALIFIER2, VALUE)))))
+        .get();
 
     // make sure we called twice and the result is still correct
 

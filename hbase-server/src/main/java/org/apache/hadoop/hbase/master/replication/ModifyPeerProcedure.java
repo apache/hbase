@@ -143,8 +143,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
       if (!peerConfig.needToReplicate(tn)) {
         continue;
       }
-      if (oldPeerConfig != null && oldPeerConfig.isSerial() &&
-        oldPeerConfig.needToReplicate(tn)) {
+      if (oldPeerConfig != null && oldPeerConfig.isSerial() && oldPeerConfig.needToReplicate(tn)) {
         continue;
       }
       if (needReopen(tsm, tn)) {
@@ -161,8 +160,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
-            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
+              + "mark the procedure as failure and give up",
+            getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
           releaseLatch(env);
           return Flow.NO_MORE_STATE;
@@ -210,7 +210,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         }
         resetRetry();
         setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
-          : PeerModificationState.POST_PEER_MODIFICATION);
+            : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_SET_PEER_ENABLED:
         try {
@@ -236,8 +236,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               "{} failed to call postPeerModification for peer {},  sleep {} secs",
               getClass().getName(), peerId, backoff / 1000, e));
         } catch (IOException e) {
-          LOG.warn("{} failed to call post CP hook for peer {}, " +
-            "ignore since the procedure has already done", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call post CP hook for peer {}, "
+              + "ignore since the procedure has already done",
+            getClass().getName(), peerId, e);
         }
         releaseLatch(env);
         return Flow.NO_MORE_STATE;

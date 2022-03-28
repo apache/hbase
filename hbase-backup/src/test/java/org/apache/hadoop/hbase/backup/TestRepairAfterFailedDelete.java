@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,7 +83,7 @@ public class TestRepairAfterFailedDelete extends TestBackupBase {
     table.startDeleteOperation(backupIds);
 
     // Now run repair command to repair "failed" delete operation
-    String[] args = new String[] {"repair"};
+    String[] args = new String[] { "repair" };
     // Run restore
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
     assertTrue(ret == 0);

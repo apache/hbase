@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,9 +56,9 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
 
   public FileBasedStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-    //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
-    //descriptors with the SFT impl specific configs. By the time this happens, the table has no
-    //regions nor stores yet, so it can't create a proper StoreContext.
+    // CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
+    // descriptors with the SFT impl specific configs. By the time this happens, the table has no
+    // regions nor stores yet, so it can't create a proper StoreContext.
     if (ctx != null) {
       backedFile = new StoreFileListFile(ctx);
     } else {
@@ -101,7 +101,7 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
 
   private StoreFileEntry toStoreFileEntry(StoreFileInfo info) {
     return StoreFileEntry.newBuilder().setName(info.getPath().getName()).setSize(info.getSize())
-      .build();
+        .build();
   }
 
   @Override
@@ -123,9 +123,9 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
 
   @Override
   protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
+      Collection<StoreFileInfo> newFiles) throws IOException {
     Set<String> compactedFileNames =
-      compactedFiles.stream().map(info -> info.getPath().getName()).collect(Collectors.toSet());
+        compactedFiles.stream().map(info -> info.getPath().getName()).collect(Collectors.toSet());
     synchronized (storefiles) {
       StoreFileList.Builder builder = StoreFileList.newBuilder();
       storefiles.forEach((name, info) -> {

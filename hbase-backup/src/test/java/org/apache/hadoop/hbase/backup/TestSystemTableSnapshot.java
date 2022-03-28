@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,10 +38,9 @@ public class TestSystemTableSnapshot extends TestBackupBase {
 
   /**
    * Verify backup system table snapshot.
-   *
    * @throws Exception if an operation on the table fails
    */
- // @Test
+  // @Test
   public void _testBackupRestoreSystemTable() throws Exception {
     LOG.info("test snapshot system table");
 

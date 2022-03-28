@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class TestStoreFileTrackerFactory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileTrackerFactory.class);
+      HBaseClassTestRule.forClass(TestStoreFileTrackerFactory.class);
 
   @Test
   public void testCreateForMigration() {
@@ -53,6 +53,6 @@ public class TestStoreFileTrackerFactory {
     // nested MigrationStoreFileTracker
     conf.setClass(configName, MigrationStoreFileTracker.class, StoreFileTrackerBase.class);
     assertThrows(IllegalArgumentException.class, () -> StoreFileTrackerFactory
-      .createForMigration(conf, configName, false, StoreContext.getBuilder().build()));
+        .createForMigration(conf, configName, false, StoreContext.getBuilder().build()));
   }
 }

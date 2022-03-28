@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestMetaReplicasAddressChange extends MetaWithReplicasTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaReplicasAddressChange.class);
+      HBaseClassTestRule.forClass(TestMetaReplicasAddressChange.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaReplicasAddressChange.class);
 
@@ -64,16 +64,16 @@ public class TestMetaReplicasAddressChange extends MetaWithReplicasTestBase {
     Configuration conf = TEST_UTIL.getConfiguration();
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     String baseZNode =
-      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode =
-      ZNodePaths.joinZNode(baseZNode, conf.get("zookeeper.znode.metaserver", "meta-region-server"));
+        conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName currentServer = ProtobufUtil.toServerName(data);
     Collection<ServerName> liveServers = TEST_UTIL.getAdmin()
-      .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
+        .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
     ServerName moveToServer =
-      liveServers.stream().filter(s -> !currentServer.equals(s)).findAny().get();
+        liveServers.stream().filter(s -> !currentServer.equals(s)).findAny().get();
     final TableName tableName = name.getTableName();
     TEST_UTIL.createTable(tableName, "f");
     assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));

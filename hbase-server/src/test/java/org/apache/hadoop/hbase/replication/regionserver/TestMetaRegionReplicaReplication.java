@@ -73,7 +73,7 @@ public class TestMetaRegionReplicaReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaRegionReplicaReplication.class);
+      HBaseClassTestRule.forClass(TestMetaRegionReplicaReplication.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaRegionReplicaReplication.class);
   private static final int NB_SERVERS = 4;
   private final HBaseTestingUtil HTU = new HBaseTestingUtil();
@@ -100,7 +100,7 @@ public class TestMetaRegionReplicaReplication {
     HBaseTestingUtil.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, numOfMetaReplica);
 
     HTU.waitFor(30000, () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME)
-      .size() >= numOfMetaReplica);
+        .size() >= numOfMetaReplica);
   }
 
   @After
@@ -132,7 +132,7 @@ public class TestMetaRegionReplicaReplication {
   @Test
   public void testCatalogReplicaReplicationWithFlushAndCompaction() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-      Table table = connection.getTable(TableName.META_TABLE_NAME)) {
+        Table table = connection.getTable(TableName.META_TABLE_NAME)) {
       // load the data to the table
       for (int i = 0; i < 5; i++) {
         LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
@@ -180,7 +180,7 @@ public class TestMetaRegionReplicaReplication {
       }
     }
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-      Table table = connection.getTable(TableName.META_TABLE_NAME)) {
+        Table table = connection.getTable(TableName.META_TABLE_NAME)) {
       // load the data to the table
       for (int i = 0; i < 5; i++) {
         LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
@@ -196,12 +196,12 @@ public class TestMetaRegionReplicaReplication {
   }
 
   protected void verifyReplication(TableName tableName, int regionReplication, final int startRow,
-    final int endRow, final byte[] family) throws Exception {
+      final int endRow, final byte[] family) throws Exception {
     verifyReplication(tableName, regionReplication, startRow, endRow, family, true);
   }
 
   private void verifyReplication(TableName tableName, int regionReplication, final int startRow,
-    final int endRow, final byte[] family, final boolean present) throws Exception {
+      final int endRow, final byte[] family, final boolean present) throws Exception {
     // find the regions
     final Region[] regions = new Region[regionReplication];
 
@@ -276,7 +276,7 @@ public class TestMetaRegionReplicaReplication {
    * they get the delete of the table rows too).
    */
   private void verifyDeletedReplication(TableName tableName, int regionReplication,
-    final TableName deletedTableName) {
+      final TableName deletedTableName) {
     final Region[] regions = getAllRegions(tableName, regionReplication);
 
     // Start count at '1' so we skip default, primary replica and only look at secondaries.
@@ -322,7 +322,7 @@ public class TestMetaRegionReplicaReplication {
    * Verify Replicas have results (exactly).
    */
   private void verifyReplication(TableName tableName, int regionReplication,
-    List<Result> contains) {
+      List<Result> contains) {
     final Region[] regions = getAllRegions(tableName, regionReplication);
 
     // Start count at '1' so we skip default, primary replica and only look at secondaries.

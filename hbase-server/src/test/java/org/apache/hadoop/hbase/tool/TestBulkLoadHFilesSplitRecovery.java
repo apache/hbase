@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,7 +86,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadHFilesSplitRecovery.class);
+      HBaseClassTestRule.forClass(TestBulkLoadHFilesSplitRecovery.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
@@ -134,7 +134,7 @@ public class TestBulkLoadHFilesSplitRecovery {
   private TableDescriptor createTableDesc(TableName name, int cfs) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     IntStream.range(0, cfs).mapToObj(i -> ColumnFamilyDescriptorBuilder.of(family(i)))
-      .forEachOrdered(builder::setColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
@@ -249,7 +249,7 @@ public class TestBulkLoadHFilesSplitRecovery {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {
         r.getNoVersionMap().values().stream().flatMap(m -> m.values().stream())
-          .forEach(v -> assertArrayEquals(value(value), v));
+            .forEach(v -> assertArrayEquals(value(value), v));
         i++;
       }
       assertEquals(count, i);
@@ -266,9 +266,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   private static AsyncClusterConnection mockAndInjectError(AsyncClusterConnection conn) {
     AsyncClusterConnection errConn = spy(conn);
-    doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn)
-      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(),
-        anyBoolean());
+    doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn).bulkLoad(
+      any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(), anyBoolean());
     return errConn;
   }
 
@@ -289,7 +288,7 @@ public class TestBulkLoadHFilesSplitRecovery {
           Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
           boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
         AsyncClusterConnection c =
-          attemptedCalls.incrementAndGet() == 1 ? mockAndInjectError(conn) : conn;
+            attemptedCalls.incrementAndGet() == 1 ? mockAndInjectError(conn) : conn;
         super.bulkLoadPhase(c, tableName, queue, regionGroups, copyFiles, item2RegionMap);
       }
     };
@@ -392,7 +391,7 @@ public class TestBulkLoadHFilesSplitRecovery {
           TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
           List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
         Pair<List<LoadQueueItem>, String> lqis =
-          super.groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
+            super.groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
         if (lqis != null && lqis.getFirst() != null) {
           countedLqis.addAndGet(lqis.getFirst().size());
         }
@@ -442,8 +441,8 @@ public class TestBulkLoadHFilesSplitRecovery {
   public void testSplitTmpFileCleanUp() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
-      Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
-      Bytes.toBytes("row_00000050") };
+        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+        Bytes.toBytes("row_00000050") };
     setupTableWithSplitkeys(table, 10, SPLIT_KEYS);
 
     BulkLoadHFiles loader = BulkLoadHFiles.create(util.getConfiguration());
@@ -494,10 +493,10 @@ public class TestBulkLoadHFilesSplitRecovery {
   }
 
   /**
-   * We are testing a split after initial validation but before the atomic bulk load call.
-   * We cannot use presplitting to test this path, so we actually inject a
-   * split just before the atomic region load. However, we will pass null item2RegionMap
-   * and that should not affect the bulk load behavior.
+   * We are testing a split after initial validation but before the atomic bulk load call. We cannot
+   * use presplitting to test this path, so we actually inject a split just before the atomic region
+   * load. However, we will pass null item2RegionMap and that should not affect the bulk load
+   * behavior.
    */
   @Test
   public void testSplitWhileBulkLoadPhaseWithoutItemMap() throws Exception {
@@ -513,9 +512,9 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(final AsyncClusterConnection conn, final TableName tableName,
-        final Deque<LoadQueueItem> queue, final Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-        final boolean copyFiles,
-        final Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+          final Deque<LoadQueueItem> queue, final Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          final boolean copyFiles, final Map<LoadQueueItem, ByteBuffer> item2RegionMap)
+          throws IOException {
 
         int i = attemptedCalls.incrementAndGet();
         if (i == 1) {
@@ -541,7 +540,6 @@ public class TestBulkLoadHFilesSplitRecovery {
     assertExpectedTable(table, ROWCOUNT, 2);
   }
 
-
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
    */
@@ -553,7 +551,7 @@ public class TestBulkLoadHFilesSplitRecovery {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {
         r.getNoVersionMap().values().stream().flatMap(m -> m.values().stream())
-          .forEach(v -> assertArrayEquals(value(value), v));
+            .forEach(v -> assertArrayEquals(value(value), v));
         i++;
       }
       assertEquals(count, i);

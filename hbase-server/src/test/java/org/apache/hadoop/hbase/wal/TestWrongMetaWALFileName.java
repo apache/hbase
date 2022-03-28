@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestWrongMetaWALFileName {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWrongMetaWALFileName.class);
+      HBaseClassTestRule.forClass(TestWrongMetaWALFileName.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -65,7 +65,7 @@ public class TestWrongMetaWALFileName {
     UTIL.waitTableAvailable(tableName);
     HRegionServer rs = UTIL.getMiniHBaseCluster().getRegionServer(0);
     Path walDir = new Path(rs.getWALRootDir(),
-      AbstractFSWALProvider.getWALDirectoryName(rs.getServerName().toString()));
+        AbstractFSWALProvider.getWALDirectoryName(rs.getServerName().toString()));
     // we should have meta wal files.
     assertTrue(
       rs.getWALFileSystem().listStatus(walDir, AbstractFSWALProvider::isMetaFile).length > 0);

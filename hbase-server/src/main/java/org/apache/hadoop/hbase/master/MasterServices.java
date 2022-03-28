@@ -60,10 +60,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
- * A curated subset of services provided by {@link HMaster}.
- * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
- * full-on HMaster at test-time. Be judicious adding API. Changes cause ripples through
- * the code base.
+ * A curated subset of services provided by {@link HMaster}. For use internally only. Passed to
+ * Managers, Services and Chores so can pass less-than-a full-on HMaster at test-time. Be judicious
+ * adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
@@ -161,21 +160,16 @@ public interface MasterServices extends Server {
   /**
    * Create a table using the given table definition.
    * @param desc The table definition
-   * @param splitKeys Starting row keys for the initial table regions.  If null
+   * @param splitKeys Starting row keys for the initial table regions. If null
    * @param nonceGroup
-   * @param nonce
-   *     a single region is created.
+   * @param nonce a single region is created.
    */
-  long createTable(
-      final TableDescriptor desc,
-      final byte[][] splitKeys,
-      final long nonceGroup,
+  long createTable(final TableDescriptor desc, final byte[][] splitKeys, final long nonceGroup,
       final long nonce) throws IOException;
 
   /**
    * Create a system table using the given table definition.
-   * @param tableDescriptor The system table definition
-   *     a single region is created.
+   * @param tableDescriptor The system table definition a single region is created.
    */
   long createSystemTable(final TableDescriptor tableDescriptor) throws IOException;
 
@@ -186,10 +180,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long deleteTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
+      throws IOException;
 
   /**
    * Truncate a table
@@ -199,11 +191,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  public long truncateTable(
-      final TableName tableName,
-      final boolean preserveSplits,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  public long truncateTable(final TableName tableName, final boolean preserveSplits,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
@@ -213,21 +202,14 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long modifyTable(
-      final TableName tableName,
-      final TableDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the store file tracker of an existing table
    */
-  long modifyTableStoreFileTracker(
-    final TableName tableName,
-    final String dstSFT,
-    final long nonceGroup,
-    final long nonce) throws IOException;
+  long modifyTableStoreFileTracker(final TableName tableName, final String dstSFT,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Enable an existing table
@@ -236,10 +218,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long enableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
+      throws IOException;
 
   /**
    * Disable an existing table
@@ -248,11 +228,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long disableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
+  long disableTable(final TableName tableName, final long nonceGroup, final long nonce)
+      throws IOException;
 
   /**
    * Add a new column to an existing table
@@ -262,12 +239,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long addColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor column,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long addColumn(final TableName tableName, final ColumnFamilyDescriptor column,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the column descriptor of an existing column in an existing table
@@ -277,22 +250,14 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long modifyColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the store file tracker of an existing column in an existing table
    */
-  long modifyColumnStoreFileTracker(
-    final TableName tableName,
-    final byte[] family,
-    final String dstSFT,
-    final long nonceGroup,
-    final long nonce) throws IOException;
+  long modifyColumnStoreFileTracker(final TableName tableName, final byte[] family,
+      final String dstSFT, final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Delete a column from an existing table
@@ -302,12 +267,8 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  long deleteColumn(
-      final TableName tableName,
-      final byte[] columnName,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long deleteColumn(final TableName tableName, final byte[] columnName, final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Merge regions in a table.
@@ -315,14 +276,11 @@ public interface MasterServices extends Server {
    * @param forcible whether to force to merge even two regions are not adjacent
    * @param nonceGroup used to detect duplicate
    * @param nonce used to detect duplicate
-   * @return  procedure Id
+   * @return procedure Id
    * @throws IOException
    */
-  long mergeRegions(
-      final RegionInfo[] regionsToMerge,
-      final boolean forcible,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long mergeRegions(final RegionInfo[] regionsToMerge, final boolean forcible,
+      final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Split a region.
@@ -330,13 +288,10 @@ public interface MasterServices extends Server {
    * @param splitRow split point
    * @param nonceGroup used to detect duplicate
    * @param nonce used to detect duplicate
-   * @return  procedure Id
+   * @return procedure Id
    * @throws IOException
    */
-  long splitRegion(
-      final RegionInfo regionInfo,
-      final byte [] splitRow,
-      final long nonceGroup,
+  long splitRegion(final RegionInfo regionInfo, final byte[] splitRow, final long nonceGroup,
       final long nonce) throws IOException;
 
   /**
@@ -422,16 +377,16 @@ public interface MasterServices extends Server {
 
   /**
    * @param table the table for which last successful major compaction time is queried
-   * @return the timestamp of the last successful major compaction for the passed table,
-   * or 0 if no HFile resulting from a major compaction exists
+   * @return the timestamp of the last successful major compaction for the passed table, or 0 if no
+   *         HFile resulting from a major compaction exists
    * @throws IOException
    */
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
 
   /**
    * @param regionName
-   * @return the timestamp of the last successful major compaction for the passed region
-   * or 0 if no HFile resulting from a major compaction exists
+   * @return the timestamp of the last successful major compaction for the passed region or 0 if no
+   *         HFile resulting from a major compaction exists
    * @throws IOException
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
@@ -480,8 +435,8 @@ public interface MasterServices extends Server {
    * @param peerId a short name that identifies the peer
    * @return ReplicationPeerConfig for the peer
    */
-  ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
-      IOException;
+  ReplicationPeerConfig getReplicationPeerConfig(String peerId)
+      throws ReplicationException, IOException;
 
   /**
    * Returns the {@link ReplicationPeerManager}.
@@ -506,8 +461,8 @@ public interface MasterServices extends Server {
    * @param regex The regular expression to match peer id
    * @return a list of replication peers description
    */
-  List<ReplicationPeerDescription> listReplicationPeers(String regex) throws ReplicationException,
-      IOException;
+  List<ReplicationPeerDescription> listReplicationPeers(String regex)
+      throws ReplicationException, IOException;
 
   /**
    * Set current cluster state for a synchronous replication peer.
@@ -525,9 +480,8 @@ public interface MasterServices extends Server {
   public String getRegionServerVersion(final ServerName sn);
 
   /**
-   * Called when a new RegionServer is added to the cluster.
-   * Checks if new server has a newer version than any existing server and will move system tables
-   * there if so.
+   * Called when a new RegionServer is added to the cluster. Checks if new server has a newer
+   * version than any existing server and will move system tables there if so.
    */
   public void checkIfShouldMoveSystemRegionAsync();
 
@@ -541,7 +495,7 @@ public interface MasterServices extends Server {
   /**
    * @return return null if current is zk-based WAL splitting
    */
-  default SplitWALManager getSplitWALManager(){
+  default SplitWALManager getSplitWALManager() {
     return null;
   }
 
@@ -573,9 +527,8 @@ public interface MasterServices extends Server {
   RSGroupInfoManager getRSGroupInfoManager();
 
   /**
-   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
-   * false is returned.
-   *
+   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized, false
+   * is returned.
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   boolean isBalancerOn();
@@ -583,12 +536,12 @@ public interface MasterServices extends Server {
   /**
    * Perform normalization of cluster.
    * @param ntfp Selection criteria for identifying which tables to normalize.
-   * @param isHighPriority {@code true} when these requested tables should skip to the front of
-   *   the queue.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of the
+   *          queue.
    * @return {@code true} when the request was submitted, {@code false} otherwise.
    */
-  boolean normalizeRegions(
-    final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+  boolean normalizeRegions(final NormalizeTableFilterParams ntfp, final boolean isHighPriority)
+      throws IOException;
 
   /**
    * Get the meta location syncer.

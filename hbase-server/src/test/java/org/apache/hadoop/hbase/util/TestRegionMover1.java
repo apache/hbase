@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -60,12 +59,12 @@ import org.slf4j.LoggerFactory;
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class TestRegionMover1 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover1.class);
+      HBaseClassTestRule.forClass(TestRegionMover1.class);
 
   @Rule
   public TestName name = new TestName();
@@ -89,7 +88,7 @@ public class TestRegionMover1 {
   public void setUp() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     String startKey = "a";
     String endKey = "z";
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
@@ -109,7 +108,7 @@ public class TestRegionMover1 {
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
     RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).maxthreads(8);
+        new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).maxthreads(8);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.info("Unloading " + regionServer.getServerName());
       rm.unload();
@@ -132,7 +131,7 @@ public class TestRegionMover1 {
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
     RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(false);
+        new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(false);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.info("Unloading " + regionServer.getServerName());
       rm.unload();
@@ -176,24 +175,23 @@ public class TestRegionMover1 {
     int port = regionServer.getServerName().getPort();
     String rs = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(true).excludeFile(excludeFile.getCanonicalPath());
+        .ack(true).excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover rm = rmBuilder.build()) {
       rm.unload();
       LOG.info("Unloading " + rs);
       assertEquals(0, regionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
-      LOG.info("Before:" + regionsExcludeServer + " After:" +
-        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:"
+          + cluster.getRegionServer(1).getNumberOfOnlineRegions());
     }
   }
 
   @Test
-  public void testDesignatedFile() throws Exception{
+  public void testDesignatedFile() throws Exception {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
-      "designated_file");
+    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "designated_file");
     HRegionServer designatedServer = cluster.getRegionServer(0);
-    try(FileWriter fos = new FileWriter(designatedFile)) {
+    try (FileWriter fos = new FileWriter(designatedFile)) {
       String designatedHostname = designatedServer.getServerName().getHostname();
       int designatedServerPort = designatedServer.getServerName().getPort();
       String excludeServerName = designatedHostname + ":" + designatedServerPort;
@@ -206,7 +204,7 @@ public class TestRegionMover1 {
     String rs = rsName + ":" + port;
     int regionsInRegionServer = regionServer.getNumberOfOnlineRegions();
     RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .designatedFile(designatedFile.getCanonicalPath());
+        .designatedFile(designatedFile.getCanonicalPath());
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {} regions", rs);
       rm.unload();
@@ -219,13 +217,12 @@ public class TestRegionMover1 {
   }
 
   @Test
-  public void testExcludeAndDesignated() throws Exception{
+  public void testExcludeAndDesignated() throws Exception {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     // create designated file
-    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
-      "designated_file");
+    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "designated_file");
     HRegionServer designatedServer = cluster.getRegionServer(0);
-    try(FileWriter fos = new FileWriter(designatedFile)) {
+    try (FileWriter fos = new FileWriter(designatedFile)) {
       String designatedHostname = designatedServer.getServerName().getHostname();
       int designatedServerPort = designatedServer.getServerName().getPort();
       String excludeServerName = designatedHostname + ":" + designatedServerPort;
@@ -235,7 +232,7 @@ public class TestRegionMover1 {
     // create exclude file
     File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
     HRegionServer excludeServer = cluster.getRegionServer(1);
-    try(FileWriter fos = new FileWriter(excludeFile)) {
+    try (FileWriter fos = new FileWriter(excludeFile)) {
       String excludeHostname = excludeServer.getServerName().getHostname();
       int excludeServerPort = excludeServer.getServerName().getPort();
       String excludeServerName = excludeHostname + ":" + excludeServerPort;
@@ -250,8 +247,8 @@ public class TestRegionMover1 {
     int regionsInTargetRegionServer = targetRegionServer.getNumberOfOnlineRegions();
 
     RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .designatedFile(designatedFile.getCanonicalPath())
-      .excludeFile(excludeFile.getCanonicalPath());
+        .designatedFile(designatedFile.getCanonicalPath())
+        .excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", rs);
       rm.unload();
@@ -289,12 +286,12 @@ public class TestRegionMover1 {
   @Test
   public void testLoadMetaRegion() throws Exception {
     HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get();
+        .map(t -> t.getRegionServer())
+        .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get();
     int onlineRegions = rsWithMeta.getNumberOfOnlineRegions();
     String rsName = rsWithMeta.getServerName().getAddress().toString();
     try (RegionMover rm =
-      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).build()) {
+        new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).build()) {
       LOG.info("Unloading " + rsWithMeta.getServerName());
       rm.unload();
       assertEquals(0, rsWithMeta.getNumberOfOnlineRegions());
@@ -315,17 +312,17 @@ public class TestRegionMover1 {
     // wait 5 seconds at most
     conf.setInt(RegionMover.SERVERSTART_WAIT_MAX_KEY, 5);
     String filename =
-      new Path(TEST_UTIL.getDataTestDir(), "testTargetServerDeadWhenLoading").toString();
+        new Path(TEST_UTIL.getDataTestDir(), "testTargetServerDeadWhenLoading").toString();
     // unload the region server
     try (RegionMover rm =
-      new RegionMoverBuilder(rsName, conf).filename(filename).ack(true).build()) {
+        new RegionMoverBuilder(rsName, conf).filename(filename).ack(true).build()) {
       LOG.info("Unloading " + rs.getServerName());
       rm.unload();
       assertEquals(0, rs.getNumberOfOnlineRegions());
     }
     String inexistRsName = "whatever:123";
     try (RegionMover rm =
-      new RegionMoverBuilder(inexistRsName, conf).filename(filename).ack(true).build()) {
+        new RegionMoverBuilder(inexistRsName, conf).filename(filename).ack(true).build()) {
       // load the regions to an inexist region server, which should fail and return false
       LOG.info("Loading to an inexist region server {}", inexistRsName);
       assertFalse(rm.load());
@@ -338,8 +335,8 @@ public class TestRegionMover1 {
     HRegionServer excludeServer = cluster.getRegionServer(1);
     List<HRegion> regions = excludeServer.getRegions();
     int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
-    TEST_UTIL.getAdmin().decommissionRegionServers(
-      Collections.singletonList(excludeServer.getServerName()), false);
+    TEST_UTIL.getAdmin()
+        .decommissionRegionServers(Collections.singletonList(excludeServer.getServerName()), false);
 
     waitForServerDecom(excludeServer);
 
@@ -348,8 +345,7 @@ public class TestRegionMover1 {
     int port = regionServer.getServerName().getPort();
     String hostname = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration())
-        .ack(true);
+        new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration()).ack(true);
 
     int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
     int sourceServerRegions = regionServer.getRegions().size();
@@ -359,8 +355,8 @@ public class TestRegionMover1 {
       LOG.info("Unloading {}", hostname);
       assertEquals(0, regionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
-      LOG.info("Before:" + regionsExcludeServer + " After:" +
-        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:"
+          + cluster.getRegionServer(1).getNumberOfOnlineRegions());
       List<HRegion> regionList = cluster.getRegionServer(1).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
@@ -381,7 +377,7 @@ public class TestRegionMover1 {
       try {
         List<ServerName> decomServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
         return decomServers.size() == 1
-          && decomServers.get(0).equals(excludeServer.getServerName());
+            && decomServers.get(0).equals(excludeServer.getServerName());
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -394,8 +390,8 @@ public class TestRegionMover1 {
     HRegionServer excludeServer = cluster.getRegionServer(0);
     List<HRegion> regions = excludeServer.getRegions();
     int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
-    TEST_UTIL.getAdmin().decommissionRegionServers(
-      Collections.singletonList(excludeServer.getServerName()), false);
+    TEST_UTIL.getAdmin()
+        .decommissionRegionServers(Collections.singletonList(excludeServer.getServerName()), false);
 
     waitForServerDecom(excludeServer);
 
@@ -404,7 +400,7 @@ public class TestRegionMover1 {
     int port = sourceRegionServer.getServerName().getPort();
     String hostname = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration()).ack(false);
+        new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration()).ack(false);
 
     int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
     int sourceServerRegions = sourceRegionServer.getRegions().size();
@@ -414,8 +410,8 @@ public class TestRegionMover1 {
       LOG.info("Unloading {}", hostname);
       assertEquals(0, sourceRegionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(0).getNumberOfOnlineRegions());
-      LOG.info("Before:" + regionsExcludeServer + " After:" +
-        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:"
+          + cluster.getRegionServer(1).getNumberOfOnlineRegions());
       List<HRegion> regionList = cluster.getRegionServer(0).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
@@ -443,8 +439,8 @@ public class TestRegionMover1 {
     fos.close();
 
     HRegionServer decomServer = cluster.getRegionServer(2);
-    TEST_UTIL.getAdmin().decommissionRegionServers(
-      Collections.singletonList(decomServer.getServerName()), false);
+    TEST_UTIL.getAdmin()
+        .decommissionRegionServers(Collections.singletonList(decomServer.getServerName()), false);
 
     waitForServerDecom(decomServer);
 
@@ -453,9 +449,8 @@ public class TestRegionMover1 {
     int port = regionServer.getServerName().getPort();
     String sourceServer = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration())
-        .ack(true)
-        .excludeFile(excludeFile.getCanonicalPath());
+        new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration()).ack(true)
+            .excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover regionMover = rmBuilder.build()) {
       Assert.assertFalse(regionMover.unload());
     }

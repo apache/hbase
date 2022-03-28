@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestOverwriteFileUnderConstruction extends AsyncFSTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOverwriteFileUnderConstruction.class);
+      HBaseClassTestRule.forClass(TestOverwriteFileUnderConstruction.class);
 
   private static FileSystem FS;
 

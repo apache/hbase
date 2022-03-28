@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,14 +64,12 @@ public class TestCleanupMetaWAL {
     TEST_UTIL.createTable(TableName.valueOf("test"), "cf");
     HRegionServer serverWithMeta = TEST_UTIL.getMiniHBaseCluster()
         .getRegionServer(TEST_UTIL.getMiniHBaseCluster().getServerWithMeta());
-    TEST_UTIL.getAdmin()
-        .move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
+    TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
     LOG.info("KILL");
     TEST_UTIL.getMiniHBaseCluster().killRegionServer(serverWithMeta.getServerName());
     LOG.info("WAIT");
-    TEST_UTIL.waitFor(30000, () ->
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
-            .filter(p -> p instanceof ServerCrashProcedure && p.isFinished()).count() > 0);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().getProcedures()
+        .stream().filter(p -> p instanceof ServerCrashProcedure && p.isFinished()).count() > 0);
     LOG.info("DONE WAITING");
     MasterFileSystem fs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path walPath = new Path(fs.getWALRootDir(), HConstants.HREGION_LOGDIR_NAME);

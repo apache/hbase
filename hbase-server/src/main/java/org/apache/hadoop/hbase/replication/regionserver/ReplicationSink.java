@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,10 +54,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -65,17 +67,17 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 
 /**
  * <p>
- * This class is responsible for replicating the edits coming
- * from another cluster.
- * </p><p>
- * This replication process is currently waiting for the edits to be applied
- * before the method can return. This means that the replication of edits
- * is synchronized (after reading from WALs in ReplicationSource) and that a
- * single region server cannot receive edits from two sources at the same time
- * </p><p>
+ * This class is responsible for replicating the edits coming from another cluster.
+ * </p>
+ * <p>
+ * This replication process is currently waiting for the edits to be applied before the method can
+ * return. This means that the replication of edits is synchronized (after reading from WALs in
+ * ReplicationSource) and that a single region server cannot receive edits from two sources at the
+ * same time
+ * </p>
+ * <p>
  * This class uses the native HBase client in order to replicate entries.
  * </p>
- *
  * TODO make this class more like ReplicationSource wrt log handling
  */
 @InterfaceAudience.Private
@@ -104,11 +106,10 @@ public class ReplicationSink {
    * @param conf conf object
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf)
-      throws IOException {
+  public ReplicationSink(Configuration conf) throws IOException {
     this.conf = HBaseConfiguration.create(conf);
-    rowSizeWarnThreshold = conf.getInt(
-      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    rowSizeWarnThreshold =
+        conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     decorateConf();
     this.metrics = new MetricsSink();
     this.walEntrySinkFilter = setupWALEntrySinkFilter();
@@ -129,8 +130,8 @@ public class ReplicationSink {
         this.conf.getClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY, null);
     WALEntrySinkFilter filter = null;
     try {
-      filter = walEntryFilterClass == null? null:
-          (WALEntrySinkFilter)walEntryFilterClass.getDeclaredConstructor().newInstance();
+      filter = walEntryFilterClass == null ? null
+          : (WALEntrySinkFilter) walEntryFilterClass.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.warn("Failed to instantiate " + walEntryFilterClass);
     }
@@ -141,14 +142,14 @@ public class ReplicationSink {
   }
 
   /**
-   * decorate the Configuration object to make replication more receptive to delays:
-   * lessen the timeout and numTries.
+   * decorate the Configuration object to make replication more receptive to delays: lessen the
+   * timeout and numTries.
    */
   private void decorateConf() {
     this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        this.conf.getInt("replication.sink.client.retries.number", 4));
+      this.conf.getInt("replication.sink.client.retries.number", 4));
     this.conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        this.conf.getInt("replication.sink.client.ops.timeout", 10000));
+      this.conf.getInt("replication.sink.client.ops.timeout", 10000));
     String replicationCodec = this.conf.get(HConstants.REPLICATION_CODEC_CONF_KEY);
     if (StringUtils.isNotEmpty(replicationCodec)) {
       this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
@@ -211,24 +212,23 @@ public class ReplicationSink {
           // Handle bulk load hfiles replication
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
             BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-            if(bld.getReplicate()) {
+            if (bld.getReplicate()) {
               if (bulkLoadsPerClusters == null) {
                 bulkLoadsPerClusters = new HashMap<>();
               }
               // Map of table name Vs list of pair of family and list of
               // hfile paths from its namespace
-              Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-                bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
+              Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = bulkLoadsPerClusters
+                  .computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
             }
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
               // Create new mutation
-              mutation =
-                  CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
-                      cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
-                      cell.getRowLength());
+              mutation = CellUtil.isDelete(cell)
+                  ? new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+                  : new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
               List<UUID> clusterIds = new ArrayList<>(entry.getKey().getClusterIdsList().size());
               for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
                 clusterIds.add(toUUID(clusterId));
@@ -258,9 +258,9 @@ public class ReplicationSink {
         LOG.debug("Finished replicating mutations.");
       }
 
-      if(bulkLoadsPerClusters != null) {
-        for (Entry<List<String>, Map<String, List<Pair<byte[], List<String>>>>> entry :
-            bulkLoadsPerClusters.entrySet()) {
+      if (bulkLoadsPerClusters != null) {
+        for (Entry<List<String>, Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters
+            .entrySet()) {
           Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
@@ -304,7 +304,7 @@ public class ReplicationSink {
         List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
         if (familyHFilePathsList != null) {
           boolean foundFamily = false;
-          for (Pair<byte[], List<String>> familyHFilePathsPair :  familyHFilePathsList) {
+          for (Pair<byte[], List<String>> familyHFilePathsPair : familyHFilePathsList) {
             if (Bytes.equals(familyHFilePathsPair.getFirst(), family)) {
               // Found family already present, just add the path to the existing list
               familyHFilePathsPair.getSecond().add(pathToHfileFromNS);
@@ -354,8 +354,8 @@ public class ReplicationSink {
    * @return True if we have crossed over onto a new row or type
    */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
-    return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte() ||
-        !CellUtil.matchingRows(previousCell, cell);
+    return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
+        || !CellUtil.matchingRows(previousCell, cell);
   }
 
   private java.util.UUID toUUID(final HBaseProtos.UUID uuid) {
@@ -363,12 +363,11 @@ public class ReplicationSink {
   }
 
   /**
-   * Simple helper to a map from key to (a list of) values
-   * TODO: Make a general utility method
+   * Simple helper to a map from key to (a list of) values TODO: Make a general utility method
    * @return the list of values corresponding to key1 and key2
    */
-  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1,
-      K2 key2, V value) {
+  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2, List<V>>> map, K1 key1, K2 key2,
+      V value) {
     Map<K2, List<V>> innerMap = map.computeIfAbsent(key1, k -> new HashMap<>());
     List<V> values = innerMap.computeIfAbsent(key2, k -> new ArrayList<>());
     values.add(value);
@@ -392,7 +391,6 @@ public class ReplicationSink {
       LOG.warn("IOException while closing the connection", e); // ignoring as we are closing.
     }
   }
-
 
   /**
    * Do the changes and handle the pool
@@ -446,14 +444,14 @@ public class ReplicationSink {
 
   /**
    * Get a string representation of this sink's metrics
-   * @return string with the total replicated edits count and the date
-   *   of the last edit that was applied
+   * @return string with the total replicated edits count and the date of the last edit that was
+   *         applied
    */
   public String getStats() {
     long total = this.totalReplicatedEdits.get();
     return total == 0 ? ""
-        : "Sink: " + "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp() +
-          ", total replicated edits: " + total;
+        : "Sink: " + "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp()
+            + ", total replicated edits: " + total;
   }
 
   /**

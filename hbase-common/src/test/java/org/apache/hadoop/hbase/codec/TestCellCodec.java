@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCellCodec {
 
   @ClassRule
@@ -58,8 +58,7 @@ public class TestCellCodec {
     dos.close();
     long offset = cos.getCount();
     assertEquals(0, offset);
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertFalse(decoder.advance());
@@ -74,15 +73,14 @@ public class TestCellCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     Codec codec = new CellCodec();
     Codec.Encoder encoder = codec.getEncoder(dos);
-    final KeyValue kv =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("v"));
+    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+        Bytes.toBytes("v"));
     kv.setSequenceId(Long.MAX_VALUE);
     encoder.write(kv);
     encoder.flush();
     dos.close();
     long offset = cos.getCount();
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance()); // First read should pull in the KV
@@ -99,20 +97,19 @@ public class TestCellCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     Codec codec = new CellCodec();
     Codec.Encoder encoder = codec.getEncoder(dos);
-    final KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("1"));
-    final KeyValue kv2 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"), Bytes.toBytes("2"));
-    final KeyValue kv3 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"), Bytes.toBytes("3"));
+    final KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
+        Bytes.toBytes("1"));
+    final KeyValue kv2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
+        Bytes.toBytes("2"));
+    final KeyValue kv3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
+        Bytes.toBytes("3"));
     encoder.write(kv1);
     encoder.write(kv2);
     encoder.write(kv3);
     encoder.flush();
     dos.close();
     long offset = cos.getCount();
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());

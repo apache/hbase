@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Arrays;
@@ -54,9 +53,10 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
   }
 
   public int compactTTLRegionsOnGroup(Configuration conf, String rsgroup, int concurrency,
-    long sleep, int numServers, int numRegions, boolean dryRun, boolean skipWait) throws Exception {
+      long sleep, int numServers, int numRegions, boolean dryRun, boolean skipWait)
+      throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(conf);
-      Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
       if (admin.getRSGroup(rsgroup) == null) {
         LOG.error("Invalid rsgroup specified: " + rsgroup);
         throw new IllegalArgumentException("Invalid rsgroup specified: " + rsgroup);
@@ -77,7 +77,7 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
     Options options = getCommonOptions();
 
     options.addOption(Option.builder("rsgroup").required().desc("Tables of rsgroup to be compacted")
-      .hasArg().build());
+        .hasArg().build());
 
     return options;
   }
@@ -91,8 +91,8 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
     try {
       commandLine = cmdLineParser.parse(options, args);
     } catch (ParseException parseException) {
-      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args) +
-        " due to: " + parseException);
+      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args)
+          + " due to: " + parseException);
       printUsage(options);
       return -1;
     }

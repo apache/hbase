@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -41,6 +42,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
@@ -52,7 +54,7 @@ public class TestRegionMoveAndAbandon {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoveAndAbandon.class);
+      HBaseClassTestRule.forClass(TestRegionMoveAndAbandon.class);
 
   @Rule
   public TestName name = new TestName();
@@ -70,7 +72,7 @@ public class TestRegionMoveAndAbandon {
     UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
     StartTestingClusterOption option =
-      StartTestingClusterOption.builder().numRegionServers(2).build();
+        StartTestingClusterOption.builder().numRegionServers(2).build();
     cluster = UTIL.startMiniHBaseCluster(option);
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);
@@ -116,8 +118,7 @@ public class TestRegionMoveAndAbandon {
     UTIL.waitFor(30_000, () -> rs2.isStopped() && !rs2.isAlive());
     UTIL.waitFor(30_000, () -> rs1.isStopped() && !rs1.isAlive());
     // make sure none of regionserver threads is alive.
-    UTIL.waitFor(30_000, () ->
-      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().isEmpty());
+    UTIL.waitFor(30_000, () -> UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().isEmpty());
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();

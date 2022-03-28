@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,14 +49,14 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
 
   @Override
   protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
+      Collection<StoreFileInfo> newFiles) throws IOException {
     // NOOP
   }
 
   @Override
   protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
     List<StoreFileInfo> files =
-      ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
+        ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
     return files != null ? files : Collections.emptyList();
   }
 

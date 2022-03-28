@@ -25,9 +25,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -44,7 +42,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
-@Category({SmallTests.class, SecurityTests.class})
+@Category({ SmallTests.class, SecurityTests.class })
 public class TestSaslClientAuthenticationProviders {
 
   @ClassRule
@@ -53,7 +51,7 @@ public class TestSaslClientAuthenticationProviders {
 
   @Test
   public void testCannotAddTheSameProviderTwice() {
-    HashMap<Byte,SaslClientAuthenticationProvider> registeredProviders = new HashMap<>();
+    HashMap<Byte, SaslClientAuthenticationProvider> registeredProviders = new HashMap<>();
     SaslClientAuthenticationProvider p1 = new SimpleSaslClientAuthenticationProvider();
     SaslClientAuthenticationProvider p2 = new SimpleSaslClientAuthenticationProvider();
 
@@ -62,10 +60,11 @@ public class TestSaslClientAuthenticationProviders {
 
     try {
       SaslClientAuthenticationProviders.addProviderIfNotExists(p2, registeredProviders);
-    } catch (RuntimeException e) {}
+    } catch (RuntimeException e) {
+    }
 
     assertSame("Expected the original provider to be present", p1,
-        registeredProviders.entrySet().iterator().next().getValue());
+      registeredProviders.entrySet().iterator().next().getValue());
   }
 
   @Test
@@ -89,58 +88,66 @@ public class TestSaslClientAuthenticationProviders {
   public void testDifferentConflictingImplementationsFail() {
     Configuration conf = HBaseConfiguration.create();
     conf.setStrings(SaslClientAuthenticationProviders.EXTRA_PROVIDERS_KEY,
-        ConflictingProvider1.class.getName(), ConflictingProvider2.class.getName());
+      ConflictingProvider1.class.getName(), ConflictingProvider2.class.getName());
     SaslClientAuthenticationProviders.getInstance(conf);
   }
 
   static class ConflictingProvider1 implements SaslClientAuthenticationProvider {
-    static final SaslAuthMethod METHOD1 = new SaslAuthMethod(
-        "FOO", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+    static final SaslAuthMethod METHOD1 =
+        new SaslAuthMethod("FOO", (byte) 12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
 
     public ConflictingProvider1() {
     }
 
-    @Override public SaslAuthMethod getSaslAuthMethod() {
+    @Override
+    public SaslAuthMethod getSaslAuthMethod() {
       return METHOD1;
     }
 
-    @Override public String getTokenKind() {
+    @Override
+    public String getTokenKind() {
       return null;
     }
 
-    @Override public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+    @Override
+    public SaslClient createClient(Configuration conf, InetAddress serverAddr,
         SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
         Map<String, String> saslProps) throws IOException {
       return null;
     }
 
-    @Override public UserInformation getUserInfo(User user) {
+    @Override
+    public UserInformation getUserInfo(User user) {
       return null;
     }
   }
 
   static class ConflictingProvider2 implements SaslClientAuthenticationProvider {
-    static final SaslAuthMethod METHOD2 = new SaslAuthMethod(
-        "BAR", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+    static final SaslAuthMethod METHOD2 =
+        new SaslAuthMethod("BAR", (byte) 12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
 
     public ConflictingProvider2() {
     }
 
-    @Override public SaslAuthMethod getSaslAuthMethod() {
+    @Override
+    public SaslAuthMethod getSaslAuthMethod() {
       return METHOD2;
     }
 
-    @Override public String getTokenKind() {
+    @Override
+    public String getTokenKind() {
       return null;
     }
 
-    @Override public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+    @Override
+    public SaslClient createClient(Configuration conf, InetAddress serverAddr,
         SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
         Map<String, String> saslProps) throws IOException {
       return null;
     }
 
-    @Override public UserInformation getUserInfo(User user) {
+    @Override
+    public UserInformation getUserInfo(User user) {
       return null;
     }
   }

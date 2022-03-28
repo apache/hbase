@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,11 +47,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Get
  */
 @InterfaceAudience.Private
 public class AccessControlUtil {
-  private AccessControlUtil() {}
+  private AccessControlUtil() {
+  }
 
   /**
    * Create a request to grant user table permissions.
-   *
    * @param username the short user name who to grant permissions
    * @param tableName optional table name the permissions apply
    * @param family optional column family
@@ -60,11 +60,10 @@ public class AccessControlUtil {
    * @return A {@link AccessControlProtos} GrantRequest
    * @throws NullPointerException if {@code tableName} is {@code null}
    */
-  public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, TableName tableName, byte[] family, byte[] qualifier,
-      boolean mergeExistingPermissions, AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+  public static AccessControlProtos.GrantRequest buildGrantRequest(String username,
+      TableName tableName, byte[] family, byte[] qualifier, boolean mergeExistingPermissions,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.TablePermission.Builder permissionBuilder =
         AccessControlProtos.TablePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
@@ -81,29 +80,24 @@ public class AccessControlUtil {
     if (qualifier != null) {
       permissionBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(qualifier));
     }
-    ret.setType(AccessControlProtos.Permission.Type.Table)
-       .setTablePermission(permissionBuilder);
+    ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).setMergeExistingPermissions(mergeExistingPermissions).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   /**
    * Create a request to grant user namespace permissions.
-   *
    * @param username the short user name who to grant permissions
    * @param namespace optional table name the permissions apply
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
    */
-  public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, String namespace, boolean mergeExistingPermissions,
+  public static AccessControlProtos.GrantRequest buildGrantRequest(String username,
+      String namespace, boolean mergeExistingPermissions,
       AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.NamespacePermission.Builder permissionBuilder =
         AccessControlProtos.NamespacePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
@@ -113,54 +107,44 @@ public class AccessControlUtil {
       permissionBuilder.setNamespaceName(ByteString.copyFromUtf8(namespace));
     }
     ret.setType(AccessControlProtos.Permission.Type.Namespace)
-       .setNamespacePermission(permissionBuilder);
+        .setNamespacePermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).setMergeExistingPermissions(mergeExistingPermissions).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   /**
    * Create a request to revoke user global permissions.
-   *
    * @param username the short user name whose permissions to be revoked
    * @param actions the permissions to be revoked
    * @return A {@link AccessControlProtos} RevokeRequest
    */
-  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
-      String username, AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(String username,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.GlobalPermission.Builder permissionBuilder =
         AccessControlProtos.GlobalPermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    ret.setType(AccessControlProtos.Permission.Type.Global)
-       .setGlobalPermission(permissionBuilder);
+    ret.setType(AccessControlProtos.Permission.Type.Global).setGlobalPermission(permissionBuilder);
     return AccessControlProtos.RevokeRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .build();
   }
 
   /**
    * Create a request to revoke user namespace permissions.
-   *
    * @param username the short user name whose permissions to be revoked
    * @param namespace optional table name the permissions apply
    * @param actions the permissions to be revoked
    * @return A {@link AccessControlProtos} RevokeRequest
    */
-  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
-      String username, String namespace,
-      AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(String username,
+      String namespace, AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.NamespacePermission.Builder permissionBuilder =
         AccessControlProtos.NamespacePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
@@ -170,60 +154,51 @@ public class AccessControlUtil {
       permissionBuilder.setNamespaceName(ByteString.copyFromUtf8(namespace));
     }
     ret.setType(AccessControlProtos.Permission.Type.Namespace)
-       .setNamespacePermission(permissionBuilder);
+        .setNamespacePermission(permissionBuilder);
     return AccessControlProtos.RevokeRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .build();
   }
 
   /**
    * Create a request to grant user global permissions.
-   *
    * @param username the short user name who to grant permissions
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(String username,
       boolean mergeExistingPermissions, AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.GlobalPermission.Builder permissionBuilder =
         AccessControlProtos.GlobalPermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    ret.setType(AccessControlProtos.Permission.Type.Global)
-       .setGlobalPermission(permissionBuilder);
+    ret.setType(AccessControlProtos.Permission.Type.Global).setGlobalPermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).setMergeExistingPermissions(mergeExistingPermissions).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(String user,
       Permission perms) {
     return AccessControlProtos.UsersAndPermissions.newBuilder()
         .addUserPermissions(AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder()
-            .setUser(ByteString.copyFromUtf8(user))
-            .addPermissions(toPermission(perms))
-            .build())
+            .setUser(ByteString.copyFromUtf8(user)).addPermissions(toPermission(perms)).build())
         .build();
   }
 
-  public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(
-      ListMultimap<String, Permission> perms) {
+  public static AccessControlProtos.UsersAndPermissions
+      toUsersAndPermissions(ListMultimap<String, Permission> perms) {
     AccessControlProtos.UsersAndPermissions.Builder builder =
         AccessControlProtos.UsersAndPermissions.newBuilder();
     for (Map.Entry<String, Collection<Permission>> entry : perms.asMap().entrySet()) {
       AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
           AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
       userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (Permission perm: entry.getValue()) {
+      for (Permission perm : entry.getValue()) {
         userPermBuilder.addPermissions(toPermission(perm));
       }
       builder.addUserPermissions(userPermBuilder.build());
@@ -231,13 +206,13 @@ public class AccessControlUtil {
     return builder.build();
   }
 
-  public static ListMultimap<String, Permission> toUsersAndPermissions(
-      AccessControlProtos.UsersAndPermissions proto) {
+  public static ListMultimap<String, Permission>
+      toUsersAndPermissions(AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, Permission> result = ArrayListMultimap.create();
-    for (AccessControlProtos.UsersAndPermissions.UserPermissions userPerms:
-      proto.getUserPermissionsList()) {
+    for (AccessControlProtos.UsersAndPermissions.UserPermissions userPerms : proto
+        .getUserPermissionsList()) {
       String user = userPerms.getUser().toStringUtf8();
-      for (AccessControlProtos.Permission perm: userPerms.getPermissionsList()) {
+      for (AccessControlProtos.Permission perm : userPerms.getPermissionsList()) {
         result.put(user, toPermission(perm));
       }
     }
@@ -311,7 +286,6 @@ public class AccessControlUtil {
 
   /**
    * Convert a client Permission to a Permission proto
-   *
    * @param perm the client Permission
    * @return the protobuf Permission
    */
@@ -321,7 +295,7 @@ public class AccessControlUtil {
       NamespacePermission namespace = (NamespacePermission) perm;
       ret.setType(AccessControlProtos.Permission.Type.Namespace);
       AccessControlProtos.NamespacePermission.Builder builder =
-        AccessControlProtos.NamespacePermission.newBuilder();
+          AccessControlProtos.NamespacePermission.newBuilder();
       builder.setNamespaceName(ByteString.copyFromUtf8(namespace.getNamespace()));
       Permission.Action[] actions = perm.getActions();
       if (actions != null) {
@@ -334,7 +308,7 @@ public class AccessControlUtil {
       TablePermission table = (TablePermission) perm;
       ret.setType(AccessControlProtos.Permission.Type.Table);
       AccessControlProtos.TablePermission.Builder builder =
-        AccessControlProtos.TablePermission.newBuilder();
+          AccessControlProtos.TablePermission.newBuilder();
       builder.setTableName(ProtobufUtil.toProtoTableName(table.getTableName()));
       if (table.hasFamily()) {
         builder.setFamily(UnsafeByteOperations.unsafeWrap(table.getFamily()));
@@ -353,10 +327,10 @@ public class AccessControlUtil {
       // perm instanceof GlobalPermission
       ret.setType(AccessControlProtos.Permission.Type.Global);
       AccessControlProtos.GlobalPermission.Builder builder =
-        AccessControlProtos.GlobalPermission.newBuilder();
+          AccessControlProtos.GlobalPermission.newBuilder();
       Permission.Action[] actions = perm.getActions();
       if (actions != null) {
-        for (Permission.Action a: actions) {
+        for (Permission.Action a : actions) {
           builder.addAction(toPermissionAction(a));
         }
       }
@@ -367,7 +341,6 @@ public class AccessControlUtil {
 
   /**
    * Converts a list of Permission.Action proto to an array of client Permission.Action objects.
-   *
    * @param protoActions the list of protobuf Actions
    * @return the converted array of Actions
    */
@@ -382,68 +355,62 @@ public class AccessControlUtil {
 
   /**
    * Converts a Permission.Action proto to a client Permission.Action object.
-   *
    * @param action the protobuf Action
    * @return the converted Action
    */
-  public static Permission.Action toPermissionAction(
-      AccessControlProtos.Permission.Action action) {
+  public static Permission.Action toPermissionAction(AccessControlProtos.Permission.Action action) {
     switch (action) {
-    case READ:
-      return Permission.Action.READ;
-    case WRITE:
-      return Permission.Action.WRITE;
-    case EXEC:
-      return Permission.Action.EXEC;
-    case CREATE:
-      return Permission.Action.CREATE;
-    case ADMIN:
-      return Permission.Action.ADMIN;
+      case READ:
+        return Permission.Action.READ;
+      case WRITE:
+        return Permission.Action.WRITE;
+      case EXEC:
+        return Permission.Action.EXEC;
+      case CREATE:
+        return Permission.Action.CREATE;
+      case ADMIN:
+        return Permission.Action.ADMIN;
     }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
+    throw new IllegalArgumentException("Unknown action value " + action.name());
   }
 
   /**
    * Convert a client Permission.Action to a Permission.Action proto
-   *
    * @param action the client Action
    * @return the protobuf Action
    */
-  public static AccessControlProtos.Permission.Action toPermissionAction(
-      Permission.Action action) {
+  public static AccessControlProtos.Permission.Action toPermissionAction(Permission.Action action) {
     switch (action) {
-    case READ:
-      return AccessControlProtos.Permission.Action.READ;
-    case WRITE:
-      return AccessControlProtos.Permission.Action.WRITE;
-    case EXEC:
-      return AccessControlProtos.Permission.Action.EXEC;
-    case CREATE:
-      return AccessControlProtos.Permission.Action.CREATE;
-    case ADMIN:
-      return AccessControlProtos.Permission.Action.ADMIN;
+      case READ:
+        return AccessControlProtos.Permission.Action.READ;
+      case WRITE:
+        return AccessControlProtos.Permission.Action.WRITE;
+      case EXEC:
+        return AccessControlProtos.Permission.Action.EXEC;
+      case CREATE:
+        return AccessControlProtos.Permission.Action.CREATE;
+      case ADMIN:
+        return AccessControlProtos.Permission.Action.ADMIN;
     }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
+    throw new IllegalArgumentException("Unknown action value " + action.name());
   }
 
   /**
    * Convert a client user permission to a user permission proto
-   *
    * @param perm the client UserPermission
    * @return the protobuf UserPermission
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
     return AccessControlProtos.UserPermission.newBuilder()
         .setUser(ByteString.copyFromUtf8(perm.getUser()))
-        .setPermission(toPermission(perm.getPermission()))
-        .build();
+        .setPermission(toPermission(perm.getPermission())).build();
   }
 
   /**
    * Converts the permissions list into a protocol buffer GetUserPermissionsResponse
    */
-  public static GetUserPermissionsResponse buildGetUserPermissionsResponse(
-      final List<UserPermission> permissions) {
+  public static GetUserPermissionsResponse
+      buildGetUserPermissionsResponse(final List<UserPermission> permissions) {
     GetUserPermissionsResponse.Builder builder = GetUserPermissionsResponse.newBuilder();
     for (UserPermission perm : permissions) {
       builder.addUserPermission(toUserPermission(perm));
@@ -453,7 +420,6 @@ public class AccessControlUtil {
 
   /**
    * Converts a user permission proto to a client user permission object.
-   *
    * @param proto the protobuf UserPermission
    * @return the converted UserPermission
    */
@@ -462,21 +428,20 @@ public class AccessControlUtil {
   }
 
   /**
-   * Convert a ListMultimap&lt;String, TablePermission&gt; where key is username
-   * to a protobuf UserPermission
-   *
+   * Convert a ListMultimap&lt;String, TablePermission&gt; where key is username to a protobuf
+   * UserPermission
    * @param perm the list of user and table permissions
    * @return the protobuf UserTablePermissions
    */
-  public static AccessControlProtos.UsersAndPermissions toUserTablePermissions(
-      ListMultimap<String, UserPermission> perm) {
+  public static AccessControlProtos.UsersAndPermissions
+      toUserTablePermissions(ListMultimap<String, UserPermission> perm) {
     AccessControlProtos.UsersAndPermissions.Builder builder =
         AccessControlProtos.UsersAndPermissions.newBuilder();
     for (Map.Entry<String, Collection<UserPermission>> entry : perm.asMap().entrySet()) {
       AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
           AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
       userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (UserPermission userPerm: entry.getValue()) {
+      for (UserPermission userPerm : entry.getValue()) {
         userPermBuilder.addPermissions(toPermission(userPerm.getPermission()));
       }
       builder.addUserPermissions(userPermBuilder.build());
@@ -488,7 +453,6 @@ public class AccessControlUtil {
    * A utility used to grant a user global permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to grant permissions
    * @param actions the permissions to be granted
@@ -497,24 +461,24 @@ public class AccessControlUtil {
    */
   @Deprecated
   public static void grant(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName, boolean mergeExistingPermissions,
-      Permission.Action... actions) throws ServiceException {
+      AccessControlService.BlockingInterface protocol, String userShortName,
+      boolean mergeExistingPermissions, Permission.Action... actions) throws ServiceException {
     List<AccessControlProtos.Permission.Action> permActions =
         Lists.newArrayListWithCapacity(actions.length);
     for (Permission.Action a : actions) {
       permActions.add(toPermissionAction(a));
     }
-    AccessControlProtos.GrantRequest request = buildGrantRequest(userShortName, mergeExistingPermissions,
-        permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
+    AccessControlProtos.GrantRequest request =
+        buildGrantRequest(userShortName, mergeExistingPermissions,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.grant(controller, request);
   }
 
   /**
-   * A utility used to grant a user table permissions. The permissions will
-   * be for a table table/column family/qualifier.
+   * A utility used to grant a user table permissions. The permissions will be for a table
+   * table/column family/qualifier.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to grant permissions
    * @param tableName optional table name
@@ -544,7 +508,6 @@ public class AccessControlUtil {
    * A utility used to grant a user namespace permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param namespace the short name of the user to grant permissions
@@ -561,8 +524,9 @@ public class AccessControlUtil {
     for (Permission.Action a : actions) {
       permActions.add(toPermissionAction(a));
     }
-    AccessControlProtos.GrantRequest request = buildGrantRequest(userShortName, namespace, mergeExistingPermissions,
-        permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
+    AccessControlProtos.GrantRequest request =
+        buildGrantRequest(userShortName, namespace, mergeExistingPermissions,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.grant(controller, request);
   }
 
@@ -570,7 +534,6 @@ public class AccessControlUtil {
    * A utility used to revoke a user's global permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
@@ -588,16 +551,15 @@ public class AccessControlUtil {
       permActions.add(toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = buildRevokeRequest(userShortName,
-        permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
+      permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(controller, request);
   }
 
   /**
-   * A utility used to revoke a user's table permissions. The permissions will
-   * be for a table/column family/qualifier.
+   * A utility used to revoke a user's table permissions. The permissions will be for a table/column
+   * family/qualifier.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
@@ -618,7 +580,7 @@ public class AccessControlUtil {
       permActions.add(toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = buildRevokeRequest(userShortName, tableName, f, q,
-        permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
+      permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(controller, request);
   }
 
@@ -626,7 +588,6 @@ public class AccessControlUtil {
    * A utility used to revoke a user's namespace permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
@@ -645,7 +606,7 @@ public class AccessControlUtil {
       permActions.add(toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = buildRevokeRequest(userShortName, namespace,
-        permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
+      permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(controller, request);
   }
 
@@ -653,7 +614,6 @@ public class AccessControlUtil {
    * A utility used to get user's global permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @throws ServiceException on failure
@@ -697,7 +657,6 @@ public class AccessControlUtil {
    * A utility used to get user table permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param t optional table name
@@ -706,8 +665,7 @@ public class AccessControlUtil {
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
-      AccessControlService.BlockingInterface protocol,
-      TableName t) throws ServiceException {
+      AccessControlService.BlockingInterface protocol, TableName t) throws ServiceException {
     return getUserPermissions(controller, protocol, t, null, null, HConstants.EMPTY_STRING);
   }
 
@@ -757,7 +715,6 @@ public class AccessControlUtil {
    * A utility used to get permissions for selected namespace.
    * <p>
    * It's also called by the shell, in case you want to find references.
-   *
    * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param namespace name of the namespace
@@ -766,8 +723,7 @@ public class AccessControlUtil {
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
-      AccessControlService.BlockingInterface protocol,
-      byte[] namespace) throws ServiceException {
+      AccessControlService.BlockingInterface protocol, byte[] namespace) throws ServiceException {
     return getUserPermissions(controller, protocol, namespace, HConstants.EMPTY_STRING);
   }
 
@@ -827,8 +783,7 @@ public class AccessControlUtil {
       throws ServiceException {
     AccessControlProtos.TablePermission.Builder tablePermissionBuilder =
         AccessControlProtos.TablePermission.newBuilder();
-    tablePermissionBuilder
-        .setTableName(ProtobufUtil.toProtoTableName(tableName));
+    tablePermissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (Bytes.len(columnFamily) > 0) {
       tablePermissionBuilder.setFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
     }
@@ -851,8 +806,8 @@ public class AccessControlUtil {
    * @param proto the proto UsersAndPermissions
    * @return a ListMultimap with user and its permissions
    */
-  public static ListMultimap<String, UserPermission> toUserPermission(
-      AccessControlProtos.UsersAndPermissions proto) {
+  public static ListMultimap<String, UserPermission>
+      toUserPermission(AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, UserPermission> userPermission = ArrayListMultimap.create();
     AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
     for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
@@ -871,8 +826,8 @@ public class AccessControlUtil {
    * @param proto the proto UsersAndPermissions
    * @return a ListMultimap with user and its permissions
    */
-  public static ListMultimap<String, Permission> toPermission(
-      AccessControlProtos.UsersAndPermissions proto) {
+  public static ListMultimap<String, Permission>
+      toPermission(AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, Permission> perms = ArrayListMultimap.create();
     AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
     for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
@@ -887,7 +842,6 @@ public class AccessControlUtil {
 
   /**
    * Create a request to revoke user table permissions.
-   *
    * @param username the short user name whose permissions to be revoked
    * @param tableName optional table name the permissions apply
    * @param family optional column family
@@ -895,11 +849,10 @@ public class AccessControlUtil {
    * @param actions the permissions to be revoked
    * @return A {@link AccessControlProtos} RevokeRequest
    */
-  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
-      String username, TableName tableName, byte[] family, byte[] qualifier,
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(String username,
+      TableName tableName, byte[] family, byte[] qualifier,
       AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder ret =
-        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.TablePermission.Builder permissionBuilder =
         AccessControlProtos.TablePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
@@ -914,13 +867,10 @@ public class AccessControlUtil {
     if (qualifier != null) {
       permissionBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(qualifier));
     }
-    ret.setType(AccessControlProtos.Permission.Type.Table)
-    .setTablePermission(permissionBuilder);
+    ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(permissionBuilder);
     return AccessControlProtos.RevokeRequest.newBuilder()
-        .setUserPermission(
-            AccessControlProtos.UserPermission.newBuilder()
-            .setUser(ByteString.copyFromUtf8(username))
-            .setPermission(ret)
-            ).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .build();
   }
 }

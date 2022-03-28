@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestSettingTimeoutOnBlockingPoint {
 
   @ClassRule
@@ -93,12 +93,12 @@ public class TestSettingTimeoutOnBlockingPoint {
   @Test
   public void testRowLock() throws IOException {
     TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(testName.getMethodName())
-      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+        .setCoprocessor(SleepCoprocessor.class.getName()).build();
     TEST_UTIL.createTable(hdt, new byte[][] { FAM }, TEST_UTIL.getConfiguration());
     TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {
       try {
-        try( Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
           table.incrementColumnValue(ROW1, FAM, FAM, 1);
         }
       } catch (IOException e) {
@@ -107,7 +107,7 @@ public class TestSettingTimeoutOnBlockingPoint {
     });
     Thread getThread = new Thread(() -> {
       try (Table table =
-        TEST_UTIL.getConnection().getTableBuilder(tableName, null).setRpcTimeout(1000).build()) {
+          TEST_UTIL.getConnection().getTableBuilder(tableName, null).setRpcTimeout(1000).build()) {
         Delete delete = new Delete(ROW1);
         table.delete(delete);
       } catch (IOException e) {
@@ -120,7 +120,7 @@ public class TestSettingTimeoutOnBlockingPoint {
     getThread.start();
     Threads.sleep(2000);
     try (Table table =
-      TEST_UTIL.getConnection().getTableBuilder(tableName, null).setRpcTimeout(1000).build()) {
+        TEST_UTIL.getConnection().getTableBuilder(tableName, null).setRpcTimeout(1000).build()) {
       // We have only two handlers. The first thread will get a write lock for row1 and occupy
       // the first handler. The second thread need a read lock for row1, it should quit after 1000
       // ms and give back the handler because it can not get the lock in time.

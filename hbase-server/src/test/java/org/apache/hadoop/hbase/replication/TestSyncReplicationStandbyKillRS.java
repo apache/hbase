@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,8 +40,7 @@ import org.slf4j.LoggerFactory;
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestSyncReplicationStandbyKillRS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSyncReplicationStandbyKillRS.class);
 
   private final long SLEEP_TIME = 1000;
 
@@ -57,10 +56,10 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     Path remoteWALDir = getRemoteWALDir(mfs, PEER_ID);
     assertFalse(mfs.getWALFileSystem().exists(remoteWALDir));
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-        SyncReplicationState.STANDBY);
+      SyncReplicationState.STANDBY);
     assertTrue(mfs.getWALFileSystem().exists(remoteWALDir));
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-        SyncReplicationState.ACTIVE);
+      SyncReplicationState.ACTIVE);
 
     // Disable async replication and write data, then shutdown
     UTIL1.getAdmin().disableReplicationPeer(PEER_ID);
@@ -72,10 +71,10 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     Thread t = new Thread(() -> {
       try {
         List<JVMClusterUtil.RegionServerThread> regionServers =
-          UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
+            UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
         LOG.debug("Going to stop {} RSes: [{}]", regionServers.size(),
           regionServers.stream().map(rst -> rst.getRegionServer().getServerName().getServerName())
-            .collect(Collectors.joining(", ")));
+              .collect(Collectors.joining(", ")));
         for (JVMClusterUtil.RegionServerThread rst : regionServers) {
           ServerName serverName = rst.getRegionServer().getServerName();
           LOG.debug("Going to RS stop [{}]", serverName);
@@ -83,7 +82,7 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
           waitForRSShutdownToStartAndFinish(activeMaster, serverName);
           LOG.debug("Going to start a new RS");
           JVMClusterUtil.RegionServerThread restarted =
-            UTIL2.getMiniHBaseCluster().startRegionServer();
+              UTIL2.getMiniHBaseCluster().startRegionServer();
           LOG.debug("Waiting RS [{}] to online", restarted.getRegionServer().getServerName());
           restarted.waitForServerOnline();
           LOG.debug("Waiting the old RS {} thread to quit", rst.getName());
@@ -112,7 +111,7 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     t.join();
 
     while (UTIL2.getAdmin()
-      .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
+        .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
       LOG.debug("Waiting for peer {} to be in {} state", PEER_ID,
         SyncReplicationState.DOWNGRADE_ACTIVE);
       Thread.sleep(SLEEP_TIME);

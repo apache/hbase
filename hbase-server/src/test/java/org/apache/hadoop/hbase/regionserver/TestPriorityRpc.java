@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public class TestPriorityRpc {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPriorityRpc.class);
+      HBaseClassTestRule.forClass(TestPriorityRpc.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -72,7 +72,7 @@ public class TestPriorityRpc {
     RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
     regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
     ByteString name =
-      UnsafeByteOperations.unsafeWrap(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+        UnsafeByteOperations.unsafeWrap(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
     regionSpecifierBuilder.setValue(name);
     RegionSpecifier regionSpecifier = regionSpecifierBuilder.build();
     getRequestBuilder.setRegion(regionSpecifier);

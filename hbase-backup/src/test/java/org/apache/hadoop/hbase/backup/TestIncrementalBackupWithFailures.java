@@ -84,7 +84,7 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
     List<TableName> tables = Lists.newArrayList(table1, table2);
     final byte[] fam3Name = Bytes.toBytes("f3");
     TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name)).build();
     TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     Connection conn = ConnectionFactory.createConnection(conf1);
@@ -127,11 +127,10 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
 
   }
 
-
   private void incrementalBackupWithFailures() throws Exception {
     conf1.set(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS,
       IncrementalTableBackupClientForTest.class.getName());
-    int maxStage = Stage.values().length -1;
+    int maxStage = Stage.values().length - 1;
     // Fail stages between 0 and 4 inclusive
     for (int stage = 0; stage <= maxStage; stage++) {
       LOG.info("Running stage " + stage);
@@ -144,18 +143,17 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
     conf1.setInt(FullTableBackupClientForTest.BACKUP_TEST_MODE_STAGE, stage);
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       int before = table.getBackupHistory().size();
-      String[] args =
-          new String[] { "create", "incremental", BACKUP_ROOT_DIR, "-t",
-              table1.getNameAsString() + "," + table2.getNameAsString() };
+      String[] args = new String[] { "create", "incremental", BACKUP_ROOT_DIR, "-t",
+          table1.getNameAsString() + "," + table2.getNameAsString() };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertFalse(ret == 0);
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertTrue(after ==  before +1);
+      assertTrue(after == before + 1);
       for (BackupInfo data : backups) {
-        if(data.getType() == BackupType.FULL) {
+        if (data.getType() == BackupType.FULL) {
           assertTrue(data.getState() == BackupState.COMPLETE);
         } else {
           assertTrue(data.getState() == BackupState.FAILED);

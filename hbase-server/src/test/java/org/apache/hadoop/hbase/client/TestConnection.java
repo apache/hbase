@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ public class TestConnection {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnection.class);
+      HBaseClassTestRule.forClass(TestConnection.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConnection.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -317,29 +317,17 @@ public class TestConnection {
   }
 
   /*
-  ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
-  @Test
-  public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
-    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
-
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }).close();
-
-    Connection connection = ConnectionFactory.createConnection(config);
-    Table table = connection.getTable(tableName);
-
-    // this will cache the meta location and table's region location
-    table.get(new Get(Bytes.toBytes("foo")));
-
-    // restart HBase
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.restartHBaseCluster(2);
-    // this should be able to discover new locations for meta and table's region
-    table.get(new Get(Bytes.toBytes("foo")));
-    TEST_UTIL.deleteTable(tableName);
-    table.close();
-    connection.close();
-  }
+   * ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
+   * @Test public void testConnectionRideOverClusterRestart() throws IOException,
+   * InterruptedException { Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+   * final TableName tableName = TableName.valueOf(name.getMethodName());
+   * TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }).close(); Connection connection =
+   * ConnectionFactory.createConnection(config); Table table = connection.getTable(tableName); //
+   * this will cache the meta location and table's region location table.get(new
+   * Get(Bytes.toBytes("foo"))); // restart HBase TEST_UTIL.shutdownMiniHBaseCluster();
+   * TEST_UTIL.restartHBaseCluster(2); // this should be able to discover new locations for meta and
+   * table's region table.get(new Get(Bytes.toBytes("foo"))); TEST_UTIL.deleteTable(tableName);
+   * table.close(); connection.close(); }
    */
 
   @Test
@@ -350,12 +338,12 @@ public class TestConnection {
 
     // Create a table with region replicas
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     TEST_UTIL.getAdmin().createTable(builder.build());
 
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(tableName)) {
+        RegionLocator locator = conn.getRegionLocator(tableName)) {
       // Get locations of the regions of the table
       List<HRegionLocation> locations = locator.getAllRegionLocations();
 
@@ -364,7 +352,7 @@ public class TestConnection {
 
       // The replicaIds of the returned locations should be 0, 1 and 2
       Set<Integer> expectedReplicaIds =
-        IntStream.range(0, regionReplication).boxed().collect(Collectors.toSet());
+          IntStream.range(0, regionReplication).boxed().collect(Collectors.toSet());
       for (HRegionLocation location : locations) {
         assertTrue(expectedReplicaIds.remove(location.getRegion().getReplicaId()));
       }
@@ -378,8 +366,8 @@ public class TestConnection {
     byte[] family = Bytes.toBytes("cf");
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
-      .setCoprocessor(MultiRowMutationEndpoint.class.getName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+        .setCoprocessor(MultiRowMutationEndpoint.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     TEST_UTIL.getAdmin().createTable(builder.build());
 
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -403,7 +391,7 @@ public class TestConnection {
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table table = connection.getTable(tableName)) {
+        Table table = connection.getTable(tableName)) {
       table.get(new Get(Bytes.toBytes("1")));
       ServerName sn = TEST_UTIL.getRSForFirstRegionInTable(tableName).getServerName();
       RpcClient rpcClient = ((AsyncConnectionImpl) connection.toAsyncConnection()).rpcClient;

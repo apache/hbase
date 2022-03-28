@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +44,7 @@ public class HBaseRESTTestingUtility {
     server = new RESTServer(conf);
     server.run();
 
-    LOG.info("started " + server.getClass().getName() + " on port " +
-      server.getPort());
+    LOG.info("started " + server.getClass().getName() + " on port " + server.getPort());
   }
 
   public void shutdownServletContainer() {

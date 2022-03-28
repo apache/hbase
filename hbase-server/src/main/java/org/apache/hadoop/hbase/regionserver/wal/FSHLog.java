@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -107,8 +107,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // We use ring buffer sequence as txid of FSWALEntry and SyncFuture.
   private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
 
-  private static final String TOLERABLE_LOW_REPLICATION = "hbase.regionserver.hlog.tolerable.lowreplication";
-  private static final String LOW_REPLICATION_ROLL_LIMIT = "hbase.regionserver.hlog.lowreplication.rolllimit";
+  private static final String TOLERABLE_LOW_REPLICATION =
+      "hbase.regionserver.hlog.tolerable.lowreplication";
+  private static final String LOW_REPLICATION_ROLL_LIMIT =
+      "hbase.regionserver.hlog.lowreplication.rolllimit";
   private static final int DEFAULT_LOW_REPLICATION_ROLL_LIMIT = 5;
   private static final String ROLL_ERRORS_TOLERATED = "hbase.regionserver.logroll.errors.tolerated";
   private static final int DEFAULT_ROLL_ERRORS_TOLERATED = 2;
@@ -117,7 +119,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private static final String MAX_BATCH_COUNT = "hbase.regionserver.wal.sync.batch.count";
   private static final int DEFAULT_MAX_BATCH_COUNT = 200;
 
-  private static final String FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = "hbase.wal.fshlog.wait.on.shutdown.seconds";
+  private static final String FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS =
+      "hbase.wal.fshlog.wait.on.shutdown.seconds";
   private static final int DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = 5;
 
   /**
@@ -245,19 +248,20 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         suffix);
     this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION,
       CommonFSUtils.getDefaultReplication(fs, this.walDir));
-    this.lowReplicationRollLimit = conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);
+    this.lowReplicationRollLimit =
+        conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);
     this.closeErrorsTolerated = conf.getInt(ROLL_ERRORS_TOLERATED, DEFAULT_ROLL_ERRORS_TOLERATED);
-    this.waitOnShutdownInSeconds = conf.getInt(FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS,
-        DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
+    this.waitOnShutdownInSeconds =
+        conf.getInt(FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS, DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
     // This is the 'writer' -- a single threaded executor. This single thread 'consumes' what is
     // put on the ring buffer.
     String hostingThreadName = Thread.currentThread().getName();
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
     this.disruptor = new Disruptor<>(RingBufferTruck::new, getPreallocatedEventCount(),
-      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".append-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-      ProducerType.MULTI, new BlockingWaitStrategy());
+        new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".append-pool-%d")
+            .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
     this.disruptor.getRingBuffer().next();
@@ -273,9 +277,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   /**
    * Currently, we need to expose the writer's OutputStream to tests so that they can manipulate the
-   * default behavior (such as setting the maxRecoveryErrorCount value). This is
-   * done using reflection on the underlying HDFS OutputStream. NOTE: This could be removed once Hadoop1 support is
-   * removed.
+   * default behavior (such as setting the maxRecoveryErrorCount value). This is done using
+   * reflection on the underlying HDFS OutputStream. NOTE: This could be removed once Hadoop1
+   * support is removed.
    * @return null if underlying stream is not ready.
    */
   OutputStream getOutputStream() {
@@ -448,7 +452,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         throw ioe;
       }
       LOG.warn("Riding over failed WAL close of " + path
-          + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
+          + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK",
+        ioe);
     } finally {
       inflightWALClosures.remove(path.getName());
     }
@@ -481,10 +486,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
-        LOG.error("We have waited {} seconds but the close of writer(s) doesn't complete."
-            + "Please check the status of underlying filesystem"
-            + " or increase the wait time by the config \"{}\"", this.waitOnShutdownInSeconds,
-            FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
+        LOG.error(
+          "We have waited {} seconds but the close of writer(s) doesn't complete."
+              + "Please check the status of underlying filesystem"
+              + " or increase the wait time by the config \"{}\"",
+          this.waitOnShutdownInSeconds, FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
       }
     } catch (InterruptedException e) {
       LOG.error("The wait for termination of FSHLog writer(s) is interrupted");
@@ -494,7 +500,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   protected long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
-    final boolean inMemstore) throws IOException {
+      final boolean inMemstore) throws IOException {
     return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
       disruptor.getRingBuffer());
   }
@@ -603,8 +609,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     boolean areSyncFuturesReleased() {
       // check whether there is no sync futures offered, and no in-flight sync futures that is being
       // processed.
-      return syncFutures.size() <= 0
-          && takeSyncFuture == null;
+      return syncFutures.size() <= 0 && takeSyncFuture == null;
     }
 
     @Override
@@ -614,8 +619,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         int syncCount = 0;
 
         try {
-          // Make a local copy of takeSyncFuture after we get it.  We've been running into NPEs
-          // 2020-03-22 16:54:32,180 WARN  [sync.1] wal.FSHLog$SyncRunner(589): UNEXPECTED
+          // Make a local copy of takeSyncFuture after we get it. We've been running into NPEs
+          // 2020-03-22 16:54:32,180 WARN [sync.1] wal.FSHLog$SyncRunner(589): UNEXPECTED
           // java.lang.NullPointerException
           // at org.apache.hadoop.hbase.regionserver.wal.FSHLog$SyncRunner.run(FSHLog.java:582)
           // at java.lang.Thread.run(Thread.java:748)
@@ -694,14 +699,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
     try {
       if (doCheckLogLowReplication()) {
-        LOG.warn("Requesting log roll because of low replication, current pipeline: " +
-          Arrays.toString(getPipeline()));
+        LOG.warn("Requesting log roll because of low replication, current pipeline: "
+            + Arrays.toString(getPipeline()));
         requestLogRoll(LOW_REPLICATION);
         return true;
       } else if (writer != null && writer.getLength() > logrollsize) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Requesting log roll because of file size threshold; length=" +
-            writer.getLength() + ", logrollsize=" + logrollsize);
+          LOG.debug("Requesting log roll because of file size threshold; length="
+              + writer.getLength() + ", logrollsize=" + logrollsize);
         }
         requestLogRoll(SIZE);
         return true;
@@ -830,8 +835,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return lowReplicationRollEnabled;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize
-      .align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + (2 * ClassSize.ATOMIC_INTEGER)
+  public static final long FIXED_OVERHEAD =
+      ClassSize.align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + (2 * ClassSize.ATOMIC_INTEGER)
           + (3 * Bytes.SIZEOF_INT) + (4 * Bytes.SIZEOF_LONG));
 
   /**
@@ -850,13 +855,13 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * To start up the drama, Thread A creates an instance of this class each time it would do this
    * zigzag dance and passes it to Thread B (these classes use Latches so it is one shot only).
    * Thread B notices the new instance (via reading a volatile reference or how ever) and it starts
-   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint(SyncFuture)} when it cannot proceed
-   * until the Thread B 'safe point' is attained. Thread A will be held inside in
-   * {@link #waitSafePoint(SyncFuture)} until Thread B reaches the 'safe point'. Once there, Thread B frees
-   * Thread A by calling {@link #safePointAttained()}. Thread A now knows Thread B is at the 'safe
-   * point' and that it is holding there (When Thread B calls {@link #safePointAttained()} it blocks
-   * here until Thread A calls {@link #releaseSafePoint()}). Thread A proceeds to do what it needs
-   * to do while Thread B is paused. When finished, it lets Thread B lose by calling
+   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint(SyncFuture)} when it
+   * cannot proceed until the Thread B 'safe point' is attained. Thread A will be held inside in
+   * {@link #waitSafePoint(SyncFuture)} until Thread B reaches the 'safe point'. Once there, Thread
+   * B frees Thread A by calling {@link #safePointAttained()}. Thread A now knows Thread B is at the
+   * 'safe point' and that it is holding there (When Thread B calls {@link #safePointAttained()} it
+   * blocks here until Thread A calls {@link #releaseSafePoint()}). Thread A proceeds to do what it
+   * needs to do while Thread B is paused. When finished, it lets Thread B lose by calling
    * {@link #releaseSafePoint()} and away go both Threads again.
    */
   static class SafePointZigZagLatch {
@@ -883,8 +888,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      *          exception, then something is up w/ our syncing.
      * @return The passed <code>syncFuture</code>
      */
-    SyncFuture waitSafePoint(SyncFuture syncFuture) throws InterruptedException,
-        FailedSyncBeforeLogCloseException {
+    SyncFuture waitSafePoint(SyncFuture syncFuture)
+        throws InterruptedException, FailedSyncBeforeLogCloseException {
       while (!this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
         checkIfSyncFailed(syncFuture);
       }
@@ -1015,8 +1020,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
     private boolean isOutstandingSyncsFromRunners() {
       // Look at SyncFutures in the SyncRunners
-      for (SyncRunner syncRunner: syncRunners) {
-        if(syncRunner.isAlive() && !syncRunner.areSyncFuturesReleased()) {
+      for (SyncRunner syncRunner : syncRunners) {
+        if (syncRunner.isAlive() && !syncRunner.areSyncFuturesReleased()) {
           return true;
         }
       }
@@ -1054,11 +1059,13 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // Failed append. Record the exception.
             this.exception = e;
             // invoking cleanupOutstandingSyncsOnException when append failed with exception,
-            // it will cleanup existing sync requests recorded in syncFutures but not offered to SyncRunner yet,
-            // so there won't be any sync future left over if no further truck published to disruptor.
+            // it will cleanup existing sync requests recorded in syncFutures but not offered to
+            // SyncRunner yet,
+            // so there won't be any sync future left over if no further truck published to
+            // disruptor.
             cleanupOutstandingSyncsOnException(sequence,
-                this.exception instanceof DamagedWALException ? this.exception
-                    : new DamagedWALException("On sync", this.exception));
+              this.exception instanceof DamagedWALException ? this.exception
+                  : new DamagedWALException("On sync", this.exception));
             // Return to keep processing events coming off the ringbuffer
             return;
           } finally {
@@ -1081,15 +1088,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             return;
           }
           // syncRunnerIndex is bound to the range [0, Integer.MAX_INT - 1] as follows:
-          //   * The maximum value possible for syncRunners.length is Integer.MAX_INT
-          //   * syncRunnerIndex starts at 0 and is incremented only here
-          //   * after the increment, the value is bounded by the '%' operator to
-          //     [0, syncRunners.length), presuming the value was positive prior to
-          //     the '%' operator.
-          //   * after being bound to [0, Integer.MAX_INT - 1], the new value is stored in
-          //     syncRunnerIndex ensuring that it can't grow without bound and overflow.
-          //   * note that the value after the increment must be positive, because the most it
-          //     could have been prior was Integer.MAX_INT - 1 and we only increment by 1.
+          // * The maximum value possible for syncRunners.length is Integer.MAX_INT
+          // * syncRunnerIndex starts at 0 and is incremented only here
+          // * after the increment, the value is bounded by the '%' operator to
+          // [0, syncRunners.length), presuming the value was positive prior to
+          // the '%' operator.
+          // * after being bound to [0, Integer.MAX_INT - 1], the new value is stored in
+          // syncRunnerIndex ensuring that it can't grow without bound and overflow.
+          // * note that the value after the increment must be positive, because the most it
+          // could have been prior was Integer.MAX_INT - 1 and we only increment by 1.
           this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
           try {
             // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
@@ -1104,8 +1111,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         }
         // We may have picked up an exception above trying to offer sync
         if (this.exception != null) {
-          cleanupOutstandingSyncsOnException(sequence, this.exception instanceof DamagedWALException
-              ? this.exception : new DamagedWALException("On sync", this.exception));
+          cleanupOutstandingSyncsOnException(sequence,
+            this.exception instanceof DamagedWALException ? this.exception
+                : new DamagedWALException("On sync", this.exception));
         }
         attainSafePoint(sequence);
         // It is critical that we offer the futures back to the cache for reuse here after the
@@ -1165,8 +1173,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       try {
         FSHLog.this.appendEntry(writer, entry);
       } catch (Exception e) {
-        String msg = "Append sequenceId=" + entry.getKey().getSequenceId()
-            + ", requesting roll of WAL";
+        String msg =
+            "Append sequenceId=" + entry.getKey().getSequenceId() + ", requesting roll of WAL";
         LOG.warn(msg, e);
         requestLogRoll(ERROR);
         throw new DamagedWALException(msg, e);

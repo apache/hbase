@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -154,11 +154,11 @@ class ConnectionOverAsyncConnection implements Connection {
     int threads = conf.getInt("hbase.hconnection.threads.max", 256);
     long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
     BlockingQueue<Runnable> workQueue =
-      new LinkedBlockingQueue<>(threads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-        HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+        new LinkedBlockingQueue<>(threads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(threads, threads, keepAliveTime,
-      TimeUnit.SECONDS, workQueue,
-      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(toString() + "-shared-%d").build());
+        TimeUnit.SECONDS, workQueue, new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat(toString() + "-shared-%d").build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }
@@ -188,13 +188,13 @@ class ConnectionOverAsyncConnection implements Connection {
       @Override
       public Table build() {
         IOExceptionSupplier<ExecutorService> poolSupplier =
-          pool != null ? () -> pool : ConnectionOverAsyncConnection.this::getBatchPool;
+            pool != null ? () -> pool : ConnectionOverAsyncConnection.this::getBatchPool;
         return new TableOverAsyncTable(conn,
-          conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
-            .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
-            .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
-            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS).build(),
-          poolSupplier);
+            conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
+                .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
+                .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
+                .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS).build(),
+            poolSupplier);
       }
     };
   }

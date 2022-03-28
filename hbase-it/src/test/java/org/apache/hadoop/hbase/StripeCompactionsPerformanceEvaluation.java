@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -55,7 +54,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
       LoggerFactory.getLogger(StripeCompactionsPerformanceEvaluation.class);
 
   private static final TableName TABLE_NAME =
-    TableName.valueOf(StripeCompactionsPerformanceEvaluation.class.getSimpleName());
+      TableName.valueOf(StripeCompactionsPerformanceEvaluation.class.getSimpleName());
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("CF");
   private static final int MIN_NUM_SERVERS = 1;
 
@@ -118,8 +117,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     }
     String datagen = cmd.getOptionValue(DATAGEN_KEY, "default").toLowerCase(Locale.ROOT);
     if ("default".equals(datagen)) {
-      dataGen = new MultiThreadedAction.DefaultDataGenerator(
-          minValueSize, maxValueSize, 1, 1, new byte[][] { COLUMN_FAMILY });
+      dataGen = new MultiThreadedAction.DefaultDataGenerator(minValueSize, maxValueSize, 1, 1,
+          new byte[][] { COLUMN_FAMILY });
     } else if ("sequential".equals(datagen)) {
       int shards = Integer.parseInt(cmd.getOptionValue(SEQ_SHARDS_PER_SERVER_KEY, "1"));
       dataGen = new SeqShardedDataGenerator(minValueSize, maxValueSize, shards);
@@ -167,7 +166,6 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     }
   }
 
-
   private void setUp() throws Exception {
     this.util = new IntegrationTestingUtility();
     LOG.debug("Initializing/checking cluster has " + MIN_NUM_SERVERS + " servers");
@@ -198,12 +196,12 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
   }
 
   private void runOneTest(String description, Configuration conf) throws Exception {
-    int numServers = util.getHBaseClusterInterface()
-      .getClusterMetrics().getLiveServerMetrics().size();
+    int numServers =
+        util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size();
     long startKey = preloadKeys * numServers;
     long endKey = startKey + writeKeys * numServers;
     status(String.format("%s test starting on %d servers; preloading 0 to %d and writing to %d",
-        description, numServers, startKey, endKey));
+      description, numServers, startKey, endKey));
 
     if (preloadKeys > 0) {
       MultiThreadedWriter preloader = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
@@ -213,9 +211,9 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
       if (preloader.getNumWriteFailures() > 0) {
         throw new IOException("Preload failed");
       }
-      int waitTime = (int)Math.min(preloadKeys / 100, 30000); // arbitrary
-      status(description + " preload took " + (EnvironmentEdgeManager.currentTime()-time)/1000
-          + "sec; sleeping for " + waitTime/1000 + "sec for store to stabilize");
+      int waitTime = (int) Math.min(preloadKeys / 100, 30000); // arbitrary
+      status(description + " preload took " + (EnvironmentEdgeManager.currentTime() - time) / 1000
+          + "sec; sleeping for " + waitTime / 1000 + "sec for store to stabilize");
       Thread.sleep(waitTime);
     }
 
@@ -244,22 +242,18 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     }
 
     // Dump perf regardless of the result.
-    /*StringBuilder perfDump = new StringBuilder();
-    for (Pair<Long, Long> pt : reader.getMetrics().getCombinedCdf()) {
-      perfDump.append(String.format(
-          "csvread,%s,%d,%d%n", description, pt.getFirst(), pt.getSecond()));
-    }
-    if (dumpTimePerf) {
-      Iterator<Triple<Long, Double, Long>> timePerf = reader.getMetrics().getCombinedTimeSeries();
-      while (timePerf.hasNext()) {
-        Triple<Long, Double, Long> pt = timePerf.next();
-        perfDump.append(String.format("csvtime,%s,%d,%d,%.4f%n",
-            description, pt.getFirst(), pt.getThird(), pt.getSecond()));
-      }
-    }
-    LOG.info("Performance data dump for " + description + " test: \n" + perfDump.toString());*/
-    status(description + " test took " +
-      (EnvironmentEdgeManager.currentTime() - testStartTime) / 1000 + "sec");
+    /*
+     * StringBuilder perfDump = new StringBuilder(); for (Pair<Long, Long> pt :
+     * reader.getMetrics().getCombinedCdf()) { perfDump.append(String.format( "csvread,%s,%d,%d%n",
+     * description, pt.getFirst(), pt.getSecond())); } if (dumpTimePerf) { Iterator<Triple<Long,
+     * Double, Long>> timePerf = reader.getMetrics().getCombinedTimeSeries(); while
+     * (timePerf.hasNext()) { Triple<Long, Double, Long> pt = timePerf.next();
+     * perfDump.append(String.format("csvtime,%s,%d,%d,%.4f%n", description, pt.getFirst(),
+     * pt.getThird(), pt.getSecond())); } } LOG.info("Performance data dump for " + description +
+     * " test: \n" + perfDump.toString());
+     */
+    status(description + " test took "
+        + (EnvironmentEdgeManager.currentTime() - testStartTime) / 1000 + "sec");
     Assert.assertTrue(success);
   }
 
@@ -270,7 +264,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
 
   private TableDescriptorBuilder createHtd(boolean isStripe) throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(COLUMN_FAMILY));
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(COLUMN_FAMILY));
     String noSplitsPolicy = DisabledRegionSplitPolicy.class.getName();
     builder.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, noSplitsPolicy);
     if (isStripe) {
@@ -293,15 +287,14 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     return builder;
   }
 
-  private void createTable(TableDescriptorBuilder builder)
-      throws Exception {
+  private void createTable(TableDescriptorBuilder builder) throws Exception {
     deleteTable();
     if (util.getHBaseClusterInterface() instanceof SingleProcessHBaseCluster) {
       LOG.warn("Test does not make a lot of sense for minicluster. Will set flush size low.");
       builder.setValue(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, "1048576");
     }
-    byte[][] splits = new RegionSplitter.HexStringSplit().split(
-        util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
+    byte[][] splits = new RegionSplitter.HexStringSplit()
+        .split(util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
     util.getAdmin().createTable(builder.build(), splits);
   }
 
@@ -324,7 +317,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     }
 
     private String getPrefix(long i) {
-      return StringUtils.leftPad(String.valueOf((int)(i % numPartitions)), PREFIX_PAD_TO, "0");
+      return StringUtils.leftPad(String.valueOf((int) (i % numPartitions)), PREFIX_PAD_TO, "0");
     }
 
     @Override

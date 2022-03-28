@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -43,15 +44,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterShutdown {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterShutdown.class);
+      HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
   private HBaseTestingUtil htu;
 
@@ -68,8 +70,8 @@ public class TestMasterShutdown {
   /**
    * Simple test of shutdown.
    * <p>
-   * Starts with three masters.  Tells the active master to shutdown the cluster.
-   * Verifies that all masters are properly shutdown.
+   * Starts with three masters. Tells the active master to shutdown the cluster. Verifies that all
+   * masters are properly shutdown.
    */
   @Test
   public void testMasterShutdown() throws Exception {
@@ -79,11 +81,8 @@ public class TestMasterShutdown {
     // Start the cluster
     try {
       htu = new HBaseTestingUtil(conf);
-      StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(3)
-        .numRegionServers(1)
-        .numDataNodes(1)
-        .build();
+      StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(3)
+          .numRegionServers(1).numDataNodes(1).build();
       final SingleProcessHBaseCluster cluster = htu.startMiniCluster(option);
 
       // wait for all master thread to spawn and start their run loop.
@@ -91,9 +90,8 @@ public class TestMasterShutdown {
       final long oneSecond = TimeUnit.SECONDS.toMillis(1);
       assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond, () -> {
         final List<MasterThread> masterThreads = cluster.getMasterThreads();
-        return masterThreads != null
-          && masterThreads.size() >= 3
-          && masterThreads.stream().allMatch(Thread::isAlive);
+        return masterThreads != null && masterThreads.size() >= 3
+            && masterThreads.stream().allMatch(Thread::isAlive);
       }));
 
       // find the active master
@@ -128,18 +126,13 @@ public class TestMasterShutdown {
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     LocalHBaseCluster hbaseCluster = null;
     try {
-      htu = new HBaseTestingUtil(
-        createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
+      htu = new HBaseTestingUtil(createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
 
       // configure a cluster with
-      final StartTestingClusterOption options = StartTestingClusterOption.builder()
-        .numDataNodes(1)
-        .numMasters(1)
-        .numRegionServers(0)
-        .masterClass(HMaster.class)
-        .rsClass(SingleProcessHBaseCluster.MiniHBaseClusterRegionServer.class)
-        .createRootDir(true)
-        .build();
+      final StartTestingClusterOption options = StartTestingClusterOption.builder().numDataNodes(1)
+          .numMasters(1).numRegionServers(0).masterClass(HMaster.class)
+          .rsClass(SingleProcessHBaseCluster.MiniHBaseClusterRegionServer.class).createRootDir(true)
+          .build();
 
       // Can't simply `htu.startMiniCluster(options)` because that method waits for the master to
       // start completely. However, this test's premise is that a partially started master should
@@ -150,7 +143,7 @@ public class TestMasterShutdown {
       htu.startMiniZKCluster(options.getNumZkServers());
       htu.createRootDir();
       hbaseCluster = new LocalHBaseCluster(htu.getConfiguration(), options.getNumMasters(),
-        options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
+          options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
       final MasterThread masterThread = hbaseCluster.getMasters().get(0);
 
       masterThread.start();

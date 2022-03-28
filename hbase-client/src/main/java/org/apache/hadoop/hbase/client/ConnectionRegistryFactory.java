@@ -37,8 +37,8 @@ final class ConnectionRegistryFactory {
    */
   static ConnectionRegistry getRegistry(Configuration conf) {
     Class<? extends ConnectionRegistry> clazz =
-      conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, RpcConnectionRegistry.class,
-        ConnectionRegistry.class);
+        conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, RpcConnectionRegistry.class,
+          ConnectionRegistry.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }
 }

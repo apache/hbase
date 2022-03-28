@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -33,16 +31,16 @@ import org.mockito.Mockito;
 /**
  * Test for EncodedDataBlock
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestEncodedDataBlock {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncodedDataBlock.class);
+      HBaseClassTestRule.forClass(TestEncodedDataBlock.class);
 
   private Algorithm algo;
-  private static final byte[] INPUT_BYTES = new byte[]{0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0,
-    1, 2, 3, 0, 0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0, 1, 2, 3, 0};
+  private static final byte[] INPUT_BYTES = new byte[] { 0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0, 1, 2,
+      3, 0, 0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0, 1, 2, 3, 0 };
 
   @Before
   public void setUp() throws IOException {
@@ -52,13 +50,13 @@ public class TestEncodedDataBlock {
   @Test
   public void testGetCompressedSize() throws Exception {
     Mockito.when(algo.createCompressionStream(Mockito.any(), Mockito.any(), Mockito.anyInt()))
-      .thenThrow(IOException.class);
+        .thenThrow(IOException.class);
     try {
       EncodedDataBlock.getCompressedSize(algo, null, INPUT_BYTES, 0, 0);
       throw new RuntimeException("Should not reach here");
     } catch (IOException e) {
-      Mockito.verify(algo, Mockito.times(1)).createCompressionStream(Mockito.any(),
-        Mockito.any(), Mockito.anyInt());
+      Mockito.verify(algo, Mockito.times(1)).createCompressionStream(Mockito.any(), Mockito.any(),
+        Mockito.anyInt());
     }
   }
 

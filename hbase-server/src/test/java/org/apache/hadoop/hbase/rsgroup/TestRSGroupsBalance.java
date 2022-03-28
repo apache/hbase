@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
+      HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBalance.class);
 
@@ -126,10 +126,11 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     ServerName first = setupBalanceTest(newGroupName, tableName);
 
-    // run the balancer in dry run mode. it should return true, but should not actually move any regions
+    // run the balancer in dry run mode. it should return true, but should not actually move any
+    // regions
     ADMIN.balancerSwitch(true, true);
-    BalanceResponse response = ADMIN.balanceRSGroup(newGroupName,
-      BalanceRequest.newBuilder().setDryRun(true).build());
+    BalanceResponse response =
+        ADMIN.balanceRSGroup(newGroupName, BalanceRequest.newBuilder().setDryRun(true).build());
     assertTrue(response.isBalancerRan());
     assertTrue(response.getMovesCalculated() > 0);
     assertEquals(0, response.getMovesExecuted());
@@ -141,9 +142,9 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     addGroup(newGroupName, 3);
 
     ADMIN.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     byte[] startKey = Bytes.toBytes("aaaaa");
     byte[] endKey = Bytes.toBytes("zzzzz");
     ADMIN.createTable(desc, startKey, endKey, 6);
@@ -188,15 +189,15 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
   public void testMisplacedRegions() throws Exception {
     String namespace = TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName());
     TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    final TableName tableName =
-      TableName.valueOf(namespace, TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName()));
+    final TableName tableName = TableName.valueOf(namespace,
+      TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName()));
 
     final RSGroupInfo rsGroupInfo = addGroup(getGroupName(name.getMethodName()), 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     TEST_UTIL.getAdmin().modifyNamespace(NamespaceDescriptor.create(namespace)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
 
     ADMIN.balancerSwitch(true, true);
     assertTrue(ADMIN.balanceRSGroup(rsGroupInfo.getName()).isBalancerRan());
@@ -208,13 +209,14 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         ServerName serverName =
-          ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
+            ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
         return ADMIN.getConnection().getAdmin().getRegions(serverName).size() == 15;
       }
     });
   }
 
-  @Test public void testGetRSGroupAssignmentsByTable() throws Exception {
+  @Test
+  public void testGetRSGroupAssignmentsByTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY, 10);
     // disable table
@@ -225,7 +227,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     RSGroupInfoManagerImpl gm = (RSGroupInfoManagerImpl) master.getRSGroupInfoManager();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-      gm.getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
+        gm.getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
   }

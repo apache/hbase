@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test {@link HFileScanner#reseekTo(org.apache.hadoop.hbase.Cell)}
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestReseekTo {
 
   @ClassRule
@@ -59,16 +59,13 @@ public class TestReseekTo {
   private void testReseekToInternals(TagUsage tagUsage) throws IOException {
     Path ncTFile = new Path(TEST_UTIL.getDataTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
-    if(tagUsage != TagUsage.NO_TAG){
+    if (tagUsage != TagUsage.NO_TAG) {
       TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     }
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
     HFileContext context = new HFileContextBuilder().withBlockSize(4000).build();
-    HFile.Writer writer = HFile.getWriterFactory(
-        TEST_UTIL.getConfiguration(), cacheConf)
-            .withOutputStream(fout)
-            .withFileContext(context)
-            .create();
+    HFile.Writer writer = HFile.getWriterFactory(TEST_UTIL.getConfiguration(), cacheConf)
+        .withOutputStream(fout).withFileContext(context).create();
     int numberOfKeys = 1000;
 
     String valueString = "Value";
@@ -81,7 +78,7 @@ public class TestReseekTo {
       KeyValue kv;
       keyList.add(key);
       valueList.add(value);
-      if(tagUsage == TagUsage.NO_TAG){
+      if (tagUsage == TagUsage.NO_TAG) {
         kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
             Bytes.toBytes(value));
         writer.append(kv);
@@ -119,8 +116,8 @@ public class TestReseekTo {
       Integer key = keyList.get(i);
       String value = valueList.get(i);
       long start = System.nanoTime();
-      scanner.seekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes
-          .toBytes("qual"), Bytes.toBytes(value)));
+      scanner.seekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"),
+          Bytes.toBytes("qual"), Bytes.toBytes(value)));
       assertEquals(value, scanner.getValueString());
     }
 
@@ -129,14 +126,12 @@ public class TestReseekTo {
       Integer key = keyList.get(i);
       String value = valueList.get(i);
       long start = System.nanoTime();
-      scanner.reseekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes
-          .toBytes("qual"), Bytes.toBytes(value)));
+      scanner.reseekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"),
+          Bytes.toBytes("qual"), Bytes.toBytes(value)));
       assertEquals("i is " + i, value, scanner.getValueString());
     }
 
     reader.close();
   }
 
-
 }
-

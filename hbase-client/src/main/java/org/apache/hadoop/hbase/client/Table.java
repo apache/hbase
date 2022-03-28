@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,10 +43,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
- * Used to communicate with a single HBase table.
- * Obtain an instance from a {@link Connection} and call {@link #close()} afterwards.
- *
- * <p><code>Table</code> can be used to get, put, delete or scan data from a table.
+ * Used to communicate with a single HBase table. Obtain an instance from a {@link Connection} and
+ * call {@link #close()} afterwards.
+ * <p>
+ * <code>Table</code> can be used to get, put, delete or scan data from a table.
  * @see ConnectionFactory
  * @see Connection
  * @see Admin
@@ -64,13 +63,13 @@ public interface Table extends Closeable {
   /**
    * Returns the {@link org.apache.hadoop.conf.Configuration} object used by this instance.
    * <p>
-   * The reference returned is not a copy, so any change made to it will
-   * affect this instance.
+   * The reference returned is not a copy, so any change made to it will affect this instance.
    */
   Configuration getConfiguration();
 
   /**
-   * Gets the {@link org.apache.hadoop.hbase.client.TableDescriptor table descriptor} for this table.
+   * Gets the {@link org.apache.hadoop.hbase.client.TableDescriptor table descriptor} for this
+   * table.
    * @throws java.io.IOException if a remote or network exception occurs.
    */
   TableDescriptor getDescriptor() throws IOException;
@@ -83,13 +82,9 @@ public interface Table extends Closeable {
   /**
    * Test for the existence of columns in the table, as specified by the Get.
    * <p>
-   *
    * This will return true if the Get matches one or more keys, false if not.
    * <p>
-   *
-   * This is a server-side call so it prevents any data from being transfered to
-   * the client.
-   *
+   * This is a server-side call so it prevents any data from being transfered to the client.
    * @param get the Get
    * @return true if the specified Get matches one or more keys, false if not
    * @throws IOException e
@@ -101,16 +96,12 @@ public interface Table extends Closeable {
   /**
    * Test for the existence of columns in the table, as specified by the Gets.
    * <p>
-   *
-   * This will return an array of booleans. Each value will be true if the related Get matches
-   * one or more keys, false if not.
+   * This will return an array of booleans. Each value will be true if the related Get matches one
+   * or more keys, false if not.
    * <p>
-   *
-   * This is a server-side call so it prevents any data from being transferred to
-   * the client.
-   *
+   * This is a server-side call so it prevents any data from being transferred to the client.
    * @param gets the Gets
-   * @return Array of boolean.  True if the specified Get matches one or more keys, false if not.
+   * @return Array of boolean. True if the specified Get matches one or more keys, false if not.
    * @throws IOException e
    */
   default boolean[] exists(List<Get> gets) throws IOException {
@@ -118,21 +109,20 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends, RowMutations.
-   * The ordering of execution of the actions is not defined. Meaning if you do a Put and a
-   * Get in the same {@link #batch} call, you will not necessarily be
-   * guaranteed that the Get returns what the Put had put.
-   *
+   * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends, RowMutations. The
+   * ordering of execution of the actions is not defined. Meaning if you do a Put and a Get in the
+   * same {@link #batch} call, you will not necessarily be guaranteed that the Get returns what the
+   * Put had put.
    * @param actions list of Get, Put, Delete, Increment, Append, RowMutations.
-   * @param results Empty Object[], same size as actions. Provides access to partial
-   *                results, in case an exception is thrown. A null in the result array means that
-   *                the call for that action failed, even after retries. The order of the objects
-   *                in the results array corresponds to the order of actions in the request list.
+   * @param results Empty Object[], same size as actions. Provides access to partial results, in
+   *          case an exception is thrown. A null in the result array means that the call for that
+   *          action failed, even after retries. The order of the objects in the results array
+   *          corresponds to the order of actions in the request list.
    * @throws IOException
    * @since 0.90.0
    */
-  default void batch(final List<? extends Row> actions, final Object[] results) throws IOException,
-    InterruptedException {
+  default void batch(final List<? extends Row> actions, final Object[] results)
+      throws IOException, InterruptedException {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -154,10 +144,9 @@ public interface Table extends Closeable {
   /**
    * Extracts certain cells from a given row.
    * @param get The object that specifies what data to fetch and from which row.
-   * @return The data coming from the specified row, if it exists.  If the row
-   *   specified doesn't exist, the {@link Result} instance returned won't
-   *   contain any {@link org.apache.hadoop.hbase.KeyValue}, as indicated by
-   *   {@link Result#isEmpty()}.
+   * @return The data coming from the specified row, if it exists. If the row specified doesn't
+   *         exist, the {@link Result} instance returned won't contain any
+   *         {@link org.apache.hadoop.hbase.KeyValue}, as indicated by {@link Result#isEmpty()}.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
@@ -167,31 +156,27 @@ public interface Table extends Closeable {
 
   /**
    * Extracts specified cells from the given rows, as a batch.
-   *
    * @param gets The objects that specify what data to fetch and from which rows.
-   * @return The data coming from the specified rows, if it exists.  If the row specified doesn't
-   *   exist, the {@link Result} instance returned won't contain any
-   *   {@link org.apache.hadoop.hbase.Cell}s, as indicated by {@link Result#isEmpty()}. If there
-   *   are any failures even after retries, there will be a <code>null</code> in the results' array
-   *   for  those Gets, AND an exception will be thrown. The ordering of the Result array
-   *   corresponds to  the order of the list of passed in Gets.
+   * @return The data coming from the specified rows, if it exists. If the row specified doesn't
+   *         exist, the {@link Result} instance returned won't contain any
+   *         {@link org.apache.hadoop.hbase.Cell}s, as indicated by {@link Result#isEmpty()}. If
+   *         there are any failures even after retries, there will be a <code>null</code> in the
+   *         results' array for those Gets, AND an exception will be thrown. The ordering of the
+   *         Result array corresponds to the order of the list of passed in Gets.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.90.0
-   * @apiNote {@link #put(List)} runs pre-flight validations on the input list on client.
-   *          Currently {@link #get(List)} doesn't run any validations on the client-side,
-   *          currently there is no need, but this may change in the future. An
-   *          {@link IllegalArgumentException} will be thrown in this case.
+   * @apiNote {@link #put(List)} runs pre-flight validations on the input list on client. Currently
+   *          {@link #get(List)} doesn't run any validations on the client-side, currently there is
+   *          no need, but this may change in the future. An {@link IllegalArgumentException} will
+   *          be thrown in this case.
    */
   default Result[] get(List<Get> gets) throws IOException {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
-   * Returns a scanner on the current table as specified by the {@link Scan}
-   * object.
-   * Note that the passed {@link Scan}'s start row and caching properties
-   * maybe changed.
-   *
+   * Returns a scanner on the current table as specified by the {@link Scan} object. Note that the
+   * passed {@link Scan}'s start row and caching properties maybe changed.
    * @param scan A configured {@link Scan} object.
    * @return A scanner.
    * @throws IOException if a remote or network exception occurs.
@@ -203,7 +188,6 @@ public interface Table extends Closeable {
 
   /**
    * Gets a scanner on the current table for the given family.
-   *
    * @param family The column family to scan.
    * @return A scanner.
    * @throws IOException if a remote or network exception occurs.
@@ -215,7 +199,6 @@ public interface Table extends Closeable {
 
   /**
    * Gets a scanner on the current table for the given family and qualifier.
-   *
    * @param family The column family to scan.
    * @param qualifier The column qualifier to scan.
    * @return A scanner.
@@ -228,7 +211,6 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table.
-   *
    * @param put The data to put.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -240,15 +222,14 @@ public interface Table extends Closeable {
   /**
    * Batch puts the specified data into the table.
    * <p>
-   * This can be used for group commit, or for submitting user defined batches. Before sending
-   * a batch of mutations to the server, the client runs a few validations on the input list. If an
+   * This can be used for group commit, or for submitting user defined batches. Before sending a
+   * batch of mutations to the server, the client runs a few validations on the input list. If an
    * error is found, for example, a mutation was supplied but was missing it's column an
-   * {@link IllegalArgumentException} will be thrown and no mutations will be applied. If there
-   * are any failures even after retries, a {@link RetriesExhaustedWithDetailsException} will be
-   * thrown. RetriesExhaustedWithDetailsException contains lists of failed mutations and
-   * corresponding remote exceptions. The ordering of mutations and exceptions in the
-   * encapsulating exception corresponds to the order of the input list of Put requests.
-   *
+   * {@link IllegalArgumentException} will be thrown and no mutations will be applied. If there are
+   * any failures even after retries, a {@link RetriesExhaustedWithDetailsException} will be thrown.
+   * RetriesExhaustedWithDetailsException contains lists of failed mutations and corresponding
+   * remote exceptions. The ordering of mutations and exceptions in the encapsulating exception
+   * corresponds to the order of the input list of Put requests.
    * @param puts The list of mutations to apply.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -259,7 +240,6 @@ public interface Table extends Closeable {
 
   /**
    * Deletes the specified cells/row.
-   *
    * @param delete The object that specifies what to delete.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -271,19 +251,18 @@ public interface Table extends Closeable {
   /**
    * Batch Deletes the specified cells/rows from the table.
    * <p>
-   * If a specified row does not exist, {@link Delete} will report as though sucessful
-   * delete; no exception will be thrown. If there are any failures even after retries,
-   * a {@link RetriesExhaustedWithDetailsException} will be thrown.
-   * RetriesExhaustedWithDetailsException contains lists of failed {@link Delete}s and
-   * corresponding remote exceptions.
-   *
-   * @param deletes List of things to delete. The input list gets modified by this
-   * method. All successfully applied {@link Delete}s in the list are removed (in particular it
-   * gets re-ordered, so the order in which the elements are inserted in the list gives no
-   * guarantee as to the order in which the {@link Delete}s are executed).
-   * @throws IOException if a remote or network exception occurs. In that case
-   * the {@code deletes} argument will contain the {@link Delete} instances
-   * that have not be successfully applied.
+   * If a specified row does not exist, {@link Delete} will report as though sucessful delete; no
+   * exception will be thrown. If there are any failures even after retries, a
+   * {@link RetriesExhaustedWithDetailsException} will be thrown.
+   * RetriesExhaustedWithDetailsException contains lists of failed {@link Delete}s and corresponding
+   * remote exceptions.
+   * @param deletes List of things to delete. The input list gets modified by this method. All
+   *          successfully applied {@link Delete}s in the list are removed (in particular it gets
+   *          re-ordered, so the order in which the elements are inserted in the list gives no
+   *          guarantee as to the order in which the {@link Delete}s are executed).
+   * @throws IOException if a remote or network exception occurs. In that case the {@code deletes}
+   *           argument will contain the {@link Delete} instances that have not be successfully
+   *           applied.
    * @since 0.20.1
    * @apiNote In 3.0.0 version, the input list {@code deletes} will no longer be modified. Also,
    *          {@link #put(List)} runs pre-flight validations on the input list on client. Currently
@@ -309,7 +288,7 @@ public interface Table extends Closeable {
    * </pre>
    *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   default CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
@@ -318,9 +297,8 @@ public interface Table extends Closeable {
 
   /**
    * A helper class for sending checkAndMutate request.
-   *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   interface CheckAndMutateBuilder {
@@ -387,7 +365,7 @@ public interface Table extends Closeable {
    * </pre>
    *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   default CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
@@ -396,9 +374,8 @@ public interface Table extends Closeable {
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
-   *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   interface CheckAndMutateWithFilterBuilder {
@@ -428,9 +405,8 @@ public interface Table extends Closeable {
   }
 
   /**
-   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
-   * it performs the specified action.
-   *
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does, it
+   * performs the specified action.
    * @param checkAndMutate The CheckAndMutate object.
    * @return A CheckAndMutateResult object that represents the result for the CheckAndMutate.
    * @throws IOException if a remote or network exception occurs.
@@ -443,21 +419,19 @@ public interface Table extends Closeable {
    * Batch version of checkAndMutate. The specified CheckAndMutates are batched only in the sense
    * that they are sent to a RS in one RPC, but each CheckAndMutate operation is still executed
    * atomically (and thus, each may fail independently of others).
-   *
    * @param checkAndMutates The list of CheckAndMutate.
    * @return A list of CheckAndMutateResult objects that represents the result for each
-   *   CheckAndMutate.
+   *         CheckAndMutate.
    * @throws IOException if a remote or network exception occurs.
    */
   default List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
-    throws IOException {
+      throws IOException {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
-   * Performs multiple mutations atomically on a single row. Currently
-   * {@link Put} and {@link Delete} are supported.
-   *
+   * Performs multiple mutations atomically on a single row. Currently {@link Put} and
+   * {@link Delete} are supported.
    * @param rm object that specifies the set of mutations to perform atomically
    * @return results of Increment/Append operations
    * @throws IOException if a remote or network exception occurs.
@@ -469,10 +443,9 @@ public interface Table extends Closeable {
   /**
    * Appends values to one or more columns within a single row.
    * <p>
-   * This operation guaranteed atomicity to readers. Appends are done
-   * under a single row lock, so write operations to a row are synchronized, and
-   * readers are guaranteed to see this operation fully completed.
-   *
+   * This operation guaranteed atomicity to readers. Appends are done under a single row lock, so
+   * write operations to a row are synchronized, and readers are guaranteed to see this operation
+   * fully completed.
    * @param append object that specifies the columns and values to be appended
    * @throws IOException e
    * @return values of columns after the append operation (maybe null)
@@ -484,12 +457,11 @@ public interface Table extends Closeable {
   /**
    * Increments one or more columns within a single row.
    * <p>
-   * This operation ensures atomicity to readers. Increments are done
-   * under a single row lock, so write operations to a row are synchronized, and
-   * readers are guaranteed to see this operation fully completed.
-   *
-   * @param increment object that specifies the columns and amounts to be used
-   *                  for the increment operations
+   * This operation ensures atomicity to readers. Increments are done under a single row lock, so
+   * write operations to a row are synchronized, and readers are guaranteed to see this operation
+   * fully completed.
+   * @param increment object that specifies the columns and amounts to be used for the increment
+   *          operations
    * @throws IOException e
    * @return values of columns after the increment
    */
@@ -504,8 +476,7 @@ public interface Table extends Closeable {
    * @param row The row that contains the cell to increment.
    * @param family The column family of the cell to increment.
    * @param qualifier The column qualifier of the cell to increment.
-   * @param amount The amount to increment the cell with (or decrement, if the
-   * amount is negative).
+   * @param amount The amount to increment the cell with (or decrement, if the amount is negative).
    * @return The new value, post increment.
    * @throws IOException if a remote or network exception occurs.
    */
@@ -517,34 +488,30 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Atomically increments a column value. If the column value already exists
-   * and is not a big-endian long, this could throw an exception. If the column
-   * value does not yet exist it is initialized to <code>amount</code> and
-   * written to the specified column.
-   *
-   * <p>Setting durability to {@link Durability#SKIP_WAL} means that in a fail
-   * scenario you will lose any increments that have not been flushed.
+   * Atomically increments a column value. If the column value already exists and is not a
+   * big-endian long, this could throw an exception. If the column value does not yet exist it is
+   * initialized to <code>amount</code> and written to the specified column.
+   * <p>
+   * Setting durability to {@link Durability#SKIP_WAL} means that in a fail scenario you will lose
+   * any increments that have not been flushed.
    * @param row The row that contains the cell to increment.
    * @param family The column family of the cell to increment.
    * @param qualifier The column qualifier of the cell to increment.
-   * @param amount The amount to increment the cell with (or decrement, if the
-   * amount is negative).
+   * @param amount The amount to increment the cell with (or decrement, if the amount is negative).
    * @param durability The persistence guarantee for this increment.
    * @return The new value, post increment.
    * @throws IOException if a remote or network exception occurs.
    */
-  default long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-    long amount, Durability durability) throws IOException {
-    Increment increment = new Increment(row)
-        .addColumn(family, qualifier, amount)
-        .setDurability(durability);
+  default long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount,
+      Durability durability) throws IOException {
+    Increment increment =
+        new Increment(row).addColumn(family, qualifier, amount).setDurability(durability);
     Cell cell = increment(increment).getColumnLatestCell(family, qualifier);
     return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
    * Releases any resources held or pending changes in internal buffers.
-   *
    * @throws IOException if a remote or network exception occurs.
    */
   @Override
@@ -565,6 +532,7 @@ public interface Table extends Closeable {
    * invocations:
    * <p/>
    * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
+   * 
    * <pre>
    * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
@@ -573,8 +541,8 @@ public interface Table extends Closeable {
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
    * </pre>
-   * </blockquote>
-   * </div>
+   * 
+   * </blockquote> </div>
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -616,7 +584,7 @@ public interface Table extends Closeable {
       byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
       throws ServiceException, Throwable {
     Map<byte[], R> results =
-      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+        Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
       @Override
       public void update(byte[] region, byte[] row, R value) {
@@ -690,7 +658,7 @@ public interface Table extends Closeable {
       Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
       byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
     final Map<byte[], R> results =
-      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+        Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
       new Callback<R>() {
         @Override

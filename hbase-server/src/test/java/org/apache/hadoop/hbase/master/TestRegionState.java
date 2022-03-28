@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionState {
 
   @ClassRule
@@ -45,14 +45,14 @@ public class TestRegionState {
   @Test
   public void testSerializeDeserialize() {
     final TableName tableName = TableName.valueOf("testtb");
-    for (RegionState.State state: RegionState.State.values()) {
+    for (RegionState.State state : RegionState.State.values()) {
       testSerializeDeserialize(tableName, state);
     }
   }
 
   private void testSerializeDeserialize(final TableName tableName, final RegionState.State state) {
     RegionState state1 =
-      RegionState.createForTesting(RegionInfoBuilder.newBuilder(tableName).build(), state);
+        RegionState.createForTesting(RegionInfoBuilder.newBuilder(tableName).build(), state);
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();

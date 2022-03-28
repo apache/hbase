@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDrainReplicationQueuesForStandBy.class);
+      HBaseClassTestRule.forClass(TestDrainReplicationQueuesForStandBy.class);
 
   @Test
   public void test() throws Exception {
@@ -57,7 +57,7 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
     String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(
       ((AbstractFSWAL<?>) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build()))
-        .getCurrentFileName().getName());
+          .getCurrentFileName().getName());
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
     // transit cluster2 to DA and cluster 1 to S
@@ -97,7 +97,7 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
 
     // confirm that we will not replicate the old data which causes inconsistency
     ReplicationSource source = (ReplicationSource) ((Replication) rs.getReplicationSourceService())
-      .getReplicationManager().getSource(PEER_ID);
+        .getReplicationManager().getSource(PEER_ID);
     UTIL1.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override

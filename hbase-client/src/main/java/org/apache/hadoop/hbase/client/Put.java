@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -39,10 +37,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Used to perform Put operations for a single row.
  * <p>
- * To perform a Put, instantiate a Put object with the row to insert to, and
- * for each column to be inserted, execute {@link #addColumn(byte[], byte[],
- * byte[]) add} or {@link #addColumn(byte[], byte[], long, byte[]) add} if
- * setting the timestamp.
+ * To perform a Put, instantiate a Put object with the row to insert to, and for each column to be
+ * inserted, execute {@link #addColumn(byte[], byte[], byte[]) add} or
+ * {@link #addColumn(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
 @InterfaceAudience.Public
 public class Put extends Mutation implements HeapSize {
@@ -50,13 +47,12 @@ public class Put extends Mutation implements HeapSize {
    * Create a Put operation for the specified row.
    * @param row row key
    */
-  public Put(byte [] row) {
+  public Put(byte[] row) {
     this(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
    * Create a Put operation for the specified row, using a given timestamp.
-   *
    * @param row row key; we make a copy of what we are passed to keep local.
    * @param ts timestamp
    */
@@ -70,13 +66,13 @@ public class Put extends Mutation implements HeapSize {
    * @param rowOffset
    * @param rowLength
    */
-  public Put(byte [] rowArray, int rowOffset, int rowLength) {
+  public Put(byte[] rowArray, int rowOffset, int rowLength) {
     this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
    * @param row row key; we make a copy of what we are passed to keep local.
-   * @param ts  timestamp
+   * @param ts timestamp
    */
   public Put(ByteBuffer row, long ts) {
     if (ts < 0) {
@@ -102,7 +98,7 @@ public class Put extends Mutation implements HeapSize {
    * @param rowLength
    * @param ts
    */
-  public Put(byte [] rowArray, int rowOffset, int rowLength, long ts) {
+  public Put(byte[] rowArray, int rowOffset, int rowLength, long ts) {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
     this.ts = ts;
@@ -113,24 +109,20 @@ public class Put extends Mutation implements HeapSize {
 
   /**
    * Create a Put operation for an immutable row key.
-   *
    * @param row row key
-   * @param rowIsImmutable whether the input row is immutable.
-   *                       Set to true if the caller can guarantee that
-   *                       the row will not be changed for the Put duration.
+   * @param rowIsImmutable whether the input row is immutable. Set to true if the caller can
+   *          guarantee that the row will not be changed for the Put duration.
    */
-  public Put(byte [] row, boolean rowIsImmutable) {
+  public Put(byte[] row, boolean rowIsImmutable) {
     this(row, HConstants.LATEST_TIMESTAMP, rowIsImmutable);
   }
 
   /**
    * Create a Put operation for an immutable row key, using a given timestamp.
-   *
    * @param row row key
    * @param ts timestamp
-   * @param rowIsImmutable whether the input row is immutable.
-   *                       Set to true if the caller can guarantee that
-   *                       the row will not be changed for the Put duration.
+   * @param rowIsImmutable whether the input row is immutable. Set to true if the caller can
+   *          guarantee that the row will not be changed for the Put duration.
    */
   public Put(byte[] row, long ts, boolean rowIsImmutable) {
     // Check and set timestamp
@@ -141,15 +133,15 @@ public class Put extends Mutation implements HeapSize {
 
     // Deal with row according to rowIsImmutable
     checkRow(row);
-    if (rowIsImmutable) {  // Row is immutable
-      this.row = row;  // Do not make a local copy, but point to the provided byte array directly
-    } else {  // Row is not immutable
-      this.row = Bytes.copy(row, 0, row.length);  // Make a local copy
+    if (rowIsImmutable) { // Row is immutable
+      this.row = row; // Do not make a local copy, but point to the provided byte array directly
+    } else { // Row is not immutable
+      this.row = Bytes.copy(row, 0, row.length); // Make a local copy
     }
   }
 
   /**
-   * Copy constructor.  Creates a Put operation cloned from the specified Put.
+   * Copy constructor. Creates a Put operation cloned from the specified Put.
    * @param putToCopy put to copy
    */
   public Put(Put putToCopy) {
@@ -157,14 +149,13 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * Construct the Put with user defined data. NOTED:
-   * 1) all cells in the familyMap must have the Type.Put
-   * 2) the row of each cell must be same with passed row.
+   * Construct the Put with user defined data. NOTED: 1) all cells in the familyMap must have the
+   * Type.Put 2) the row of each cell must be same with passed row.
    * @param row row. CAN'T be null
    * @param ts timestamp
    * @param familyMap the map to collect all cells internally. CAN'T be null
    */
-  public Put(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+  public Put(byte[] row, long ts, NavigableMap<byte[], List<Cell>> familyMap) {
     super(row, ts, familyMap);
   }
 
@@ -175,20 +166,20 @@ public class Put extends Mutation implements HeapSize {
    * @param value column value
    * @return this
    */
-  public Put addColumn(byte [] family, byte [] qualifier, byte [] value) {
+  public Put addColumn(byte[] family, byte[] qualifier, byte[] value) {
     return addColumn(family, qualifier, this.ts, value);
   }
 
   /**
-   * Add the specified column and value, with the specified timestamp as
-   * its version to this Put operation.
+   * Add the specified column and value, with the specified timestamp as its version to this Put
+   * operation.
    * @param family family name
    * @param qualifier column qualifier
    * @param ts version timestamp
    * @param value column value
    * @return this
    */
-  public Put addColumn(byte [] family, byte [] qualifier, long ts, byte [] value) {
+  public Put addColumn(byte[] family, byte[] qualifier, long ts, byte[] value) {
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
     }
@@ -199,8 +190,8 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * Add the specified column and value, with the specified timestamp as
-   * its version to this Put operation.
+   * Add the specified column and value, with the specified timestamp as its version to this Put
+   * operation.
    * @param family family name
    * @param qualifier column qualifier
    * @param ts version timestamp
@@ -218,9 +209,8 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * Add the specified KeyValue to this Put operation.  Operation assumes that
-   * the passed KeyValue is immutable and its backing array will not be modified
-   * for the duration of this Put.
+   * Add the specified KeyValue to this Put operation. Operation assumes that the passed KeyValue is
+   * immutable and its backing array will not be modified for the duration of this Put.
    * @param cell individual cell
    * @return this
    * @throws java.io.IOException e

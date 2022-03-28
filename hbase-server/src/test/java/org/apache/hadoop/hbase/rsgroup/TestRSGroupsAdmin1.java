@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsAdmin1.class);
+      HBaseClassTestRule.forClass(TestRSGroupsAdmin1.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin1.class);
 
@@ -152,7 +152,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertTrue(OBSERVER.postAddRSGroupCalled);
 
     ADMIN.createNamespace(NamespaceDescriptor.create(nsName)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
     RSGroupInfo rsGroupInfo = ADMIN.getRSGroup(groupName);
     ADMIN.moveServersToRSGroup(rsGroupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     // test removing a referenced group
@@ -164,7 +164,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     // test modify group
     // changing with the same name is fine
     ADMIN.modifyNamespace(NamespaceDescriptor.create(nsName)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
     String anotherGroup = TABLE_PREFIX + "_anotherGroup";
     ADMIN.addRSGroup(anotherGroup);
     // test add non-existent group
@@ -174,7 +174,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertTrue(OBSERVER.postRemoveRSGroupCalled);
     try {
       ADMIN.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo").build());
+          .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo").build());
       fail("Expected a constraint exception");
     } catch (IOException ex) {
     }
@@ -238,9 +238,9 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   @Test
   public void testMultiTableMove() throws Exception {
     final TableName tableNameA =
-      TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()) + "A");
+        TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()) + "A");
     final TableName tableNameB =
-      TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()) + "B");
+        TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()) + "B");
     final byte[] familyNameBytes = Bytes.toBytes("f");
     String newGroupName = getGroupName(getNameWithoutIndex(name.getMethodName()));
     final RSGroupInfo newGroup = addGroup(newGroupName, 1);
@@ -258,8 +258,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
         if (regionsB == null) {
           return false;
         }
-        return getTableRegionMap().get(tableNameA).size() >= 1 &&
-          getTableRegionMap().get(tableNameB).size() >= 1;
+        return getTableRegionMap().get(tableNameA).size() >= 1
+            && getTableRegionMap().get(tableNameB).size() >= 1;
       }
     });
 
@@ -279,7 +279,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
     // verify tables' not exist in old group
     Set<TableName> defaultTables =
-      Sets.newHashSet(ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP));
+        Sets.newHashSet(ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP));
     assertFalse(defaultTables.contains(tableNameA));
     assertFalse(defaultTables.contains(tableNameB));
 
@@ -382,7 +382,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   @Test
   public void testNonExistentTableMove() throws Exception {
     TableName tableName =
-      TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()));
+        TableName.valueOf(TABLE_PREFIX + getNameWithoutIndex(name.getMethodName()));
     RSGroupInfo tableGrp = ADMIN.getRSGroup(tableName);
     assertNull(tableGrp);
 
@@ -415,19 +415,19 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     toggleQuotaCheckAndRestartMiniCluster(true);
     String nsp = "np1";
     NamespaceDescriptor nspDesc =
-      NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
-        .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
+        NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
+            .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
     ADMIN.createNamespace(nspDesc);
     assertEquals(3, ADMIN.listNamespaceDescriptors().length);
     ColumnFamilyDescriptor fam1 = ColumnFamilyDescriptorBuilder.of("fam1");
     TableDescriptor tableDescOne = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"))
-      .setColumnFamily(fam1).build();
+        .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"))
+        .setColumnFamily(fam1).build();
     ADMIN.createTable(tableDescOne);
 
     TableDescriptor tableDescTwo = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"))
-      .setColumnFamily(fam1).build();
+        .newBuilder(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"))
+        .setColumnFamily(fam1).build();
     boolean constraintViolated = false;
 
     try {
@@ -445,7 +445,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     boolean foundTable1 = false;
     for (int i = 0; i < rsGroupInfoList.size(); i++) {
       Set<TableName> tables =
-        Sets.newHashSet(ADMIN.listTablesInRSGroup(rsGroupInfoList.get(i).getName()));
+          Sets.newHashSet(ADMIN.listTablesInRSGroup(rsGroupInfoList.get(i).getName()));
       if (tables.contains(tableDescTwo.getTableName())) {
         foundTable2 = true;
       }
@@ -500,8 +500,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TEST_UTIL.createTable(tb1, "tr");
     ADMIN.setRSGroup(Sets.newHashSet(tb1), oldgroup.getName());
     TEST_UTIL.waitFor(1000,
-      (Waiter.Predicate<Exception>) () ->
-        ADMIN.getRSGroup(tb1).getServers().size() == 2);
+      (Waiter.Predicate<Exception>) () -> ADMIN.getRSGroup(tb1).getServers().size() == 2);
     oldgroup = ADMIN.getRSGroup(oldgroup.getName());
     assertEquals(2, oldgroup.getServers().size());
     assertEquals(oldgroup.getName(), ADMIN.getRSGroup(tb1).getName());
@@ -513,12 +512,10 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TEST_UTIL.createTable(tb2, "ut");
     ADMIN.setRSGroup(Sets.newHashSet(tb2), normal.getName());
     TEST_UTIL.waitFor(1000,
-      (Waiter.Predicate<Exception>) () ->
-        ADMIN.getRSGroup(tb2).getServers().size() == 1);
+      (Waiter.Predicate<Exception>) () -> ADMIN.getRSGroup(tb2).getServers().size() == 1);
     normal = ADMIN.getRSGroup(normal.getName());
     assertEquals(1, normal.getServers().size());
     assertEquals(normal.getName(), ADMIN.getRSGroup(tb2).getName());
-
 
     // Rename rsgroup
     ADMIN.renameRSGroup(oldgroup.getName(), "newgroup");
@@ -545,43 +542,42 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertNotNull(oldGroup);
     assertEquals(2, oldGroup.getServers().size());
 
-    //Add another RSGroup
+    // Add another RSGroup
     String anotherRSGroupName = "anotherRSGroup";
     RSGroupInfo anotherGroup = addGroup(anotherRSGroupName, 1);
     anotherGroup = ADMIN.getRSGroup(anotherGroup.getName());
     assertNotNull(anotherGroup);
     assertEquals(1, anotherGroup.getServers().size());
 
-
-    //Rename a non existing RSGroup
+    // Rename a non existing RSGroup
     try {
       ADMIN.renameRSGroup("nonExistingRSGroup", "newRSGroup1");
       fail("ConstraintException was expected.");
-    } catch (ConstraintException e){
+    } catch (ConstraintException e) {
       assertTrue(e.getMessage().contains("does not exist"));
     }
 
-    //Rename to existing group
+    // Rename to existing group
     try {
       ADMIN.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
       fail("ConstraintException was expected.");
-    } catch (ConstraintException e){
+    } catch (ConstraintException e) {
       assertTrue(e.getMessage().contains("Group already exists"));
     }
 
-    //Rename default RSGroup
+    // Rename default RSGroup
     try {
       ADMIN.renameRSGroup(RSGroupInfo.DEFAULT_GROUP, "newRSGroup2");
       fail("ConstraintException was expected.");
-    } catch (ConstraintException e){
-      //Do nothing
+    } catch (ConstraintException e) {
+      // Do nothing
     }
 
-    //Rename to default RSGroup
+    // Rename to default RSGroup
     try {
       ADMIN.renameRSGroup(oldGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
       fail("ConstraintException was expected.");
-    } catch (ConstraintException e){
+    } catch (ConstraintException e) {
       assertTrue(e.getMessage().contains("Group already exists"));
     }
 

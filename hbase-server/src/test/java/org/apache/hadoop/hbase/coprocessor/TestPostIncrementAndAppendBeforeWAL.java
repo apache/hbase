@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -74,7 +73,7 @@ import org.slf4j.LoggerFactory;
  * change the cells which will be applied to memstore and WAL. So add unit test for the case which
  * change the cell's column family and tags.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestPostIncrementAndAppendBeforeWAL {
 
   @ClassRule
@@ -90,7 +89,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   private static Connection connection;
 
-  private static final byte [] ROW = Bytes.toBytes("row");
+  private static final byte[] ROW = Bytes.toBytes("row");
   private static final String CF1 = "cf1";
   private static final byte[] CF1_BYTES = Bytes.toBytes(CF1);
   private static final String CF2 = "cf2";
@@ -103,7 +102,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
   private static final byte[] VALUE2 = Bytes.toBytes("valuevalue");
   private static final String USER = "User";
   private static final Permission PERMS =
-    Permission.newBuilder().withActions(Permission.Action.READ).build();
+      Permission.newBuilder().withActions(Permission.Action.READ).build();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -179,8 +178,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Increment without TTL
-      Increment firstIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1)
-        .setACL(USER, PERMS);
+      Increment firstIncrement =
+          new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setACL(USER, PERMS);
       Result result = table.increment(firstIncrement);
       assertEquals(1, result.size());
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
@@ -192,8 +191,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
 
       // Increment with TTL
-      Increment secondIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000)
-        .setACL(USER, PERMS);
+      Increment secondIncrement =
+          new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000).setACL(USER, PERMS);
       result = table.increment(secondIncrement);
 
       // We should get value 2 here
@@ -229,8 +228,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
 
       // Append with TTL
-      Append secondAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000)
-        .setACL(USER, PERMS);
+      Append secondAppend =
+          new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000).setACL(USER, PERMS);
       result = table.append(secondAppend);
 
       // We should get "valuevalue""
@@ -253,8 +252,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
     while (iter.hasNext()) {
       Tag tag = iter.next();
       if (tag.getType() == TagType.ACL_TAG_TYPE) {
-        Tag temp = TagBuilderFactory.create().
-          setTagType(TagType.ACL_TAG_TYPE).setTagValue(acl).build();
+        Tag temp =
+            TagBuilderFactory.create().setTagType(TagType.ACL_TAG_TYPE).setTagValue(acl).build();
         return Tag.matchingValue(tag, temp);
       }
     }

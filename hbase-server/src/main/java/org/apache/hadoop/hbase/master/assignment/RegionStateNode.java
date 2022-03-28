@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -138,8 +138,8 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public void transitionState(final State update, final State... expected)
       throws UnexpectedStateException {
     if (!setState(update, expected)) {
-      throw new UnexpectedStateException("Expected " + Arrays.toString(expected) +
-        " so could move to " + update + " but current state=" + getState());
+      throw new UnexpectedStateException("Expected " + Arrays.toString(expected)
+          + " so could move to " + update + " but current state=" + getState());
     }
   }
 
@@ -308,7 +308,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
     if (ri.isSplitParent()) {
       throw new DoNotRetryRegionException(
-        ri.getEncodedName() + " is not online (splitParent=true)");
+          ri.getEncodedName() + " is not online (splitParent=true)");
     }
     if (ri.isSplit()) {
       throw new DoNotRetryRegionException(ri.getEncodedName() + " has split=true");

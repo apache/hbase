@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestRegionHDFSBlockLocationFinder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionHDFSBlockLocationFinder.class);
+      HBaseClassTestRule.forClass(TestRegionHDFSBlockLocationFinder.class);
 
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static TableDescriptor TD;
@@ -89,7 +89,7 @@ public class TestRegionHDFSBlockLocationFinder {
       byte[] startKey = i == 0 ? HConstants.EMPTY_START_ROW : Bytes.toBytes(i);
       byte[] endKey = i == numRegions ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes(i + 1);
       RegionInfo region = RegionInfoBuilder.newBuilder(TD.getTableName()).setStartKey(startKey)
-        .setEndKey(endKey).build();
+          .setEndKey(endKey).build();
       REGIONS.add(region);
     }
   }
@@ -111,7 +111,7 @@ public class TestRegionHDFSBlockLocationFinder {
 
       @Override
       public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-        TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
+          TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
         return generate(regionInfo);
       }
     });
@@ -159,7 +159,7 @@ public class TestRegionHDFSBlockLocationFinder {
   }
 
   private void assertHostAndWeightEquals(HDFSBlocksDistribution expected,
-    HDFSBlocksDistribution actual) {
+      HDFSBlocksDistribution actual) {
     Map<String, HostAndWeight> expectedMap = expected.getHostAndWeights();
     Map<String, HostAndWeight> actualMap = actual.getHostAndWeights();
     assertEquals(expectedMap.size(), actualMap.size());
@@ -220,8 +220,8 @@ public class TestRegionHDFSBlockLocationFinder {
       cache.put(region, hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
-      0.123f));
+    finder
+        .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
 
     // everything should be cached, because metrics were null before
     for (RegionInfo region : REGIONS) {
@@ -229,8 +229,8 @@ public class TestRegionHDFSBlockLocationFinder {
       assertSame(cache.get(region), hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
-      0.345f));
+    finder
+        .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
 
     // cache refresh happens in a background thread, so we need to wait for the value to
     // update before running assertions.
@@ -254,7 +254,7 @@ public class TestRegionHDFSBlockLocationFinder {
   }
 
   private ClusterMetrics getMetricsWithLocality(ServerName serverName, byte[] region,
-    float locality) {
+      float locality) {
     RegionMetrics regionMetrics = mock(RegionMetrics.class);
     when(regionMetrics.getDataLocality()).thenReturn(locality);
 

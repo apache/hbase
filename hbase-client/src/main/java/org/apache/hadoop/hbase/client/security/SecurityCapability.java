@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,10 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public enum SecurityCapability {
   // Note to implementors: These must match the numbering of Capability values in MasterProtos
-  SIMPLE_AUTHENTICATION(0),
-  SECURE_AUTHENTICATION(1),
-  AUTHORIZATION(2),
-  CELL_AUTHORIZATION(3),
+  SIMPLE_AUTHENTICATION(0), SECURE_AUTHENTICATION(1), AUTHORIZATION(2), CELL_AUTHORIZATION(3),
   CELL_VISIBILITY(4);
 
   private final int value;
@@ -48,11 +44,16 @@ public enum SecurityCapability {
 
   public static SecurityCapability valueOf(int value) {
     switch (value) {
-      case 0: return SIMPLE_AUTHENTICATION;
-      case 1: return SECURE_AUTHENTICATION;
-      case 2: return AUTHORIZATION;
-      case 3: return CELL_AUTHORIZATION;
-      case 4: return CELL_VISIBILITY;
+      case 0:
+        return SIMPLE_AUTHENTICATION;
+      case 1:
+        return SECURE_AUTHENTICATION;
+      case 2:
+        return AUTHORIZATION;
+      case 3:
+        return CELL_AUTHORIZATION;
+      case 4:
+        return CELL_VISIBILITY;
       default:
         throw new IllegalArgumentException("Unknown SecurityCapability value " + value);
     }

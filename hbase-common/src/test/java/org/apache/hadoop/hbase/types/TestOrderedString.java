@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,26 +29,25 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedString {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestOrderedString.class);
 
-  private static final String[] VALUES =
-      new String[] { null, "", "1", "22", "333", "4444", "55555", "666666",
-        "7777777", "88888888", "999999999" };
+  private static final String[] VALUES = new String[] { null, "", "1", "22", "333", "4444", "55555",
+      "666666", "7777777", "88888888", "999999999" };
 
   @Test
   public void testEncodedLength() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(20);
     for (final DataType<String> type : new OrderedString[] { new OrderedString(Order.ASCENDING),
-      new OrderedString(Order.DESCENDING) }) {
+        new OrderedString(Order.DESCENDING) }) {
       for (final String val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);
-        assertEquals("encodedLength does not match actual, " + val,
-          buff.getPosition(), type.encodedLength(val));
+        assertEquals("encodedLength does not match actual, " + val, buff.getPosition(),
+          type.encodedLength(val));
       }
     }
   }

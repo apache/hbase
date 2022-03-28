@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestStructNullExtension {
 
   @ClassRule
@@ -45,8 +45,7 @@ public class TestStructNullExtension {
    */
   @Test(expected = NullPointerException.class)
   public void testNonNullableNullExtension() {
-    Struct s = new StructBuilder()
-        .add(new RawStringTerminated("|")) // not nullable
+    Struct s = new StructBuilder().add(new RawStringTerminated("|")) // not nullable
         .toStruct();
     PositionedByteRange buf = new SimplePositionedMutableByteRange(4);
     s.encode(buf, new Object[1]);
@@ -58,20 +57,18 @@ public class TestStructNullExtension {
   @Test
   public void testNullableNullExtension() {
     // the following field members are used because they're all nullable
-    final StructBuilder builder = new StructBuilder()
-        .add(new OrderedNumeric(Order.ASCENDING))
+    final StructBuilder builder = new StructBuilder().add(new OrderedNumeric(Order.ASCENDING))
         .add(new OrderedString(Order.ASCENDING));
     Struct shorter = builder.toStruct();
     final Struct longer = builder
         // intentionally include a wrapped instance to test wrapper behavior.
         .add(new TerminatedWrapper<>(new OrderedString(Order.ASCENDING), "/"))
-        .add(new OrderedNumeric(Order.ASCENDING))
-        .toStruct();
+        .add(new OrderedNumeric(Order.ASCENDING)).toStruct();
 
     PositionedByteRange buf1 = new SimplePositionedMutableByteRange(7);
     Object[] val1 = new Object[] { BigDecimal.ONE, "foo" }; // => 2 bytes + 5 bytes
-    assertEquals("Encoding shorter value wrote a surprising number of bytes.",
-      buf1.getLength(), shorter.encode(buf1, val1));
+    assertEquals("Encoding shorter value wrote a surprising number of bytes.", buf1.getLength(),
+      shorter.encode(buf1, val1));
     int shortLen = buf1.getLength();
 
     // test iterator

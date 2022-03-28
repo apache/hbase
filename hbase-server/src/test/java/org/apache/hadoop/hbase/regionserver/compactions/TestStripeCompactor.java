@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -200,8 +200,8 @@ public class TestStripeCompactor {
 
     // Create store mock that is satisfactory for compactor.
     ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
-    ScanInfo si = new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0,
-      CellComparatorImpl.COMPARATOR);
+    ScanInfo si =
+        new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
     HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor()).thenReturn(familyDescriptor);
     when(store.getScanInfo()).thenReturn(si);

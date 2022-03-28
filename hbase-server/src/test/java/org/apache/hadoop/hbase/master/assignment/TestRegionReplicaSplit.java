@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +19,10 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -120,8 +119,7 @@ public class TestRegionReplicaSplit {
           for (Region r : rs.getRegionServer().getRegions(table.getName())) {
             // Make sure that every region has some data (even for split daughter regions).
             if (RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
-              assertTrue(r.getStore(f).hasReferences() ||
-                r.getStore(f).getStorefiles().size() > 0);
+              assertTrue(r.getStore(f).hasReferences() || r.getStore(f).getStorefiles().size() > 0);
             }
             count++;
           }
@@ -145,9 +143,8 @@ public class TestRegionReplicaSplit {
     Table table = null;
     try {
       table = createTableAndLoadData(tn);
-      final RegionInfo fakeHri =
-        RegionInfoBuilder.newBuilder(table.getName()).setStartKey(Bytes.toBytes("a"))
-          .setEndKey(Bytes.toBytes("b")).setReplicaId(1)
+      final RegionInfo fakeHri = RegionInfoBuilder.newBuilder(table.getName())
+          .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).setReplicaId(1)
           .setRegionId(EnvironmentEdgeManager.currentTime()).build();
 
       // To test AssignProcedure can defend this case.
@@ -155,7 +152,7 @@ public class TestRegionReplicaSplit {
       // Wait until all assigns are done.
       HBaseTestingUtil.await(50, () -> {
         return HTU.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
-          .isEmpty();
+            .isEmpty();
       });
 
       // Make sure the region is not online.

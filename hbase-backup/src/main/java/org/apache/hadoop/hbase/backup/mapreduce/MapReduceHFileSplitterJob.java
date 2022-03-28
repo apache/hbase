@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -69,17 +68,15 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
   }
 
   /**
-   * A mapper that just writes out cells. This one can be used together with
-   * {@link CellSortReducer}
+   * A mapper that just writes out cells. This one can be used together with {@link CellSortReducer}
    */
-  static class HFileCellMapper extends
-      Mapper<NullWritable, Cell, ImmutableBytesWritable, Cell> {
+  static class HFileCellMapper extends Mapper<NullWritable, Cell, ImmutableBytesWritable, Cell> {
 
     @Override
     public void map(NullWritable key, Cell value, Context context)
         throws IOException, InterruptedException {
       context.write(new ImmutableBytesWritable(CellUtil.cloneRow(value)),
-          new MapReduceExtendedCell(value));
+        new MapReduceExtendedCell(value));
     }
 
     @Override
@@ -100,9 +97,8 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     String tabName = args[1];
     conf.setStrings(TABLES_KEY, tabName);
     conf.set(FileInputFormat.INPUT_DIR, inputDirs);
-    Job job =
-        Job.getInstance(conf,
-          conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
+    Job job = Job.getInstance(conf,
+      conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
     job.setJarByClass(MapReduceHFileSplitterJob.class);
     job.setInputFormatClass(HFileInputFormat.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);

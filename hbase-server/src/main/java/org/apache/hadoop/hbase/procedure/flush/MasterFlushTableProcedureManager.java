@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,8 +63,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
   private static final String FLUSH_WAKE_MILLIS_KEY = "hbase.flush.master.wakeMillis";
   private static final int FLUSH_WAKE_MILLIS_DEFAULT = 500;
 
-  private static final String FLUSH_PROC_POOL_THREADS_KEY =
-      "hbase.flush.procedure.master.threads";
+  private static final String FLUSH_PROC_POOL_THREADS_KEY = "hbase.flush.procedure.master.threads";
   private static final int FLUSH_PROC_POOL_THREADS_DEFAULT = 1;
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterFlushTableProcedureManager.class);
@@ -74,7 +73,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
   private Map<TableName, Procedure> procMap = new HashMap<>();
   private boolean stopped;
 
-  public MasterFlushTableProcedureManager() {}
+  public MasterFlushTableProcedureManager() {
+  }
 
   @Override
   public void stop(String why) {
@@ -101,8 +101,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // setup the procedure coordinator
     String name = master.getServerName().toString();
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, threads);
-    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinator(
-        master.getZooKeeper(), getProcedureSignature(), name);
+    ProcedureCoordinatorRpcs comms =
+        new ZKProcedureCoordinator(master.getZooKeeper(), getProcedureSignature(), name);
 
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
   }
@@ -129,7 +129,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
     List<Pair<RegionInfo, ServerName>> regionsAndLocations =
-      master.getAssignmentManager().getTableRegionsAndLocations(tableName, false);
+        master.getAssignmentManager().getTableRegionsAndLocations(tableName, false);
 
     Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<RegionInfo, ServerName> region : regionsAndLocations) {
@@ -153,8 +153,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // Kick of the global procedure from the master coordinator to the region servers.
     // We rely on the existing Distributed Procedure framework to prevent any concurrent
     // procedure with the same name.
-    Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(),
-      procArgs, Lists.newArrayList(regionServers));
+    Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(), procArgs,
+      Lists.newArrayList(regionServers));
     monitor.rethrowException();
     if (proc == null) {
       String msg = "Failed to submit distributed procedure " + desc.getSignature() + " for '"
@@ -166,7 +166,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     procMap.put(tableName, proc);
 
     try {
-      // wait for the procedure to complete.  A timer thread is kicked off that should cancel this
+      // wait for the procedure to complete. A timer thread is kicked off that should cancel this
       // if it takes too long.
       proc.waitForCompleted();
       LOG.info("Done waiting - exec procedure " + desc.getSignature() + " for '"

@@ -67,7 +67,7 @@ public class TestGetClosestAtOrBefore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGetClosestAtOrBefore.class);
+      HBaseClassTestRule.forClass(TestGetClosestAtOrBefore.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -104,11 +104,12 @@ public class TestGetClosestAtOrBefore {
         final int interval = 2;
         for (int i = 0; i <= last; i += interval) {
           RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i))
-            .setEndKey(i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval))
-            .build();
+              .setStartKey(i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i))
+              .setEndKey(
+                i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval))
+              .build();
           Put put =
-            MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+              MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
           put.setDurability(Durability.SKIP_WAL);
           LOG.info("Put {}", put);
           mr.put(put);
@@ -168,7 +169,7 @@ public class TestGetClosestAtOrBefore {
    * @return Row found.
    */
   private byte[] findRow(final Region mr, final char table, final int rowToFind, final int answer)
-    throws IOException {
+      throws IOException {
     TableName tableb = TableName.valueOf("" + table);
     // Find the row.
     byte[] tofindBytes = Bytes.toBytes((short) rowToFind);

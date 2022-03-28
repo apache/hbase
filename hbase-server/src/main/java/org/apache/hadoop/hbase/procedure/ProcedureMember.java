@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,20 +25,19 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Process to kick off and manage a running {@link Subprocedure} on a member. This is the
- * specialized part of a {@link Procedure} that actually does procedure type-specific work
- * and reports back to the coordinator as it completes each phase.
+ * specialized part of a {@link Procedure} that actually does procedure type-specific work and
+ * reports back to the coordinator as it completes each phase.
  */
 @InterfaceAudience.Private
 public class ProcedureMember implements Closeable {
@@ -49,13 +48,12 @@ public class ProcedureMember implements Closeable {
   private final SubprocedureFactory builder;
   private final ProcedureMemberRpcs rpcs;
 
-  private final ConcurrentMap<String,Subprocedure> subprocs =
+  private final ConcurrentMap<String, Subprocedure> subprocs =
       new MapMaker().concurrencyLevel(4).weakValues().makeMap();
   private final ExecutorService pool;
 
   /**
-   * Instantiate a new ProcedureMember.  This is a slave that executes subprocedures.
-   *
+   * Instantiate a new ProcedureMember. This is a slave that executes subprocedures.
    * @param rpcs controller used to send notifications to the procedure coordinator
    * @param pool thread pool to submit subprocedures
    * @param factory class that creates instances of a subprocedure.
@@ -69,7 +67,6 @@ public class ProcedureMember implements Closeable {
 
   /**
    * Default thread pool for the procedure
-   *
    * @param memberName
    * @param procThreads the maximum number of threads to allow in the pool
    */
@@ -79,7 +76,6 @@ public class ProcedureMember implements Closeable {
 
   /**
    * Default thread pool for the procedure
-   *
    * @param memberName
    * @param procThreads the maximum number of threads to allow in the pool
    * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
@@ -87,20 +83,19 @@ public class ProcedureMember implements Closeable {
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, procThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-      new SynchronousQueue<>(),
-      new ThreadFactoryBuilder().setNameFormat("member: '" + memberName + "' subprocedure-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        new SynchronousQueue<>(),
+        new ThreadFactoryBuilder()
+            .setNameFormat("member: '" + memberName + "' subprocedure-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**
-   * Package exposed.  Not for public use.
-   *
+   * Package exposed. Not for public use.
    * @return reference to the Procedure member's rpcs object
    */
   ProcedureMemberRpcs getRpcs() {
     return rpcs;
   }
-
 
   /**
    * This is separated from execution so that we can detect and handle the case where the
@@ -115,15 +110,15 @@ public class ProcedureMember implements Closeable {
   }
 
   /**
-   * Submit an subprocedure for execution.  This starts the local acquire phase.
+   * Submit an subprocedure for execution. This starts the local acquire phase.
    * @param subproc the subprocedure to execute.
-   * @return <tt>true</tt> if the subprocedure was started correctly, <tt>false</tt> if it
-   *         could not be started. In the latter case, the subprocedure holds a reference to
-   *         the exception that caused the failure.
+   * @return <tt>true</tt> if the subprocedure was started correctly, <tt>false</tt> if it could not
+   *         be started. In the latter case, the subprocedure holds a reference to the exception
+   *         that caused the failure.
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public boolean submitSubprocedure(Subprocedure subproc) {
-     // if the submitted subprocedure was null, bail.
+    // if the submitted subprocedure was null, bail.
     if (subproc == null) {
       LOG.warn("Submitted null subprocedure, nothing to run here.");
       return false;
@@ -142,7 +137,7 @@ public class ProcedureMember implements Closeable {
         LOG.error("Subproc '" + procName + "' is already running. Bailing out");
         return false;
       }
-      LOG.warn("A completed old subproc "  +  procName + " is still present, removing");
+      LOG.warn("A completed old subproc " + procName + " is still present, removing");
       if (!subprocs.remove(procName, rsub)) {
         LOG.error("Another thread has replaced existing subproc '" + procName + "'. Bailing out");
         return false;
@@ -172,21 +167,21 @@ public class ProcedureMember implements Closeable {
     return false;
   }
 
-   /**
-    * Notification that procedure coordinator has reached the global barrier
-    * @param procName name of the subprocedure that should start running the in-barrier phase
-    */
-   public void receivedReachedGlobalBarrier(String procName) {
-     Subprocedure subproc = subprocs.get(procName);
-     if (subproc == null) {
-       LOG.warn("Unexpected reached globa barrier message for Sub-Procedure '" + procName + "'");
-       return;
-     }
-     if (LOG.isTraceEnabled()) {
+  /**
+   * Notification that procedure coordinator has reached the global barrier
+   * @param procName name of the subprocedure that should start running the in-barrier phase
+   */
+  public void receivedReachedGlobalBarrier(String procName) {
+    Subprocedure subproc = subprocs.get(procName);
+    if (subproc == null) {
+      LOG.warn("Unexpected reached globa barrier message for Sub-Procedure '" + procName + "'");
+      return;
+    }
+    if (LOG.isTraceEnabled()) {
       LOG.trace("reached global barrier message for Sub-Procedure '" + procName + "'");
-     }
-     subproc.receiveReachedGlobalBarrier();
-   }
+    }
+    subproc.receiveReachedGlobalBarrier();
+  }
 
   /**
    * Best effort attempt to close the threadpool via Thread.interrupt.
@@ -238,8 +233,9 @@ public class ProcedureMember implements Closeable {
     // if we know about the procedure, notify it
     Subprocedure sub = subprocs.get(procName);
     if (sub == null) {
-      LOG.info("Received abort on procedure with no local subprocedure " + procName +
-          ", ignoring it.", ee);
+      LOG.info(
+        "Received abort on procedure with no local subprocedure " + procName + ", ignoring it.",
+        ee);
       return; // Procedure has already completed
     }
     String msg = "Propagating foreign exception to subprocedure " + sub.getName();

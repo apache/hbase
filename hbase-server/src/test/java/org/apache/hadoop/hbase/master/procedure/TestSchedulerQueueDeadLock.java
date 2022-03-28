@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestSchedulerQueueDeadLock {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSchedulerQueueDeadLock.class);
+      HBaseClassTestRule.forClass(TestSchedulerQueueDeadLock.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -165,7 +165,7 @@ public class TestSchedulerQueueDeadLock {
     procStore.start(1);
     MasterProcedureScheduler scheduler = new MasterProcedureScheduler(pid -> null);
     procExec = new ProcedureExecutor<>(UTIL.getConfiguration(), new TestEnv(scheduler), procStore,
-      scheduler);
+        scheduler);
     procExec.init(1, false);
   }
 
@@ -267,7 +267,7 @@ public class TestSchedulerQueueDeadLock {
     UTIL.waitFor(10000,
       () -> procExec.getProcedures().stream().anyMatch(p -> p instanceof TableSharedProcedure));
     procExec.getProcedures().stream().filter(p -> p instanceof TableSharedProcedure)
-      .map(p -> (TableSharedProcedure) p).forEach(p -> p.latch.release());
+        .map(p -> (TableSharedProcedure) p).forEach(p -> p.latch.release());
     ((TableExclusiveProcedure) procExec.getProcedure(procId2)).latch.release();
 
     UTIL.waitFor(10000, () -> procExec.isFinished(procId1));

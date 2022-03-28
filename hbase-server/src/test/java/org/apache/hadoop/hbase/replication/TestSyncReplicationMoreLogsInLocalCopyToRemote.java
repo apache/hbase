@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,10 +48,10 @@ public class TestSyncReplicationMoreLogsInLocalCopyToRemote extends SyncReplicat
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationMoreLogsInLocalCopyToRemote.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationMoreLogsInLocalCopyToRemote.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestSyncReplicationMoreLogsInLocalCopyToRemote.class);
+      LoggerFactory.getLogger(TestSyncReplicationMoreLogsInLocalCopyToRemote.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -71,10 +71,10 @@ public class TestSyncReplicationMoreLogsInLocalCopyToRemote extends SyncReplicat
       SyncReplicationState.ACTIVE);
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
     DualAsyncFSWALForTest wal =
-      (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+        (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     wal.setRemoteBroken();
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
       AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setMaxAttempts(1).build();
       try {
         table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0))).get();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.util.ArrayList;
@@ -28,8 +27,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@link WALEntryFilter} which contains multiple filters and applies them
- * in chain order
+ * A {@link WALEntryFilter} which contains multiple filters and applies them in chain order
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class ChainWALEntryFilter implements WALEntryFilter {
@@ -37,7 +35,7 @@ public class ChainWALEntryFilter implements WALEntryFilter {
   private final WALEntryFilter[] filters;
   private WALCellFilter[] cellFilters;
 
-  public ChainWALEntryFilter(WALEntryFilter...filters) {
+  public ChainWALEntryFilter(WALEntryFilter... filters) {
     this.filters = filters;
     initCellFilters();
   }

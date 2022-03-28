@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -28,14 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
 final class TestHDFSAclHelper {
   private static final Logger LOG = LoggerFactory.getLogger(TestHDFSAclHelper.class);
 
@@ -45,7 +44,7 @@ final class TestHDFSAclHelper {
   }
 
   static void grantOnTable(HBaseTestingUtil util, String user, TableName tableName,
-                           Permission.Action... actions) throws Exception {
+      Permission.Action... actions) throws Exception {
     SecureTestUtil.grantOnTable(util, user, tableName, null, null, actions);
   }
 
@@ -155,7 +154,7 @@ final class TestHDFSAclHelper {
   }
 
   static PrivilegedExceptionAction<Void> getScanSnapshotAction(Configuration conf,
-                                                               String snapshotName, long expectedRowCount) {
+      String snapshotName, long expectedRowCount) {
     return () -> {
       try {
         Path restoreDir = new Path(SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_TMP_DIR_DEFAULT);

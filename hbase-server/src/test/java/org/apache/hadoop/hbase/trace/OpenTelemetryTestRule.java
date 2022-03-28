@@ -21,8 +21,8 @@ import org.junit.rules.ExternalResource;
 
 /**
  * Used alongside {@link OpenTelemetryClassRule}. See that class's javadoc for details on when to
- * use these classes instead of {@link io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule} and
- * an example of how to use these classes together.
+ * use these classes instead of {@link io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule} and an
+ * example of how to use these classes together.
  */
 public final class OpenTelemetryTestRule extends ExternalResource {
 

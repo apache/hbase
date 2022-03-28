@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isEmpty;
+
 import java.time.Instant;
 import java.time.Period;
 import java.util.ArrayList;
@@ -49,12 +50,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Simple implementation of region normalizer. Logic in use:
  * <ol>
- *   <li>Get all regions of a given table</li>
- *   <li>Get avg size S of the regions in the table (by total size of store files reported in
- *     RegionMetrics)</li>
- *   <li>For each region R0, if R0 is bigger than S * 2, it is kindly requested to split.</li>
- *   <li>Otherwise, for the next region in the chain R1, if R0 + R1 is smaller then S, R0 and R1
- *     are kindly requested to merge.</li>
+ * <li>Get all regions of a given table</li>
+ * <li>Get avg size S of the regions in the table (by total size of store files reported in
+ * RegionMetrics)</li>
+ * <li>For each region R0, if R0 is bigger than S * 2, it is kindly requested to split.</li>
+ * <li>Otherwise, for the next region in the chain R1, if R0 + R1 is smaller then S, R0 and R1 are
+ * kindly requested to merge.</li>
  * </ol>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -66,8 +67,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final String MERGE_ENABLED_KEY = "hbase.normalizer.merge.enabled";
   static final boolean DEFAULT_MERGE_ENABLED = true;
   /**
-   * @deprecated since 2.5.0 and will be removed in 4.0.0.
-   *   Use {@link SimpleRegionNormalizer#MERGE_MIN_REGION_COUNT_KEY} instead.
+   * @deprecated since 2.5.0 and will be removed in 4.0.0. Use
+   *             {@link SimpleRegionNormalizer#MERGE_MIN_REGION_COUNT_KEY} instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-25745">HBASE-25745</a>
    */
   @Deprecated
@@ -107,8 +108,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   private static int parseMergeMinRegionCount(final Configuration conf) {
-    final int parsedValue = conf.getInt(MERGE_MIN_REGION_COUNT_KEY,
-      DEFAULT_MERGE_MIN_REGION_COUNT);
+    final int parsedValue = conf.getInt(MERGE_MIN_REGION_COUNT_KEY, DEFAULT_MERGE_MIN_REGION_COUNT);
     final int settledValue = Math.max(1, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_MIN_REGION_COUNT_KEY, parsedValue, settledValue);
@@ -118,7 +118,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
   private static Period parseMergeMinRegionAge(final Configuration conf) {
     final int parsedValue =
-      conf.getInt(MERGE_MIN_REGION_AGE_DAYS_KEY, DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
+        conf.getInt(MERGE_MIN_REGION_AGE_DAYS_KEY, DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
     final int settledValue = Math.max(0, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_MIN_REGION_AGE_DAYS_KEY, parsedValue, settledValue);
@@ -128,7 +128,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
   private static long parseMergeMinRegionSizeMb(final Configuration conf) {
     final long parsedValue =
-      conf.getLong(MERGE_MIN_REGION_SIZE_MB_KEY, DEFAULT_MERGE_MIN_REGION_SIZE_MB);
+        conf.getLong(MERGE_MIN_REGION_SIZE_MB_KEY, DEFAULT_MERGE_MIN_REGION_SIZE_MB);
     final long settledValue = Math.max(0, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_MIN_REGION_SIZE_MB_KEY, parsedValue, settledValue);
@@ -137,13 +137,13 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   private static <T> void warnInvalidValue(final String key, final T parsedValue,
-    final T settledValue) {
-    LOG.warn("Configured value {}={} is invalid. Setting value to {}.",
-      key, parsedValue, settledValue);
+      final T settledValue) {
+    LOG.warn("Configured value {}={} is invalid. Setting value to {}.", key, parsedValue,
+      settledValue);
   }
 
   private static <T> void logConfigurationUpdated(final String key, final T oldValue,
-    final T newValue) {
+      final T newValue) {
     if (!Objects.equals(oldValue, newValue)) {
       LOG.info("Updated configuration for key '{}' from {} to {}", key, oldValue, newValue);
     }
@@ -229,8 +229,9 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       plans.addAll(mergePlans);
     }
 
-    LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, " +
-        "merge plans: {}", table, plans.size(), splitPlansCount, mergePlansCount);
+    LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, "
+        + "merge plans: {}",
+      table, plans.size(), splitPlansCount, mergePlansCount);
     return plans;
   }
 
@@ -239,7 +240,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   private long getRegionSizeMB(RegionInfo hri) {
     ServerName sn =
-      masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
+        masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
     if (sn == null) {
       LOG.debug("{} region was not found on any Server", hri.getRegionNameAsString());
       return -1;
@@ -263,28 +264,28 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
   private boolean proceedWithSplitPlanning(TableDescriptor tableDescriptor) {
     String value = tableDescriptor.getValue(SPLIT_ENABLED_KEY);
-    return  (value == null ? isSplitEnabled() : Boolean.parseBoolean(value)) &&
-      isMasterSwitchEnabled(MasterSwitchType.SPLIT);
+    return (value == null ? isSplitEnabled() : Boolean.parseBoolean(value))
+        && isMasterSwitchEnabled(MasterSwitchType.SPLIT);
   }
 
   private boolean proceedWithMergePlanning(TableDescriptor tableDescriptor) {
     String value = tableDescriptor.getValue(MERGE_ENABLED_KEY);
-    return (value == null ? isMergeEnabled() : Boolean.parseBoolean(value)) &&
-      isMasterSwitchEnabled(MasterSwitchType.MERGE);
+    return (value == null ? isMergeEnabled() : Boolean.parseBoolean(value))
+        && isMasterSwitchEnabled(MasterSwitchType.MERGE);
   }
 
   /**
    * @param tableRegions regions of table to normalize
    * @param tableDescriptor the TableDescriptor
    * @return average region size depending on
-   * @see org.apache.hadoop.hbase.client.TableDescriptor#getNormalizerTargetRegionCount()
-   * Also make sure tableRegions contains regions of the same table
+   * @see org.apache.hadoop.hbase.client.TableDescriptor#getNormalizerTargetRegionCount() Also make
+   *      sure tableRegions contains regions of the same table
    */
   private double getAverageRegionSizeMb(final List<RegionInfo> tableRegions,
-    final TableDescriptor tableDescriptor) {
+      final TableDescriptor tableDescriptor) {
     if (isEmpty(tableRegions)) {
       throw new IllegalStateException(
-        "Cannot calculate average size of a table without any regions.");
+          "Cannot calculate average size of a table without any regions.");
     }
     TableName table = tableDescriptor.getTableName();
     double avgRegionSize;
@@ -297,9 +298,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       avgRegionSize = targetRegionSize;
     } else {
       final int regionCount = tableRegions.size();
-      final long totalSizeMb = tableRegions.stream()
-        .mapToLong(this::getRegionSizeMB)
-        .sum();
+      final long totalSizeMb = tableRegions.stream().mapToLong(this::getRegionSizeMB).sum();
       if (targetRegionCount > 0) {
         avgRegionSize = totalSizeMb / (double) targetRegionCount;
       } else {
@@ -318,25 +317,17 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    * Callers beware: for safe concurrency, be sure to pass in the local instance of
    * {@link NormalizerConfiguration}, don't use {@code this}'s instance.
    */
-  private boolean skipForMerge(
-    final NormalizerConfiguration normalizerConfiguration,
-    final NormalizeContext ctx,
-    final RegionInfo regionInfo
-  ) {
+  private boolean skipForMerge(final NormalizerConfiguration normalizerConfiguration,
+      final NormalizeContext ctx, final RegionInfo regionInfo) {
     final RegionState state = ctx.getRegionStates().getRegionState(regionInfo);
     final String name = regionInfo.getEncodedName();
-    return
-      logTraceReason(
-        () -> state == null,
-        "skipping merge of region {} because no state information is available.", name)
-        || logTraceReason(
-          () -> !Objects.equals(state.getState(), RegionState.State.OPEN),
+    return logTraceReason(() -> state == null,
+      "skipping merge of region {} because no state information is available.", name)
+        || logTraceReason(() -> !Objects.equals(state.getState(), RegionState.State.OPEN),
           "skipping merge of region {} because it is not open.", name)
-        || logTraceReason(
-          () -> !isOldEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
+        || logTraceReason(() -> !isOldEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
           "skipping merge of region {} because it is not old enough.", name)
-        || logTraceReason(
-          () -> !isLargeEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
+        || logTraceReason(() -> !isLargeEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
           "skipping merge region {} because it is not large enough.", name);
   }
 
@@ -347,9 +338,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   private List<NormalizationPlan> computeMergeNormalizationPlans(final NormalizeContext ctx) {
     final NormalizerConfiguration configuration = normalizerConfiguration;
     if (ctx.getTableRegions().size() < configuration.getMergeMinRegionCount(ctx)) {
-      LOG.debug("Table {} has {} regions, required min number of regions for normalizer to run"
-          + " is {}, not computing merge plans.", ctx.getTableName(),
-        ctx.getTableRegions().size(), configuration.getMergeMinRegionCount());
+      LOG.debug(
+        "Table {} has {} regions, required min number of regions for normalizer to run"
+            + " is {}, not computing merge plans.",
+        ctx.getTableName(), ctx.getTableRegions().size(), configuration.getMergeMinRegionCount());
       return Collections.emptyList();
     }
 
@@ -358,8 +350,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       return Collections.emptyList();
     }
     LOG.debug("Computing normalization plan for table {}. average region size: {} MB, number of"
-      + " regions: {}.", ctx.getTableName(), avgRegionSizeMb,
-      ctx.getTableRegions().size());
+        + " regions: {}.",
+      ctx.getTableName(), avgRegionSizeMb, ctx.getTableRegions().size());
 
     // this nested loop walks the table's region chain once, looking for contiguous sequences of
     // regions that meet the criteria for merge. The outer loop tracks the starting point of the
@@ -370,8 +362,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     final List<NormalizationTarget> rangeMembers = new LinkedList<>();
     long sumRangeMembersSizeMb;
     int current = 0;
-    for (int rangeStart = 0;
-         rangeStart < ctx.getTableRegions().size() - 1 && current < ctx.getTableRegions().size();) {
+    for (int rangeStart = 0; rangeStart < ctx.getTableRegions().size() - 1
+        && current < ctx.getTableRegions().size();) {
       // walk the region chain looking for contiguous sequences of regions that can be merged.
       rangeMembers.clear();
       sumRangeMembersSizeMb = 0;
@@ -386,15 +378,16 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         if (rangeMembers.isEmpty() // when there are no range members, seed the range with whatever
                                    // we have. this way we're prepared in case the next region is
                                    // 0-size.
-          || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0) // when there is only one
-                                                                      // region and the size is 0,
-                                                                      // seed the range with
-                                                                      // whatever we have.
-          || regionSizeMb == 0 // always add an empty region to the current range.
-          || (regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)) { // add the current region
-                                                                          // to the range when
-                                                                          // there's capacity
-                                                                          // remaining.
+            || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0) // when there is only one
+                                                                        // region and the size is 0,
+                                                                        // seed the range with
+                                                                        // whatever we have.
+            || regionSizeMb == 0 // always add an empty region to the current range.
+            || (regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)) { // add the current
+                                                                            // region
+                                                                            // to the range when
+                                                                            // there's capacity
+                                                                            // remaining.
           rangeMembers.add(new NormalizationTarget(regionInfo, regionSizeMb));
           sumRangeMembersSizeMb += regionSizeMb;
           continue;
@@ -415,21 +408,17 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   private static boolean skipForSplit(final RegionState state, final RegionInfo regionInfo) {
     final String name = regionInfo.getEncodedName();
-    return
-      logTraceReason(
-        () -> state == null,
-        "skipping split of region {} because no state information is available.", name)
-        || logTraceReason(
-          () -> !Objects.equals(state.getState(), RegionState.State.OPEN),
+    return logTraceReason(() -> state == null,
+      "skipping split of region {} because no state information is available.", name)
+        || logTraceReason(() -> !Objects.equals(state.getState(), RegionState.State.OPEN),
           "skipping merge of region {} because it is not open.", name);
   }
 
   /**
    * Computes the split plans that should be executed for this table to converge average region size
-   * towards target average or target region count.
-   * <br />
-   * if the region is > 2 times larger than average, we split it. split
-   * is more high priority normalization action than merge.
+   * towards target average or target region count. <br />
+   * if the region is > 2 times larger than average, we split it. split is more high priority
+   * normalization action than merge.
    */
   private List<NormalizationPlan> computeSplitNormalizationPlans(final NormalizeContext ctx) {
     final double avgRegionSize = ctx.getAverageRegionSizeMb();
@@ -443,8 +432,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       }
       final long regionSizeMb = getRegionSizeMB(hri);
       if (regionSizeMb > 2 * avgRegionSize) {
-        LOG.info("Table {}, large region {} has size {} MB, more than twice avg size {} MB, "
-            + "splitting", ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
+        LOG.info(
+          "Table {}, large region {} has size {} MB, more than twice avg size {} MB, "
+              + "splitting",
+          ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
           String.format("%.3f", avgRegionSize));
         plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
       }
@@ -453,37 +444,31 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   /**
-   * Return {@code true} when {@code regionInfo} has a creation date that is old
-   * enough to be considered for a merge operation, {@code false} otherwise.
+   * Return {@code true} when {@code regionInfo} has a creation date that is old enough to be
+   * considered for a merge operation, {@code false} otherwise.
    */
-  private static boolean isOldEnoughForMerge(
-    final NormalizerConfiguration normalizerConfiguration,
-    final NormalizeContext ctx,
-    final RegionInfo regionInfo
-  ) {
+  private static boolean isOldEnoughForMerge(final NormalizerConfiguration normalizerConfiguration,
+      final NormalizeContext ctx, final RegionInfo regionInfo) {
     final Instant currentTime = Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime());
     final Instant regionCreateTime = Instant.ofEpochMilli(regionInfo.getRegionId());
-    return currentTime.isAfter(
-      regionCreateTime.plus(normalizerConfiguration.getMergeMinRegionAge(ctx)));
+    return currentTime
+        .isAfter(regionCreateTime.plus(normalizerConfiguration.getMergeMinRegionAge(ctx)));
   }
 
   /**
-   * Return {@code true} when {@code regionInfo} has a size that is sufficient
-   * to be considered for a merge operation, {@code false} otherwise.
+   * Return {@code true} when {@code regionInfo} has a size that is sufficient to be considered for
+   * a merge operation, {@code false} otherwise.
    * </p>
    * Callers beware: for safe concurrency, be sure to pass in the local instance of
    * {@link NormalizerConfiguration}, don't use {@code this}'s instance.
    */
-  private boolean isLargeEnoughForMerge(
-    final NormalizerConfiguration normalizerConfiguration,
-    final NormalizeContext ctx,
-    final RegionInfo regionInfo
-  ) {
+  private boolean isLargeEnoughForMerge(final NormalizerConfiguration normalizerConfiguration,
+      final NormalizeContext ctx, final RegionInfo regionInfo) {
     return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
   }
 
   private static boolean logTraceReason(final BooleanSupplier predicate, final String fmtWhenTrue,
-    final Object... args) {
+      final Object... args) {
     final boolean value = predicate.getAsBoolean();
     if (value) {
       LOG.trace(fmtWhenTrue, args);
@@ -492,8 +477,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   /**
-   * Holds the configuration values read from {@link Configuration}. Encapsulation in a POJO
-   * enables atomic hot-reloading of configs without locks.
+   * Holds the configuration values read from {@link Configuration}. Encapsulation in a POJO enables
+   * atomic hot-reloading of configs without locks.
    */
   private static final class NormalizerConfiguration {
     private final Configuration conf;
@@ -512,10 +497,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
     }
 
-    private NormalizerConfiguration(
-      final Configuration conf,
-      final NormalizerConfiguration currentConfiguration
-    ) {
+    private NormalizerConfiguration(final Configuration conf,
+        final NormalizerConfiguration currentConfiguration) {
       this.conf = conf;
       splitEnabled = conf.getBoolean(SPLIT_ENABLED_KEY, DEFAULT_SPLIT_ENABLED);
       mergeEnabled = conf.getBoolean(MERGE_ENABLED_KEY, DEFAULT_MERGE_ENABLED);
@@ -551,14 +534,15 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
 
     public int getMergeMinRegionCount(NormalizeContext context) {
-      String stringValue = context.getOrDefault(MERGE_MIN_REGION_COUNT_KEY,
-        Function.identity(), null);
+      String stringValue =
+          context.getOrDefault(MERGE_MIN_REGION_COUNT_KEY, Function.identity(), null);
       if (stringValue == null) {
-        stringValue = context.getOrDefault(MIN_REGION_COUNT_KEY, Function.identity(),  null);
+        stringValue = context.getOrDefault(MIN_REGION_COUNT_KEY, Function.identity(), null);
         if (stringValue != null) {
-          LOG.debug("The config key {} in table descriptor is deprecated. Instead please use {}. "
-              + "In future release we will remove the deprecated config.", MIN_REGION_COUNT_KEY,
-            MERGE_MIN_REGION_COUNT_KEY);
+          LOG.debug(
+            "The config key {} in table descriptor is deprecated. Instead please use {}. "
+                + "In future release we will remove the deprecated config.",
+            MIN_REGION_COUNT_KEY, MERGE_MIN_REGION_COUNT_KEY);
         }
       }
       final int mergeMinRegionCount = stringValue == null ? 0 : Integer.parseInt(stringValue);
@@ -573,8 +557,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
 
     public Period getMergeMinRegionAge(NormalizeContext context) {
-      final int mergeMinRegionAge = context.getOrDefault(MERGE_MIN_REGION_AGE_DAYS_KEY,
-        Integer::parseInt, -1);
+      final int mergeMinRegionAge =
+          context.getOrDefault(MERGE_MIN_REGION_AGE_DAYS_KEY, Integer::parseInt, -1);
       if (mergeMinRegionAge < 0) {
         return getMergeMinRegionAge();
       }
@@ -586,8 +570,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
 
     public long getMergeMinRegionSizeMb(NormalizeContext context) {
-      final long mergeMinRegionSizeMb = context.getOrDefault(MERGE_MIN_REGION_SIZE_MB_KEY,
-        Long::parseLong, (long)-1);
+      final long mergeMinRegionSizeMb =
+          context.getOrDefault(MERGE_MIN_REGION_SIZE_MB_KEY, Long::parseLong, (long) -1);
       if (mergeMinRegionSizeMb < 0) {
         return getMergeMinRegionSizeMb();
       }
@@ -610,9 +594,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     public NormalizeContext(final TableDescriptor tableDescriptor) {
       this.tableDescriptor = tableDescriptor;
       tableName = tableDescriptor.getTableName();
-      regionStates = SimpleRegionNormalizer.this.masterServices
-        .getAssignmentManager()
-        .getRegionStates();
+      regionStates =
+          SimpleRegionNormalizer.this.masterServices.getAssignmentManager().getRegionStates();
       tableRegions = regionStates.getRegionsOfTable(tableName);
       // The list of regionInfo from getRegionsOfTable() is ordered by regionName.
       // regionName does not necessary guarantee the order by STARTKEY (let's say 'aa1', 'aa1!',

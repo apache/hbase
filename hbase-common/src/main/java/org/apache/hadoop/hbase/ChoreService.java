@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +86,6 @@ public class ChoreService {
   private final String coreThreadPoolPrefix;
 
   /**
-   *
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
    */
@@ -99,8 +97,8 @@ public class ChoreService {
   /**
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
-   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
-   *               to true this will add -10% to 10% jitter.
+   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set to
+   *          true this will add -10% to 10% jitter.
    */
   public ChoreService(final String coreThreadPoolPrefix, final boolean jitter) {
     this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, jitter);
@@ -109,15 +107,15 @@ public class ChoreService {
   /**
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
-   * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor
-   *          to during initialization. The default size is 1, but specifying a larger size may be
+   * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor to
+   *          during initialization. The default size is 1, but specifying a larger size may be
    *          beneficial if you know that 1 thread will not be enough.
-   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
-   *               to true this will add -10% to 10% jitter.
+   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set to
+   *          true this will add -10% to 10% jitter.
    */
   public ChoreService(final String coreThreadPoolPrefix, int corePoolSize, boolean jitter) {
     this.coreThreadPoolPrefix = coreThreadPoolPrefix;
-    if (corePoolSize < MIN_CORE_POOL_SIZE)  {
+    if (corePoolSize < MIN_CORE_POOL_SIZE) {
       corePoolSize = MIN_CORE_POOL_SIZE;
     }
 
@@ -198,7 +196,7 @@ public class ChoreService {
    * {@link ScheduledChore} from this {@link ChoreService}.
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
   synchronized void cancelChore(ScheduledChore chore) {
     cancelChore(chore, true);
   }
@@ -211,7 +209,7 @@ public class ChoreService {
    * {@link ScheduledChore} from this {@link ChoreService}.
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
   synchronized void cancelChore(ScheduledChore chore, boolean mayInterruptIfRunning) {
     if (scheduledChores.containsKey(chore)) {
       ScheduledFuture<?> future = scheduledChores.get(chore);
@@ -241,7 +239,7 @@ public class ChoreService {
    * this call, the chore will begin another execution as soon as the current execution finishes
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void triggerNow(ScheduledChore chore) {
     assert chore.getChoreService() == this;
     rescheduleChore(chore);
@@ -333,7 +331,7 @@ public class ChoreService {
    * @param chore The chore that missed its start time
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void onChoreMissedStartTime(ScheduledChore chore) {
     if (!scheduledChores.containsKey(chore)) {
       return;

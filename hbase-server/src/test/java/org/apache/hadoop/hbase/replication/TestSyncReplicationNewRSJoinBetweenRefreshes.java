@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestSyncReplicationNewRSJoinBetweenRefreshes extends SyncReplicatio
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationNewRSJoinBetweenRefreshes.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationNewRSJoinBetweenRefreshes.class);
 
   private static boolean HALT;
 
@@ -69,22 +69,22 @@ public class TestSyncReplicationNewRSJoinBetweenRefreshes extends SyncReplicatio
           return;
         }
         UTIL1.getMiniHBaseCluster().getMaster().getProcedures().stream()
-          .filter(p -> p instanceof TransitPeerSyncReplicationStateProcedure)
-          .filter(p -> !p.isFinished()).map(p -> (TransitPeerSyncReplicationStateProcedure) p)
-          .findFirst().ifPresent(proc -> {
-            // this is the next state of REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_BEGIN_VALUE
-            if (proc.getCurrentStateId() == REOPEN_ALL_REGIONS_IN_PEER_VALUE) {
-              // tell the main thread to start a new region server
-              ARRIVE.countDown();
-              try {
-                // wait for the region server to online
-                RESUME.await();
-              } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            .filter(p -> p instanceof TransitPeerSyncReplicationStateProcedure)
+            .filter(p -> !p.isFinished()).map(p -> (TransitPeerSyncReplicationStateProcedure) p)
+            .findFirst().ifPresent(proc -> {
+              // this is the next state of REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_BEGIN_VALUE
+              if (proc.getCurrentStateId() == REOPEN_ALL_REGIONS_IN_PEER_VALUE) {
+                // tell the main thread to start a new region server
+                ARRIVE.countDown();
+                try {
+                  // wait for the region server to online
+                  RESUME.await();
+                } catch (InterruptedException e) {
+                  throw new RuntimeException(e);
+                }
+                HALT = false;
               }
-              HALT = false;
-            }
-          });
+            });
       }
     }
   }

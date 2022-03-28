@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,19 +65,19 @@ public class BootstrapNodeManager {
   private static final Logger LOG = LoggerFactory.getLogger(BootstrapNodeManager.class);
 
   public static final String REQUEST_MASTER_INTERVAL_SECS =
-    "hbase.server.bootstrap.request_master_interval.secs";
+      "hbase.server.bootstrap.request_master_interval.secs";
 
   // default request every 10 minutes
   public static final long DEFAULT_REQUEST_MASTER_INTERVAL_SECS = TimeUnit.MINUTES.toSeconds(10);
 
   public static final String REQUEST_MASTER_MIN_INTERVAL_SECS =
-    "hbase.server.bootstrap.request_master_min_interval.secs";
+      "hbase.server.bootstrap.request_master_min_interval.secs";
 
   // default 30 seconds
   public static final long DEFAULT_REQUEST_MASTER_MIN_INTERVAL_SECS = 30;
 
   public static final String REQUEST_REGIONSERVER_INTERVAL_SECS =
-    "hbase.server.bootstrap.request_regionserver_interval.secs";
+      "hbase.server.bootstrap.request_regionserver_interval.secs";
 
   // default request every 30 seconds
   public static final long DEFAULT_REQUEST_REGIONSERVER_INTERVAL_SECS = 30;
@@ -112,17 +112,17 @@ public class BootstrapNodeManager {
     this.masterAddrTracker = masterAddrTracker;
     Configuration conf = conn.getConfiguration();
     requestMasterIntervalSecs =
-      conf.getLong(REQUEST_MASTER_INTERVAL_SECS, DEFAULT_REQUEST_MASTER_INTERVAL_SECS);
+        conf.getLong(REQUEST_MASTER_INTERVAL_SECS, DEFAULT_REQUEST_MASTER_INTERVAL_SECS);
     requestMasterMinIntervalSecs =
-      conf.getLong(REQUEST_MASTER_MIN_INTERVAL_SECS, DEFAULT_REQUEST_MASTER_MIN_INTERVAL_SECS);
-    requestRegionServerIntervalSecs =
-      conf.getLong(REQUEST_REGIONSERVER_INTERVAL_SECS, DEFAULT_REQUEST_REGIONSERVER_INTERVAL_SECS);
+        conf.getLong(REQUEST_MASTER_MIN_INTERVAL_SECS, DEFAULT_REQUEST_MASTER_MIN_INTERVAL_SECS);
+    requestRegionServerIntervalSecs = conf.getLong(REQUEST_REGIONSERVER_INTERVAL_SECS,
+      DEFAULT_REQUEST_REGIONSERVER_INTERVAL_SECS);
     maxNodeCount = conf.getInt(HBaseRpcServicesBase.CLIENT_BOOTSTRAP_NODE_LIMIT,
       HBaseRpcServicesBase.DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
     retryCounterFactory = new RetryCounterFactory(
-      new RetryConfig().setBackoffPolicy(new ExponentialBackoffPolicyWithLimit()).setJitter(JITTER)
-        .setSleepInterval(requestMasterMinIntervalSecs).setMaxSleepTime(requestMasterIntervalSecs)
-        .setTimeUnit(TimeUnit.SECONDS));
+        new RetryConfig().setBackoffPolicy(new ExponentialBackoffPolicyWithLimit())
+            .setJitter(JITTER).setSleepInterval(requestMasterMinIntervalSecs)
+            .setMaxSleepTime(requestMasterIntervalSecs).setTimeUnit(TimeUnit.SECONDS));
     executor.schedule(this::getFromMaster, getDelay(requestMasterMinIntervalSecs),
       TimeUnit.SECONDS);
   }
@@ -137,7 +137,7 @@ public class BootstrapNodeManager {
     try {
       // get 2 times number of node
       liveRegionServers =
-        FutureUtils.get(conn.getLiveRegionServers(masterAddrTracker, maxNodeCount * 2));
+          FutureUtils.get(conn.getLiveRegionServers(masterAddrTracker, maxNodeCount * 2));
     } catch (IOException e) {
       LOG.warn("failed to get live region servers from master", e);
       if (retryCounter == null) {
@@ -166,7 +166,7 @@ public class BootstrapNodeManager {
   // this method is also used to test whether a given region server is still alive.
   private void getFromRegionServer() {
     if (EnvironmentEdgeManager.currentTime() - lastRequestMasterTime >= TimeUnit.SECONDS
-      .toMillis(requestMasterIntervalSecs)) {
+        .toMillis(requestMasterIntervalSecs)) {
       // schedule a get from master task immediately if haven't request master for more than
       // requestMasterIntervalSecs
       executor.execute(this::getFromMaster);
@@ -180,8 +180,8 @@ public class BootstrapNodeManager {
     } catch (IOException e) {
       LOG.warn("failed to request region server {}", peer, e);
       // remove this region server from the list since it can not respond successfully
-      List<ServerName> newList = currentList.stream().filter(sn -> sn != peer)
-        .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+      List<ServerName> newList = currentList.stream().filter(sn -> sn != peer).collect(
+        Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
       this.nodes = newList;
       if (newList.size() < maxNodeCount) {
         // schedule a get from master task immediately
@@ -202,7 +202,7 @@ public class BootstrapNodeManager {
       this.nodes = Collections.unmodifiableList(newList);
     } else {
       this.nodes =
-        Collections.unmodifiableList(new ArrayList<>(newList.subList(0, expectedListSize)));
+          Collections.unmodifiableList(new ArrayList<>(newList.subList(0, expectedListSize)));
     }
     // schedule a new get from region server task
     executor.schedule(this::getFromRegionServer, requestRegionServerIntervalSecs, TimeUnit.SECONDS);

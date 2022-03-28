@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -96,7 +96,7 @@ class AdminOverAsyncAdmin implements Admin {
     this.operationTimeout = conn.getConfiguration().getInt(
       HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     this.syncWaitTimeout =
-      conn.getConfiguration().getInt("hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
+        conn.getConfiguration().getInt("hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
   }
 
   @Override
@@ -136,8 +136,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables)
-      throws IOException {
+  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException {
     return get(admin.listTableDescriptors(includeSysTables));
   }
 
@@ -230,13 +229,13 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-    ColumnFamilyDescriptor columnFamily) throws IOException {
+      ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamily(tableName, columnFamily);
   }
 
   @Override
   public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
-    String dstSFT) throws IOException {
+      String dstSFT) throws IOException {
     return admin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
   }
 
@@ -380,7 +379,6 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.balancerSwitch(onOrOff, synchronous));
   }
 
-
   public BalanceResponse balance(BalanceRequest request) throws IOException {
     return get(admin.balance(request));
   }
@@ -483,7 +481,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
-    throws IOException {
+      throws IOException {
     return admin.modifyTableStoreFileTracker(tableName, dstSFT);
   }
 
@@ -656,14 +654,14 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-    throws IOException, RestoreSnapshotException {
+      throws IOException, RestoreSnapshotException {
     get(admin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
   @Override
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-    boolean restoreAcl, String customSFT)
-    throws IOException, TableExistsException, RestoreSnapshotException {
+      boolean restoreAcl, String customSFT)
+      throws IOException, TableExistsException, RestoreSnapshotException {
     return admin.cloneSnapshot(snapshotName, tableName, restoreAcl, customSFT);
   }
 
@@ -779,14 +777,14 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public CoprocessorRpcChannel coprocessorService() {
     return new SyncCoprocessorRpcChannelOverAsync(
-      new MasterCoprocessorRpcChannelImpl(admin.<Message> newMasterCaller()));
+        new MasterCoprocessorRpcChannelImpl(admin.<Message> newMasterCaller()));
   }
 
   @SuppressWarnings("deprecation")
   @Override
   public CoprocessorRpcChannel coprocessorService(ServerName serverName) {
     return new SyncCoprocessorRpcChannelOverAsync(new RegionServerCoprocessorRpcChannelImpl(
-      admin.<Message> newServerCaller().serverName(serverName)));
+        admin.<Message> newServerCaller().serverName(serverName)));
   }
 
   @Override
@@ -947,8 +945,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public Map<TableName, ? extends SpaceQuotaSnapshotView> getRegionServerSpaceQuotaSnapshots(
-      ServerName serverName) throws IOException {
+  public Map<TableName, ? extends SpaceQuotaSnapshotView>
+      getRegionServerSpaceQuotaSnapshots(ServerName serverName) throws IOException {
     return get(admin.getRegionServerSpaceQuotaSnapshots(serverName));
   }
 
@@ -975,8 +973,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<UserPermission> getUserPermissions(
-      GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
+  public List<UserPermission>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
     return get(admin.getUserPermissions(getUserPermissionsRequest));
   }
 
@@ -998,8 +996,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
-      throws IOException {
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) throws IOException {
     return get(admin.clearSlowLogResponses(serverNames));
   }
 
@@ -1024,7 +1021,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+      throws IOException {
     return get(admin.balanceRSGroup(groupName, request));
   }
 
@@ -1040,7 +1038,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Pair<List<String>, List<TableName>>
-    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+      getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     return get(admin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
   }
 
@@ -1077,8 +1075,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
-      ServerType serverType, int limit, Map<String, Object> filterParams)
-      throws IOException {
+      ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
     return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

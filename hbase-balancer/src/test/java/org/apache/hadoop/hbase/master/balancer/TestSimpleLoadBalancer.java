@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the load balancer that is created by default.
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   @ClassRule
@@ -74,10 +74,8 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   public TestName name = new TestName();
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level
    */
   @Test
   public void testBalanceClusterOverall() throws Exception {
@@ -97,7 +95,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
         List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
-        if(partialplans != null) clusterplans.addAll(partialplans);
+        if (partialplans != null) clusterplans.addAll(partialplans);
         List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
         LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
         assertClusterAsBalanced(balancedClusterPerTable);
@@ -112,12 +110,10 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
-   * Deliberately generate a special case to show the overall strategy can achieve cluster
-   * level balance while the bytable strategy cannot
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level Deliberately generate
+   * a special case to show the overall strategy can achieve cluster level balance while the bytable
+   * strategy cannot
    */
   @Test
   public void testImpactOfBalanceClusterOverall() throws Exception {

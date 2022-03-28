@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ public class OrderedFloat32 extends OrderedBytesBase<Float> {
 
   /**
    * Creates a new 32-bit {@code float} with a fixed-length encoding.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedFloat32(Order order) {
@@ -78,7 +77,6 @@ public class OrderedFloat32 extends OrderedBytesBase<Float> {
 
   /**
    * Read a {@code float} value from the buffer {@code dst}.
-   *
    * @param dst the {@link PositionedByteRange} to read the {@code float} from
    * @return the {@code float} read from the buffer
    */
@@ -88,7 +86,6 @@ public class OrderedFloat32 extends OrderedBytesBase<Float> {
 
   /**
    * Write instance {@code val} into buffer {@code buff}.
-   *
    * @param dst the {@link PositionedByteRange} to write to
    * @param val the value to write to {@code dst}
    * @return the number of bytes written

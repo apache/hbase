@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
@@ -268,24 +267,25 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
           tableUsers, tableName);
       } else if (needHandleTableHdfsAcl(oldDescriptor, "modifyTable " + tableName)
           && !hdfsAclHelper.isAclSyncToHdfsEnabled(currentDescriptor)) {
-        // 1. Remove empty table directories
-        List<Path> tableRootPaths = hdfsAclHelper.getTableRootPaths(tableName, false);
-        for (Path path : tableRootPaths) {
-          hdfsAclHelper.deleteEmptyDir(path);
-        }
-        // 2. Remove all table HDFS acls
-        Set<String> tableUsers = hdfsAclHelper.getUsersWithTableReadAction(tableName, false, false);
-        Set<String> users = hdfsAclHelper
-            .getUsersWithNamespaceReadAction(tableName.getNamespaceAsString(), true);
-        users.addAll(tableUsers);
-        hdfsAclHelper.removeTableAcl(tableName, users);
-        // 3. Remove namespace access HDFS acls for users who only own permission for this table
-        hdfsAclHelper.removeNamespaceAccessAcl(tableName,
-          filterUsersToRemoveNsAccessAcl(aclTable, tableName, tableUsers), "modify");
-        // 4. Record table user acl is not synced to HDFS
-        SnapshotScannerHDFSAclStorage.deleteUserTableHdfsAcl(ctx.getEnvironment().getConnection(),
-          tableUsers, tableName);
-      }
+            // 1. Remove empty table directories
+            List<Path> tableRootPaths = hdfsAclHelper.getTableRootPaths(tableName, false);
+            for (Path path : tableRootPaths) {
+              hdfsAclHelper.deleteEmptyDir(path);
+            }
+            // 2. Remove all table HDFS acls
+            Set<String> tableUsers =
+                hdfsAclHelper.getUsersWithTableReadAction(tableName, false, false);
+            Set<String> users = hdfsAclHelper
+                .getUsersWithNamespaceReadAction(tableName.getNamespaceAsString(), true);
+            users.addAll(tableUsers);
+            hdfsAclHelper.removeTableAcl(tableName, users);
+            // 3. Remove namespace access HDFS acls for users who only own permission for this table
+            hdfsAclHelper.removeNamespaceAccessAcl(tableName,
+              filterUsersToRemoveNsAccessAcl(aclTable, tableName, tableUsers), "modify");
+            // 4. Record table user acl is not synced to HDFS
+            SnapshotScannerHDFSAclStorage.deleteUserTableHdfsAcl(
+              ctx.getEnvironment().getConnection(), tableUsers, tableName);
+          }
     }
   }
 

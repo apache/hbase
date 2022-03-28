@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Manages singleton instance of {@link VisibilityLabelService}
@@ -56,7 +55,7 @@ public class VisibilityLabelServiceManager {
    */
   public VisibilityLabelService getVisibilityLabelService(Configuration conf) throws IOException {
     String vlsClassName = conf.get(VISIBILITY_LABEL_SERVICE_CLASS,
-        DefaultVisibilityLabelServiceImpl.class.getCanonicalName()).trim();
+      DefaultVisibilityLabelServiceImpl.class.getCanonicalName()).trim();
     if (this.visibilityLabelService != null) {
       checkForClusterLevelSingleConf(vlsClassName);
       return this.visibilityLabelService;
@@ -68,8 +67,8 @@ public class VisibilityLabelServiceManager {
       }
       this.vlsClazzName = vlsClassName;
       try {
-        this.visibilityLabelService = (VisibilityLabelService) ReflectionUtils.newInstance(
-            Class.forName(vlsClassName), conf);
+        this.visibilityLabelService =
+            (VisibilityLabelService) ReflectionUtils.newInstance(Class.forName(vlsClassName), conf);
       } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }

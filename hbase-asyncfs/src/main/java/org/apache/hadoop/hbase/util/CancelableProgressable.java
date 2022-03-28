@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +20,8 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Similar interface as {@link org.apache.hadoop.util.Progressable} but returns
- * a boolean to support canceling the operation.
+ * Similar interface as {@link org.apache.hadoop.util.Progressable} but returns a boolean to support
+ * canceling the operation.
  * <p/>
  * Used for doing updating of OPENING znode during log replay on region open.
  */
@@ -30,8 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface CancelableProgressable {
 
   /**
-   * Report progress.  Returns true if operations should continue, false if the
-   * operation should be canceled and rolled back.
+   * Report progress. Returns true if operations should continue, false if the operation should be
+   * canceled and rolled back.
    * @return whether to continue (true) or cancel (false) the operation
    */
   boolean progress();

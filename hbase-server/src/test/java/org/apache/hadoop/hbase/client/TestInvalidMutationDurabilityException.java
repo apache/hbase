@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,9 +57,11 @@ public class TestInvalidMutationDurabilityException {
     UTIL.startMiniCluster();
     UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NOT_REPLICATE)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NEED_REPLICATE)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+    UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_NEED_REPLICATE)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
+                .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+            .build());
     tableNotReplicate = UTIL.getConnection().getTable(TABLE_NOT_REPLICATE);
     tableNeedReplicate = UTIL.getConnection().getTable(TABLE_NEED_REPLICATE);
   }

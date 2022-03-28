@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.fail;
 
 import java.text.MessageFormat;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A class that provides a standard waitFor pattern
- * See details at https://issues.apache.org/jira/browse/HBASE-7384
+ * A class that provides a standard waitFor pattern See details at
+ * https://issues.apache.org/jira/browse/HBASE-7384
  */
 @InterfaceAudience.Private
 public final class Waiter {
@@ -101,7 +99,6 @@ public final class Waiter {
   public interface ExplainingPredicate<E extends Exception> extends Predicate<E> {
     /**
      * Perform a predicate evaluation.
-     *
      * @return explanation of failed state
      */
     String explainFailure() throws E;
@@ -184,7 +181,7 @@ public final class Waiter {
       LOG.info(MessageFormat.format("Waiting up to [{0}] milli-secs(wait.for.ratio=[{1}])",
         adjustedTimeout, getWaitForRatio(conf)));
       while (!(eval = predicate.evaluate())
-              && (remainderWait = mustEnd - EnvironmentEdgeManager.currentTime()) > 0) {
+          && (remainderWait = mustEnd - EnvironmentEdgeManager.currentTime()) > 0) {
         try {
           // handle tail case when remainder wait is less than one interval
           sleepInterval = Math.min(remainderWait, interval);
@@ -201,12 +198,11 @@ public final class Waiter {
             EnvironmentEdgeManager.currentTime() - started));
         } else if (failIfTimeout) {
           String msg = getExplanation(predicate);
-          fail(MessageFormat
-              .format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
+          fail(MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         } else {
           String msg = getExplanation(predicate);
           LOG.warn(
-              MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
+            MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         }
       }
       return (eval || interrupted) ? (EnvironmentEdgeManager.currentTime() - started) : -1;

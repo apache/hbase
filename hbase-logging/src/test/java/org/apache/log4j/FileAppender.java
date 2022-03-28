@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j;
 
 import java.io.BufferedWriter;
@@ -74,7 +73,7 @@ public class FileAppender extends WriterAppender {
    * write to the output file.
    */
   public FileAppender(Layout layout, String fileName, boolean append, boolean bufferedIO,
-    int bufferSize) throws IOException {
+      int bufferSize) throws IOException {
     this.layout = layout;
     this.setFile(fileName, append, bufferedIO, bufferSize);
   }
@@ -225,7 +224,7 @@ public class FileAppender extends WriterAppender {
    * @param append If true will append to fileName. Otherwise will truncate fileName.
    */
   public synchronized void setFile(String fileName, boolean append, boolean bufferedIO,
-    int bufferSize) throws IOException {
+      int bufferSize) throws IOException {
 
     // It does not make sense to have immediate flush and bufferedIO.
     if (bufferedIO) {

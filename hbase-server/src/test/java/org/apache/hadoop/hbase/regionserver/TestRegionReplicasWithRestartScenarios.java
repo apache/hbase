@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -47,9 +48,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
-
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionReplicasWithRestartScenarios {
 
   @ClassRule
@@ -59,7 +58,8 @@ public class TestRegionReplicasWithRestartScenarios {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRegionReplicasWithRestartScenarios.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static final int NB_SERVERS = 3;
   private Table table;
@@ -132,7 +132,7 @@ public class TestRegionReplicasWithRestartScenarios {
     ServerName serverName = stopRegionServer.getServerName();
     // Make a copy because this is actual instance from HRegionServer
     Collection<HRegion> regionsOnStoppedServer =
-      new ArrayList<HRegion>(stopRegionServer.getOnlineRegionsLocalContext());
+        new ArrayList<HRegion>(stopRegionServer.getOnlineRegionsLocalContext());
     HTU.getHBaseCluster().stopRegionServer(serverName);
     HTU.getHBaseCluster().waitForRegionServerToStop(serverName, 60000);
     HTU.waitTableAvailable(this.tableName);
@@ -153,8 +153,8 @@ public class TestRegionReplicasWithRestartScenarios {
     Collection<HRegion> onlineRegions3 = getTertiaryRS().getOnlineRegionsLocalContext();
     checkDuplicates(onlineRegions3);
     assertFalse(res);
-    int totalRegions = HTU.getMiniHBaseCluster().getLiveRegionServerThreads().stream().
-      mapToInt(l -> l.getRegionServer().getOnlineRegions().size()).sum();
+    int totalRegions = HTU.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
+        .mapToInt(l -> l.getRegionServer().getOnlineRegions().size()).sum();
     assertEquals(61, totalRegions);
   }
 
@@ -171,7 +171,7 @@ public class TestRegionReplicasWithRestartScenarios {
           i++;
           if (i > 1) {
             LOG.warn("Duplicate found {} and {}", actualRegion.getRegionInfo(),
-                region.getRegionInfo());
+              region.getRegionInfo());
             assertTrue(Bytes.equals(region.getRegionInfo().getStartKey(),
               actualRegion.getRegionInfo().getStartKey()));
             assertTrue(Bytes.equals(region.getRegionInfo().getEndKey(),

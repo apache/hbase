@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +38,6 @@ public interface RestoreJob extends Configurable {
    * @param fullBackupRestore full backup restore
    * @throws IOException if running the job fails
    */
-  void run(Path[] dirPaths, TableName[] fromTables, TableName[] toTables,
-      boolean fullBackupRestore) throws IOException;
+  void run(Path[] dirPaths, TableName[] fromTables, TableName[] toTables, boolean fullBackupRestore)
+      throws IOException;
 }

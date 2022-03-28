@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestCombinedAsyncWriter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
+      HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -106,11 +106,11 @@ public class TestCombinedAsyncWriter {
     FileSystem fs = UTIL.getTestFileSystem();
     Configuration conf = UTIL.getConfiguration();
     try (
-      AsyncWriter writer1 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path1, false,
-        EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
-      AsyncWriter writer2 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path2, false,
-        EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
-      CombinedAsyncWriter writer = CombinedAsyncWriter.create(writer1, writer2)) {
+        AsyncWriter writer1 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path1, false,
+          EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
+        AsyncWriter writer2 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path2, false,
+          EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
+        CombinedAsyncWriter writer = CombinedAsyncWriter.create(writer1, writer2)) {
       ProtobufLogTestHelper.doWrite(new WriterOverAsyncWriter(writer), withTrailer, tableName,
         columnCount, recordCount, row, timestamp);
       try (ProtobufLogReader reader = (ProtobufLogReader) WALS.createReader(fs, path1)) {

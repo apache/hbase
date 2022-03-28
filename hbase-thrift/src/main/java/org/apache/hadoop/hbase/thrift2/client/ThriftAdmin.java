@@ -27,7 +27,6 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,17 +38,18 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ServerType;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.ServerType;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -91,7 +91,6 @@ public class ThriftAdmin implements Admin {
   private int operationTimeout;
   private int syncWaitTimeout;
   private Configuration conf;
-
 
   public ThriftAdmin(THBaseService.Client client, TTransport tTransport, Configuration conf) {
     this.client = client;
@@ -166,8 +165,8 @@ public class ThriftAdmin implements Admin {
       throws IOException {
     try {
       String regex = (pattern == null ? null : pattern.toString());
-      List<TTableDescriptor> tTableDescriptors = client
-          .getTableDescriptorsByPattern(regex, includeSysTables);
+      List<TTableDescriptor> tTableDescriptors =
+          client.getTableDescriptorsByPattern(regex, includeSysTables);
       return ThriftUtilities.tableDescriptorsFromThrift(tTableDescriptors);
 
     } catch (TException e) {
@@ -211,8 +210,8 @@ public class ThriftAdmin implements Admin {
   @Override
   public List<TableDescriptor> listTableDescriptorsByNamespace(byte[] name) throws IOException {
     try {
-      List<TTableDescriptor> tTableDescriptors = client
-          .getTableDescriptorsByNamespace(Bytes.toString(name));
+      List<TTableDescriptor> tTableDescriptors =
+          client.getTableDescriptorsByNamespace(Bytes.toString(name));
       return ThriftUtilities.tableDescriptorsFromThrift(tTableDescriptors);
     } catch (TException e) {
       throw new IOException(e);
@@ -237,17 +236,17 @@ public class ThriftAdmin implements Admin {
   @Override
   public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
       throws IOException {
-    if(numRegions < 3) {
+    if (numRegions < 3) {
       throw new IllegalArgumentException("Must create at least three regions");
-    } else if(Bytes.compareTo(startKey, endKey) >= 0) {
+    } else if (Bytes.compareTo(startKey, endKey) >= 0) {
       throw new IllegalArgumentException("Start key must be smaller than end key");
     }
     if (numRegions == 3) {
-      createTable(desc, new byte[][]{startKey, endKey});
+      createTable(desc, new byte[][] { startKey, endKey });
       return;
     }
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    if(splitKeys == null || splitKeys.length != numRegions - 1) {
+    byte[][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    if (splitKeys == null || splitKeys.length != numRegions - 1) {
       throw new IllegalArgumentException("Unable to split key range into enough regions");
     }
     createTable(desc, splitKeys);
@@ -338,8 +337,8 @@ public class ThriftAdmin implements Admin {
   public void addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException {
     TTableName tTableName = ThriftUtilities.tableNameFromHBase(tableName);
-    TColumnFamilyDescriptor tColumnFamilyDescriptor = ThriftUtilities
-        .columnFamilyDescriptorFromHBase(columnFamily);
+    TColumnFamilyDescriptor tColumnFamilyDescriptor =
+        ThriftUtilities.columnFamilyDescriptorFromHBase(columnFamily);
     try {
       client.addColumnFamily(tTableName, tColumnFamilyDescriptor);
     } catch (TException e) {
@@ -361,8 +360,8 @@ public class ThriftAdmin implements Admin {
   public void modifyColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException {
     TTableName tTableName = ThriftUtilities.tableNameFromHBase(tableName);
-    TColumnFamilyDescriptor tColumnFamilyDescriptor = ThriftUtilities
-        .columnFamilyDescriptorFromHBase(columnFamily);
+    TColumnFamilyDescriptor tColumnFamilyDescriptor =
+        ThriftUtilities.columnFamilyDescriptorFromHBase(columnFamily);
     try {
       client.modifyColumnFamily(tTableName, tColumnFamilyDescriptor);
     } catch (TException e) {
@@ -372,8 +371,7 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public void modifyTable(TableDescriptor td) throws IOException {
-    TTableDescriptor tTableDescriptor = ThriftUtilities
-        .tableDescriptorFromHBase(td);
+    TTableDescriptor tTableDescriptor = ThriftUtilities.tableDescriptorFromHBase(td);
     try {
       client.modifyTable(tTableDescriptor);
     } catch (TException e) {
@@ -383,8 +381,8 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException {
-    TNamespaceDescriptor tNamespaceDescriptor = ThriftUtilities
-        .namespaceDescriptorFromHBase(descriptor);
+    TNamespaceDescriptor tNamespaceDescriptor =
+        ThriftUtilities.namespaceDescriptorFromHBase(descriptor);
     try {
       client.modifyNamespace(tNamespaceDescriptor);
     } catch (TException e) {
@@ -434,8 +432,8 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public void createNamespace(NamespaceDescriptor descriptor) throws IOException {
-    TNamespaceDescriptor tNamespaceDescriptor = ThriftUtilities
-        .namespaceDescriptorFromHBase(descriptor);
+    TNamespaceDescriptor tNamespaceDescriptor =
+        ThriftUtilities.namespaceDescriptorFromHBase(descriptor);
     try {
       client.createNamespace(tNamespaceDescriptor);
     } catch (TException e) {
@@ -862,6 +860,7 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("restoreSnapshot not supported in ThriftAdmin");
 
   }
+
   @Override
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
       boolean restoreAcl) {
@@ -870,7 +869,7 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl,
-    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException {
+      String customSFT) throws IOException, TableExistsException, RestoreSnapshotException {
     throw new NotImplementedException("cloneSnapshotAsync not supported in ThriftAdmin");
   }
 
@@ -895,6 +894,7 @@ public class ThriftAdmin implements Admin {
   public List<SnapshotDescription> listSnapshots() {
     throw new NotImplementedException("listSnapshots not supported in ThriftAdmin");
   }
+
   @Override
   public List<SnapshotDescription> listSnapshots(Pattern pattern) {
     throw new NotImplementedException("listSnapshots not supported in ThriftAdmin");
@@ -1023,6 +1023,7 @@ public class ThriftAdmin implements Admin {
   public List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern) {
     throw new NotImplementedException("listReplicationPeers not supported in ThriftAdmin");
   }
+
   @Override
   public Future<Void> transitReplicationPeerSyncReplicationStateAsync(String peerId,
       SyncReplicationState state) {
@@ -1141,10 +1142,10 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Map<TableName, SpaceQuotaSnapshot> getRegionServerSpaceQuotaSnapshots(
-      ServerName serverName) throws IOException {
+  public Map<TableName, SpaceQuotaSnapshot>
+      getRegionServerSpaceQuotaSnapshots(ServerName serverName) throws IOException {
     throw new NotImplementedException(
-      "getRegionServerSpaceQuotaSnapshots not supported in ThriftAdmin");
+        "getRegionServerSpaceQuotaSnapshots not supported in ThriftAdmin");
   }
 
   @Override
@@ -1168,8 +1169,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<UserPermission> getUserPermissions(
-      GetUserPermissionsRequest getUserPermissionsRequest) {
+  public List<UserPermission>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
     throw new NotImplementedException("getUserPermissions not supported in ThriftAdmin");
   }
 
@@ -1192,11 +1193,10 @@ public class ThriftAdmin implements Admin {
   public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
       final LogQueryFilter logQueryFilter) throws IOException {
     Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
-    TLogQueryFilter tLogQueryFilter =
-      ThriftUtilities.getSlowLogQueryFromHBase(logQueryFilter);
+    TLogQueryFilter tLogQueryFilter = ThriftUtilities.getSlowLogQueryFromHBase(logQueryFilter);
     try {
       List<TOnlineLogRecord> tOnlineLogRecords =
-        client.getSlowLogResponses(tServerNames, tLogQueryFilter);
+          client.getSlowLogResponses(tServerNames, tLogQueryFilter);
       return ThriftUtilities.getSlowLogRecordsFromThrift(tOnlineLogRecords);
     } catch (TException e) {
       throw new IOException(e);
@@ -1204,8 +1204,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
-      throws IOException {
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) throws IOException {
     Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
     try {
       return client.clearSlowLogResponses(tServerNames);
@@ -1276,7 +1275,7 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public Pair<List<String>, List<TableName>>
-    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+      getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
   }
 
@@ -1293,22 +1292,21 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
-      ServerType serverType, int limit, Map<String, Object> filterParams)
-      throws IOException {
+      ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
 
   @Override
   public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
-    String dstSFT) throws IOException {
+      String dstSFT) throws IOException {
     throw new NotImplementedException(
-      "modifyColumnFamilyStoreFileTrackerAsync not supported in ThriftAdmin");
+        "modifyColumnFamilyStoreFileTrackerAsync not supported in ThriftAdmin");
   }
 
   @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
-    throws IOException {
+      throws IOException {
     throw new NotImplementedException(
-      "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
+        "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
   }
 }

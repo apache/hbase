@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestRegionSplitPolicy {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionSplitPolicy.class);
+      HBaseClassTestRule.forClass(TestRegionSplitPolicy.class);
 
   private Configuration conf;
   private HRegion mockRegion;
@@ -85,7 +85,7 @@ public class TestRegionSplitPolicy {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
     ConstantSizeRegionSplitPolicy policy =
-      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     assertFalse(policy.shouldSplit());
 
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -112,13 +112,13 @@ public class TestRegionSplitPolicy {
     long flushSize = maxSplitSize / 8;
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME).setMaxFileSize(maxSplitSize)
-      .setMemStoreFlushSize(flushSize).build();
+        .setMemStoreFlushSize(flushSize).build();
     doReturn(td).when(mockRegion).getTableDescriptor();
     // If RegionServerService with no regions in it -- 'online regions' == 0 --
     // then IncreasingToUpperBoundRegionSplitPolicy should act like a
     // ConstantSizePolicy
     IncreasingToUpperBoundRegionSplitPolicy policy =
-      (IncreasingToUpperBoundRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (IncreasingToUpperBoundRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     doConstantSizePolicyTests(policy);
 
     // Add a store in excess of split size. Because there are "no regions"
@@ -169,7 +169,7 @@ public class TestRegionSplitPolicy {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME).build();
     doReturn(td).when(mockRegion).getTableDescriptor();
     ConstantSizeRegionSplitPolicy policy =
-      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     regions.add(mockRegion);
 
     HStore mockStore1 = mock(HStore.class);
@@ -194,7 +194,7 @@ public class TestRegionSplitPolicy {
   @Test
   public void testBusyRegionSplitPolicy() throws Exception {
     doReturn(TableDescriptorBuilder.newBuilder(TABLENAME).build()).when(mockRegion)
-      .getTableDescriptor();
+        .getTableDescriptor();
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, BusyRegionSplitPolicy.class.getName());
     conf.setLong("hbase.busy.policy.minAge", 1000000L);
     conf.setFloat("hbase.busy.policy.blockedRequests", 0.1f);
@@ -207,7 +207,7 @@ public class TestRegionSplitPolicy {
     when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
 
     BusyRegionSplitPolicy policy =
-      (BusyRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (BusyRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
 
     when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
     when(mockRegion.getWriteRequestsCount()).thenReturn(10L);
@@ -253,7 +253,7 @@ public class TestRegionSplitPolicy {
     // Using a default HTD, should pick up the file size from
     // configuration.
     ConstantSizeRegionSplitPolicy policy =
-      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     assertWithinJitter(1234L, policy.getDesiredMaxFileSize());
 
     // If specified in HTD, should use that
@@ -269,8 +269,8 @@ public class TestRegionSplitPolicy {
   @Test
   public void testCustomPolicy() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME)
-      .setRegionSplitPolicyClassName(KeyPrefixRegionSplitPolicy.class.getName())
-      .setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, "2").build();
+        .setRegionSplitPolicyClassName(KeyPrefixRegionSplitPolicy.class.getName())
+        .setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, "2").build();
 
     doReturn(td).when(mockRegion).getTableDescriptor();
 
@@ -281,7 +281,7 @@ public class TestRegionSplitPolicy {
     stores.add(mockStore);
 
     KeyPrefixRegionSplitPolicy policy =
-      (KeyPrefixRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (KeyPrefixRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
 
     assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
   }
@@ -291,7 +291,7 @@ public class TestRegionSplitPolicy {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME).setMaxFileSize(1024L).build();
     doReturn(td).when(mockRegion).getTableDescriptor();
     ConstantSizeRegionSplitPolicy policy =
-      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     doConstantSizePolicyTests(policy);
   }
 
@@ -332,7 +332,7 @@ public class TestRegionSplitPolicy {
     doReturn(td).when(mockRegion).getTableDescriptor();
 
     ConstantSizeRegionSplitPolicy policy =
-      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
 
     // For no stores, should not split
     assertFalse(policy.shouldSplit());
@@ -360,8 +360,8 @@ public class TestRegionSplitPolicy {
   @Test
   public void testDelimitedKeyPrefixRegionSplitPolicy() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME)
-      .setRegionSplitPolicyClassName(DelimitedKeyPrefixRegionSplitPolicy.class.getName())
-      .setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",").build();
+        .setRegionSplitPolicyClassName(DelimitedKeyPrefixRegionSplitPolicy.class.getName())
+        .setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",").build();
 
     doReturn(td).when(mockRegion).getTableDescriptor();
     doReturn(stores).when(mockRegion).getStores();
@@ -373,7 +373,7 @@ public class TestRegionSplitPolicy {
     stores.add(mockStore);
 
     DelimitedKeyPrefixRegionSplitPolicy policy =
-      (DelimitedKeyPrefixRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+        (DelimitedKeyPrefixRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
 
     assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
 
@@ -386,7 +386,7 @@ public class TestRegionSplitPolicy {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
     TableDescriptor td =
-      TableDescriptorBuilder.newBuilder(TABLENAME).setMaxFileSize(Long.MAX_VALUE).build();
+        TableDescriptorBuilder.newBuilder(TABLENAME).setMaxFileSize(Long.MAX_VALUE).build();
     doReturn(td).when(mockRegion).getTableDescriptor();
     boolean positiveJitter = false;
     ConstantSizeRegionSplitPolicy policy = null;

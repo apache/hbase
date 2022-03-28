@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public final class ProcedureUtil {
-  private ProcedureUtil() { }
+  private ProcedureUtil() {
+  }
 
   // ==========================================================================
-  //  Reflection helpers to create/validate a Procedure object
+  // Reflection helpers to create/validate a Procedure object
   // ==========================================================================
   private static Procedure<?> newProcedure(String className) throws BadProcedureException {
     try {
@@ -67,8 +68,8 @@ public final class ProcedureUtil {
       return ctor.newInstance();
     } catch (Exception e) {
       throw new BadProcedureException(
-        "The procedure class " + className + " must be accessible and have an empty constructor",
-        e);
+          "The procedure class " + className + " must be accessible and have an empty constructor",
+          e);
     }
   }
 
@@ -85,18 +86,18 @@ public final class ProcedureUtil {
         throw new Exception("the " + clazz + " constructor is not public");
       }
     } catch (Exception e) {
-      throw new BadProcedureException("The procedure class " + proc.getClass().getName() +
-        " must be accessible and have an empty constructor", e);
+      throw new BadProcedureException("The procedure class " + proc.getClass().getName()
+          + " must be accessible and have an empty constructor", e);
     }
   }
 
   // ==========================================================================
-  //  convert to and from Procedure object
+  // convert to and from Procedure object
   // ==========================================================================
 
   /**
-   * A serializer for our Procedures. Instead of the previous serializer, it
-   * uses the stateMessage list to store the internal state of the Procedures.
+   * A serializer for our Procedures. Instead of the previous serializer, it uses the stateMessage
+   * list to store the internal state of the Procedures.
    */
   private static class StateSerializer implements ProcedureStateSerializer {
     private final ProcedureProtos.Procedure.Builder builder;
@@ -113,8 +114,7 @@ public final class ProcedureUtil {
     }
 
     @Override
-    public <M extends Message> M deserialize(Class<M> clazz)
-        throws IOException {
+    public <M extends Message> M deserialize(Class<M> clazz) throws IOException {
       if (deserializeIndex >= builder.getStateMessageCount()) {
         throw new IOException("Invalid state message index: " + deserializeIndex);
       }
@@ -129,8 +129,8 @@ public final class ProcedureUtil {
   }
 
   /**
-   * A serializer (deserializer) for those Procedures which were serialized
-   * before this patch. It deserializes the old, binary stateData field.
+   * A serializer (deserializer) for those Procedures which were serialized before this patch. It
+   * deserializes the old, binary stateData field.
    */
   private static class CompatStateSerializer implements ProcedureStateSerializer {
     private InputStream inputStream;
@@ -146,8 +146,7 @@ public final class ProcedureUtil {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <M extends Message> M deserialize(Class<M> clazz)
-        throws IOException {
+    public <M extends Message> M deserialize(Class<M> clazz) throws IOException {
       Parser<M> parser = (Parser<M>) Internal.getDefaultInstance(clazz).getParserForType();
       try {
         return parser.parseDelimitedFrom(inputStream);
@@ -167,12 +166,10 @@ public final class ProcedureUtil {
     Preconditions.checkArgument(proc != null);
     validateClass(proc);
 
-    final ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder()
-      .setClassName(proc.getClass().getName())
-      .setProcId(proc.getProcId())
-      .setState(proc.getState())
-      .setSubmittedTime(proc.getSubmittedTime())
-      .setLastUpdate(proc.getLastUpdate());
+    final ProcedureProtos.Procedure.Builder builder =
+        ProcedureProtos.Procedure.newBuilder().setClassName(proc.getClass().getName())
+            .setProcId(proc.getProcId()).setState(proc.getState())
+            .setSubmittedTime(proc.getSubmittedTime()).setLastUpdate(proc.getLastUpdate());
 
     if (proc.hasParent()) {
       builder.setParentId(proc.getParentProcId());
@@ -259,9 +256,9 @@ public final class ProcedureUtil {
     }
 
     if (proto.hasException()) {
-      assert proc.getState() == ProcedureProtos.ProcedureState.FAILED ||
-             proc.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK :
-             "The procedure must be failed (waiting to rollback) or rolledback";
+      assert proc.getState() == ProcedureProtos.ProcedureState.FAILED
+          || proc.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK
+          : "The procedure must be failed (waiting to rollback) or rolledback";
       proc.setFailure(RemoteProcedureException.fromProto(proto.getException()));
     }
 
@@ -298,11 +295,11 @@ public final class ProcedureUtil {
   }
 
   // ==========================================================================
-  //  convert from LockedResource object
+  // convert from LockedResource object
   // ==========================================================================
 
-  public static LockServiceProtos.LockedResourceType convertToProtoResourceType(
-      LockedResourceType resourceType) {
+  public static LockServiceProtos.LockedResourceType
+      convertToProtoResourceType(LockedResourceType resourceType) {
     return LockServiceProtos.LockedResourceType.valueOf(resourceType.name());
   }
 
@@ -310,13 +307,12 @@ public final class ProcedureUtil {
     return LockServiceProtos.LockType.valueOf(lockType.name());
   }
 
-  public static LockServiceProtos.LockedResource convertToProtoLockedResource(
-      LockedResource lockedResource) throws IOException {
+  public static LockServiceProtos.LockedResource
+      convertToProtoLockedResource(LockedResource lockedResource) throws IOException {
     LockServiceProtos.LockedResource.Builder builder =
         LockServiceProtos.LockedResource.newBuilder();
 
-    builder
-        .setResourceType(convertToProtoResourceType(lockedResource.getResourceType()))
+    builder.setResourceType(convertToProtoResourceType(lockedResource.getResourceType()))
         .setResourceName(lockedResource.getResourceName())
         .setLockType(convertToProtoLockType(lockedResource.getLockType()));
 
@@ -331,8 +327,7 @@ public final class ProcedureUtil {
     builder.setSharedLockCount(lockedResource.getSharedLockCount());
 
     for (Procedure<?> waitingProcedure : lockedResource.getWaitingProcedures()) {
-      ProcedureProtos.Procedure waitingProcedureProto =
-          convertToProtoProcedure(waitingProcedure);
+      ProcedureProtos.Procedure waitingProcedureProto = convertToProtoProcedure(waitingProcedure);
       builder.addWaitingProcedures(waitingProcedureProto);
     }
 
@@ -340,17 +335,17 @@ public final class ProcedureUtil {
   }
 
   public static final String PROCEDURE_RETRY_SLEEP_INTERVAL_MS =
-    "hbase.procedure.retry.sleep.interval.ms";
+      "hbase.procedure.retry.sleep.interval.ms";
 
   // default to 1 second
   public static final long DEFAULT_PROCEDURE_RETRY_SLEEP_INTERVAL_MS = 1000;
 
   public static final String PROCEDURE_RETRY_MAX_SLEEP_TIME_MS =
-    "hbase.procedure.retry.max.sleep.time.ms";
+      "hbase.procedure.retry.max.sleep.time.ms";
 
   // default to 10 minutes
   public static final long DEFAULT_PROCEDURE_RETRY_MAX_SLEEP_TIME_MS =
-    TimeUnit.MINUTES.toMillis(10);
+      TimeUnit.MINUTES.toMillis(10);
 
   /**
    * Get a retry counter for getting the backoff time. We will use the
@@ -363,11 +358,11 @@ public final class ProcedureUtil {
    */
   public static RetryCounter createRetryCounter(Configuration conf) {
     long sleepIntervalMs =
-      conf.getLong(PROCEDURE_RETRY_SLEEP_INTERVAL_MS, DEFAULT_PROCEDURE_RETRY_SLEEP_INTERVAL_MS);
+        conf.getLong(PROCEDURE_RETRY_SLEEP_INTERVAL_MS, DEFAULT_PROCEDURE_RETRY_SLEEP_INTERVAL_MS);
     long maxSleepTimeMs =
-      conf.getLong(PROCEDURE_RETRY_MAX_SLEEP_TIME_MS, DEFAULT_PROCEDURE_RETRY_MAX_SLEEP_TIME_MS);
+        conf.getLong(PROCEDURE_RETRY_MAX_SLEEP_TIME_MS, DEFAULT_PROCEDURE_RETRY_MAX_SLEEP_TIME_MS);
     RetryConfig retryConfig = new RetryConfig().setSleepInterval(sleepIntervalMs)
-      .setMaxSleepTime(maxSleepTimeMs).setBackoffPolicy(new ExponentialBackoffPolicyWithLimit());
+        .setMaxSleepTime(maxSleepTimeMs).setBackoffPolicy(new ExponentialBackoffPolicyWithLimit());
     return new RetryCounter(retryConfig);
   }
 

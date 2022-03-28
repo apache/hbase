@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ import org.junit.experimental.categories.Category;
 public class TestAssignmentManagerUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignmentManagerUtil.class);
+      HBaseClassTestRule.forClass(TestAssignmentManagerUtil.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -67,8 +67,9 @@ public class TestAssignmentManagerUtil {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin().balancerSwitch(false, true);
     UTIL.createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf"))
-      .setRegionReplication(REGION_REPLICATION).build(), new byte[][] { Bytes.toBytes(0) });
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf"))
+        .setRegionReplication(REGION_REPLICATION).build(),
+      new byte[][] { Bytes.toBytes(0) });
     UTIL.waitTableAvailable(TABLE_NAME);
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ENV = master.getMasterProcedureExecutor().getEnvironment();
@@ -95,14 +96,14 @@ public class TestAssignmentManagerUtil {
 
   private List<RegionInfo> getPrimaryRegions() throws IOException {
     return UTIL.getAdmin().getRegions(TABLE_NAME).stream()
-      .filter(r -> RegionReplicaUtil.isDefaultReplica(r)).collect(Collectors.toList());
+        .filter(r -> RegionReplicaUtil.isDefaultReplica(r)).collect(Collectors.toList());
   }
 
   @Test
   public void testCreateUnassignProcedureForSplitFail() throws IOException {
     RegionInfo region = getPrimaryRegions().get(0);
     AM.getRegionStates().getRegionStateNode(region)
-      .setProcedure(TransitRegionStateProcedure.unassign(ENV, region));
+        .setProcedure(TransitRegionStateProcedure.unassign(ENV, region));
     try {
       AssignmentManagerUtil.createUnassignProceduresForSplitOrMerge(ENV, Stream.of(region),
         REGION_REPLICATION);
@@ -118,7 +119,7 @@ public class TestAssignmentManagerUtil {
     RegionInfo regionA = regions.get(0);
     RegionInfo regionB = regions.get(1);
     AM.getRegionStates().getRegionStateNode(regionB)
-      .setProcedure(TransitRegionStateProcedure.unassign(ENV, regionB));
+        .setProcedure(TransitRegionStateProcedure.unassign(ENV, regionB));
     try {
       AssignmentManagerUtil.createUnassignProceduresForSplitOrMerge(ENV,
         Stream.of(regionA, regionB), REGION_REPLICATION);
@@ -127,8 +128,8 @@ public class TestAssignmentManagerUtil {
       // expected
     }
     IntStream.range(0, REGION_REPLICATION)
-      .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(regionA, i))
-      .map(AM.getRegionStates()::getRegionStateNode).forEachOrdered(
-        rn -> assertFalse("Should have unset the proc for " + rn, rn.isInTransition()));
+        .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(regionA, i))
+        .map(AM.getRegionStates()::getRegionStateNode).forEachOrdered(
+          rn -> assertFalse("Should have unset the proc for " + rn, rn.isInTransition()));
   }
 }

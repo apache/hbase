@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,19 +44,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ScopeType;
 
 /**
- * Default implementation of Key for an Entry in the WAL.
- * For internal use only though Replication needs to have access.
- *
- * The log intermingles edits to many tables and rows, so each log entry
- * identifies the appropriate table and row.  Within a table and row, they're
- * also sorted.
- *
- * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an associated row.
- *
+ * Default implementation of Key for an Entry in the WAL. For internal use only though Replication
+ * needs to have access. The log intermingles edits to many tables and rows, so each log entry
+ * identifies the appropriate table and row. Within a table and row, they're also sorted.
+ * <p>
+ * Some Transactional edits (START, COMMIT, ABORT) will not have an associated row.
  */
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
-//       purposes. They need to be merged into WALEntry.
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.REPLICATION})
+// purposes. They need to be merged into WALEntry.
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION })
 public class WALKeyImpl implements WALKey {
   public static final WALKeyImpl EMPTY_WALKEYIMPL = new WALKeyImpl();
 
@@ -65,11 +61,10 @@ public class WALKeyImpl implements WALKey {
   }
 
   /**
-   * Use it to complete mvcc transaction. This WALKeyImpl was part of
-   * (the transaction is started when you call append; see the comment on FSHLog#append). To
-   * complete call
+   * Use it to complete mvcc transaction. This WALKeyImpl was part of (the transaction is started
+   * when you call append; see the comment on FSHLog#append). To complete call
+   * {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)} or
    * {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
-   * or {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
    * @return A WriteEntry gotten from local WAL subsystem.
    * @see #setWriteEntry(MultiVersionConcurrencyControl.WriteEntry)
    */
@@ -84,7 +79,7 @@ public class WALKeyImpl implements WALKey {
     this.sequenceId = writeEntry.getWriteNumber();
   }
 
-  private byte [] encodedRegionName;
+  private byte[] encodedRegionName;
 
   private TableName tablename;
 
@@ -119,13 +114,13 @@ public class WALKeyImpl implements WALKey {
   private Map<String, byte[]> extendedAttributes;
 
   public WALKeyImpl() {
-    init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null, null);
+    init(null, null, 0L, HConstants.LATEST_TIMESTAMP, new ArrayList<>(), HConstants.NO_NONCE,
+      HConstants.NO_NONCE, null, null, null);
   }
 
   public WALKeyImpl(final NavigableMap<byte[], Integer> replicationScope) {
-    init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope, null);
+    init(null, null, 0L, HConstants.LATEST_TIMESTAMP, new ArrayList<>(), HConstants.NO_NONCE,
+      HConstants.NO_NONCE, null, replicationScope, null);
   }
 
   @InterfaceAudience.Private
@@ -148,233 +143,176 @@ public class WALKeyImpl implements WALKey {
 
   // TODO: Fix being able to pass in sequenceid.
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now) {
-    init(encodedRegionName,
-        tablename,
-        NO_SEQUENCE_ID,
-        now,
-        EMPTY_UUIDS,
-        HConstants.NO_NONCE,
-        HConstants.NO_NONCE,
-        null, null, null);
+    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
+      HConstants.NO_NONCE, null, null, null);
   }
 
   // TODO: Fix being able to pass in sequenceid.
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
       final NavigableMap<byte[], Integer> replicationScope) {
     init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
-        HConstants.NO_NONCE, null, replicationScope, null);
+      HConstants.NO_NONCE, null, replicationScope, null);
   }
 
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
       MultiVersionConcurrencyControl mvcc, final NavigableMap<byte[], Integer> replicationScope) {
     init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
-        HConstants.NO_NONCE, mvcc, replicationScope, null);
+      HConstants.NO_NONCE, mvcc, replicationScope, null);
   }
 
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
-                    MultiVersionConcurrencyControl mvcc,
-                    final NavigableMap<byte[], Integer> replicationScope,
-                    Map<String, byte[]> extendedAttributes) {
+      MultiVersionConcurrencyControl mvcc, final NavigableMap<byte[], Integer> replicationScope,
+      Map<String, byte[]> extendedAttributes) {
     init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
-        HConstants.NO_NONCE, mvcc, replicationScope, extendedAttributes);
+      HConstants.NO_NONCE, mvcc, replicationScope, extendedAttributes);
   }
 
-  public WALKeyImpl(final byte[] encodedRegionName,
-                final TableName tablename,
-                final long now,
-                MultiVersionConcurrencyControl mvcc) {
-    init(encodedRegionName,
-        tablename,
-        NO_SEQUENCE_ID,
-        now,
-        EMPTY_UUIDS,
-        HConstants.NO_NONCE,
-        HConstants.NO_NONCE,
-        mvcc, null, null);
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
+      MultiVersionConcurrencyControl mvcc) {
+    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
+      HConstants.NO_NONCE, mvcc, null, null);
   }
 
   /**
-   * Copy constructor that takes in an existing WALKeyImpl plus some extended attributes.
-   * Intended for coprocessors to add annotations to a system-generated WALKey
-   * for persistence to the WAL.
+   * Copy constructor that takes in an existing WALKeyImpl plus some extended attributes. Intended
+   * for coprocessors to add annotations to a system-generated WALKey for persistence to the WAL.
    * @param key Key to be copied into this new key
    * @param extendedAttributes Extra attributes to copy into the new key
    */
-  public WALKeyImpl(WALKeyImpl key,
-                    Map<String, byte[]> extendedAttributes){
-    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(),
-        key.getWriteTime(), key.getClusterIds(), key.getNonceGroup(), key.getNonce(),
-        key.getMvcc(), key.getReplicationScopes(), extendedAttributes);
+  public WALKeyImpl(WALKeyImpl key, Map<String, byte[]> extendedAttributes) {
+    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(), key.getWriteTime(),
+      key.getClusterIds(), key.getNonceGroup(), key.getNonce(), key.getMvcc(),
+      key.getReplicationScopes(), extendedAttributes);
 
   }
 
   /**
-   * Copy constructor that takes in an existing WALKey, the extra WALKeyImpl fields that the
-   * parent interface is missing, plus some extended attributes. Intended
-   * for coprocessors to add annotations to a system-generated WALKey for
-   * persistence to the WAL.
+   * Copy constructor that takes in an existing WALKey, the extra WALKeyImpl fields that the parent
+   * interface is missing, plus some extended attributes. Intended for coprocessors to add
+   * annotations to a system-generated WALKey for persistence to the WAL.
    */
-  public WALKeyImpl(WALKey key,
-                    List<UUID> clusterIds,
-                    MultiVersionConcurrencyControl mvcc,
-                    final NavigableMap<byte[], Integer> replicationScopes,
-                    Map<String, byte[]> extendedAttributes){
-    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(),
-        key.getWriteTime(), clusterIds, key.getNonceGroup(), key.getNonce(),
-        mvcc, replicationScopes, extendedAttributes);
+  public WALKeyImpl(WALKey key, List<UUID> clusterIds, MultiVersionConcurrencyControl mvcc,
+      final NavigableMap<byte[], Integer> replicationScopes,
+      Map<String, byte[]> extendedAttributes) {
+    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(), key.getWriteTime(),
+      clusterIds, key.getNonceGroup(), key.getNonce(), mvcc, replicationScopes, extendedAttributes);
 
   }
+
   /**
-   * Create the log key for writing to somewhere.
-   * We maintain the tablename mainly for debugging purposes.
-   * A regionName is always a sub-table object.
-   * <p>Used by log splitting and snapshots.
-   *
+   * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
+   * purposes. A regionName is always a sub-table object.
+   * <p>
+   * Used by log splitting and snapshots.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                         <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename         - name of table
-   * @param logSeqNum         - log sequence number
-   * @param now               Time at which this edit was written.
-   * @param clusterIds        the clusters that have consumed the change(used in Replication)
-   * @param nonceGroup        the nonceGroup
-   * @param nonce             the nonce
-   * @param mvcc              the mvcc associate the WALKeyImpl
-   * @param replicationScope  the non-default replication scope
-   *                          associated with the region's column families
+   *          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename - name of table
+   * @param logSeqNum - log sequence number
+   * @param now Time at which this edit was written.
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
+   * @param nonceGroup the nonceGroup
+   * @param nonce the nonce
+   * @param mvcc the mvcc associate the WALKeyImpl
+   * @param replicationScope the non-default replication scope associated with the region's column
+   *          families
    */
   // TODO: Fix being able to pass in sequenceid.
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
       final long now, List<UUID> clusterIds, long nonceGroup, long nonce,
       MultiVersionConcurrencyControl mvcc, final NavigableMap<byte[], Integer> replicationScope) {
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc,
-        replicationScope, null);
+      replicationScope, null);
   }
 
   /**
-   * Create the log key for writing to somewhere.
-   * We maintain the tablename mainly for debugging purposes.
-   * A regionName is always a sub-table object.
-   * <p>Used by log splitting and snapshots.
-   *
+   * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
+   * purposes. A regionName is always a sub-table object.
+   * <p>
+   * Used by log splitting and snapshots.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename         - name of table
-   * @param logSeqNum         - log sequence number
-   * @param now               Time at which this edit was written.
-   * @param clusterIds        the clusters that have consumed the change(used in Replication)
+   *          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename - name of table
+   * @param logSeqNum - log sequence number
+   * @param now Time at which this edit was written.
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
    */
   // TODO: Fix being able to pass in sequenceid.
-  public WALKeyImpl(final byte[] encodedRegionName,
-                final TableName tablename,
-                long logSeqNum,
-                final long now,
-                List<UUID> clusterIds,
-                long nonceGroup,
-                long nonce,
-                MultiVersionConcurrencyControl mvcc) {
-    init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup,
-        nonce, mvcc, null, null);
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
+      final long now, List<UUID> clusterIds, long nonceGroup, long nonce,
+      MultiVersionConcurrencyControl mvcc) {
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc, null,
+      null);
   }
 
   /**
-   * Create the log key for writing to somewhere.
-   * We maintain the tablename mainly for debugging purposes.
-   * A regionName is always a sub-table object.
-   *
+   * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
+   * purposes. A regionName is always a sub-table object.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename         the tablename
-   * @param now               Time at which this edit was written.
-   * @param clusterIds        the clusters that have consumed the change(used in Replication)
+   *          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename the tablename
+   * @param now Time at which this edit was written.
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
    * @param nonceGroup
    * @param nonce
    * @param mvcc mvcc control used to generate sequence numbers and control read/write points
    */
-  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename,
-                final long now, List<UUID> clusterIds, long nonceGroup,
-                final long nonce, final MultiVersionConcurrencyControl mvcc) {
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
+      List<UUID> clusterIds, long nonceGroup, final long nonce,
+      final MultiVersionConcurrencyControl mvcc) {
     init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce, mvcc,
-        null, null);
+      null, null);
   }
 
   /**
-   * Create the log key for writing to somewhere.
-   * We maintain the tablename mainly for debugging purposes.
-   * A regionName is always a sub-table object.
-   *
+   * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
+   * purposes. A regionName is always a sub-table object.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   *          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tablename
-   * @param now               Time at which this edit was written.
-   * @param clusterIds        the clusters that have consumed the change(used in Replication)
-   * @param nonceGroup        the nonceGroup
-   * @param nonce             the nonce
+   * @param now Time at which this edit was written.
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
+   * @param nonceGroup the nonceGroup
+   * @param nonce the nonce
    * @param mvcc mvcc control used to generate sequence numbers and control read/write points
-   * @param replicationScope  the non-default replication scope of the column families
+   * @param replicationScope the non-default replication scope of the column families
    */
-  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename,
-                final long now, List<UUID> clusterIds, long nonceGroup,
-                final long nonce, final MultiVersionConcurrencyControl mvcc,
-                NavigableMap<byte[], Integer> replicationScope) {
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
+      List<UUID> clusterIds, long nonceGroup, final long nonce,
+      final MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> replicationScope) {
     init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce, mvcc,
-        replicationScope, null);
+      replicationScope, null);
   }
 
   /**
-   * Create the log key for writing to somewhere.
-   * We maintain the tablename mainly for debugging purposes.
-   * A regionName is always a sub-table object.
-   *
+   * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
+   * purposes. A regionName is always a sub-table object.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   *          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tablename
    * @param logSeqNum
    * @param nonceGroup
    * @param nonce
    */
   // TODO: Fix being able to pass in sequenceid.
-  public WALKeyImpl(final byte[] encodedRegionName,
-                final TableName tablename,
-                long logSeqNum,
-                long nonceGroup,
-                long nonce,
-                final MultiVersionConcurrencyControl mvcc) {
-    init(encodedRegionName,
-        tablename,
-        logSeqNum,
-        EnvironmentEdgeManager.currentTime(),
-        EMPTY_UUIDS,
-        nonceGroup,
-        nonce,
-        mvcc, null, null);
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
+      long nonceGroup, long nonce, final MultiVersionConcurrencyControl mvcc) {
+    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTime(), EMPTY_UUIDS,
+      nonceGroup, nonce, mvcc, null, null);
   }
 
-  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename,
-                    final long now, List<UUID> clusterIds, long nonceGroup,
-                    final long nonce, final MultiVersionConcurrencyControl mvcc,
-                    NavigableMap<byte[], Integer> replicationScope,
-                    Map<String, byte[]> extendedAttributes){
-    init(encodedRegionName,
-        tablename,
-        NO_SEQUENCE_ID,
-        now,
-        clusterIds,
-        nonceGroup,
-        nonce,
-        mvcc, replicationScope, extendedAttributes);
+  public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
+      List<UUID> clusterIds, long nonceGroup, final long nonce,
+      final MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> replicationScope,
+      Map<String, byte[]> extendedAttributes) {
+    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce, mvcc,
+      replicationScope, extendedAttributes);
   }
 
   @InterfaceAudience.Private
-  protected void init(final byte[] encodedRegionName,
-                      final TableName tablename,
-                      long logSeqNum,
-                      final long now,
-                      List<UUID> clusterIds,
-                      long nonceGroup,
-                      long nonce,
-                      MultiVersionConcurrencyControl mvcc,
-                      NavigableMap<byte[], Integer> replicationScope,
-                      Map<String, byte[]> extendedAttributes) {
+  protected void init(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
+      final long now, List<UUID> clusterIds, long nonceGroup, long nonce,
+      MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> replicationScope,
+      Map<String, byte[]> extendedAttributes) {
     this.sequenceId = logSeqNum;
     this.writeTime = now;
     this.clusterIds = clusterIds;
@@ -398,7 +336,7 @@ public class WALKeyImpl implements WALKey {
 
   /** @return encoded region name */
   @Override
-  public byte [] getEncodedRegionName() {
+  public byte[] getEncodedRegionName() {
     return encodedRegionName;
   }
 
@@ -489,27 +427,27 @@ public class WALKeyImpl implements WALKey {
    *         returns DEFAULT_CLUSTER_ID (cases where replication is not enabled)
    */
   @Override
-  public UUID getOriginatingClusterId(){
-    return clusterIds.isEmpty()? HConstants.DEFAULT_CLUSTER_ID: clusterIds.get(0);
+  public UUID getOriginatingClusterId() {
+    return clusterIds.isEmpty() ? HConstants.DEFAULT_CLUSTER_ID : clusterIds.get(0);
   }
 
   @Override
-  public void addExtendedAttribute(String attributeKey, byte[] attributeValue){
-    if (extendedAttributes == null){
+  public void addExtendedAttribute(String attributeKey, byte[] attributeValue) {
+    if (extendedAttributes == null) {
       extendedAttributes = new HashMap<String, byte[]>();
     }
     extendedAttributes.put(attributeKey, attributeValue);
   }
 
   @Override
-  public byte[] getExtendedAttribute(String attributeKey){
+  public byte[] getExtendedAttribute(String attributeKey) {
     return extendedAttributes != null ? extendedAttributes.get(attributeKey) : null;
   }
 
   @Override
-  public Map<String, byte[]> getExtendedAttributes(){
-    return extendedAttributes != null ? new HashMap<String, byte[]>(extendedAttributes) :
-        new HashMap<String, byte[]>();
+  public Map<String, byte[]> getExtendedAttributes() {
+    return extendedAttributes != null ? new HashMap<String, byte[]>(extendedAttributes)
+        : new HashMap<String, byte[]>();
   }
 
   @Override
@@ -525,7 +463,7 @@ public class WALKeyImpl implements WALKey {
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    return compareTo((WALKey)obj) == 0;
+    return compareTo((WALKey) obj) == 0;
   }
 
   @Override
@@ -544,7 +482,7 @@ public class WALKeyImpl implements WALKey {
       long otherSid = o.getSequenceId();
       if (sid < otherSid) {
         result = -1;
-      } else if (sid  > otherSid) {
+      } else if (sid > otherSid) {
         result = 1;
       }
       if (result == 0) {
@@ -560,10 +498,9 @@ public class WALKeyImpl implements WALKey {
   }
 
   /**
-   * Drop this instance's tablename byte array and instead
-   * hold a reference to the provided tablename. This is not
-   * meant to be a general purpose setter - it's only used
-   * to collapse references to conserve memory.
+   * Drop this instance's tablename byte array and instead hold a reference to the provided
+   * tablename. This is not meant to be a general purpose setter - it's only used to collapse
+   * references to conserve memory.
    */
   void internTableName(TableName tablename) {
     // We should not use this as a setter - only to swap
@@ -573,12 +510,11 @@ public class WALKeyImpl implements WALKey {
   }
 
   /**
-   * Drop this instance's region name byte array and instead
-   * hold a reference to the provided region name. This is not
-   * meant to be a general purpose setter - it's only used
-   * to collapse references to conserve memory.
+   * Drop this instance's region name byte array and instead hold a reference to the provided region
+   * name. This is not meant to be a general purpose setter - it's only used to collapse references
+   * to conserve memory.
    */
-  void internEncodedRegionName(byte []encodedRegionName) {
+  void internEncodedRegionName(byte[] encodedRegionName) {
     // We should not use this as a setter - only to swap
     // in a new reference to the same table name.
     assert Bytes.equals(this.encodedRegionName, encodedRegionName);
@@ -617,11 +553,11 @@ public class WALKeyImpl implements WALKey {
             .setScopeType(ScopeType.forNumber(e.getValue())));
       }
     }
-    if (extendedAttributes != null){
-      for (Map.Entry<String, byte[]> e : extendedAttributes.entrySet()){
-        WALProtos.Attribute attr = WALProtos.Attribute.newBuilder().
-            setKey(e.getKey()).setValue(compressor.compress(e.getValue(),
-            CompressionContext.DictionaryIndex.TABLE)).build();
+    if (extendedAttributes != null) {
+      for (Map.Entry<String, byte[]> e : extendedAttributes.entrySet()) {
+        WALProtos.Attribute attr = WALProtos.Attribute.newBuilder().setKey(e.getKey())
+            .setValue(compressor.compress(e.getValue(), CompressionContext.DictionaryIndex.TABLE))
+            .build();
         builder.addExtendedAttributes(attr);
       }
     }
@@ -659,9 +595,9 @@ public class WALKeyImpl implements WALKey {
     if (walKey.hasOrigSequenceNumber()) {
       this.origLogSeqNum = walKey.getOrigSequenceNumber();
     }
-    if (walKey.getExtendedAttributesCount() > 0){
+    if (walKey.getExtendedAttributesCount() > 0) {
       this.extendedAttributes = new HashMap<>(walKey.getExtendedAttributesCount());
-      for (WALProtos.Attribute attr : walKey.getExtendedAttributesList()){
+      for (WALProtos.Attribute attr : walKey.getExtendedAttributesList()) {
         byte[] value =
             uncompressor.uncompress(attr.getValue(), CompressionContext.DictionaryIndex.TABLE);
         extendedAttributes.put(attr.getKey(), value);
@@ -683,7 +619,7 @@ public class WALKeyImpl implements WALKey {
       size += Bytes.SIZEOF_LONG; // nonce
     }
     if (replicationScope != null) {
-      for (Map.Entry<byte[], Integer> scope: replicationScope.entrySet()) {
+      for (Map.Entry<byte[], Integer> scope : replicationScope.entrySet()) {
         size += scope.getKey().length;
         size += Bytes.SIZEOF_INT;
       }

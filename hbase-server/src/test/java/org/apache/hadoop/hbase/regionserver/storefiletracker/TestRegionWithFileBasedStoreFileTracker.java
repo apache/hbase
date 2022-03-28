@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestRegionWithFileBasedStoreFileTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionWithFileBasedStoreFileTracker.class);
+      HBaseClassTestRule.forClass(TestRegionWithFileBasedStoreFileTracker.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -58,8 +58,8 @@ public class TestRegionWithFileBasedStoreFileTracker {
   private static final byte[] CQ = Bytes.toBytes("cq");
 
   private static final TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("file_based_tracker"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("file_based_tracker"))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
 
   private static final RegionInfo RI = RegionInfoBuilder.newBuilder(TD.getTableName()).build();
 
@@ -72,8 +72,8 @@ public class TestRegionWithFileBasedStoreFileTracker {
   public void setUp() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.set(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
-    region =
-      HBaseTestingUtil.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()), conf, TD);
+    region = HBaseTestingUtil.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()),
+      conf, TD);
   }
 
   @After

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,7 @@ import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestImportTsv implements Configurable {
 
   @ClassRule
@@ -143,11 +143,10 @@ public class TestImportTsv implements Configurable {
   }
 
   @Test
-  public void testMROnTableWithCustomMapper()
-  throws Exception {
+  public void testMROnTableWithCustomMapper() throws Exception {
     util.createTable(tn, FAMILY);
     args.put(ImportTsv.MAPPER_CONF_KEY,
-        "org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapper");
+      "org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapper");
 
     doMROnTableTest(null, 3);
     util.deleteTable(tn);
@@ -189,39 +188,34 @@ public class TestImportTsv implements Configurable {
 
   @Test
   public void testJobConfigurationsWithTsvImporterTextMapper() throws Exception {
-    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
     String INPUT_FILE = "InputFile1.csv";
     // Prepare the arguments required for the test.
-    String[] args =
-        new String[] {
-            "-D" + ImportTsv.MAPPER_CONF_KEY
-                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
-            "-D" + ImportTsv.COLUMNS_CONF_KEY
-                + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
-            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
-                tn.getNameAsString(),
-            INPUT_FILE
-            };
-    assertEquals("running test job configuration failed.", 0, ToolRunner.run(
-        new Configuration(util.getConfiguration()),
-        new ImportTsv() {
-          @Override
-          public int run(String[] args) throws Exception {
-            Job job = createSubmittableJob(getConf(), args);
-            assertTrue(job.getMapperClass().equals(TsvImporterTextMapper.class));
-            assertTrue(job.getReducerClass().equals(TextSortReducer.class));
-            assertTrue(job.getMapOutputValueClass().equals(Text.class));
-            return 0;
-          }
-        }, args));
+    String[] args = new String[] {
+        "-D" + ImportTsv.MAPPER_CONF_KEY
+            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
+        tn.getNameAsString(), INPUT_FILE };
+    assertEquals("running test job configuration failed.", 0,
+      ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
+        @Override
+        public int run(String[] args) throws Exception {
+          Job job = createSubmittableJob(getConf(), args);
+          assertTrue(job.getMapperClass().equals(TsvImporterTextMapper.class));
+          assertTrue(job.getReducerClass().equals(TextSortReducer.class));
+          assertTrue(job.getMapOutputValueClass().equals(Text.class));
+          return 0;
+        }
+      }, args));
     // Delete table created by createSubmittableJob.
     util.deleteTable(tn);
   }
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
     args.put(ImportTsv.MAPPER_CONF_KEY, "org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper");
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     String data = "KEY\u001bVALUE4\u001bVALUE8\n";
@@ -239,53 +233,49 @@ public class TestImportTsv implements Configurable {
     conf.set(ImportTsv.CREATE_TABLE_CONF_KEY, "no");
     exception.expect(TableNotFoundException.class);
     assertEquals("running test job configuration failed.", 0,
-        ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
-              @Override public int run(String[] args) throws Exception {
-                createSubmittableJob(getConf(), args);
-                return 0;
-              }
-            }, args));
+      ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
+        @Override
+        public int run(String[] args) throws Exception {
+          createSubmittableJob(getConf(), args);
+          return 0;
+        }
+      }, args));
   }
 
   @Test
   public void testMRWithoutAnExistingTable() throws Exception {
-    String[] args =
-        new String[] { tn.getNameAsString(), "/inputFile" };
+    String[] args = new String[] { tn.getNameAsString(), "/inputFile" };
 
     exception.expect(TableNotFoundException.class);
-    assertEquals("running test job configuration failed.", 0, ToolRunner.run(
-        new Configuration(util.getConfiguration()),
-        new ImportTsv() {
-          @Override
-          public int run(String[] args) throws Exception {
-            createSubmittableJob(getConf(), args);
-            return 0;
-          }
-        }, args));
+    assertEquals("running test job configuration failed.", 0,
+      ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
+        @Override
+        public int run(String[] args) throws Exception {
+          createSubmittableJob(getConf(), args);
+          return 0;
+        }
+      }, args));
   }
 
   @Test
   public void testJobConfigurationsWithDryMode() throws Exception {
-    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
     String INPUT_FILE = "InputFile1.csv";
     // Prepare the arguments required for the test.
-    String[] argsArray = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
-        "-D" + ImportTsv.DRY_RUN_CONF_KEY + "=true",
-        tn.getNameAsString(),
-        INPUT_FILE };
-    assertEquals("running test job configuration failed.", 0, ToolRunner.run(
-        new Configuration(util.getConfiguration()),
-        new ImportTsv() {
-          @Override
-          public int run(String[] args) throws Exception {
-            Job job = createSubmittableJob(getConf(), args);
-            assertTrue(job.getOutputFormatClass().equals(NullOutputFormat.class));
-            return 0;
-          }
-        }, argsArray));
+    String[] argsArray =
+        new String[] { "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
+            "-D" + ImportTsv.DRY_RUN_CONF_KEY + "=true", tn.getNameAsString(), INPUT_FILE };
+    assertEquals("running test job configuration failed.", 0,
+      ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
+        @Override
+        public int run(String[] args) throws Exception {
+          Job job = createSubmittableJob(getConf(), args);
+          assertTrue(job.getOutputFormatClass().equals(NullOutputFormat.class));
+          return 0;
+        }
+      }, argsArray));
     // Delete table created by createSubmittableJob.
     util.deleteTable(tn);
   }
@@ -301,8 +291,7 @@ public class TestImportTsv implements Configurable {
   }
 
   /**
-   * If table is not present in non-bulk mode, dry run should fail just like
-   * normal mode.
+   * If table is not present in non-bulk mode, dry run should fail just like normal mode.
    */
   @Test
   public void testDryModeWithoutBulkOutputAndTableDoesNotExists() throws Exception {
@@ -311,7 +300,8 @@ public class TestImportTsv implements Configurable {
     doMROnTableTest(null, 1);
   }
 
-  @Test public void testDryModeWithBulkOutputAndTableExists() throws Exception {
+  @Test
+  public void testDryModeWithBulkOutputAndTableExists() throws Exception {
     util.createTable(tn, FAMILY);
     // Prepare the arguments required for the test.
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
@@ -324,12 +314,11 @@ public class TestImportTsv implements Configurable {
   }
 
   /**
-   * If table is not present in bulk mode and create.table is not set to yes,
-   * import should fail with TableNotFoundException.
+   * If table is not present in bulk mode and create.table is not set to yes, import should fail
+   * with TableNotFoundException.
    */
   @Test
-  public void testDryModeWithBulkOutputAndTableDoesNotExistsCreateTableSetToNo() throws
-      Exception {
+  public void testDryModeWithBulkOutputAndTableDoesNotExistsCreateTableSetToNo() throws Exception {
     // Prepare the arguments required for the test.
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
@@ -382,31 +371,30 @@ public class TestImportTsv implements Configurable {
   }
 
   private Tool doMROnTableTest(String data, int valueMultiplier) throws Exception {
-    return doMROnTableTest(util, tn, FAMILY, data, args, valueMultiplier,-1);
+    return doMROnTableTest(util, tn, FAMILY, data, args, valueMultiplier, -1);
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table,
-      String family, String data, Map<String, String> args) throws Exception {
-    return doMROnTableTest(util, table, family, data, args, 1,-1);
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table, String family,
+      String data, Map<String, String> args) throws Exception {
+    return doMROnTableTest(util, table, family, data, args, 1, -1);
   }
 
   /**
-   * Run an ImportTsv job and perform basic validation on the results.
-   * Returns the ImportTsv <code>Tool</code> instance so that other tests can
-   * inspect it for further validation as necessary. This method is static to
-   * insure non-reliance on instance's util/conf facilities.
+   * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
+   * <code>Tool</code> instance so that other tests can inspect it for further validation as
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities.
    * @param args Any arguments to pass BEFORE inputFile path is appended.
    * @return The Tool instance used to run the test.
    */
-  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table,
-      String family, String data, Map<String, String> args, int valueMultiplier,int expectedKVCount)
-  throws Exception {
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table, String family,
+      String data, Map<String, String> args, int valueMultiplier, int expectedKVCount)
+      throws Exception {
     Configuration conf = new Configuration(util.getConfiguration());
 
     // populate input file
     FileSystem fs = FileSystem.get(conf);
-    Path inputPath = fs.makeQualified(
-            new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
+    Path inputPath = fs
+        .makeQualified(new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
     FSDataOutputStream op = fs.create(inputPath, true);
     if (data == null) {
       data = "KEY\u001bVALUE1\u001bVALUE2\n";
@@ -440,15 +428,14 @@ public class TestImportTsv implements Configurable {
     // Perform basic validation. If the input args did not include
     // ImportTsv.BULK_OUTPUT_CONF_KEY then validate data in the table.
     // Otherwise, validate presence of hfiles.
-    boolean isDryRun = args.containsKey(ImportTsv.DRY_RUN_CONF_KEY) &&
-        "true".equalsIgnoreCase(args.get(ImportTsv.DRY_RUN_CONF_KEY));
+    boolean isDryRun = args.containsKey(ImportTsv.DRY_RUN_CONF_KEY)
+        && "true".equalsIgnoreCase(args.get(ImportTsv.DRY_RUN_CONF_KEY));
     if (args.containsKey(ImportTsv.BULK_OUTPUT_CONF_KEY)) {
       if (isDryRun) {
         assertFalse(String.format("Dry run mode, %s should not have been created.",
-                 ImportTsv.BULK_OUTPUT_CONF_KEY),
-            fs.exists(new Path(ImportTsv.BULK_OUTPUT_CONF_KEY)));
+          ImportTsv.BULK_OUTPUT_CONF_KEY), fs.exists(new Path(ImportTsv.BULK_OUTPUT_CONF_KEY)));
       } else {
-        validateHFiles(fs, args.get(ImportTsv.BULK_OUTPUT_CONF_KEY), family,expectedKVCount);
+        validateHFiles(fs, args.get(ImportTsv.BULK_OUTPUT_CONF_KEY), family, expectedKVCount);
       }
     } else {
       validateTable(conf, table, family, valueMultiplier, isDryRun);
@@ -464,8 +451,8 @@ public class TestImportTsv implements Configurable {
   /**
    * Confirm ImportTsv via data in online table.
    */
-  private static void validateTable(Configuration conf, TableName tableName,
-      String family, int valueMultiplier, boolean isDryRun) throws IOException {
+  private static void validateTable(Configuration conf, TableName tableName, String family,
+      int valueMultiplier, boolean isDryRun) throws IOException {
 
     LOG.debug("Validating table.");
     Connection connection = ConnectionFactory.createConnection(conf);
@@ -487,7 +474,8 @@ public class TestImportTsv implements Configurable {
           assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
-          assertTrue(CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
+          assertTrue(
+            CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.
         }
         if (isDryRun) {
@@ -527,14 +515,11 @@ public class TestImportTsv implements Configurable {
       String[] elements = cfStatus.getPath().toString().split(Path.SEPARATOR);
       String cf = elements[elements.length - 1];
       foundFamilies.add(cf);
-      assertTrue(
-        String.format(
-          "HFile output contains a column family (%s) not present in input families (%s)",
-          cf, configFamilies),
-          configFamilies.contains(cf));
+      assertTrue(String.format(
+        "HFile output contains a column family (%s) not present in input families (%s)", cf,
+        configFamilies), configFamilies.contains(cf));
       for (FileStatus hfile : fs.listStatus(cfStatus.getPath())) {
-        assertTrue(
-          String.format("HFile %s appears to contain no data.", hfile.getPath()),
+        assertTrue(String.format("HFile %s appears to contain no data.", hfile.getPath()),
           hfile.getLen() > 0);
         // count the number of KVs from all the hfiles
         if (expectedKVCount > -1) {
@@ -543,11 +528,12 @@ public class TestImportTsv implements Configurable {
       }
     }
     assertTrue(String.format("HFile output does not contain the input family '%s'.", family),
-        foundFamilies.contains(family));
+      foundFamilies.contains(family));
     if (expectedKVCount > -1) {
-      assertTrue(String.format(
-        "KV count in ouput hfile=<%d> doesn't match with expected KV count=<%d>", actualKVCount,
-        expectedKVCount), actualKVCount == expectedKVCount);
+      assertTrue(
+        String.format("KV count in ouput hfile=<%d> doesn't match with expected KV count=<%d>",
+          actualKVCount, expectedKVCount),
+        actualKVCount == expectedKVCount);
     }
   }
 
@@ -571,4 +557,3 @@ public class TestImportTsv implements Configurable {
     return count;
   }
 }
-

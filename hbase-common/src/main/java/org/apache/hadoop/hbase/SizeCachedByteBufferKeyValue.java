@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
- * off heap/ on heap ByteBuffer
+ * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in off
+ * heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
 public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {

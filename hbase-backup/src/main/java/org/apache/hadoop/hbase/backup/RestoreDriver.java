@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,9 +59,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 
 /**
- *
  * Command-line entry point for restore operation
- *
  */
 @InterfaceAudience.Private
 public class RestoreDriver extends AbstractHBaseTool {
@@ -107,13 +105,13 @@ public class RestoreDriver extends AbstractHBaseTool {
     // whether to only check the dependencies, false by default
     boolean check = cmd.hasOption(OPTION_CHECK);
     if (check) {
-      LOG.debug("Found -check option in restore command, "
-          + "will check and verify the dependencies");
+      LOG.debug(
+        "Found -check option in restore command, " + "will check and verify the dependencies");
     }
 
     if (cmd.hasOption(OPTION_SET) && cmd.hasOption(OPTION_TABLE)) {
-      System.err.println("Options -s and -t are mutaully exclusive,"+
-          " you can not specify both of them.");
+      System.err.println(
+        "Options -s and -t are mutaully exclusive," + " you can not specify both of them.");
       printToolUsage();
       return -1;
     }
@@ -155,8 +153,8 @@ public class RestoreDriver extends AbstractHBaseTool {
           return -2;
         }
         if (tables == null) {
-          System.out.println("ERROR: Backup set '" + setName
-              + "' is either empty or does not exist");
+          System.out
+              .println("ERROR: Backup set '" + setName + "' is either empty or does not exist");
           printToolUsage();
           return -3;
         }
@@ -167,15 +165,15 @@ public class RestoreDriver extends AbstractHBaseTool {
       TableName[] sTableArray = BackupUtils.parseTableNames(tables);
       TableName[] tTableArray = BackupUtils.parseTableNames(tableMapping);
 
-      if (sTableArray != null && tTableArray != null &&
-          (sTableArray.length != tTableArray.length)) {
+      if (sTableArray != null && tTableArray != null
+          && (sTableArray.length != tTableArray.length)) {
         System.out.println("ERROR: table mapping mismatch: " + tables + " : " + tableMapping);
         printToolUsage();
         return -4;
       }
 
-      client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check,
-        sTableArray, tTableArray, overwrite));
+      client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check, sTableArray,
+        tTableArray, overwrite));
     } catch (Exception e) {
       LOG.error("Error while running restore backup", e);
       return -5;

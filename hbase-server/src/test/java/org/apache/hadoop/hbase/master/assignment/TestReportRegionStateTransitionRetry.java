@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestReportRegionStateTransitionRetry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReportRegionStateTransitionRetry.class);
+      HBaseClassTestRule.forClass(TestReportRegionStateTransitionRetry.class);
 
   private static final AtomicReference<CountDownLatch> RESUME_AND_FAIL = new AtomicReference<>();
 
@@ -90,7 +90,7 @@ public class TestReportRegionStateTransitionRetry {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
   }
@@ -118,17 +118,17 @@ public class TestReportRegionStateTransitionRetry {
   public void testRetryOnClose() throws Exception {
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(NAME).get(0).getRegionInfo();
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     RegionStateNode rsn = am.getRegionStates().getRegionStateNode(region);
 
     CountDownLatch latch = new CountDownLatch(1);
     RESUME_AND_FAIL.set(latch);
     Future<byte[]> future =
-      am.moveAsync(new RegionPlan(region, rsn.getRegionLocation(), rsn.getRegionLocation()));
+        am.moveAsync(new RegionPlan(region, rsn.getRegionLocation(), rsn.getRegionLocation()));
     TransitRegionStateProcedure proc =
-      procExec.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
-        .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p).findAny().get();
+        procExec.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
+            .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p).findAny().get();
 
     // wait until we schedule the OpenRegionProcedure
     UTIL.waitFor(10000,
@@ -139,7 +139,7 @@ public class TestReportRegionStateTransitionRetry {
 
     // confirm that the region can still be write
     try (Table table = UTIL.getConnection().getTableBuilder(NAME, null).setWriteRpcTimeout(1000)
-      .setOperationTimeout(2000).build()) {
+        .setOperationTimeout(2000).build()) {
       table.put(
         new Put(Bytes.toBytes("key")).addColumn(CF, Bytes.toBytes("cq"), Bytes.toBytes("val")));
     }

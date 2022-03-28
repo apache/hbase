@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +22,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes variable-length values encoded using
- * {@link org.apache.hadoop.hbase.util.Bytes#toBytes(String)}. 
- * Includes a termination marker following the
- * raw {@code byte[]} value. Intended to make it easier to transition
- * away from direct use of {@link org.apache.hadoop.hbase.util.Bytes}.
+ * {@link org.apache.hadoop.hbase.util.Bytes#toBytes(String)}. Includes a termination marker
+ * following the raw {@code byte[]} value. Intended to make it easier to transition away from direct
+ * use of {@link org.apache.hadoop.hbase.util.Bytes}.
  * @see org.apache.hadoop.hbase.util.Bytes#toBytes(String)
  * @see org.apache.hadoop.hbase.util.Bytes#toString(byte[], int, int)
  * @see RawString
@@ -35,8 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RawStringTerminated extends TerminatedWrapper<String> {
 
   /**
-   * Create a {@code RawStringTerminated} using the specified terminator and
-   * {@code order}.
+   * Create a {@code RawStringTerminated} using the specified terminator and {@code order}.
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawStringTerminated(Order order, byte[] term) {
@@ -44,8 +42,7 @@ public class RawStringTerminated extends TerminatedWrapper<String> {
   }
 
   /**
-   * Create a {@code RawStringTerminated} using the specified terminator and
-   * {@code order}.
+   * Create a {@code RawStringTerminated} using the specified terminator and {@code order}.
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawStringTerminated(Order order, String term) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,17 +39,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test MetaTableAccessor but without spinning up a cluster.
- * We mock regionserver back and forth (we do spin up a zk cluster).
+ * Test MetaTableAccessor but without spinning up a cluster. We mock regionserver back and forth (we
+ * do spin up a zk cluster).
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestMetaTableAccessorNoCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetaTableAccessorNoCluster.class);
 
-  private static final  HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Before
   public void before() throws Exception {
@@ -81,7 +81,7 @@ public class TestMetaTableAccessorNoCluster {
     // OK, give it what it expects
     kvs.clear();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER,
-      RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+        RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
     hri = CatalogFamilyFormat.getRegionInfo(Result.create(kvs));
     assertNotNull(hri);
     assertTrue(RegionInfo.COMPARATOR.compare(hri, RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);

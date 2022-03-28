@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
@@ -76,22 +75,23 @@ public class QuotaUtil extends QuotaTableUtil {
 
   /** Table descriptor for Quota internal table */
   public static final TableDescriptor QUOTA_TABLE_DESC =
-    TableDescriptorBuilder.newBuilder(QUOTA_TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_INFO)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
-        .setMaxVersions(1).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_USAGE)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
-        .setMaxVersions(1).build())
-      .build();
+      TableDescriptorBuilder.newBuilder(QUOTA_TABLE_NAME)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_INFO)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
+              .setMaxVersions(1).build())
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(QUOTA_FAMILY_USAGE)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROW)
+              .setMaxVersions(1).build())
+          .build();
 
   /** Returns true if the support for quota is enabled */
   public static boolean isQuotaEnabled(final Configuration conf) {
     return conf.getBoolean(QUOTA_CONF_KEY, QUOTA_ENABLED_DEFAULT);
   }
 
-  /* =========================================================================
-   *  Quota "settings" helpers
+  /*
+   * ========================================================================= Quota "settings"
+   * helpers
    */
   public static void addTableQuota(final Connection connection, final TableName table,
       final Quotas data) throws IOException {
@@ -113,8 +113,8 @@ public class QuotaUtil extends QuotaTableUtil {
     deleteQuotas(connection, getNamespaceRowKey(namespace));
   }
 
-  public static void addUserQuota(final Connection connection, final String user,
-      final Quotas data) throws IOException {
+  public static void addUserQuota(final Connection connection, final String user, final Quotas data)
+      throws IOException {
     addQuotas(connection, getUserRowKey(user), data);
   }
 
@@ -125,8 +125,8 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static void addUserQuota(final Connection connection, final String user,
       final String namespace, final Quotas data) throws IOException {
-    addQuotas(connection, getUserRowKey(user),
-        getSettingsQualifierForUserNamespace(namespace), data);
+    addQuotas(connection, getUserRowKey(user), getSettingsQualifierForUserNamespace(namespace),
+      data);
   }
 
   public static void deleteUserQuota(final Connection connection, final String user)
@@ -136,14 +136,12 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static void deleteUserQuota(final Connection connection, final String user,
       final TableName table) throws IOException {
-    deleteQuotas(connection, getUserRowKey(user),
-        getSettingsQualifierForUserTable(table));
+    deleteQuotas(connection, getUserRowKey(user), getSettingsQualifierForUserTable(table));
   }
 
   public static void deleteUserQuota(final Connection connection, final String user,
       final String namespace) throws IOException {
-    deleteQuotas(connection, getUserRowKey(user),
-        getSettingsQualifierForUserNamespace(namespace));
+    deleteQuotas(connection, getUserRowKey(user), getSettingsQualifierForUserNamespace(namespace));
   }
 
   public static void addRegionServerQuota(final Connection connection, final String regionServer,
@@ -236,8 +234,8 @@ public class QuotaUtil extends QuotaTableUtil {
     return Bytes.toBoolean(result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS));
   }
 
-  private static void addQuotas(final Connection connection, final byte[] rowKey,
-      final Quotas data) throws IOException {
+  private static void addQuotas(final Connection connection, final byte[] rowKey, final Quotas data)
+      throws IOException {
     addQuotas(connection, rowKey, QUOTA_QUALIFIER_SETTINGS, data);
   }
 
@@ -261,7 +259,7 @@ public class QuotaUtil extends QuotaTableUtil {
     }
     if (isNamespaceRowKey(rowKey)) {
       String ns = getNamespaceFromRowKey(rowKey);
-      Quotas namespaceQuota = getNamespaceQuota(connection,ns);
+      Quotas namespaceQuota = getNamespaceQuota(connection, ns);
       if (namespaceQuota != null && namespaceQuota.hasSpace()) {
         // When deleting namespace space quota, also delete table usage(u:p) snapshots
         deleteTableUsageSnapshotsForNamespace(connection, ns);
@@ -368,7 +366,7 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type,
       final Connection connection, final List<Get> gets, final KeyFromRow<K> kfr)
-  throws IOException {
+      throws IOException {
     long nowTs = EnvironmentEdgeManager.currentTime();
     Result[] results = doGet(connection, gets);
 
@@ -388,8 +386,7 @@ public class QuotaUtil extends QuotaTableUtil {
 
       try {
         Quotas quotas = quotasFromData(data);
-        quotas = updateClusterQuotaToMachineQuota(quotas,
-          kfr.getFactor(key));
+        quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
         quotaInfo.setQuotas(quotas);
       } catch (IOException e) {
         LOG.error("Unable to parse " + type + " '" + key + "' quotas", e);
@@ -454,28 +451,28 @@ public class QuotaUtil extends QuotaTableUtil {
 
   private static interface KeyFromRow<T> {
     T getKeyFromRow(final byte[] row);
+
     double getFactor(T t);
   }
 
-  /* =========================================================================
-   *  HTable helpers
+  /*
+   * ========================================================================= HTable helpers
    */
-  private static void doPut(final Connection connection, final Put put)
-  throws IOException {
+  private static void doPut(final Connection connection, final Put put) throws IOException {
     try (Table table = connection.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
       table.put(put);
     }
   }
 
   private static void doDelete(final Connection connection, final Delete delete)
-  throws IOException {
+      throws IOException {
     try (Table table = connection.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
       table.delete(delete);
     }
   }
 
-  /* =========================================================================
-   *  Data Size Helpers
+  /*
+   * ========================================================================= Data Size Helpers
    */
   public static long calculateMutationSize(final Mutation mutation) {
     long size = 0;
@@ -497,7 +494,7 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static long calculateResultSize(final List<Result> results) {
     long size = 0;
-    for (Result result: results) {
+    for (Result result : results) {
       for (Cell cell : result.rawCells()) {
         size += cell.getSerializedSize();
       }

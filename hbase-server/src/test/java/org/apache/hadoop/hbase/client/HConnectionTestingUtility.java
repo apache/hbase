@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,24 +32,23 @@ public class HConnectionTestingUtility {
    * to HBaseTestingUtility to give it access.
    */
   /**
-   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code>
-   * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
-   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the
-   * connection when done by calling {@link Connection#close()} else it will stick around; this is
-   * probably not what you want.
+   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code> configuration
+   * instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
+   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the connection when done
+   * by calling {@link Connection#close()} else it will stick around; this is probably not what you
+   * want.
    * @param conf configuration
    * @return ConnectionImplementation object for <code>conf</code>
    */
-  public static Connection getMockedConnection(final Configuration conf)
-      throws IOException {
+  public static Connection getMockedConnection(final Configuration conf) throws IOException {
     Connection connection = Mockito.mock(Connection.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
 
-    // Some test cases need Mock of getTable and getScanner 
+    // Some test cases need Mock of getTable and getScanner
     Table t = Mockito.mock(Table.class);
     Mockito.when(connection.getTable(Mockito.any())).thenReturn(t);
     ResultScanner rs = Mockito.mock(ResultScanner.class);
-    Mockito.when(t.getScanner((Scan)Mockito.any())).thenReturn(rs);
+    Mockito.when(t.getScanner((Scan) Mockito.any())).thenReturn(rs);
 
     return connection;
   }

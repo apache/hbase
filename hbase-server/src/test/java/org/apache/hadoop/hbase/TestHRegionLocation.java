@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class TestHRegionLocation {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionLocation.class);
+      HBaseClassTestRule.forClass(TestHRegionLocation.class);
 
   /**
    * HRegionLocations are equal if they have the same 'location' -- i.e. host and port -- even if
@@ -57,7 +57,7 @@ public class TestHRegionLocation {
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
     HRegionLocation hrl5 =
-      new HRegionLocation(hrl4.getRegion(), hrl4.getServerName(), hrl4.getSeqNum() + 1);
+        new HRegionLocation(hrl4.getRegion(), hrl4.getServerName(), hrl4.getSeqNum() + 1);
     assertTrue(hrl4.equals(hrl5));
   }
 

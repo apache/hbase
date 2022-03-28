@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,10 +52,10 @@ public class TestReopenTableRegionsProcedureBackoff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReopenTableRegionsProcedureBackoff.class);
+      HBaseClassTestRule.forClass(TestReopenTableRegionsProcedureBackoff.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestReopenTableRegionsProcedureBackoff.class);
+      LoggerFactory.getLogger(TestReopenTableRegionsProcedureBackoff.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -79,12 +79,12 @@ public class TestReopenTableRegionsProcedureBackoff {
   public void testRetryBackoff() throws IOException, InterruptedException {
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     RegionInfo regionInfo = UTIL.getAdmin().getRegions(TABLE_NAME).get(0);
     RegionStateNode regionNode = am.getRegionStates().getRegionStateNode(regionInfo);
     // just a dummy one
     TransitRegionStateProcedure trsp =
-      TransitRegionStateProcedure.unassign(procExec.getEnvironment(), regionInfo);
+        TransitRegionStateProcedure.unassign(procExec.getEnvironment(), regionInfo);
     long openSeqNum;
     regionNode.lock();
     try {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestTransitRegionStateProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitRegionStateProcedure.class);
+      HBaseClassTestRule.forClass(TestTransitRegionStateProcedure.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -84,7 +84,7 @@ public class TestTransitRegionStateProcedure {
 
   private void resetProcExecutorTestingKillFlag() {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     assertTrue("expected executor to be running", procExec.isRunning());
   }
@@ -113,11 +113,11 @@ public class TestTransitRegionStateProcedure {
   @Test
   public void testRecoveryAndDoubleExecutionMove() throws Exception {
     MasterProcedureEnv env =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     HRegion region = UTIL.getMiniHBaseCluster().getRegions(tableName).get(0);
     long openSeqNum = region.getOpenSeqNum();
     TransitRegionStateProcedure proc =
-      TransitRegionStateProcedure.move(env, region.getRegionInfo(), null);
+        TransitRegionStateProcedure.move(env, region.getRegionInfo(), null);
     testRecoveryAndDoubleExcution(proc);
     HRegion region2 = UTIL.getMiniHBaseCluster().getRegions(tableName).get(0);
     long openSeqNum2 = region2.getOpenSeqNum();
@@ -128,14 +128,14 @@ public class TestTransitRegionStateProcedure {
   @Test
   public void testRecoveryAndDoubleExecutionReopen() throws Exception {
     MasterProcedureEnv env =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableName);
     HRegion region = rs.getRegions(tableName).get(0);
     region.addReadRequestsCount(1);
     region.addWriteRequestsCount(2);
     long openSeqNum = region.getOpenSeqNum();
     TransitRegionStateProcedure proc =
-      TransitRegionStateProcedure.reopen(env, region.getRegionInfo());
+        TransitRegionStateProcedure.reopen(env, region.getRegionInfo());
     testRecoveryAndDoubleExcution(proc);
     // should still be on the same RS
     HRegion region2 = rs.getRegions(tableName).get(0);

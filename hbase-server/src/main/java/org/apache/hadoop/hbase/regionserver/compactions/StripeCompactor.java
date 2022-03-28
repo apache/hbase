@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -102,9 +101,10 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
       }, throughputController, user);
   }
 
-  public List<Path> compact(CompactionRequestImpl request, final int targetCount, final long targetSize,
-      final byte[] left, final byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
-      ThroughputController throughputController, User user) throws IOException {
+  public List<Path> compact(CompactionRequestImpl request, final int targetCount,
+      final long targetSize, final byte[] left, final byte[] right, byte[] majorRangeFromRow,
+      byte[] majorRangeToRow, ThroughputController throughputController, User user)
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Executing compaction with " + targetSize + " target file size, no more than " + targetCount
@@ -125,8 +125,8 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
-      CompactionRequestImpl request) throws IOException {
+  protected List<Path> commitWriter(FileDetails fd, CompactionRequestImpl request)
+      throws IOException {
     List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor(), request.getFiles());
     assert !newFiles.isEmpty() : "Should have produced an empty file to preserve metadata.";
     return newFiles;

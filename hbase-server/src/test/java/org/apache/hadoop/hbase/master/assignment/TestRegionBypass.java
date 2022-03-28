@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,11 +51,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState;
 
-
 /**
  * Tests bypass on a region assign/unassign
  */
-@Category({LargeTests.class})
+@Category({ LargeTests.class })
 public class TestRegionBypass {
   private final static Logger LOG = LoggerFactory.getLogger(TestRegionBypass.class);
 
@@ -93,34 +92,34 @@ public class TestRegionBypass {
     MasterProcedureEnv env =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     List<RegionInfo> regions = admin.getRegions(this.tableName);
-    for (RegionInfo ri: regions) {
+    for (RegionInfo ri : regions) {
       admin.unassign(ri.getRegionName(), false);
     }
     List<Long> pids = new ArrayList<>(regions.size());
-    for (RegionInfo ri: regions) {
-      Procedure<MasterProcedureEnv> p = new StallingAssignProcedure(env, ri, null, false,
-          TransitionType.ASSIGN);
-      pids.add(TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().
-          submitProcedure(p));
+    for (RegionInfo ri : regions) {
+      Procedure<MasterProcedureEnv> p =
+          new StallingAssignProcedure(env, ri, null, false, TransitionType.ASSIGN);
+      pids.add(
+        TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().submitProcedure(p));
     }
-    for (Long pid: pids) {
+    for (Long pid : pids) {
       while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().isStarted(pid)) {
         Thread.sleep(100);
       }
     }
     List<Procedure<MasterProcedureEnv>> ps =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
-    for (Procedure<MasterProcedureEnv> p: ps) {
+    for (Procedure<MasterProcedureEnv> p : ps) {
       if (p instanceof StallingAssignProcedure) {
-        List<Boolean> bs = TEST_UTIL.getHbck().
-            bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, false);
-        for (Boolean b: bs) {
+        List<Boolean> bs =
+            TEST_UTIL.getHbck().bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, false);
+        for (Boolean b : bs) {
           LOG.info("BYPASSED {} {}", p.getProcId(), b);
         }
       }
     }
     // Try and assign WITHOUT override flag. Should fail!.
-    for (RegionInfo ri: regions) {
+    for (RegionInfo ri : regions) {
       try {
         admin.assign(ri.getRegionName());
       } catch (Throwable dnrioe) {
@@ -128,31 +127,32 @@ public class TestRegionBypass {
         LOG.info("Expected {}", dnrioe);
       }
     }
-    while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().
-        getActiveProcIds().isEmpty()) {
+    while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
+        .isEmpty()) {
       Thread.sleep(100);
     }
     // Now assign with the override flag.
-    for (RegionInfo ri: regions) {
-      TEST_UTIL.getHbck().assigns(Arrays.<String>asList(ri.getEncodedName()), true);
+    for (RegionInfo ri : regions) {
+      TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true);
     }
-    while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().
-        getActiveProcIds().isEmpty()) {
+    while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
+        .isEmpty()) {
       Thread.sleep(100);
     }
-    for (RegionInfo ri: regions) {
-      assertTrue(ri.toString(), TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-          getRegionStates().isRegionOnline(ri));
+    for (RegionInfo ri : regions) {
+      assertTrue(ri.toString(), TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().isRegionOnline(ri));
     }
   }
 
   /**
    * An AssignProcedure that Stalls just before the finish.
    */
-  public static class StallingAssignProcedure extends TransitRegionStateProcedure{
+  public static class StallingAssignProcedure extends TransitRegionStateProcedure {
     public final CountDownLatch latch = new CountDownLatch(2);
 
-    public StallingAssignProcedure(){}
+    public StallingAssignProcedure() {
+    }
 
     public StallingAssignProcedure(MasterProcedureEnv env, RegionInfo hri,
         ServerName assignCandidate, boolean forceNewPlan, TransitionType type) {
@@ -160,12 +160,11 @@ public class TestRegionBypass {
       init(env);
     }
 
-    private void init(MasterProcedureEnv env){
+    private void init(MasterProcedureEnv env) {
       RegionStateNode regionNode =
           env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
       regionNode.setProcedure(this);
     }
-
 
     @Override
     protected Flow executeFromState(MasterProcedureEnv env, RegionStateTransitionState state)

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,13 +54,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Since 2.2.0, Connection created by ConnectionFactory can contain user-specified kerberos
  * credentials if caller has following two configurations set:
  * <ul>
- *   <li>hbase.client.keytab.file, points to a valid keytab on the local filesystem
- *   <li>hbase.client.kerberos.principal, gives the Kerberos principal to use
+ * <li>hbase.client.keytab.file, points to a valid keytab on the local filesystem
+ * <li>hbase.client.kerberos.principal, gives the Kerberos principal to use
  * </ul>
  * By this way, caller can directly connect to kerberized cluster without caring login and
  * credentials renewal logic in application.
+ * 
  * <pre>
  * </pre>
+ * 
  * Similarly, {@link Connection} also returns {@link Admin} and {@link RegionLocator}
  * implementations.
  * @see Connection
@@ -70,7 +71,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class ConnectionFactory {
 
-  public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL = "hbase.client.async.connection.impl";
+  public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
+      "hbase.client.async.connection.impl";
 
   /** No public c.tors */
   protected ConnectionFactory() {
@@ -220,10 +222,10 @@ public class ConnectionFactory {
       try {
         // Default HCM#HCI is not accessible; make it so before invoking.
         Constructor<?> constructor =
-          clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
+            clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
         constructor.setAccessible(true);
         return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
-          .newInstance(conf, pool, user));
+            .newInstance(conf, pool, user));
       } catch (Exception e) {
         throw new IOException(e);
       }
@@ -278,7 +280,7 @@ public class ConnectionFactory {
    * @return AsyncConnection object wrapped by CompletableFuture
    */
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
-    final User user) {
+      final User user) {
     return TraceUtil.tracedFuture(() -> {
       CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
       ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
@@ -298,7 +300,7 @@ public class ConnectionFactory {
         try {
           future.complete(
             user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
-              .newInstance(clazz, conf, registry, clusterId, null, user)));
+                .newInstance(clazz, conf, registry, clusterId, null, user)));
         } catch (Exception e) {
           registry.close();
           future.completeExceptionally(e);

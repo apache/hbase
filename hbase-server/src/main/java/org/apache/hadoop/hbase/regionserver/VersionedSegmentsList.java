@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,13 +22,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A list of segment managers coupled with the version of the memstore (version at the time it was
- * created).
- * This structure helps to guarantee that the compaction pipeline updates after the compaction is
- * updated in a consistent (atomic) way.
- * Specifically, swapping some of the elements in a compaction pipeline with a new compacted
- * element is permitted only if the pipeline version is the same as the version attached to the
- * elements.
- *
+ * created). This structure helps to guarantee that the compaction pipeline updates after the
+ * compaction is updated in a consistent (atomic) way. Specifically, swapping some of the elements
+ * in a compaction pipeline with a new compacted element is permitted only if the pipeline version
+ * is the same as the version attached to the elements.
  */
 @InterfaceAudience.Private
 public class VersionedSegmentsList {
@@ -70,9 +66,9 @@ public class VersionedSegmentsList {
 
     for (ImmutableSegment s : storeSegments) {
       double segmentUniques = s.getNumUniqueKeys();
-      if(segmentUniques != CellSet.UNKNOWN_NUM_UNIQUES) {
+      if (segmentUniques != CellSet.UNKNOWN_NUM_UNIQUES) {
         segmentCells = s.getCellsCount();
-        if(segmentCells > maxCells) {
+        if (segmentCells > maxCells) {
           maxCells = segmentCells;
           est = segmentUniques / segmentCells;
         }
@@ -80,7 +76,7 @@ public class VersionedSegmentsList {
       // else ignore this segment specifically since if the unique number is unknown counting
       // cells can be expensive
     }
-    if(maxCells == 0) {
+    if (maxCells == 0) {
       return 1.0;
     }
     return est;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,16 +22,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class CellSerialization implements Serialization<Cell> {
@@ -60,7 +59,7 @@ public class CellSerialization implements Serialization<Cell> {
 
     @Override
     public KeyValue deserialize(Cell ignore) throws IOException {
-      // I can't overwrite the passed in KV, not from a proto kv, not just yet.  TODO
+      // I can't overwrite the passed in KV, not from a proto kv, not just yet. TODO
       return KeyValueUtil.create(this.dis);
     }
 

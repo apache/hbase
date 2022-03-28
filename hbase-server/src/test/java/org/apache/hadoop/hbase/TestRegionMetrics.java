@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,6 @@ public class TestRegionMetrics {
     UTIL.shutdownMiniCluster();
   }
 
-
   @Test
   public void testRegionMetrics() throws Exception {
 
@@ -95,8 +94,7 @@ public class TestRegionMetrics {
     for (ServerName serverName : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
         .getLiveServerMetrics().keySet()) {
       List<RegionInfo> regions = admin.getRegions(serverName);
-      Collection<RegionMetrics> regionMetricsList =
-          admin.getRegionMetrics(serverName);
+      Collection<RegionMetrics> regionMetricsList = admin.getRegionMetrics(serverName);
       checkRegionsAndRegionMetrics(regions, regionMetricsList);
     }
 
@@ -121,36 +119,33 @@ public class TestRegionMetrics {
 
     // Check RegionMetrics matches the RegionMetrics from ClusterMetrics
     for (Map.Entry<ServerName, ServerMetrics> entry : admin
-      .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().entrySet()) {
+        .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().entrySet()) {
       ServerName serverName = entry.getKey();
       ServerMetrics serverMetrics = entry.getValue();
       List<RegionMetrics> regionMetrics = admin.getRegionMetrics(serverName);
-      LOG.debug("serverName=" + serverName + ", getRegionLoads=" +
-        serverMetrics.getRegionMetrics().keySet().stream().map(r -> Bytes.toString(r)).
-          collect(Collectors.toList()));
-      LOG.debug("serverName=" + serverName + ", regionLoads=" +
-        regionMetrics.stream().map(r -> Bytes.toString(r.getRegionName())).
-          collect(Collectors.toList()));
+      LOG.debug("serverName=" + serverName + ", getRegionLoads=" + serverMetrics.getRegionMetrics()
+          .keySet().stream().map(r -> Bytes.toString(r)).collect(Collectors.toList()));
+      LOG.debug("serverName=" + serverName + ", regionLoads=" + regionMetrics.stream()
+          .map(r -> Bytes.toString(r.getRegionName())).collect(Collectors.toList()));
       assertEquals(serverMetrics.getRegionMetrics().size(), regionMetrics.size());
       checkMetricsValue(regionMetrics, serverMetrics);
     }
   }
 
   private void checkMetricsValue(List<RegionMetrics> regionMetrics, ServerMetrics serverMetrics)
-    throws InvocationTargetException, IllegalAccessException {
+      throws InvocationTargetException, IllegalAccessException {
     for (RegionMetrics fromRM : regionMetrics) {
       RegionMetrics fromSM = serverMetrics.getRegionMetrics().get(fromRM.getRegionName());
       Class clazz = RegionMetrics.class;
       for (Method method : clazz.getMethods()) {
         // check numeric values only
-        if (method.getReturnType().equals(Size.class)
-          || method.getReturnType().equals(int.class)
-          || method.getReturnType().equals(long.class)
-          || method.getReturnType().equals(float.class)) {
+        if (method.getReturnType().equals(Size.class) || method.getReturnType().equals(int.class)
+            || method.getReturnType().equals(long.class)
+            || method.getReturnType().equals(float.class)) {
           Object valueRm = method.invoke(fromRM);
           Object valueSM = method.invoke(fromSM);
           assertEquals("Return values of method " + method.getName() + " are different",
-              valueRm.toString(), valueSM.toString());
+            valueRm.toString(), valueSM.toString());
         }
       }
     }
@@ -160,16 +155,16 @@ public class TestRegionMetrics {
       Collection<RegionMetrics> regionMetrics) {
 
     assertEquals("No of regions and regionMetrics doesn't match", regions.size(),
-        regionMetrics.size());
+      regionMetrics.size());
 
     Map<byte[], RegionMetrics> regionMetricsMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (RegionMetrics r : regionMetrics) {
       regionMetricsMap.put(r.getRegionName(), r);
     }
     for (RegionInfo info : regions) {
-      assertTrue("Region not in RegionMetricsMap region:"
-          + info.getRegionNameAsString() + " regionMap: "
-          + regionMetricsMap, regionMetricsMap.containsKey(info.getRegionName()));
+      assertTrue("Region not in RegionMetricsMap region:" + info.getRegionNameAsString()
+          + " regionMap: " + regionMetricsMap,
+        regionMetricsMap.containsKey(info.getRegionName()));
     }
   }
 }

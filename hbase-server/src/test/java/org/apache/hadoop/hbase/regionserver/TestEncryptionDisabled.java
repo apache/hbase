@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestEncryptionDisabled {
 
   @ClassRule
@@ -52,7 +52,6 @@ public class TestEncryptionDisabled {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static TableDescriptorBuilder tdb;
-
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -75,10 +74,10 @@ public class TestEncryptionDisabled {
   public void testEncryptedTableShouldNotBeCreatedWhenEncryptionDisabled() throws Exception {
     // Create the table schema
     // Specify an encryption algorithm without a key (normally HBase would generate a random key)
-    tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("default",
-      "TestEncryptionDisabledFail"));
+    tdb = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf("default", "TestEncryptionDisabledFail"));
     ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     columnFamilyDescriptorBuilder.setEncryptionType(algorithm);
     tdb.setColumnFamily(columnFamilyDescriptorBuilder.build());
@@ -92,10 +91,10 @@ public class TestEncryptionDisabled {
   @Test
   public void testNonEncryptedTableShouldBeCreatedWhenEncryptionDisabled() throws Exception {
     // Create the table schema
-    tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("default",
-      "TestEncryptionDisabledSuccess"));
+    tdb = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf("default", "TestEncryptionDisabledSuccess"));
     ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
     tdb.setColumnFamily(columnFamilyDescriptorBuilder.build());
 
     // Create the test table, this should succeed, as we don't use encryption

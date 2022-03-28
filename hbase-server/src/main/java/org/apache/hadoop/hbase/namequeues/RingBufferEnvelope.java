@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * An envelope to carry payload in the ring buffer that serves as online buffer
- * to provide latest events
+ * An envelope to carry payload in the ring buffer that serves as online buffer to provide latest
+ * events
  */
 @InterfaceAudience.Private
 final class RingBufferEnvelope {
@@ -34,18 +31,15 @@ final class RingBufferEnvelope {
 
   /**
    * Load the Envelope with {@link RpcCall}
-   *
-   * @param namedQueuePayload all details of rpc call that would be useful for ring buffer
-   *   consumers
+   * @param namedQueuePayload all details of rpc call that would be useful for ring buffer consumers
    */
   public void load(NamedQueuePayload namedQueuePayload) {
     this.namedQueuePayload = namedQueuePayload;
   }
 
   /**
-   * Retrieve current namedQueue payload {@link NamedQueuePayload} available on Envelope and
-   * free up the Envelope
-   *
+   * Retrieve current namedQueue payload {@link NamedQueuePayload} available on Envelope and free up
+   * the Envelope
    * @return Retrieve rpc log details
    */
   public NamedQueuePayload getPayload() {

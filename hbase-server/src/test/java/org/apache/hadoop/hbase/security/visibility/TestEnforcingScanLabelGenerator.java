@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestEnforcingScanLabelGenerator {
 
   @ClassRule
@@ -80,7 +80,7 @@ public class TestEnforcingScanLabelGenerator {
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(1);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    TESTUSER = User.createUserForTesting(conf, "test", new String[] { });
+    TESTUSER = User.createUserForTesting(conf, "test", new String[] {});
 
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
@@ -108,7 +108,7 @@ public class TestEnforcingScanLabelGenerator {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = TEST_UTIL.createTable(tableName, CF)) {
+            Table table = TEST_UTIL.createTable(tableName, CF)) {
           Put put = new Put(ROW_1);
           put.addColumn(CF, Q1, HConstants.LATEST_TIMESTAMP, value);
           put.setCellVisibility(new CellVisibility(SECRET));
@@ -130,7 +130,7 @@ public class TestEnforcingScanLabelGenerator {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+            Table table = connection.getTable(tableName)) {
           // Test that super user can see all the cells.
           Get get = new Get(ROW_1);
           Result result = table.get(get);
@@ -146,7 +146,7 @@ public class TestEnforcingScanLabelGenerator {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+            Table table = connection.getTable(tableName)) {
           // Test that we enforce the defined set
           Get get = new Get(ROW_1);
           get.setAuthorizations(new Authorizations(new String[] { SECRET, CONFIDENTIAL }));

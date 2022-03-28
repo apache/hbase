@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,8 +80,8 @@ public class TestScanWithoutFetchingData {
       }
     }
     HRI = UTIL.getAdmin().getRegions(TABLE_NAME).get(0);
-    CONN =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+    CONN = (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration())
+        .get();
     STUB = CONN.getRegionServerStub(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
 

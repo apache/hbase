@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,28 +36,24 @@ public class TestExcludeDatanodeManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExcludeDatanodeManager.class);
+      HBaseClassTestRule.forClass(TestExcludeDatanodeManager.class);
 
   @Test
   public void testExcludeSlowDNBySpeed() {
     Configuration conf = HBaseConfiguration.create();
     ExcludeDatanodeManager excludeDatanodeManager = new ExcludeDatanodeManager(conf);
     StreamSlowMonitor streamSlowDNsMonitor =
-      excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
+        excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
     assertEquals(0, excludeDatanodeManager.getExcludeDNs().size());
-    DatanodeInfo datanodeInfo =
-      new DatanodeInfo.DatanodeInfoBuilder().setIpAddr("0.0.0.0").setHostName("hostname1")
-        .setDatanodeUuid("uuid1").setXferPort(111).setInfoPort(222).setInfoSecurePort(333)
-        .setIpcPort(444).setNetworkLocation("location1").build();
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
-        System.currentTimeMillis() - 5100, 0);
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
-        System.currentTimeMillis() - 5100, 0);
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
-        System.currentTimeMillis() - 5100, 0);
+    DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().setIpAddr("0.0.0.0")
+        .setHostName("hostname1").setDatanodeUuid("uuid1").setXferPort(111).setInfoPort(222)
+        .setInfoSecurePort(333).setIpcPort(444).setNetworkLocation("location1").build();
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
+      System.currentTimeMillis() - 5100, 0);
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
+      System.currentTimeMillis() - 5100, 0);
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 100000, 5100,
+      System.currentTimeMillis() - 5100, 0);
     assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     assertTrue(excludeDatanodeManager.getExcludeDNs().containsKey(datanodeInfo));
   }
@@ -66,21 +63,17 @@ public class TestExcludeDatanodeManager {
     Configuration conf = HBaseConfiguration.create();
     ExcludeDatanodeManager excludeDatanodeManager = new ExcludeDatanodeManager(conf);
     StreamSlowMonitor streamSlowDNsMonitor =
-      excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
+        excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
     assertEquals(0, excludeDatanodeManager.getExcludeDNs().size());
-    DatanodeInfo datanodeInfo =
-      new DatanodeInfo.DatanodeInfoBuilder().setIpAddr("0.0.0.0").setHostName("hostname1")
-        .setDatanodeUuid("uuid1").setXferPort(111).setInfoPort(222).setInfoSecurePort(333)
-        .setIpcPort(444).setNetworkLocation("location1").build();
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
-        System.currentTimeMillis() - 7000, 0);
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
-        System.currentTimeMillis() - 7000, 0);
-    streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
-        System.currentTimeMillis() - 7000, 0);
+    DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().setIpAddr("0.0.0.0")
+        .setHostName("hostname1").setDatanodeUuid("uuid1").setXferPort(111).setInfoPort(222)
+        .setInfoSecurePort(333).setIpcPort(444).setNetworkLocation("location1").build();
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
+      System.currentTimeMillis() - 7000, 0);
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
+      System.currentTimeMillis() - 7000, 0);
+    streamSlowDNsMonitor.checkProcessTimeAndSpeed(datanodeInfo, 5000, 7000,
+      System.currentTimeMillis() - 7000, 0);
     assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     assertTrue(excludeDatanodeManager.getExcludeDNs().containsKey(datanodeInfo));
   }

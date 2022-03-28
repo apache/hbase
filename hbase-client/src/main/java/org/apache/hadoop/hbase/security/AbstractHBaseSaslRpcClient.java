@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.security;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
@@ -58,7 +56,7 @@ public abstract class AbstractHBaseSaslRpcClient {
   protected AbstractHBaseSaslRpcClient(Configuration conf,
       SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
       InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed)
-          throws IOException {
+      throws IOException {
     this(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, "authentication");
   }
 
@@ -80,11 +78,11 @@ public abstract class AbstractHBaseSaslRpcClient {
     this.fallbackAllowed = fallbackAllowed;
     saslProps = SaslUtil.initSaslProperties(rpcProtection);
 
-    saslClient = provider.createClient(
-        conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
+    saslClient =
+        provider.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
     if (saslClient == null) {
-      throw new IOException("Authentication provider " + provider.getClass()
-          + " returned a null SaslClient");
+      throw new IOException(
+          "Authentication provider " + provider.getClass() + " returned a null SaslClient");
     }
   }
 

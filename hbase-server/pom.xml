@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
@@ -21,8 +21,8 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>3.0.0-alpha-3-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
@@ -36,203 +36,6 @@
     <license.bundles.jquery>true</license.bundles.jquery>
     <license.bundles.vega>true</license.bundles.vega>
   </properties>
-  <build>
-    <!-- Make sure resources get added before they are processed by placing this first
-     -->
-    <resources>
-      <!-- Add the build webabpps to the classpth -->
-      <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
-      </resource>
-      <resource>
-        <directory>src/main/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </resource>
-    </resources>
-    <testResources>
-      <!-- Our test artifact has different license info than our source/bin ones -->
-      <testResource>
-        <directory>src/test/resources/META-INF/</directory>
-        <targetPath>META-INF/</targetPath>
-        <includes>
-          <include>NOTICE</include>
-        </includes>
-        <filtering>true</filtering>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </testResource>
-    </testResources>
-    <plugins>
-      <plugin>
-        <groupId>com.github.spotbugs</groupId>
-        <artifactId>spotbugs-maven-plugin</artifactId>
-        <configuration>
-          <maxHeap>2048</maxHeap>
-        </configuration>
-      </plugin>
-      <!-- licensing info from our bundled works -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <dependencies>
-          <!-- resource bundle only needed at build time -->
-          <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-resource-bundle</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>default</id>
-            <configuration>
-              <attachToTest>false</attachToTest>
-              <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-vega>${license.bundles.vega}</bundled-vega>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
-              </properties>
-              <resourceBundles>
-                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
-              </resourceBundles>
-              <supplementalModelArtifacts>
-                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
-              </supplementalModelArtifacts>
-              <supplementalModels>
-                <supplementalModel>supplemental-models.xml</supplementalModel>
-              </supplementalModels>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
-        tests (this is needed for upstream projects whose tests need this jar simply for
-        compilation) -->
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files
-            include the sources, and Maven 2.2 appears to add them to the sources to compile,
-            weird -->
-          <excludes>
-            <exclude>org/apache/jute/**</exclude>
-            <exclude>org/apache/zookeeper/**</exclude>
-            <exclude>**/*.jsp</exclude>
-            <exclude>hbase-site.xml</exclude>
-            <exclude>hdfs-site.xml</exclude>
-            <exclude>log4j.properties</exclude>
-            <exclude>mapred-queues.xml</exclude>
-            <exclude>mapred-site.xml</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <!-- General ant tasks, bound to different build phases -->
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <!-- Generate web app sources -->
-          <execution>
-            <id>generate</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <target>
-                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
-                <mkdir dir="${build.webapps}"/>
-                <copy todir="${build.webapps}">
-                  <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
-                  </fileset>
-                </copy>
-                <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-                <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/master" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-jamon</source>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>translate</goal>
-            </goals>
-            <configuration>
-              <templateSourceDir>src/main/jamon</templateSourceDir>
-              <templateOutputDir>target/generated-jamon</templateOutputDir>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Testing plugins -->
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
@@ -304,8 +107,8 @@
       <artifactId>hbase-balancer</artifactId>
     </dependency>
     <dependency>
-      <artifactId>hbase-balancer</artifactId>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-balancer</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -372,7 +175,7 @@
       <groupId>org.glassfish.web</groupId>
       <artifactId>javax.servlet.jsp</artifactId>
     </dependency>
-      <!-- Also used by generated sources from our JSP -->
+    <!-- Also used by generated sources from our JSP -->
     <dependency>
       <groupId>javax.servlet.jsp</groupId>
       <artifactId>javax.servlet.jsp-api</artifactId>
@@ -537,6 +340,203 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <build>
+    <!-- Make sure resources get added before they are processed by placing this first
+     -->
+    <resources>
+      <!-- Add the build webabpps to the classpth -->
+      <resource>
+        <directory>${project.build.directory}</directory>
+        <includes>
+          <include>hbase-webapps/**</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <!-- Our test artifact has different license info than our source/bin ones -->
+      <testResource>
+        <targetPath>META-INF/</targetPath>
+        <filtering>true</filtering>
+        <directory>src/test/resources/META-INF/</directory>
+        <includes>
+          <include>NOTICE</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <maxHeap>2048</maxHeap>
+        </configuration>
+      </plugin>
+      <!-- licensing info from our bundled works -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <dependencies>
+          <!-- resource bundle only needed at build time -->
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-resource-bundle</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>default</id>
+            <configuration>
+              <attachToTest>false</attachToTest>
+              <properties>
+                <copyright-end-year>${build.year}</copyright-end-year>
+                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
+                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                <bundled-vega>${license.bundles.vega}</bundled-vega>
+                <bundled-logo>${license.bundles.logo}</bundled-logo>
+                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+              </properties>
+              <resourceBundles>
+                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
+              </resourceBundles>
+              <supplementalModelArtifacts>
+                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
+              </supplementalModelArtifacts>
+              <supplementalModels>
+                <supplementalModel>supplemental-models.xml</supplementalModel>
+              </supplementalModels>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
+        tests (this is needed for upstream projects whose tests need this jar simply for
+        compilation) -->
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <!-- Exclude these 2 packages, because their dependency _binary_ files
+            include the sources, and Maven 2.2 appears to add them to the sources to compile,
+            weird -->
+          <excludes>
+            <exclude>org/apache/jute/**</exclude>
+            <exclude>org/apache/zookeeper/**</exclude>
+            <exclude>**/*.jsp</exclude>
+            <exclude>hbase-site.xml</exclude>
+            <exclude>hdfs-site.xml</exclude>
+            <exclude>log4j.properties</exclude>
+            <exclude>mapred-queues.xml</exclude>
+            <exclude>mapred-site.xml</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <!-- General ant tasks, bound to different build phases -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate web app sources -->
+          <execution>
+            <id>generate</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <property location="${project.build.directory}/hbase-webapps" name="build.webapps"/>
+                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps"/>
+                <property location="${project.build.directory}/generated-sources" name="generated.sources"/>
+                <mkdir dir="${build.webapps}"/>
+                <copy todir="${build.webapps}">
+                  <fileset dir="${src.webapps}">
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
+                  </fileset>
+                </copy>
+                <!--The compile.classpath is passed in by maven -->
+                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
+                <mkdir dir="${build.webapps}/master/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <!-- Add the generated sources -->
+          <execution>
+            <id>jspcSource-packageInfo-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-jamon</source>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jamon</groupId>
+        <artifactId>jamon-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>translate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <templateSourceDir>src/main/jamon</templateSourceDir>
+              <templateOutputDir>target/generated-jamon</templateOutputDir>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Testing plugins -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
     <profile>
@@ -549,10 +549,10 @@
             <executions>
               <execution>
                 <id>license-javadocs</id>
-                <phase>prepare-package</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>prepare-package</phase>
                 <configuration>
                   <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
                   <resources>
@@ -600,15 +600,17 @@
             <executions>
               <execution>
                 <id>make</id>
+                <goals>
+                  <goal>run</goal>
+                </goals>
                 <phase>compile</phase>
-                <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
                     <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" failonerror="true">
+                    <exec dir="${project.build.directory}/native" executable="cmake" failonerror="true">
                       <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
                     </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                    <exec dir="${project.build.directory}/native" executable="make" failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
                   </target>
@@ -626,7 +628,9 @@
     <profile>
       <id>hadoop-3.0</id>
       <activation>
-        <property><name>!hadoop.profile</name></property>
+        <property>
+          <name>!hadoop.profile</name>
+        </property>
       </activation>
       <dependencies>
         <dependency>
@@ -705,10 +709,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -730,35 +734,9 @@
         </property>
       </activation>
       <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-eclipse-plugin</artifactId>
-            <configuration>
-              <additionalProjectnatures>
-                <projectnature>org.jamon.project.jamonnature</projectnature>
-              </additionalProjectnatures>
-              <buildcommands>
-                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
-                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
-              </buildcommands>
-              <additionalConfig>
-                <file>
-                  <name>.settings/org.jamon.prefs</name>
-                  <content># now
-                    eclipse.preferences.version=1
-                    templateSourceDir=src/main/jamon
-                    templateOutputDir=target/generated-jamon
-                  </content>
-                </file>
-              </additionalConfig>
-            </configuration>
-          </plugin>
-        </plugins>
         <pluginManagement>
-           <plugins>
-             <!--This plugin's configuration is used to store Eclipse m2e settings
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings
                  only. It has no influence on the Maven build itself and needs to
                  be kept in plugin management, not in the actual plugins. -->
             <plugin>
@@ -777,10 +755,10 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                          <execute>
-                            <runOnIncremental>false</runOnIncremental>
-                            <runOnConfiguration>true</runOnConfiguration>
-                          </execute>
+                        <execute>
+                          <runOnIncremental>false</runOnIncremental>
+                          <runOnConfiguration>true</runOnConfiguration>
+                        </execute>
                       </action>
                     </pluginExecution>
                     <pluginExecution>
@@ -809,7 +787,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>
@@ -818,6 +796,31 @@
             </plugin>
           </plugins>
         </pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-eclipse-plugin</artifactId>
+            <configuration>
+              <additionalProjectnatures>
+                <projectnature>org.jamon.project.jamonnature</projectnature>
+              </additionalProjectnatures>
+              <buildcommands>
+                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
+                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
+                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
+              </buildcommands>
+              <additionalConfig>
+                <file>
+                  <name>.settings/org.jamon.prefs</name>
+                  <content># now
+                    eclipse.preferences.version=1
+                    templateSourceDir=src/main/jamon
+                    templateOutputDir=target/generated-jamon</content>
+                </file>
+              </additionalConfig>
+            </configuration>
+          </plugin>
+        </plugins>
       </build>
     </profile>
   </profiles>

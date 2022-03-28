@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is responsible for the tracking and enforcement of Deletes during the course of a Scan
@@ -133,8 +131,8 @@ public class ScanDeleteTracker implements DeleteTracker {
         deleteCell = null;
       } else {
         throw new IllegalStateException("isDelete failed: deleteBuffer="
-            + Bytes.toStringBinary(deleteCell.getQualifierArray(),
-                    deleteCell.getQualifierOffset(), deleteCell.getQualifierLength())
+            + Bytes.toStringBinary(deleteCell.getQualifierArray(), deleteCell.getQualifierOffset(),
+              deleteCell.getQualifierLength())
             + ", qualifier="
             + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
               cell.getQualifierLength())

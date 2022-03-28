@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -91,9 +90,8 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     addGroup(groupName, 1);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
-      .setRegionServerGroup(groupName)
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
+        .setRegionServerGroup(groupName).build();
     ADMIN.createTable(desc, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     // server of test group crash, regions move to default group
@@ -111,7 +109,7 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
 
     // add a new server to test group, regions move back
     JVMClusterUtil.RegionServerThread t =
-      TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
+        TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     ADMIN.moveServersToRSGroup(
       Collections.singleton(t.getRegionServer().getServerName().getAddress()), groupName);
     assertTrue(MASTER.balance().isBalancerRan());

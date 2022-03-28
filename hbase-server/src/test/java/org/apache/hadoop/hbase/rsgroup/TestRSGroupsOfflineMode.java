@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsOfflineMode.class);
+      HBaseClassTestRule.forClass(TestRSGroupsOfflineMode.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsOfflineMode.class);
   private static HMaster master;
@@ -79,8 +79,8 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     TEST_UTIL = new HBaseTestingUtil();
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "1");
-    StartTestingClusterOption option =
-      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2)
+        .numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((SingleProcessHBaseCluster) cluster).getMaster();
@@ -90,9 +90,9 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return master.isInitialized() &&
-          ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline() &&
-          master.getServerManager().getOnlineServersList().size() >= 3;
+        return master.isInitialized()
+            && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline()
+            && master.getServerManager().getOnlineServersList().size() >= 3;
       }
     });
   }
@@ -114,7 +114,7 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     Admin admin = TEST_UTIL.getAdmin();
     admin.addRSGroup(newGroup);
     if (master.getAssignmentManager().getRegionStates().getRegionAssignments()
-      .containsValue(failoverRS.getServerName())) {
+        .containsValue(failoverRS.getServerName())) {
       for (RegionInfo regionInfo : hbaseAdmin.getRegions(failoverRS.getServerName())) {
         hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(), failoverRS.getServerName());
       }
@@ -123,7 +123,7 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
         @Override
         public boolean evaluate() throws Exception {
           return !master.getServerManager().getLoad(failoverRS.getServerName()).getRegionMetrics()
-            .isEmpty();
+              .isEmpty();
         }
       });
     }
@@ -133,8 +133,8 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return groupRS.getNumberOfOnlineRegions() < 1 &&
-          master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
+        return groupRS.getNumberOfOnlineRegions() < 1
+            && master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
       }
     });
     // Move table to group and wait.
@@ -154,16 +154,16 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return TEST_UTIL.getHBaseCluster().getMaster() != null &&
-          TEST_UTIL.getHBaseCluster().getMaster().isActiveMaster() &&
-          TEST_UTIL.getHBaseCluster().getMaster().isInitialized() &&
-          TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() <= 3;
+        return TEST_UTIL.getHBaseCluster().getMaster() != null
+            && TEST_UTIL.getHBaseCluster().getMaster().isActiveMaster()
+            && TEST_UTIL.getHBaseCluster().getMaster().isInitialized() && TEST_UTIL
+                .getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() <= 3;
       }
     });
 
     // Get groupInfoManager from the new active master.
     RSGroupInfoManager groupMgr =
-      ((SingleProcessHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
+        ((SingleProcessHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Kill final regionserver to see the failover happens for all tables except GROUP table since

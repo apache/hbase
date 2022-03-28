@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,7 +69,7 @@ public abstract class EnableRSGroupsTestBase {
 
     // wait RSGroupBasedLoadBalancer online
     RSGroupBasedLoadBalancer loadBalancer =
-      (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
+        (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
     long start = EnvironmentEdgeManager.currentTime();
     while (EnvironmentEdgeManager.currentTime() - start <= 60000 && !loadBalancer.isOnline()) {
       LOG.info("waiting for rsgroup load balancer onLine...");

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, MediumTests.class})
+@Category({ ClientTests.class, MediumTests.class })
 public class TestThriftHBaseServiceHandlerWithReadOnly {
 
   @ClassRule
@@ -79,8 +79,8 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
   private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
-    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
-    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
+      ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+      ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -88,8 +88,9 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.startMiniCluster();
     Admin admin = UTIL.getAdmin();
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
+    TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableAname))
+            .setColumnFamilies(Arrays.asList(families)).build();
     admin.createTable(tableDescriptor);
     admin.close();
   }
@@ -221,23 +222,23 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     ByteBuffer table = wrap(tableAname);
 
     List<TColumnValue> columnValuesA = new ArrayList<>(1);
-    TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(valueAname));
+    TColumnValue columnValueA =
+        new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
     columnValuesA.add(columnValueA);
     TPut putA = new TPut(wrap(rowName), columnValuesA);
     putA.setColumnValues(columnValuesA);
 
     List<TColumnValue> columnValuesB = new ArrayList<>(1);
-    TColumnValue columnValueB = new TColumnValue(wrap(familyBname), wrap(qualifierBname),
-        wrap(valueBname));
+    TColumnValue columnValueB =
+        new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname));
     columnValuesB.add(columnValueB);
     TPut putB = new TPut(wrap(rowName), columnValuesB);
     putB.setColumnValues(columnValuesB);
 
     boolean exceptionCaught = false;
     try {
-      handler.checkAndPut(table, wrap(rowName), wrap(familyAname),
-          wrap(qualifierAname), wrap(valueAname), putB);
+      handler.checkAndPut(table, wrap(rowName), wrap(familyAname), wrap(qualifierAname),
+        wrap(valueAname), putB);
     } catch (TIOError e) {
       exceptionCaught = true;
       assertTrue(e.getCause() instanceof DoNotRetryIOException);
@@ -331,13 +332,13 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     TPut putB = new TPut(row, columnValuesB);
     putB.setColumnValues(columnValuesB);
 
-    TRowMutations tRowMutations = new TRowMutations(row,
-        Arrays.<TMutation> asList(TMutation.put(putB)));
+    TRowMutations tRowMutations =
+        new TRowMutations(row, Arrays.<TMutation> asList(TMutation.put(putB)));
 
     boolean exceptionCaught = false;
     try {
       handler.checkAndMutate(table, row, family, qualifier, TCompareOperator.EQUAL, value,
-          tRowMutations);
+        tRowMutations);
     } catch (TIOError e) {
       exceptionCaught = true;
       assertTrue(e.getCause() instanceof DoNotRetryIOException);
@@ -357,8 +358,8 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
 
     boolean exceptionCaught = false;
     try {
-      handler.checkAndDelete(table, wrap(rowName), wrap(familyAname),
-          wrap(qualifierAname), wrap(valueAname), delete);
+      handler.checkAndDelete(table, wrap(rowName), wrap(familyAname), wrap(qualifierAname),
+        wrap(valueAname), delete);
     } catch (TIOError e) {
       exceptionCaught = true;
       assertTrue(e.getCause() instanceof DoNotRetryIOException);
@@ -420,8 +421,8 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     ByteBuffer table = wrap(tableAname);
 
     List<TColumnValue> columnValuesA = new ArrayList<>(1);
-    TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(valueAname));
+    TColumnValue columnValueA =
+        new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
     columnValuesA.add(columnValueA);
     TPut putA = new TPut(wrap(rowName), columnValuesA);
     putA.setColumnValues(columnValuesA);
@@ -433,11 +434,11 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     mutations.add(mutationA);
     TMutation mutationB = TMutation.deleteSingle(delete);
     mutations.add(mutationB);
-    TRowMutations tRowMutations = new TRowMutations(wrap(rowName),mutations);
+    TRowMutations tRowMutations = new TRowMutations(wrap(rowName), mutations);
 
     boolean exceptionCaught = false;
     try {
-      handler.mutateRow(table,tRowMutations);
+      handler.mutateRow(table, tRowMutations);
     } catch (TIOError e) {
       exceptionCaught = true;
       assertTrue(e.getCause() instanceof DoNotRetryIOException);

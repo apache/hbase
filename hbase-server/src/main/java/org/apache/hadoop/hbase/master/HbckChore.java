@@ -56,9 +56,9 @@ public class HbckChore extends ScheduledChore {
   private final MasterServices master;
 
   /**
-   * This map contains the state of all hbck items.  It maps from encoded region
-   * name to HbckRegionInfo structure.  The information contained in HbckRegionInfo is used
-   * to detect and correct consistency (hdfs/meta/deployment) problems.
+   * This map contains the state of all hbck items. It maps from encoded region name to
+   * HbckRegionInfo structure. The information contained in HbckRegionInfo is used to detect and
+   * correct consistency (hdfs/meta/deployment) problems.
    */
   private final Map<String, HbckRegionInfo> regionInfoMap = new HashMap<>();
 
@@ -74,10 +74,9 @@ public class HbckChore extends ScheduledChore {
    */
   private final Map<String, Path> orphanRegionsOnFS = new HashMap<>();
   /**
-   * The inconsistent regions. There are three case:
-   * case 1. Master thought this region opened, but no regionserver reported it.
-   * case 2. Master thought this region opened on Server1, but regionserver reported Server2
-   * case 3. More than one regionservers reported opened this region
+   * The inconsistent regions. There are three case: case 1. Master thought this region opened, but
+   * no regionserver reported it. case 2. Master thought this region opened on Server1, but
+   * regionserver reported Server2 case 3. More than one regionservers reported opened this region
    */
   private final Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
       new HashMap<>();
@@ -191,26 +190,23 @@ public class HbckChore extends ScheduledChore {
 
   /**
    * Scan hbase:meta to get set of merged parent regions, this is a very heavy scan.
-   *
    * @return Return generated {@link HashSet}
    */
   private HashSet<String> scanForMergedParentRegions() throws IOException {
     HashSet<String> mergedParentRegions = new HashSet<>();
     // Null tablename means scan all of meta.
-    MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(),
-      r -> {
-        List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(r.rawCells());
-        if (mergeParents != null) {
-          for (RegionInfo mergeRegion : mergeParents) {
-            if (mergeRegion != null) {
-              // This region is already being merged
-              mergedParentRegions.add(mergeRegion.getEncodedName());
-            }
+    MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(), r -> {
+      List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(r.rawCells());
+      if (mergeParents != null) {
+        for (RegionInfo mergeRegion : mergeParents) {
+          if (mergeRegion != null) {
+            // This region is already being merged
+            mergedParentRegions.add(mergeRegion.getEncodedName());
           }
         }
-        return true;
-        },
-      null);
+      }
+      return true;
+    }, null);
     return mergedParentRegions;
   }
 
@@ -219,35 +215,33 @@ public class HbckChore extends ScheduledChore {
         master.getAssignmentManager().getRegionStates().getRegionStates();
     for (RegionState regionState : regionStates) {
       RegionInfo regionInfo = regionState.getRegion();
-      if (master.getTableStateManager()
-          .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
+      if (master.getTableStateManager().isTableState(regionInfo.getTable(),
+        TableState.State.DISABLED)) {
         disabledTableRegions.add(regionInfo.getRegionNameAsString());
       }
       // Check both state and regioninfo for split status, see HBASE-26383
       if (regionState.isSplit() || regionInfo.isSplit()) {
         splitParentRegions.add(regionInfo.getRegionNameAsString());
       }
-      HbckRegionInfo.MetaEntry metaEntry =
-          new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
-              regionState.getStamp());
+      HbckRegionInfo.MetaEntry metaEntry = new HbckRegionInfo.MetaEntry(regionInfo,
+          regionState.getServerName(), regionState.getStamp());
       regionInfoMap.put(regionInfo.getEncodedName(), new HbckRegionInfo(metaEntry));
     }
     LOG.info("Loaded {} regions ({} disabled, {} split parents) from in-memory state",
       regionStates.size(), disabledTableRegions.size(), splitParentRegions.size());
     if (LOG.isDebugEnabled()) {
-      Map<RegionState.State,Integer> stateCountMap = new HashMap<>();
+      Map<RegionState.State, Integer> stateCountMap = new HashMap<>();
       for (RegionState regionState : regionStates) {
         stateCountMap.compute(regionState.getState(), (k, v) -> (v == null) ? 1 : v + 1);
       }
       StringBuffer sb = new StringBuffer();
       sb.append("Regions by state: ");
       stateCountMap.entrySet().forEach(e -> {
-          sb.append(e.getKey());
-          sb.append('=');
-          sb.append(e.getValue());
-          sb.append(' ');
-        }
-      );
+        sb.append(e.getKey());
+        sb.append('=');
+        sb.append(e.getValue());
+        sb.append(' ');
+      });
       LOG.debug(sb.toString());
     }
     if (LOG.isTraceEnabled()) {
@@ -275,7 +269,7 @@ public class HbckChore extends ScheduledChore {
       numRegions += entry.getValue().size();
     }
     LOG.info("Loaded {} regions from {} regionservers' reports and found {} orphan regions",
-        numRegions, rsReports.size(), orphanRegionsOnRS.size());
+      numRegions, rsReports.size(), orphanRegionsOnRS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       HbckRegionInfo hri = entry.getValue();
@@ -294,15 +288,15 @@ public class HbckChore extends ScheduledChore {
         }
         // Master thought this region opened, but no regionserver reported it.
         inconsistentRegions.put(hri.getRegionNameAsString(),
-            new Pair<>(locationInMeta, new LinkedList<>()));
+          new Pair<>(locationInMeta, new LinkedList<>()));
       } else if (hri.getDeployedOn().size() > 1) {
         // More than one regionserver reported opened this region
         inconsistentRegions.put(hri.getRegionNameAsString(),
-            new Pair<>(locationInMeta, hri.getDeployedOn()));
+          new Pair<>(locationInMeta, hri.getDeployedOn()));
       } else if (!hri.getDeployedOn().get(0).equals(locationInMeta)) {
         // Master thought this region opened on Server1, but regionserver reported Server2
         inconsistentRegions.put(hri.getRegionNameAsString(),
-            new Pair<>(locationInMeta, hri.getDeployedOn()));
+          new Pair<>(locationInMeta, hri.getDeployedOn()));
       }
     }
   }
@@ -332,7 +326,7 @@ public class HbckChore extends ScheduledChore {
       numRegions += regionDirs.size();
     }
     LOG.info("Loaded {} tables {} regions from filesystem and found {} orphan regions",
-        tableDirs.size(), numRegions, orphanRegionsOnFS.size());
+      tableDirs.size(), numRegions, orphanRegionsOnFS.size());
   }
 
   private void updateAssignmentManagerMetrics() {
@@ -378,11 +372,10 @@ public class HbckChore extends ScheduledChore {
   }
 
   /**
-   * Found the inconsistent regions. There are three case:
-   * case 1. Master thought this region opened, but no regionserver reported it.
-   * case 2. Master thought this region opened on Server1, but regionserver reported Server2
-   * case 3. More than one regionservers reported opened this region
-   *
+   * Found the inconsistent regions. There are three case: case 1. Master thought this region
+   * opened, but no regionserver reported it. case 2. Master thought this region opened on Server1,
+   * but regionserver reported Server2 case 3. More than one regionservers reported opened this
+   * region
    * @return the map of inconsistent regions. Key is the region name. Value is a pair of location in
    *         meta and the regionservers which reported opened this region.
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,7 +81,7 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
    * Used to refresh region block locations on HDFS.
    */
   HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-    TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException;
+      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException;
 
   /**
    * Check whether we have region replicas enabled for the tables of the given regions.
@@ -97,7 +97,7 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
    * Returns a copy of the internal list of online servers matched by the given {@code filter}.
    */
   List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
-    Predicate<ServerMetrics> filter);
+      Predicate<ServerMetrics> filter);
 
   /**
    * Get a snapshot of the current assignment status.

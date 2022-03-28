@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSequenceIdMonotonicallyIncreasing.class);
+      HBaseClassTestRule.forClass(TestSequenceIdMonotonicallyIncreasing.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -94,7 +94,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
     Path walFile = ((AbstractFSWAL<?>) rs.getWAL(null)).getCurrentFileName();
     long maxSeqId = -1L;
     try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), walFile, UTIL.getConfiguration())) {
+        WALFactory.createReader(UTIL.getTestFileSystem(), walFile, UTIL.getConfiguration())) {
       for (;;) {
         WAL.Entry entry = reader.next();
         if (entry == null) {
@@ -142,15 +142,15 @@ public class TestSequenceIdMonotonicallyIncreasing {
     HRegion regionA = regions.get(0);
     HRegion regionB = regions.get(1);
     HRegionServer rsA =
-      cluster.getRegionServer(cluster.getServerWith(regionA.getRegionInfo().getRegionName()));
+        cluster.getRegionServer(cluster.getServerWith(regionA.getRegionInfo().getRegionName()));
     HRegionServer rsB =
-      cluster.getRegionServer(cluster.getServerWith(regionB.getRegionInfo().getRegionName()));
+        cluster.getRegionServer(cluster.getServerWith(regionB.getRegionInfo().getRegionName()));
     UTIL.getAdmin().mergeRegionsAsync(regionA.getRegionInfo().getRegionName(),
       regionB.getRegionInfo().getRegionName(), false).get(1, TimeUnit.MINUTES);
     long maxSeqIdA = getMaxSeqId(rsA, regionA.getRegionInfo());
     long maxSeqIdB = getMaxSeqId(rsB, regionB.getRegionInfo());
     HRegionLocation loc =
-      UTIL.getConnection().getRegionLocator(NAME).getRegionLocation(Bytes.toBytes(0), true);
+        UTIL.getConnection().getRegionLocator(NAME).getRegionLocation(Bytes.toBytes(0), true);
     assertEquals(Math.max(maxSeqIdA, maxSeqIdB) + 1, loc.getSeqNum());
   }
 }

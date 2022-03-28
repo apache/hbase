@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseStateData;
@@ -64,7 +65,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   protected ServerName targetServer;
 
   private RegionRemoteProcedureBaseState state =
-    RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_DISPATCH;
+      RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_DISPATCH;
 
   private TransitionCode transitionCode;
 
@@ -190,8 +191,8 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       return;
     }
     if (!targetServer.equals(serverName)) {
-      throw new UnexpectedStateException("Received report from " + serverName + ", expected " +
-        targetServer + ", " + regionNode + ", proc=" + this);
+      throw new UnexpectedStateException("Received report from " + serverName + ", expected "
+          + targetServer + ", " + regionNode + ", proc=" + this);
     }
     checkTransition(regionNode, transitionCode, seqId);
     // this state means we have received the report from RS, does not mean the result is fine, as we
@@ -260,7 +261,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   private TransitRegionStateProcedure getParent(MasterProcedureEnv env) {
     return (TransitRegionStateProcedure) env.getMasterServices().getMasterProcedureExecutor()
-      .getProcedure(getParentProcId());
+        .getProcedure(getParentProcId());
   }
 
   private void unattach(MasterProcedureEnv env) {
@@ -282,9 +283,10 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
           try {
             env.getRemoteDispatcher().addOperationToNode(targetServer, this);
           } catch (FailedRemoteDispatchException e) {
-            LOG.warn("Can not add remote operation {} for region {} to server {}, this usually " +
-              "because the server is alread dead, give up and mark the procedure as complete, " +
-              "the parent procedure will take care of this.", this, region, targetServer, e);
+            LOG.warn("Can not add remote operation {} for region {} to server {}, this usually "
+                + "because the server is alread dead, give up and mark the procedure as complete, "
+                + "the parent procedure will take care of this.",
+              this, region, targetServer, e);
             unattach(env);
             return null;
           }
@@ -337,8 +339,8 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     RegionRemoteProcedureBaseStateData.Builder builder =
-      RegionRemoteProcedureBaseStateData.newBuilder().setRegion(ProtobufUtil.toRegionInfo(region))
-        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state);
+        RegionRemoteProcedureBaseStateData.newBuilder().setRegion(ProtobufUtil.toRegionInfo(region))
+            .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state);
     if (transitionCode != null) {
       builder.setTransitionCode(transitionCode);
       builder.setSeqId(seqId);
@@ -349,7 +351,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     RegionRemoteProcedureBaseStateData data =
-      serializer.deserialize(RegionRemoteProcedureBaseStateData.class);
+        serializer.deserialize(RegionRemoteProcedureBaseStateData.class);
     region = ProtobufUtil.toRegionInfo(data.getRegion());
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     // 'state' may not be present if we are reading an 'old' form of this pb Message.
@@ -367,11 +369,13 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     getParent(env).attachRemoteProc(this);
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + region.getEncodedName();
   }
 
-  @Override protected void toStringClassDetails(StringBuilder builder) {
+  @Override
+  protected void toStringClassDetails(StringBuilder builder) {
     builder.append(getProcName());
     if (targetServer != null) {
       builder.append(", server=");

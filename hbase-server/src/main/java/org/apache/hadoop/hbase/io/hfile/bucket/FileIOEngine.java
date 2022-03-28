@@ -1,20 +1,19 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
@@ -82,9 +81,8 @@ public class FileIOEngine extends PersistentIOEngine {
         if (totalSpace < sizePerFile) {
           // The next setting length will throw exception,logging this message
           // is just used for the detail reason of exception，
-          String msg = "Only " + StringUtils.byteDesc(totalSpace)
-              + " total space under " + filePath + ", not enough for requested "
-              + StringUtils.byteDesc(sizePerFile);
+          String msg = "Only " + StringUtils.byteDesc(totalSpace) + " total space under " + filePath
+              + ", not enough for requested " + StringUtils.byteDesc(sizePerFile);
           LOG.warn(msg);
         }
         File file = new File(filePath);
@@ -95,8 +93,8 @@ public class FileIOEngine extends PersistentIOEngine {
         }
         fileChannels[i] = rafs[i].getChannel();
         channelLocks[i] = new ReentrantLock();
-        LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
-            + ", on the path:" + filePath);
+        LOG.info(
+          "Allocating cache " + StringUtils.byteDesc(sizePerFile) + ", on the path:" + filePath);
       } catch (IOException fex) {
         LOG.error("Failed allocating cache on " + filePath, fex);
         shutdown();
@@ -107,8 +105,8 @@ public class FileIOEngine extends PersistentIOEngine {
 
   @Override
   public String toString() {
-    return "ioengine=" + this.getClass().getSimpleName() + ", paths="
-        + Arrays.asList(filePaths) + ", capacity=" + String.format("%,d", this.capacity);
+    return "ioengine=" + this.getClass().getSimpleName() + ", paths=" + Arrays.asList(filePaths)
+        + ", capacity=" + String.format("%,d", this.capacity);
   }
 
   /**
@@ -153,7 +151,7 @@ public class FileIOEngine extends PersistentIOEngine {
   }
 
   void closeFileChannels() {
-    for (FileChannel fileChannel: fileChannels) {
+    for (FileChannel fileChannel : fileChannels) {
       try {
         fileChannel.close();
       } catch (IOException e) {
@@ -218,8 +216,8 @@ public class FileIOEngine extends PersistentIOEngine {
     accessFile(writeAccessor, srcBuff, offset);
   }
 
-  private void accessFile(FileAccessor accessor, ByteBuff buff,
-      long globalOffset) throws IOException {
+  private void accessFile(FileAccessor accessor, ByteBuff buff, long globalOffset)
+      throws IOException {
     int startFileNum = getFileNum(globalOffset);
     int remainingAccessDataLen = buff.remaining();
     int endFileNum = getFileNum(globalOffset + remainingAccessDataLen - 1);
@@ -274,8 +272,7 @@ public class FileIOEngine extends PersistentIOEngine {
     }
     int fileNum = (int) (offset / sizePerFile);
     if (fileNum >= fileChannels.length) {
-      throw new RuntimeException("Not expected offset " + offset
-          + " where capacity=" + capacity);
+      throw new RuntimeException("Not expected offset " + offset + " where capacity=" + capacity);
     }
     return fileNum;
   }
@@ -298,31 +295,31 @@ public class FileIOEngine extends PersistentIOEngine {
         fileChannel.close();
       }
       LOG.warn("Caught ClosedChannelException accessing BucketCache, reopening file: "
-          + filePaths[accessFileNum], ioe);
+          + filePaths[accessFileNum],
+        ioe);
       rafs[accessFileNum] = new RandomAccessFile(filePaths[accessFileNum], "rw");
       fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
-    } finally{
+    } finally {
       channelLock.unlock();
     }
   }
 
   private interface FileAccessor {
-    int access(FileChannel fileChannel, ByteBuff buff, long accessOffset)
-        throws IOException;
+    int access(FileChannel fileChannel, ByteBuff buff, long accessOffset) throws IOException;
   }
 
   private static class FileReadAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuff buff,
-        long accessOffset) throws IOException {
+    public int access(FileChannel fileChannel, ByteBuff buff, long accessOffset)
+        throws IOException {
       return buff.read(fileChannel, accessOffset);
     }
   }
 
   private static class FileWriteAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuff buff,
-        long accessOffset) throws IOException {
+    public int access(FileChannel fileChannel, ByteBuff buff, long accessOffset)
+        throws IOException {
       return buff.write(fileChannel, accessOffset);
     }
   }

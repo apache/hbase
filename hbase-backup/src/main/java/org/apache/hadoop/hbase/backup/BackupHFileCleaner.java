@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -54,7 +53,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   private Connection connection;
   private long prevReadFromBackupTbl = 0, // timestamp of most recent read from backup:system table
       secondPrevReadFromBackupTbl = 0; // timestamp of 2nd most recent read from backup:system table
-  //used by unit test to skip reading backup:system
+  // used by unit test to skip reading backup:system
   private boolean checkForFullyBackedUpTables = true;
   private List<TableName> fullyBackedUpTables = null;
 
@@ -79,8 +78,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       connection = ConnectionFactory.createConnection(conf);
     }
     try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      Map<byte[], List<Path>>[] res =
-          tbl.readBulkLoadedFiles(null, tableList);
+      Map<byte[], List<Path>>[] res = tbl.readBulkLoadedFiles(null, tableList);
       secondPrevReadFromBackupTbl = prevReadFromBackupTbl;
       prevReadFromBackupTbl = EnvironmentEdgeManager.currentTime();
       return getFilenameFromBulkLoad(res);
@@ -91,6 +89,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   void setCheckForFullyBackedUpTables(boolean b) {
     checkForFullyBackedUpTables = b;
   }
+
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     if (conf == null) {

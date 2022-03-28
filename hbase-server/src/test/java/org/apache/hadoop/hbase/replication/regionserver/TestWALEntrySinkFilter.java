@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -56,7 +57,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
@@ -67,7 +70,7 @@ public class TestWALEntrySinkFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALEntrySinkFilter.class);
+      HBaseClassTestRule.forClass(TestWALEntrySinkFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   @Rule
@@ -106,18 +109,18 @@ public class TestWALEntrySinkFilter {
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
     conf.setClass(DummyConnectionRegistry.REGISTRY_IMPL_CONF_KEY, DevNullConnectionRegistry.class,
-        DummyConnectionRegistry.class);
+      DummyConnectionRegistry.class);
     conf.setClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY,
-        IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
+      IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass(ClusterConnectionFactory.HBASE_SERVER_CLUSTER_CONNECTION_IMPL,
-        DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
+      DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
     ReplicationSink sink = new ReplicationSink(conf);
     // Create some dumb walentries.
     List<AdminProtos.WALEntry> entries = new ArrayList<>();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     // Need a tablename.
     ByteString tableName =
-      ByteString.copyFromUtf8(TableName.valueOf(this.name.getMethodName()).toString());
+        ByteString.copyFromUtf8(TableName.valueOf(this.name.getMethodName()).toString());
     // Add WALEdit Cells to Cells List. The way edits arrive at the sink is with protos
     // describing the edit with all Cells from all edits aggregated in a single CellScanner.
     final List<Cell> cells = new ArrayList<>();
@@ -127,8 +130,8 @@ public class TestWALEntrySinkFilter {
       // Create a wal entry. Everything is set to the current index as bytes or int/long.
       entryBuilder.clear();
       entryBuilder.setKey(entryBuilder.getKeyBuilder().setLogSequenceNumber(i)
-        .setEncodedRegionName(ByteString.copyFrom(bytes)).setWriteTime(i).setTableName(tableName)
-        .build());
+          .setEncodedRegionName(ByteString.copyFrom(bytes)).setWriteTime(i).setTableName(tableName)
+          .build());
       // Lets have one Cell associated with each WALEdit.
       entryBuilder.setAssociatedCellCount(1);
       entries.add(entryBuilder.build());
@@ -136,7 +139,7 @@ public class TestWALEntrySinkFilter {
       CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
       // Make cells whose row, family, cell, value, and ts are == 'i'.
       Cell cell = cellBuilder.setRow(bytes).setFamily(bytes).setQualifier(bytes)
-        .setType(Cell.Type.Put).setTimestamp(i).setValue(bytes).build();
+          .setType(Cell.Type.Put).setTimestamp(i).setValue(bytes).build();
       cells.add(cell);
     }
     // Now wrap our cells array in a CellScanner that we can pass in to replicateEntries. It has

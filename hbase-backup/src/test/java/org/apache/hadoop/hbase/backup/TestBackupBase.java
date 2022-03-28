@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -111,8 +110,8 @@ public class TestBackupBase {
     public IncrementalTableBackupClientForTest() {
     }
 
-    public IncrementalTableBackupClientForTest(Connection conn,
-        String backupId, BackupRequest request) throws IOException {
+    public IncrementalTableBackupClientForTest(Connection conn, String backupId,
+        BackupRequest request) throws IOException {
       super(conn, backupId, request);
     }
 
@@ -133,7 +132,7 @@ public class TestBackupBase {
         BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
         convertWALsToHFiles();
-        incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
+        incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
 
@@ -215,9 +214,8 @@ public class TestBackupBase {
         // SNAPSHOT_TABLES:
         backupInfo.setPhase(BackupPhase.SNAPSHOT);
         for (TableName tableName : tableList) {
-          String snapshotName =
-              "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime()) + "_"
-                  + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
+          String snapshotName = "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime())
+              + "_" + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
 
           snapshotTable(admin, tableName, snapshotName);
           backupInfo.setSnapshotName(tableName, snapshotName);
@@ -242,8 +240,7 @@ public class TestBackupBase {
             backupManager.readLogTimestampMap();
 
         Long newStartCode =
-            BackupUtils.getMinValue(BackupUtils
-                .getRSLogTimestampMins(newTableSetTimestampMap));
+            BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
         backupManager.writeBackupStartCode(newStartCode);
         failStageIf(Stage.stage_4);
         // backup complete
@@ -251,7 +248,7 @@ public class TestBackupBase {
 
       } catch (Exception e) {
 
-        if(autoRestoreOnFailure) {
+        if (autoRestoreOnFailure) {
           failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
             BackupType.FULL, conf);
         }
@@ -261,13 +258,13 @@ public class TestBackupBase {
   }
 
   public static void setUpHelper() throws Exception {
-    BACKUP_ROOT_DIR = Path.SEPARATOR +"backupUT";
+    BACKUP_ROOT_DIR = Path.SEPARATOR + "backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
 
     if (secure) {
       // set the always on security provider
       UserProvider.setUserProviderForTesting(TEST_UTIL.getConfiguration(),
-          HadoopSecurityEnabledUserProviderForTesting.class);
+        HadoopSecurityEnabledUserProviderForTesting.class);
       // setup configuration
       SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     }
@@ -299,23 +296,21 @@ public class TestBackupBase {
 
     TEST_UTIL.startMiniMapReduceCluster();
     BACKUP_ROOT_DIR =
-        new Path(new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")),
-          BACKUP_ROOT_DIR).toString();
+        new Path(new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")), BACKUP_ROOT_DIR)
+            .toString();
     LOG.info("ROOTDIR " + BACKUP_ROOT_DIR);
     if (useSecondCluster) {
-      BACKUP_REMOTE_ROOT_DIR =
-          new Path(new Path(TEST_UTIL2.getConfiguration().get("fs.defaultFS"))
-          + BACKUP_REMOTE_ROOT_DIR).toString();
+      BACKUP_REMOTE_ROOT_DIR = new Path(
+          new Path(TEST_UTIL2.getConfiguration().get("fs.defaultFS")) + BACKUP_REMOTE_ROOT_DIR)
+              .toString();
       LOG.info("REMOTE ROOTDIR " + BACKUP_REMOTE_ROOT_DIR);
     }
     createTables();
     populateFromMasterConfig(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(), conf1);
   }
 
-
   /**
    * Setup Cluster with appropriate configurations before running tests.
-   *
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
   @BeforeClass
@@ -326,7 +321,6 @@ public class TestBackupBase {
     useSecondCluster = false;
     setUpHelper();
   }
-
 
   private static void populateFromMasterConfig(Configuration masterConf, Configuration conf) {
     Iterator<Entry<String, String>> it = masterConf.iterator();
@@ -341,7 +335,7 @@ public class TestBackupBase {
    */
   @AfterClass
   public static void tearDown() throws Exception {
-    try{
+    try {
       SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
     } catch (Exception e) {
     }
@@ -367,12 +361,11 @@ public class TestBackupBase {
     return t;
   }
 
-  protected BackupRequest createBackupRequest(BackupType type,
-      List<TableName> tables, String path) {
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
+      String path) {
     BackupRequest.Builder builder = new BackupRequest.Builder();
-    BackupRequest request = builder.withBackupType(type)
-                                    .withTableList(tables)
-                                    .withTargetRootDir(path).build();
+    BackupRequest request =
+        builder.withBackupType(type).withTableList(tables).withTargetRootDir(path).build();
     return request;
   }
 
@@ -427,7 +420,7 @@ public class TestBackupBase {
     ha.createNamespace(NamespaceDescriptor.create("ns4").build());
 
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(table1)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
     ha.createTable(desc);
     table1Desc = desc;
     Connection conn = ConnectionFactory.createConnection(conf1);
@@ -436,7 +429,7 @@ public class TestBackupBase {
     table.close();
     table2 = TableName.valueOf("ns2:test-" + tid + 1);
     desc = TableDescriptorBuilder.newBuilder(table2)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
     ha.createTable(desc);
     table = conn.getTable(table2);
     loadTable(table);

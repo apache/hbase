@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,13 +34,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * MapReduce implementation of {@link RestoreJob}
- *
- * For backup restore, it runs {@link MapReduceHFileSplitterJob} job and creates
- * HFiles which are aligned with a region boundaries of a table being
- * restored.
- *
- * The resulting HFiles then are loaded using HBase bulk load tool {@link BulkLoadHFiles}.
+ * MapReduce implementation of {@link RestoreJob} For backup restore, it runs
+ * {@link MapReduceHFileSplitterJob} job and creates HFiles which are aligned with a region
+ * boundaries of a table being restored. The resulting HFiles then are loaded using HBase bulk load
+ * tool {@link BulkLoadHFiles}.
  */
 @InterfaceAudience.Private
 public class MapReduceRestoreJob implements RestoreJob {
@@ -74,15 +71,12 @@ public class MapReduceRestoreJob implements RestoreJob {
     for (int i = 0; i < tableNames.length; i++) {
       LOG.info("Restore " + tableNames[i] + " into " + newTableNames[i]);
 
-      Path bulkOutputPath =
-          BackupUtils.getBulkOutputDir(BackupUtils.getFileNameCompatibleString(newTableNames[i]),
-            getConf());
+      Path bulkOutputPath = BackupUtils
+          .getBulkOutputDir(BackupUtils.getFileNameCompatibleString(newTableNames[i]), getConf());
       Configuration conf = getConf();
       conf.set(bulkOutputConfKey, bulkOutputPath.toString());
-      String[] playerArgs = {
-        dirs, fullBackupRestore ? newTableNames[i].getNameAsString() : tableNames[i]
-              .getNameAsString()
-      };
+      String[] playerArgs = { dirs, fullBackupRestore ? newTableNames[i].getNameAsString()
+          : tableNames[i].getNameAsString() };
 
       int result;
       try {
@@ -97,8 +91,8 @@ public class MapReduceRestoreJob implements RestoreJob {
           }
 
           if (loader.bulkLoad(newTableNames[i], bulkOutputPath).isEmpty()) {
-            throw new IOException("Can not restore from backup directory " + dirs +
-              " (check Hadoop and HBase logs). Bulk loader returns null");
+            throw new IOException("Can not restore from backup directory " + dirs
+                + " (check Hadoop and HBase logs). Bulk loader returns null");
           }
         } else {
           throw new IOException("Can not restore from backup directory " + dirs
@@ -107,8 +101,8 @@ public class MapReduceRestoreJob implements RestoreJob {
         LOG.debug("Restore Job finished:" + result);
       } catch (Exception e) {
         LOG.error(e.toString(), e);
-        throw new IOException("Can not restore from backup directory " + dirs
-            + " (check Hadoop and HBase logs) ", e);
+        throw new IOException(
+            "Can not restore from backup directory " + dirs + " (check Hadoop and HBase logs) ", e);
       }
     }
   }

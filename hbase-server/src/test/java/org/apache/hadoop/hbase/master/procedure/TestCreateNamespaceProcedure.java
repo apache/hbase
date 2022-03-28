@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestCreateNamespaceProcedure {
 
   @ClassRule
@@ -89,8 +89,8 @@ public class TestCreateNamespaceProcedure {
     final NamespaceDescriptor nsd = NamespaceDescriptor.create("testCreateNamespace").build();
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -104,15 +104,15 @@ public class TestCreateNamespaceProcedure {
         NamespaceDescriptor.create("testCreateSameNamespaceTwice").build();
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    long procId1 = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId1 =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
     // Create the namespace that exists
-    long procId2 = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId2 =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
 
@@ -130,8 +130,8 @@ public class TestCreateNamespaceProcedure {
         UTIL.getAdmin().getNamespaceDescriptor(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<?> result = procExec.getResult(procId);
@@ -151,8 +151,8 @@ public class TestCreateNamespaceProcedure {
 
     nsd.setConfiguration(nsKey, nsValue);
 
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<?> result = procExec.getResult(procId);
@@ -171,8 +171,8 @@ public class TestCreateNamespaceProcedure {
 
     nsd.setConfiguration(nsKey, nsValue);
 
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<?> result = procExec.getResult(procId);
@@ -191,8 +191,8 @@ public class TestCreateNamespaceProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the CreateNamespace procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
@@ -212,8 +212,8 @@ public class TestCreateNamespaceProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the CreateNamespace procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+        procExec.submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
 
     int lastStep = 2; // failing before CREATE_NAMESPACE_CREATE_DIRECTORY
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
@@ -233,8 +233,7 @@ public class TestCreateNamespaceProcedure {
   }
 
   private void validateNamespaceCreated(NamespaceDescriptor nsd) throws IOException {
-    NamespaceDescriptor createdNsDescriptor =
-        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
+    NamespaceDescriptor createdNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertNotNull(createdNsDescriptor);
   }
 }

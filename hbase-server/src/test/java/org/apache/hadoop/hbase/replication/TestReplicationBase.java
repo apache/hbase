@@ -63,10 +63,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
- * This class is only a base for other integration-level replication tests.
- * Do not add tests here.
- * TestReplicationSmallTests is where tests that don't require bring machines up/down should go
- * All other tests should have their own classes and extend this one
+ * This class is only a base for other integration-level replication tests. Do not add tests here.
+ * TestReplicationSmallTests is where tests that don't require bring machines up/down should go All
+ * other tests should have their own classes and extend this one
  */
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
@@ -87,8 +86,7 @@ public class TestReplicationBase {
   protected static int NUM_SLAVES1 = 1;
   protected static int NUM_SLAVES2 = 1;
   protected static final int NB_ROWS_IN_BATCH = 100;
-  protected static final int NB_ROWS_IN_BIG_BATCH =
-      NB_ROWS_IN_BATCH * 10;
+  protected static final int NB_ROWS_IN_BIG_BATCH = NB_ROWS_IN_BATCH * 10;
   protected static final long SLEEP_TIME = 500;
   protected static final int NB_RETRIES = 50;
   protected static AtomicInteger replicateCount = new AtomicInteger();
@@ -111,8 +109,7 @@ public class TestReplicationBase {
   protected final void cleanUp() throws IOException, InterruptedException {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
-        .getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster().getRegionServerThreads()) {
       UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     int rowCount = UTIL1.countRows(tableName);
@@ -150,7 +147,7 @@ public class TestReplicationBase {
   }
 
   protected static void waitForReplication(Table table, int expectedRows, int retries)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     Scan scan;
     for (int i = 0; i < retries; i++) {
       scan = new Scan();
@@ -209,8 +206,7 @@ public class TestReplicationBase {
     conf.setLong("hbase.serial.replication.waiting.ms", 100);
   }
 
-  static void configureClusters(HBaseTestingUtil util1,
-      HBaseTestingUtil util2) {
+  static void configureClusters(HBaseTestingUtil util1, HBaseTestingUtil util2) {
     setupConfig(util1, "/1");
     setupConfig(util2, "/2");
 
@@ -240,12 +236,11 @@ public class TestReplicationBase {
     htable2 = UTIL2.getConnection().getTable(tableName);
   }
 
-  protected static void createTable(TableName tableName)
-    throws IOException {
+  protected static void createTable(TableName tableName) throws IOException {
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
     UTIL1.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     UTIL2.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     UTIL1.waitUntilAllRegionsAssigned(tableName);
@@ -288,17 +283,17 @@ public class TestReplicationBase {
   protected final void addPeer(String peerId, TableName tableName) throws Exception {
     if (!peerExist(peerId)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
-        .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
+          .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
+          .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
       if (isSyncPeer()) {
         FileSystem fs2 = UTIL2.getTestFileSystem();
         // The remote wal dir is not important as we do not use it in DA state, here we only need to
         // confirm that a sync peer in DA state can still replicate data to remote cluster
         // asynchronously.
         builder.setReplicateAllUserTables(false)
-          .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of()))
-          .setRemoteWALDir(new Path("/RemoteWAL")
-            .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
+            .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of()))
+            .setRemoteWALDir(new Path("/RemoteWAL")
+                .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
       }
       hbaseAdmin.addReplicationPeer(peerId, builder.build());
     }
@@ -404,7 +399,8 @@ public class TestReplicationBase {
       replicateCount.set(0);
     }
 
-    @Override public boolean replicate(ReplicateContext replicateContext) {
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
       replicateCount.incrementAndGet();
       replicatedEntries.addAll(replicateContext.getEntries());
 

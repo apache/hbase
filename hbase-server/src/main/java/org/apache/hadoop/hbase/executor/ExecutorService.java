@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,15 +45,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecuto
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * This is a generic executor service. This component abstracts a
- * threadpool, a queue to which {@link EventType}s can be submitted,
- * and a <code>Runnable</code> that handles the object that is added to the queue.
- *
- * <p>In order to create a new service, create an instance of this class and
- * then do: <code>instance.startExecutorService(executorConfig);</code>. {@link ExecutorConfig}
- * wraps the configuration needed by this service. When done call {@link #shutdown()}.
- *
- * <p>In order to use the service created above, call {@link #submit(EventHandler)}.
+ * This is a generic executor service. This component abstracts a threadpool, a queue to which
+ * {@link EventType}s can be submitted, and a <code>Runnable</code> that handles the object that is
+ * added to the queue.
+ * <p>
+ * In order to create a new service, create an instance of this class and then do:
+ * <code>instance.startExecutorService(executorConfig);</code>. {@link ExecutorConfig} wraps the
+ * configuration needed by this service. When done call {@link #shutdown()}.
+ * <p>
+ * In order to use the service created above, call {@link #submit(EventHandler)}.
  */
 @InterfaceAudience.Private
 public class ExecutorService {
@@ -66,9 +65,9 @@ public class ExecutorService {
   // Name of the server hosting this executor service.
   private final String servername;
 
-  private final ListeningScheduledExecutorService delayedSubmitTimer =
-    MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
-      .setDaemon(true).setNameFormat("Event-Executor-Delay-Submit-Timer").build()));
+  private final ListeningScheduledExecutorService delayedSubmitTimer = MoreExecutors
+      .listeningDecorator(Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+          .setDaemon(true).setNameFormat("Event-Executor-Delay-Submit-Timer").build()));
 
   /**
    * Default constructor.
@@ -79,24 +78,22 @@ public class ExecutorService {
   }
 
   /**
-   * Start an executor service with a given name. If there was a service already
-   * started with the same name, this throws a RuntimeException.
+   * Start an executor service with a given name. If there was a service already started with the
+   * same name, this throws a RuntimeException.
    * @param config Configuration to use for the executor.
    */
   public void startExecutorService(final ExecutorConfig config) {
     final String name = config.getName();
     Executor hbes = this.executorMap.compute(name, (key, value) -> {
       if (value != null) {
-        throw new RuntimeException("An executor service with the name " + key +
-            " is already running!");
+        throw new RuntimeException(
+            "An executor service with the name " + key + " is already running!");
       }
       return new Executor(config);
     });
 
-    LOG.debug(
-        "Starting executor service name={}, corePoolSize={}, maxPoolSize={}",
-        name, hbes.threadPoolExecutor.getCorePoolSize(),
-        hbes.threadPoolExecutor.getMaximumPoolSize());
+    LOG.debug("Starting executor service name={}, corePoolSize={}, maxPoolSize={}", name,
+      hbes.threadPoolExecutor.getCorePoolSize(), hbes.threadPoolExecutor.getMaximumPoolSize());
   }
 
   boolean isExecutorServiceRunning(String name) {
@@ -105,9 +102,8 @@ public class ExecutorService {
 
   public void shutdown() {
     this.delayedSubmitTimer.shutdownNow();
-    for(Entry<String, Executor> entry: this.executorMap.entrySet()) {
-      List<Runnable> wasRunning =
-        entry.getValue().threadPoolExecutor.shutdownNow();
+    for (Entry<String, Executor> entry : this.executorMap.entrySet()) {
+      List<Runnable> wasRunning = entry.getValue().threadPoolExecutor.shutdownNow();
       if (!wasRunning.isEmpty()) {
         LOG.info(entry.getValue() + " had " + wasRunning + " on shutdown");
       }
@@ -133,8 +129,8 @@ public class ExecutorService {
    * {@link ExecutorService#startExecutorService(ExecutorConfig)}
    */
   public ThreadPoolExecutor getExecutorLazily(ExecutorConfig config) {
-    return executorMap.computeIfAbsent(config.getName(), (executorName) ->
-        new Executor(config)).getThreadPoolExecutor();
+    return executorMap.computeIfAbsent(config.getName(), (executorName) -> new Executor(config))
+        .getThreadPoolExecutor();
   }
 
   public void submit(final EventHandler eh) {
@@ -143,8 +139,8 @@ public class ExecutorService {
       // This happens only when events are submitted after shutdown() was
       // called, so dropping them should be "ok" since it means we're
       // shutting down.
-      LOG.error("Cannot submit [" + eh + "] because the executor is missing." +
-        " Is this process shutting down?");
+      LOG.error("Cannot submit [" + eh + "] because the executor is missing."
+          + " Is this process shutting down?");
     } else {
       executor.submit(eh);
     }
@@ -206,9 +202,9 @@ public class ExecutorService {
     }
 
     /**
-     * Allows timing out of core threads. Good to set this for non-critical thread pools for
-     * release of unused resources. Refer to {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
-     * for additional details.
+     * Allows timing out of core threads. Good to set this for non-critical thread pools for release
+     * of unused resources. Refer to {@link ThreadPoolExecutor#allowCoreThreadTimeOut} for
+     * additional details.
      */
     public ExecutorConfig setAllowCoreThreadTimeout(boolean allowCoreThreadTimeout) {
       this.allowCoreThreadTimeout = allowCoreThreadTimeout;
@@ -250,8 +246,8 @@ public class ExecutorService {
       // create the thread pool executor
       this.threadPoolExecutor = new TrackingThreadPoolExecutor(
           // setting maxPoolSize > corePoolSize has no effect since we use an unbounded task queue.
-          config.getCorePoolSize(), config.getCorePoolSize(),
-          config.getKeepAliveTimeMillis(), TimeUnit.MILLISECONDS, q);
+          config.getCorePoolSize(), config.getCorePoolSize(), config.getKeepAliveTimeMillis(),
+          TimeUnit.MILLISECONDS, q);
       this.threadPoolExecutor.allowCoreThreadTimeOut(config.allowCoreThreadTimeout());
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
@@ -286,18 +282,17 @@ public class ExecutorService {
           LOG.warn("Non-EventHandler " + r + " queued in " + name);
           continue;
         }
-        queuedEvents.add((EventHandler)r);
+        queuedEvents.add((EventHandler) r);
       }
 
       List<RunningEventStatus> running = Lists.newArrayList();
-      for (Map.Entry<Thread, Runnable> e :
-          threadPoolExecutor.getRunningTasks().entrySet()) {
+      for (Map.Entry<Thread, Runnable> e : threadPoolExecutor.getRunningTasks().entrySet()) {
         Runnable r = e.getValue();
         if (!(r instanceof EventHandler)) {
           LOG.warn("Non-EventHandler " + r + " running in " + name);
           continue;
         }
-        running.add(new RunningEventStatus(e.getKey(), (EventHandler)r));
+        running.add(new RunningEventStatus(e.getKey(), (EventHandler) r));
       }
 
       return new ExecutorStatus(this, queuedEvents, running);
@@ -305,14 +300,14 @@ public class ExecutorService {
   }
 
   /**
-   * A subclass of ThreadPoolExecutor that keeps track of the Runnables that
-   * are executing at any given point in time.
+   * A subclass of ThreadPoolExecutor that keeps track of the Runnables that are executing at any
+   * given point in time.
    */
   static class TrackingThreadPoolExecutor extends ThreadPoolExecutor {
     private ConcurrentMap<Thread, Runnable> running = Maps.newConcurrentMap();
 
-    public TrackingThreadPoolExecutor(int corePoolSize, int maximumPoolSize,
-        long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+    public TrackingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+        TimeUnit unit, BlockingQueue<Runnable> workQueue) {
       super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
     }
 
@@ -330,10 +325,9 @@ public class ExecutorService {
     }
 
     /**
-     * @return a map of the threads currently running tasks
-     * inside this executor. Each key is an active thread,
-     * and the value is the task that is currently running.
-     * Note that this is not a stable snapshot of the map.
+     * @return a map of the threads currently running tasks inside this executor. Each key is an
+     *         active thread, and the value is the task that is currently running. Note that this is
+     *         not a stable snapshot of the map.
      */
     public ConcurrentMap<Thread, Runnable> getRunningTasks() {
       return running;
@@ -341,19 +335,16 @@ public class ExecutorService {
   }
 
   /**
-   * A snapshot of the status of a particular executor. This includes
-   * the contents of the executor's pending queue, as well as the
-   * threads and events currently being processed.
-   *
-   * This is a consistent snapshot that is immutable once constructed.
+   * A snapshot of the status of a particular executor. This includes the contents of the executor's
+   * pending queue, as well as the threads and events currently being processed. This is a
+   * consistent snapshot that is immutable once constructed.
    */
   public static class ExecutorStatus {
     final Executor executor;
     final List<EventHandler> queuedEvents;
     final List<RunningEventStatus> running;
 
-    ExecutorStatus(Executor executor,
-        List<EventHandler> queuedEvents,
+    ExecutorStatus(Executor executor, List<EventHandler> queuedEvents,
         List<RunningEventStatus> running) {
       this.executor = executor;
       this.queuedEvents = queuedEvents;
@@ -369,17 +360,14 @@ public class ExecutorService {
     }
 
     /**
-     * Dump a textual representation of the executor's status
-     * to the given writer.
-     *
+     * Dump a textual representation of the executor's status to the given writer.
      * @param out the stream to write to
      * @param indent a string prefix for each line, used for indentation
      */
     public void dumpTo(Writer out, String indent) throws IOException {
       out.write(indent + "Status for executor: " + executor + "\n");
       out.write(indent + "=======================================\n");
-      out.write(indent + queuedEvents.size() + " events queued, " +
-          running.size() + " running\n");
+      out.write(indent + queuedEvents.size() + " events queued, " + running.size() + " running\n");
       if (!queuedEvents.isEmpty()) {
         out.write(indent + "Queued:\n");
         for (EventHandler e : queuedEvents) {
@@ -390,11 +378,9 @@ public class ExecutorService {
       if (!running.isEmpty()) {
         out.write(indent + "Running:\n");
         for (RunningEventStatus stat : running) {
-          out.write(indent + "  Running on thread '" +
-              stat.threadInfo.getThreadName() +
-              "': " + stat.event + "\n");
-          out.write(ThreadMonitoring.formatThreadInfo(
-              stat.threadInfo, indent + "  "));
+          out.write(indent + "  Running on thread '" + stat.threadInfo.getThreadName() + "': "
+              + stat.event + "\n");
+          out.write(ThreadMonitoring.formatThreadInfo(stat.threadInfo, indent + "  "));
           out.write("\n");
         }
       }
@@ -403,8 +389,7 @@ public class ExecutorService {
   }
 
   /**
-   * The status of a particular event that is in the middle of being
-   * handled by an executor.
+   * The status of a particular event that is in the middle of being handled by an executor.
    */
   public static class RunningEventStatus {
     final ThreadInfo threadInfo;

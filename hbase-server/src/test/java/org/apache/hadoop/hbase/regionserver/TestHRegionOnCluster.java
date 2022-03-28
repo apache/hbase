@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,11 +52,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests that need to spin up a cluster testing an {@link HRegion}.  Use
- * {@link TestHRegion} if you don't need a cluster, if you can test w/ a
- * standalone {@link HRegion}.
+ * Tests that need to spin up a cluster testing an {@link HRegion}. Use {@link TestHRegion} if you
+ * don't need a cluster, if you can test w/ a standalone {@link HRegion}.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestHRegionOnCluster {
 
   @ClassRule
@@ -83,7 +82,7 @@ public class TestHRegionOnCluster {
 
       // Create table
       TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
       hbaseAdmin = master.getConnection().getAdmin();
       hbaseAdmin.createTable(tableDescriptor);
 
@@ -154,8 +153,8 @@ public class TestHRegionOnCluster {
     }
   }
 
-  private void putDataAndVerify(Table table, String row, byte[] family,
-      String value, int verifyNum) throws IOException {
+  private void putDataAndVerify(Table table, String row, byte[] family, String value, int verifyNum)
+      throws IOException {
     System.out.println("=========Putting data :" + row);
     Put put = new Put(Bytes.toBytes(row));
     put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes(value));
@@ -164,8 +163,7 @@ public class TestHRegionOnCluster {
     List<Result> results = new ArrayList<>();
     while (true) {
       Result r = resultScanner.next();
-      if (r == null)
-        break;
+      if (r == null) break;
       results.add(r);
     }
     resultScanner.close();

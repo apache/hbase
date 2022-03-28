@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocatorConcurrenyLimit.class);
+      HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocatorConcurrenyLimit.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -127,10 +127,10 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     ConnectionRegistry registry =
         ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), null, User.getCurrent());
+        registry.getClusterId().get(), null, User.getCurrent());
     LOCATOR = new AsyncNonMetaRegionLocator(CONN);
     SPLIT_KEYS = IntStream.range(1, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
-      .toArray(byte[][]::new);
+        .toArray(byte[][]::new);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLIT_KEYS);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
   }
@@ -162,10 +162,10 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
   @Test
   public void test() throws InterruptedException, ExecutionException {
     List<CompletableFuture<RegionLocations>> futures =
-      IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
-        .map(r -> LOCATOR.getRegionLocations(TABLE_NAME, r, RegionReplicaUtil.DEFAULT_REPLICA_ID,
-          RegionLocateType.CURRENT, false))
-        .collect(toList());
+        IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
+            .map(r -> LOCATOR.getRegionLocations(TABLE_NAME, r,
+              RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false))
+            .collect(toList());
     assertLocs(futures);
     assertTrue("max allowed is " + MAX_ALLOWED + " but actual is " + MAX_CONCURRENCY.get(),
       MAX_CONCURRENCY.get() <= MAX_ALLOWED);

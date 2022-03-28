@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,16 +78,16 @@ public class TestMemStoreSegmentsIterator {
     Configuration conf = new Configuration();
     HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
     this.wal = HBaseTestingUtil.createWal(conf, rootPath, info);
-    this.region = HRegion.createHRegion(info, rootPath, conf,
-      tableDescriptorBuilder.build(), this.wal, true);
+    this.region =
+        HRegion.createHRegion(info, rootPath, conf, tableDescriptorBuilder.build(), this.wal, true);
     this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);
     this.comparator = CellComparator.getInstance();
     this.compactionKVMax = HConstants.COMPACTION_KV_MAX_DEFAULT;

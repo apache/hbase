@@ -48,7 +48,7 @@ public class TestSizeFailures {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSizeFailures.class);
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
   protected static int SLAVES = 1;
   private static TableName TABLENAME;
   private static final int NUM_ROWS = 1000 * 1000, NUM_COLS = 9;
@@ -57,9 +57,9 @@ public class TestSizeFailures {
   public static void setUpBeforeClass() throws Exception {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     TEST_UTIL.startMiniCluster(SLAVES);
 
     // Write a bunch of data
@@ -70,7 +70,7 @@ public class TestSizeFailures {
     }
 
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     byte[][] splits = new byte[9][2];
     for (int i = 1; i < 10; i++) {
       int split = 48 + i;
@@ -120,7 +120,7 @@ public class TestSizeFailures {
       s.setMaxResultSize(-1);
       s.setBatch(-1);
       s.setCaching(500);
-      Entry<Long,Long> entry = sumTable(table.getScanner(s));
+      Entry<Long, Long> entry = sumTable(table.getScanner(s));
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
@@ -143,7 +143,7 @@ public class TestSizeFailures {
       s.setMaxResultSize(-1);
       s.setBatch(-1);
       s.setCaching(500);
-      Entry<Long,Long> entry = sumTable(table.getScanner(s));
+      Entry<Long, Long> entry = sumTable(table.getScanner(s));
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
@@ -155,12 +155,10 @@ public class TestSizeFailures {
 
   /**
    * Count the number of rows and the number of entries from a scanner
-   *
-   * @param scanner
-   *          The Scanner
+   * @param scanner The Scanner
    * @return An entry where the first item is rows observed and the second is entries observed.
    */
-  private Entry<Long,Long> sumTable(ResultScanner scanner) {
+  private Entry<Long, Long> sumTable(ResultScanner scanner) {
     long rowsObserved = 0L;
     long entriesObserved = 0L;
 
@@ -171,6 +169,6 @@ public class TestSizeFailures {
         entriesObserved++;
       }
     }
-    return Maps.immutableEntry(rowsObserved,entriesObserved);
+    return Maps.immutableEntry(rowsObserved, entriesObserved);
   }
 }

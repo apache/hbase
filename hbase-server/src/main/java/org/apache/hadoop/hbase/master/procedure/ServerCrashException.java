@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Passed as Exception by {@link ServerCrashProcedure}
- * notifying on-going RIT that server has failed. This exception is less an error-condition than
- * it is a signal to waiting procedures that they can now proceed.
+ * Passed as Exception by {@link ServerCrashProcedure} notifying on-going RIT that server has
+ * failed. This exception is less an error-condition than it is a signal to waiting procedures that
+ * they can now proceed.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("serial")

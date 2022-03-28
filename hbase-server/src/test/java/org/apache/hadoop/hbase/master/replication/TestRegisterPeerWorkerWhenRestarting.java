@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegisterPeerWorkerWhenRestarting.class);
+      HBaseClassTestRule.forClass(TestRegisterPeerWorkerWhenRestarting.class);
 
   private static volatile boolean FAIL = false;
 
@@ -59,7 +59,7 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     @Override
     public void remoteProcedureCompleted(long procId) {
       if (FAIL && getMasterProcedureExecutor()
-        .getProcedure(procId) instanceof SyncReplicationReplayWALRemoteProcedure) {
+          .getProcedure(procId) instanceof SyncReplicationReplayWALRemoteProcedure) {
         throw new RuntimeException("Inject error");
       }
       super.remoteProcedureCompleted(procId);
@@ -108,9 +108,9 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     // wait until we are in the states where we need to register peer worker when restarting
     UTIL2.waitFor(60000,
       () -> procExec.getProcedures().stream().filter(p -> p instanceof RecoverStandbyProcedure)
-        .map(p -> (RecoverStandbyProcedure) p)
-        .anyMatch(p -> p.getCurrentStateId() == DISPATCH_WALS_VALUE ||
-          p.getCurrentStateId() == UNREGISTER_PEER_FROM_WORKER_STORAGE_VALUE));
+          .map(p -> (RecoverStandbyProcedure) p)
+          .anyMatch(p -> p.getCurrentStateId() == DISPATCH_WALS_VALUE
+              || p.getCurrentStateId() == UNREGISTER_PEER_FROM_WORKER_STORAGE_VALUE));
     // failover to another master
     MasterThread mt = UTIL2.getMiniHBaseCluster().getMasterThread();
     mt.getMaster().abort("for testing");
@@ -119,7 +119,7 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     t.join();
     // make sure the new master can finish the transition
     UTIL2.waitFor(60000, () -> UTIL2.getAdmin()
-      .getReplicationPeerSyncReplicationState(PEER_ID) == SyncReplicationState.DOWNGRADE_ACTIVE);
+        .getReplicationPeerSyncReplicationState(PEER_ID) == SyncReplicationState.DOWNGRADE_ACTIVE);
     verify(UTIL2, 0, 100);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 public class QosTestBase {
 
   protected final void checkMethod(Configuration conf, final String methodName, final int expected,
-    final AnnotationReadingPriorityFunction<?> qosf) {
+      final AnnotationReadingPriorityFunction<?> qosf) {
     checkMethod(conf, methodName, expected, qosf, null);
   }
 
   protected final void checkMethod(Configuration conf, final String methodName, final int expected,
-    final AnnotationReadingPriorityFunction<?> qosf, final Message param) {
+      final AnnotationReadingPriorityFunction<?> qosf, final Message param) {
     RPCProtos.RequestHeader.Builder builder = RPCProtos.RequestHeader.newBuilder();
     builder.setMethodName(methodName);
     assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,

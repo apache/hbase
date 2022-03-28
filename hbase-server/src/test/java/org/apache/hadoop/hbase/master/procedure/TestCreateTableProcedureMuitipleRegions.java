@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestCreateTableProcedureMuitipleRegions {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCreateTableProcedureMuitipleRegions.class);
+      HBaseClassTestRule.forClass(TestCreateTableProcedureMuitipleRegions.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -60,7 +60,7 @@ public class TestCreateTableProcedureMuitipleRegions {
     }
 
     TableDescriptor htd =
-      MasterProcedureTestingUtility.createHTD(TableName.valueOf("TestMRegions"), F1, F2);
+        MasterProcedureTestingUtility.createHTD(TableName.valueOf("TestMRegions"), F1, F2);
     UTIL.getAdmin().createTableAsync(htd, splitKeys).get(10, java.util.concurrent.TimeUnit.HOURS);
   }
 }

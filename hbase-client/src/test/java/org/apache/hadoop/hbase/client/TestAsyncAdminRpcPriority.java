@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,7 +73,7 @@ public class TestAsyncAdminRpcPriority {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminRpcPriority.class);
+      HBaseClassTestRule.forClass(TestAsyncAdminRpcPriority.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -96,7 +96,7 @@ public class TestAsyncAdminRpcPriority {
       public Void answer(InvocationOnMock invocation) throws Throwable {
         RpcCallback<GetProcedureResultResponse> done = invocation.getArgument(2);
         done.run(GetProcedureResultResponse.newBuilder()
-          .setState(GetProcedureResultResponse.State.FINISHED).build());
+            .setState(GetProcedureResultResponse.State.FINISHED).build());
         return null;
       }
     }).when(masterStub).getProcedureResult(any(HBaseRpcController.class),
@@ -143,7 +143,7 @@ public class TestAsyncAdminRpcPriority {
       any());
 
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null,
-      UserProvider.instantiate(CONF).getCurrent()) {
+        UserProvider.instantiate(CONF).getCurrent()) {
 
       @Override
       CompletableFuture<MasterService.Interface> getMasterStub() {
@@ -170,9 +170,9 @@ public class TestAsyncAdminRpcPriority {
   @Test
   public void testCreateNormalTable() {
     conn.getAdmin()
-      .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
-      .join();
+        .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
+        .join();
     verify(masterStub, times(1)).createTable(assertPriority(NORMAL_QOS),
       any(CreateTableRequest.class), any());
   }
@@ -182,10 +182,10 @@ public class TestAsyncAdminRpcPriority {
   @Test
   public void testCreateSystemTable() {
     conn.getAdmin()
-      .createTable(TableDescriptorBuilder
-        .newBuilder(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
-      .join();
+        .createTable(TableDescriptorBuilder
+            .newBuilder(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build())
+        .join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());
   }
@@ -195,7 +195,7 @@ public class TestAsyncAdminRpcPriority {
   @Test
   public void testCreateMetaTable() {
     conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());
   }

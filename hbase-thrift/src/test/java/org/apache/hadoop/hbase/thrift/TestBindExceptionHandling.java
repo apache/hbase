@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.junit.Assert.assertNotNull;
+
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -25,13 +27,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
 
-@Category({ ClientTests.class, MediumTests.class})
+@Category({ ClientTests.class, MediumTests.class })
 public class TestBindExceptionHandling {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
+      HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
@@ -40,8 +41,8 @@ public class TestBindExceptionHandling {
    */
   @Test
   public void testProtocolPortClash() throws Exception {
-    try (ThriftServerRunner tsr = TestThriftServerCmdLine.
-        createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), true, false)) {
+    try (ThriftServerRunner tsr = TestThriftServerCmdLine
+        .createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), true, false)) {
       assertNotNull(tsr.getThriftServer());
     }
   }
@@ -51,8 +52,8 @@ public class TestBindExceptionHandling {
    */
   @Test
   public void testInfoPortClash() throws Exception {
-    try (ThriftServerRunner tsr = TestThriftServerCmdLine.
-        createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), false, true)) {
+    try (ThriftServerRunner tsr = TestThriftServerCmdLine
+        .createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), false, true)) {
       assertNotNull(tsr.getThriftServer());
     }
   }

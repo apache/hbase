@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -115,14 +115,14 @@ public class TestGetProcedureResult {
   private GetProcedureResultResponse.State getState(long procId)
       throws MasterNotRunningException, IOException, ServiceException {
     GetProcedureResultResponse resp = UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices()
-      .getProcedureResult(null, GetProcedureResultRequest.newBuilder().setProcId(procId).build());
+        .getProcedureResult(null, GetProcedureResultRequest.newBuilder().setProcId(procId).build());
     return resp.getState();
   }
 
   @Test
   public void testRace() throws Exception {
     ProcedureExecutor<MasterProcedureEnv> executor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     DummyProcedure p = new DummyProcedure();
     long procId = executor.submitProcedure(p);
     p.failureSet.await();
@@ -137,8 +137,8 @@ public class TestGetProcedureResult {
 
       @Override
       public String explainFailure() throws Exception {
-        return "Procedure pid=" + procId + " is still in " + getState(procId) +
-          " state, expected " + GetProcedureResultResponse.State.FINISHED;
+        return "Procedure pid=" + procId + " is still in " + getState(procId) + " state, expected "
+            + GetProcedureResultResponse.State.FINISHED;
       }
     });
   }

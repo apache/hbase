@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.util.Collections;
@@ -30,9 +29,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * help assign and release a worker for each remote task.
- * For each worker, concurrent running task should be no more than maxTasks.
- * If a task failed to acquire a worker, it will suspend and wait for workers available.
+ * help assign and release a worker for each remote task. For each worker, concurrent running task
+ * should be no more than maxTasks. If a task failed to acquire a worker, it will suspend and wait
+ * for workers available.
  */
 @InterfaceAudience.Private
 public class WorkerAssigner implements ServerListener {
@@ -57,9 +56,9 @@ public class WorkerAssigner implements ServerListener {
     Collections.shuffle(serverList);
     Optional<ServerName> worker = serverList.stream().filter(
       serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
-      .findAny();
-    worker.ifPresent(name -> currentWorkers.compute(name, (serverName, availableWorker) ->
-      availableWorker == null ? maxTasks - 1 : availableWorker - 1));
+        .findAny();
+    worker.ifPresent(name -> currentWorkers.compute(name, (serverName,
+        availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1));
     return worker;
   }
 
@@ -86,7 +85,7 @@ public class WorkerAssigner implements ServerListener {
   public synchronized void addUsedWorker(ServerName worker) {
     // load used worker when master restart
     currentWorkers.compute(worker, (serverName,
-      availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1);
+        availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1);
   }
 
   public Integer getAvailableWorker(ServerName serverName) {

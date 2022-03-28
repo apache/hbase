@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,11 +30,11 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, SecurityTests.class })
 public class TestCustomSaslAuthenticationProviderNettyRpcServer
-  extends CustomSaslAuthenticationProviderTestBase {
+    extends CustomSaslAuthenticationProviderTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCustomSaslAuthenticationProviderNettyRpcServer.class);
+      HBaseClassTestRule.forClass(TestCustomSaslAuthenticationProviderNettyRpcServer.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

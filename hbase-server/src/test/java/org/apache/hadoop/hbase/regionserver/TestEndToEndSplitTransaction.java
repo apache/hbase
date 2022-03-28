@@ -82,7 +82,7 @@ public class TestEndToEndSplitTransaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEndToEndSplitTransaction.class);
+      HBaseClassTestRule.forClass(TestEndToEndSplitTransaction.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEndToEndSplitTransaction.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -112,13 +112,13 @@ public class TestEndToEndSplitTransaction {
     byte[] fam = Bytes.toBytes("cf_split");
 
     CompactSplit compactSplit =
-      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getCompactSplitThread();
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getCompactSplitThread();
     TableName tableName = TableName.valueOf("CanSplitTable");
     Table source = TEST_UTIL.getConnection().getTable(tableName);
     Admin admin = TEST_UTIL.getAdmin();
     // set a large min compaction file count to avoid compaction just after splitting.
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     Map<String, StoreFileReader> scanner = Maps.newHashMap();
     try {
       admin.createTable(htd);
@@ -129,15 +129,16 @@ public class TestEndToEndSplitTransaction {
 
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       regions.stream()
-        .forEach(r -> r.getStores().get(0).getStorefiles().stream()
-          .filter(s -> s.isReference() && !scanner.containsKey(r.getRegionInfo().getEncodedName()))
-          .forEach(sf -> {
-            StoreFileReader reader = ((HStoreFile) sf).getReader();
-            reader.getStoreFileScanner(true, false, false, 0, 0, false);
-            scanner.put(r.getRegionInfo().getEncodedName(), reader);
-            LOG.info("Got reference to file = " + sf.getPath() + ",for region = " +
-              r.getRegionInfo().getEncodedName());
-          }));
+          .forEach(r -> r.getStores().get(0).getStorefiles().stream()
+              .filter(
+                s -> s.isReference() && !scanner.containsKey(r.getRegionInfo().getEncodedName()))
+              .forEach(sf -> {
+                StoreFileReader reader = ((HStoreFile) sf).getReader();
+                reader.getStoreFileScanner(true, false, false, 0, 0, false);
+                scanner.put(r.getRegionInfo().getEncodedName(), reader);
+                LOG.info("Got reference to file = " + sf.getPath() + ",for region = "
+                    + r.getRegionInfo().getEncodedName());
+              }));
       assertTrue("Regions did not split properly", regions.size() > 1);
       assertTrue("Could not get reference any of the store file", scanner.size() > 1);
       compactSplit.setCompactionsEnabled(true);
@@ -146,9 +147,9 @@ public class TestEndToEndSplitTransaction {
       }
 
       regions.stream()
-        .filter(region -> scanner.containsKey(region.getRegionInfo().getEncodedName()))
-        .forEach(r -> assertFalse("Contains an open file reference which can be split",
-          r.getStores().get(0).canSplit()));
+          .filter(region -> scanner.containsKey(region.getRegionInfo().getEncodedName()))
+          .forEach(r -> assertFalse("Contains an open file reference which can be split",
+            r.getStores().get(0).canSplit()));
     } finally {
       scanner.values().forEach(s -> {
         try {
@@ -299,10 +300,10 @@ public class TestEndToEndSplitTransaction {
     void verifyRegionsUsingMetaTableAccessor() throws Exception {
       List<RegionInfo> regionList = MetaTableAccessor.getTableRegions(connection, tableName, true);
       verifyTableRegions(regionList.stream()
-        .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
+          .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
       regionList = MetaTableAccessor.getAllRegions(connection, true);
       verifyTableRegions(regionList.stream()
-        .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
+          .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
     }
 
     /** verify region boundaries obtained from HTable.getStartEndKeys() */
@@ -354,8 +355,8 @@ public class TestEndToEndSplitTransaction {
       // ensure that we do not have any gaps
       for (int i = 0; i < startKeys.length; i++) {
         assertArrayEquals(
-          "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey) +
-            " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]),
+          "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey)
+              + " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]),
           prevEndKey, startKeys[i]);
         prevEndKey = endKeys[i];
       }
@@ -397,9 +398,10 @@ public class TestEndToEndSplitTransaction {
     // Wait till its online before we do compact else it comes back with NoServerForRegionException
     try {
       TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-        @Override public boolean evaluate() throws Exception {
-          return rs.getServerName().equals(MetaTableAccessor.
-            getRegionLocation(admin.getConnection(), regionName).getServerName());
+        @Override
+        public boolean evaluate() throws Exception {
+          return rs.getServerName().equals(
+            MetaTableAccessor.getRegionLocation(admin.getConnection(), regionName).getServerName());
         }
       });
     } catch (Exception e) {
@@ -448,9 +450,9 @@ public class TestEndToEndSplitTransaction {
         Threads.sleep(100);
       }
       if (daughterA == null || daughterB == null) {
-        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB=" +
-          daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName=" +
-          Bytes.toString(regionName) + ", region=" + region);
+        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB="
+            + daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName="
+            + Bytes.toString(regionName) + ", region=" + region);
       }
 
       // if we are here, this means the region split is complete or timed out

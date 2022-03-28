@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -118,11 +118,10 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     runWithExpectedException(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        TableDescriptorBuilder tableDescriptorBuilder =
-          TableDescriptorBuilder.newBuilder(TableName.valueOf("non_existing_namespace",
-            "table1"));
+        TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder
+            .newBuilder(TableName.valueOf("non_existing_namespace", "table1"));
         ColumnFamilyDescriptor columnFamilyDescriptor =
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1")).build();
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1")).build();
         tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
         admin.createTable(tableDescriptorBuilder.build()).join();
         return null;
@@ -172,7 +171,8 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     admin.deleteNamespace(prefix + "ns1").join();
   }
 
-  private static <V, E> void runWithExpectedException(Callable<V> callable, Class<E> exceptionClass) {
+  private static <V, E> void runWithExpectedException(Callable<V> callable,
+      Class<E> exceptionClass) {
     try {
       callable.call();
     } catch (Exception ex) {

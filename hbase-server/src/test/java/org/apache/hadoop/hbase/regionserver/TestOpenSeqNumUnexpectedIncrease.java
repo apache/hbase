@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestOpenSeqNumUnexpectedIncrease {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenSeqNumUnexpectedIncrease.class);
+      HBaseClassTestRule.forClass(TestOpenSeqNumUnexpectedIncrease.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -78,7 +78,7 @@ public class TestOpenSeqNumUnexpectedIncrease {
     }
 
     public Map<byte[], List<HStoreFile>> close() throws IOException {
-      //skip close
+      // skip close
       return null;
     }
   }

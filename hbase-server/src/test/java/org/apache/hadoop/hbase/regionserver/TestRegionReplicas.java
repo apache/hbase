@@ -68,10 +68,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
- * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
- * cluster. See {@link TestRegionServerNoMaster}.
+ * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
+ * See {@link TestRegionServerNoMaster}.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRegionReplicas {
 
   @ClassRule
@@ -130,7 +130,7 @@ public class TestRegionReplicas {
   public void testOpenRegionReplica() throws Exception {
     openRegion(HTU, getRS(), hriSecondary);
     try {
-      //load some data to primary
+      // load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
 
       // assert that we can read back from primary
@@ -148,8 +148,8 @@ public class TestRegionReplicas {
     Table meta = null;
     try {
       meta = HTU.getConnection().getTable(TableName.META_TABLE_NAME);
-      TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName()
-        , getRS().getServerName(), -1, 1, false);
+      TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName(),
+        getRS().getServerName(), -1, 1, false);
     } finally {
       if (meta != null) {
         meta.close();
@@ -161,7 +161,7 @@ public class TestRegionReplicas {
   @Test
   public void testRegionReplicaGets() throws Exception {
     try {
-      //load some data to primary
+      // load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
       Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
@@ -185,7 +185,7 @@ public class TestRegionReplicas {
   @Test
   public void testGetOnTargetRegionReplica() throws Exception {
     try {
-      //load some data to primary
+      // load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
       Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
@@ -225,7 +225,7 @@ public class TestRegionReplicas {
     byte[] row = Bytes.toBytes(String.valueOf(value));
     Get get = new Get(row);
     ClientProtos.GetRequest getReq = RequestConverter.buildGetRequest(info.getRegionName(), get);
-    ClientProtos.GetResponse getResp =  getRS().getRSRpcServices().get(null, getReq);
+    ClientProtos.GetResponse getResp = getRS().getRSRpcServices().get(null, getReq);
     Result result = ProtobufUtil.toResult(getResp.getResult());
     if (expect) {
       Assert.assertArrayEquals(row, result.getValue(f, null));
@@ -253,7 +253,7 @@ public class TestRegionReplicas {
       LOG.info("Opening the secondary region " + hriSecondary.getEncodedName());
       openRegion(HTU, getRS(), hriSecondary);
 
-      //load some data to primary
+      // load some data to primary
       LOG.info("Loading data to primary region");
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
@@ -275,7 +275,7 @@ public class TestRegionReplicas {
       assertGetRpc(hriSecondary, 42, true);
       assertGetRpc(hriSecondary, 1042, false);
 
-      //load some data to primary
+      // load some data to primary
       HTU.loadNumericRows(table, f, 1000, 1100);
       region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -331,7 +331,7 @@ public class TestRegionReplicas {
     try {
       openRegion(HTU, getRS(), hriSecondary);
 
-      //load some data to primary so that reader won't fail
+      // load some data to primary so that reader won't fail
       HTU.loadNumericRows(table, f, startKey, endKey);
       TestRegionServerNoMaster.flushRegion(HTU, hriPrimary);
       // ensure that chore is run
@@ -340,12 +340,13 @@ public class TestRegionReplicas {
       final AtomicBoolean running = new AtomicBoolean(true);
       @SuppressWarnings("unchecked")
       final AtomicReference<Exception>[] exceptions = new AtomicReference[3];
-      for (int i=0; i < exceptions.length; i++) {
+      for (int i = 0; i < exceptions.length; i++) {
         exceptions[i] = new AtomicReference<>();
       }
 
       Runnable writer = new Runnable() {
         int key = startKey;
+
         @Override
         public void run() {
           try {
@@ -368,6 +369,7 @@ public class TestRegionReplicas {
 
       Runnable flusherCompactor = new Runnable() {
         Random random = ThreadLocalRandom.current();
+
         public void run() {
           try {
             while (running.get()) {
@@ -396,15 +398,15 @@ public class TestRegionReplicas {
                 try {
                   closeRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed closing the region " + hriSecondary + " "  +
-                    StringUtils.stringifyException(ex));
+                  LOG.warn("Failed closing the region " + hriSecondary + " "
+                      + StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
                 try {
                   openRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed opening the region " + hriSecondary + " "  +
-                    StringUtils.stringifyException(ex));
+                  LOG.warn("Failed opening the region " + hriSecondary + " "
+                      + StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
               }
@@ -413,8 +415,8 @@ public class TestRegionReplicas {
               assertGetRpc(hriSecondary, key, true);
             }
           } catch (Exception ex) {
-            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  +
-              StringUtils.stringifyException(ex));
+            LOG.warn("Failed getting the value in the region " + hriSecondary + " "
+                + StringUtils.stringifyException(ex));
             exceptions[2].compareAndSet(null, ex);
           }
         }
@@ -475,8 +477,8 @@ public class TestRegionReplicas {
       LOG.info("Force Major compaction on primary region " + hriPrimary);
       primaryRegion.compact(true);
       Assert.assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
-      List<RegionServerThread> regionServerThreads = HTU.getMiniHBaseCluster()
-          .getRegionServerThreads();
+      List<RegionServerThread> regionServerThreads =
+          HTU.getMiniHBaseCluster().getRegionServerThreads();
       HRegionServer hrs = null;
       for (RegionServerThread rs : regionServerThreads) {
         if (rs.getRegionServer()
@@ -485,8 +487,7 @@ public class TestRegionReplicas {
           break;
         }
       }
-      CompactedHFilesDischarger cleaner =
-          new CompactedHFilesDischarger(100, null, hrs, false);
+      CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, hrs, false);
       cleaner.chore();
       // scan all the hfiles on the secondary.
       // since there are no read on the secondary when we ask locations to
@@ -505,8 +506,8 @@ public class TestRegionReplicas {
           keys++;
 
           Cell cell = scanner.getCell();
-          sum += Integer.parseInt(Bytes.toString(cell.getRowArray(),
-            cell.getRowOffset(), cell.getRowLength()));
+          sum += Integer.parseInt(
+            Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
         } while (scanner.next());
       }
       Assert.assertEquals(3000, keys);

@@ -21,8 +21,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used internally signaling failed queue of a remote procedure
- * operation.
+ * Used internally signaling failed queue of a remote procedure operation.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

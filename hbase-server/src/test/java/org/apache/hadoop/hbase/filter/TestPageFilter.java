@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for the page filter
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestPageFilter {
 
   @ClassRule
@@ -76,14 +76,14 @@ public class TestPageFilter {
     for (int i = 0; i < (pageSize * 2); i++) {
       boolean filterOut = f.filterRow();
 
-      if(filterOut) {
+      if (filterOut) {
         break;
       } else {
         count++;
       }
 
       // If at last row, should tell us to skip all remaining
-      if(count == pageSize) {
+      if (count == pageSize) {
         assertTrue(f.filterAllRemaining());
       } else {
         assertFalse(f.filterAllRemaining());
@@ -94,4 +94,3 @@ public class TestPageFilter {
   }
 
 }
-

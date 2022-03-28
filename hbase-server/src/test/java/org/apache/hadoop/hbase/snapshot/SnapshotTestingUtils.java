@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,22 +93,18 @@ public final class SnapshotTestingUtils {
 
   /**
    * Assert that we don't have any snapshots lists
-   *
-   * @throws IOException
-   *           if the admin operation fails
+   * @throws IOException if the admin operation fails
    */
   public static void assertNoSnapshots(Admin admin) throws IOException {
-    assertEquals("Have some previous snapshots", 0, admin.listSnapshots()
-        .size());
+    assertEquals("Have some previous snapshots", 0, admin.listSnapshots().size());
   }
 
   /**
-   * Make sure that there is only one snapshot returned from the master and its
-   * name and table match the passed in parameters.
+   * Make sure that there is only one snapshot returned from the master and its name and table match
+   * the passed in parameters.
    */
-  public static List<SnapshotDescription> assertExistsMatchingSnapshot(
-      Admin admin, String snapshotName, TableName tableName)
-      throws IOException {
+  public static List<SnapshotDescription> assertExistsMatchingSnapshot(Admin admin,
+      String snapshotName, TableName tableName) throws IOException {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
 
@@ -119,7 +115,7 @@ public final class SnapshotTestingUtils {
       }
     }
 
-    Assert.assertTrue("No matching snapshots found.", returnedSnapshots.size()>0);
+    Assert.assertTrue("No matching snapshots found.", returnedSnapshots.size() > 0);
     return returnedSnapshots;
   }
 
@@ -132,12 +128,11 @@ public final class SnapshotTestingUtils {
   }
 
   /**
-   * Make sure that there is only one snapshot returned from the master and its
-   * name and table match the passed in parameters.
+   * Make sure that there is only one snapshot returned from the master and its name and table match
+   * the passed in parameters.
    */
-  public static List<SnapshotDescription> assertOneSnapshotThatMatches(
-      Admin admin, String snapshotName, TableName tableName)
-      throws IOException {
+  public static List<SnapshotDescription> assertOneSnapshotThatMatches(Admin admin,
+      String snapshotName, TableName tableName) throws IOException {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
 
@@ -149,13 +144,12 @@ public final class SnapshotTestingUtils {
   }
 
   /**
-   * Make sure that there is only one snapshot returned from the master and its
-   * name and table match the passed in parameters.
+   * Make sure that there is only one snapshot returned from the master and its name and table match
+   * the passed in parameters.
    */
-  public static List<SnapshotDescription> assertOneSnapshotThatMatches(
-      Admin admin, byte[] snapshot, TableName tableName) throws IOException {
-    return assertOneSnapshotThatMatches(admin, Bytes.toString(snapshot),
-        tableName);
+  public static List<SnapshotDescription> assertOneSnapshotThatMatches(Admin admin, byte[] snapshot,
+      TableName tableName) throws IOException {
+    return assertOneSnapshotThatMatches(admin, Bytes.toString(snapshot), tableName);
   }
 
   public static void confirmSnapshotValid(HBaseTestingUtil testUtil,
@@ -167,76 +161,79 @@ public final class SnapshotTestingUtils {
   }
 
   /**
-   * Confirm that the snapshot contains references to all the files that should
-   * be in the snapshot.
+   * Confirm that the snapshot contains references to all the files that should be in the snapshot.
    */
   public static void confirmSnapshotValid(SnapshotProtos.SnapshotDescription snapshotDescriptor,
       TableName tableName, byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
       throws IOException {
     ArrayList nonEmptyTestFamilies = new ArrayList(1);
     nonEmptyTestFamilies.add(testFamily);
-    confirmSnapshotValid(snapshotDescriptor, tableName,
-      nonEmptyTestFamilies, null, rootDir, admin, fs);
+    confirmSnapshotValid(snapshotDescriptor, tableName, nonEmptyTestFamilies, null, rootDir, admin,
+      fs);
   }
 
   /**
    * Confirm that the snapshot has no references files but only metadata.
    */
   public static void confirmEmptySnapshotValid(
-      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
-      throws IOException {
+      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] testFamily,
+      Path rootDir, Admin admin, FileSystem fs) throws IOException {
     ArrayList emptyTestFamilies = new ArrayList(1);
     emptyTestFamilies.add(testFamily);
-    confirmSnapshotValid(snapshotDescriptor, tableName,
-      null, emptyTestFamilies, rootDir, admin, fs);
+    confirmSnapshotValid(snapshotDescriptor, tableName, null, emptyTestFamilies, rootDir, admin,
+      fs);
   }
 
   /**
-   * Confirm that the snapshot contains references to all the files that should
-   * be in the snapshot. This method also perform some redundant check like
-   * the existence of the snapshotinfo or the regioninfo which are done always
-   * by the MasterSnapshotVerifier, at the end of the snapshot operation.
+   * Confirm that the snapshot contains references to all the files that should be in the snapshot.
+   * This method also perform some redundant check like the existence of the snapshotinfo or the
+   * regioninfo which are done always by the MasterSnapshotVerifier, at the end of the snapshot
+   * operation.
    */
-  public static void confirmSnapshotValid(
-      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
-      List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
+  public static void confirmSnapshotValid(SnapshotProtos.SnapshotDescription snapshotDescriptor,
+      TableName tableName, List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
       Path rootDir, Admin admin, FileSystem fs) throws IOException {
     final Configuration conf = admin.getConfiguration();
 
     // check snapshot dir
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotDescriptor, rootDir);
-    assertTrue("target snapshot directory, '"+ snapshotDir +"', doesn't exist.", fs.exists(snapshotDir));
+    Path snapshotDir =
+        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDescriptor, rootDir);
+    assertTrue("target snapshot directory, '" + snapshotDir + "', doesn't exist.",
+      fs.exists(snapshotDir));
 
-    SnapshotProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotProtos.SnapshotDescription desc =
+        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     // Extract regions and families with store files
     final Set<byte[]> snapshotFamilies = new TreeSet<>(Bytes.BYTES_COMPARATOR);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
     Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
-    for (SnapshotRegionManifest regionManifest: regionManifests.values()) {
+    for (SnapshotRegionManifest regionManifest : regionManifests.values()) {
       SnapshotReferenceUtil.visitRegionStoreFiles(regionManifest,
-          new SnapshotReferenceUtil.StoreFileVisitor() {
-        @Override
-        public void storeFile(final RegionInfo regionInfo, final String family,
+        new SnapshotReferenceUtil.StoreFileVisitor() {
+          @Override
+          public void storeFile(final RegionInfo regionInfo, final String family,
               final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          snapshotFamilies.add(Bytes.toBytes(family));
-        }
-      });
+            snapshotFamilies.add(Bytes.toBytes(family));
+          }
+        });
     }
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
-      for (final byte[] familyName: nonEmptyTestFamilies) {
-        assertTrue("Expected snapshot to contain family '" + Bytes.toString(familyName) + "', but it does not.", snapshotFamilies.contains(familyName));
+      for (final byte[] familyName : nonEmptyTestFamilies) {
+        assertTrue("Expected snapshot to contain family '" + Bytes.toString(familyName)
+            + "', but it does not.",
+          snapshotFamilies.contains(familyName));
       }
     }
 
     // Verify that there are no store files in the specified families
     if (emptyTestFamilies != null) {
-      for (final byte[] familyName: emptyTestFamilies) {
-        assertFalse("Expected snapshot to skip empty family '" + Bytes.toString(familyName) + "', but it is present.", snapshotFamilies.contains(familyName));
+      for (final byte[] familyName : emptyTestFamilies) {
+        assertFalse("Expected snapshot to skip empty family '" + Bytes.toString(familyName)
+            + "', but it is present.",
+          snapshotFamilies.contains(familyName));
       }
     }
 
@@ -244,8 +241,8 @@ public final class SnapshotTestingUtils {
     List<RegionInfo> regions = admin.getRegions(tableName);
     // remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
-    boolean hasMob = regionManifests.containsKey(MobUtils.getMobRegionInfo(tableName)
-        .getEncodedName());
+    boolean hasMob =
+        regionManifests.containsKey(MobUtils.getMobRegionInfo(tableName).getEncodedName());
     if (hasMob) {
       assertEquals("Wrong number of regions.", regions.size(), regionManifests.size() - 1);
     } else {
@@ -265,13 +262,14 @@ public final class SnapshotTestingUtils {
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (RegionInfo info : regions) {
       String regionName = info.getEncodedName();
-      assertTrue("Missing region name: '" + regionName + "'", regionManifests.containsKey(regionName));
+      assertTrue("Missing region name: '" + regionName + "'",
+        regionManifests.containsKey(regionName));
     }
   }
 
   /*
-   * Take snapshot with maximum of numTries attempts, ignoring CorruptedSnapshotException
-   * except for the last CorruptedSnapshotException
+   * Take snapshot with maximum of numTries attempts, ignoring CorruptedSnapshotException except for
+   * the last CorruptedSnapshotException
    */
   public static void snapshot(Admin admin, final String snapshotName, final TableName tableName,
       final SnapshotType type, final int numTries) throws IOException {
@@ -289,28 +287,23 @@ public final class SnapshotTestingUtils {
     throw lastEx;
   }
 
-  public static void cleanupSnapshot(Admin admin, byte[] tableName)
-      throws IOException {
+  public static void cleanupSnapshot(Admin admin, byte[] tableName) throws IOException {
     SnapshotTestingUtils.cleanupSnapshot(admin, Bytes.toString(tableName));
   }
 
-  public static void cleanupSnapshot(Admin admin, String snapshotName)
-      throws IOException {
+  public static void cleanupSnapshot(Admin admin, String snapshotName) throws IOException {
     // delete the taken snapshot
     admin.deleteSnapshot(snapshotName);
     assertNoSnapshots(admin);
   }
 
   /**
-   * Expect the snapshot to throw an error when checking if the snapshot is
-   * complete
-   *
+   * Expect the snapshot to throw an error when checking if the snapshot is complete
    * @param master master to check
    * @param snapshot the {@link SnapshotDescription} request to pass to the master
    * @param clazz expected exception from the master
    */
-  public static void expectSnapshotDoneException(HMaster master,
-      IsSnapshotDoneRequest snapshot,
+  public static void expectSnapshotDoneException(HMaster master, IsSnapshotDoneRequest snapshot,
       Class<? extends HBaseSnapshotException> clazz) {
     try {
       master.getMasterRpcServices().isSnapshotDone(null, snapshot);
@@ -328,7 +321,6 @@ public final class SnapshotTestingUtils {
 
   /**
    * List all the HFiles in the given table
-   *
    * @param fs FileSystem where the table lives
    * @param tableDir directory of the table
    * @return array of the current HFiles in the table (could be a zero-length array)
@@ -349,35 +341,32 @@ public final class SnapshotTestingUtils {
   }
 
   /**
-   * Take a snapshot of the specified table and verify that the given family is
-   * not empty. Note that this will leave the table disabled
-   * in the case of an offline snapshot.
+   * Take a snapshot of the specified table and verify that the given family is not empty. Note that
+   * this will leave the table disabled in the case of an offline snapshot.
    */
-  public static void createSnapshotAndValidate(Admin admin,
-      TableName tableName, String familyName, String snapshotNameString,
-      Path rootDir, FileSystem fs, boolean onlineSnapshot)
+  public static void createSnapshotAndValidate(Admin admin, TableName tableName, String familyName,
+      String snapshotNameString, Path rootDir, FileSystem fs, boolean onlineSnapshot)
       throws Exception {
     ArrayList<byte[]> nonEmptyFamilyNames = new ArrayList<>(1);
     nonEmptyFamilyNames.add(Bytes.toBytes(familyName));
     createSnapshotAndValidate(admin, tableName, nonEmptyFamilyNames, /* emptyFamilyNames= */ null,
-                              snapshotNameString, rootDir, fs, onlineSnapshot);
+      snapshotNameString, rootDir, fs, onlineSnapshot);
   }
 
   /**
-   * Take a snapshot of the specified table and verify the given families.
-   * Note that this will leave the table disabled in the case of an offline snapshot.
+   * Take a snapshot of the specified table and verify the given families. Note that this will leave
+   * the table disabled in the case of an offline snapshot.
    */
-  public static void createSnapshotAndValidate(Admin admin,
-      TableName tableName, List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames,
-      String snapshotNameString, Path rootDir, FileSystem fs, boolean onlineSnapshot)
-        throws Exception {
+  public static void createSnapshotAndValidate(Admin admin, TableName tableName,
+      List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames, String snapshotNameString,
+      Path rootDir, FileSystem fs, boolean onlineSnapshot) throws Exception {
     if (!onlineSnapshot) {
       try {
         LOG.info("prepping for offline snapshot.");
         admin.disableTable(tableName);
       } catch (TableNotEnabledException tne) {
-        LOG.info("In attempting to disable " + tableName + " it turns out that the this table is " +
-            "already disabled.");
+        LOG.info("In attempting to disable " + tableName + " it turns out that the this table is "
+            + "already disabled.");
       }
     }
     LOG.info("taking snapshot.");
@@ -398,7 +387,6 @@ public final class SnapshotTestingUtils {
 
   /**
    * Corrupt the specified snapshot by deleting some files.
-   *
    * @param util {@link HBaseTestingUtil}
    * @param snapshotName name of the snapshot to corrupt
    * @return array of the corrupted HFiles
@@ -409,8 +397,8 @@ public final class SnapshotTestingUtils {
     final MasterFileSystem mfs = util.getHBaseCluster().getMaster().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
-                                                                        mfs.getRootDir());
+    Path snapshotDir =
+        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, mfs.getRootDir());
     SnapshotProtos.SnapshotDescription snapshotDesc =
         SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
@@ -418,26 +406,26 @@ public final class SnapshotTestingUtils {
     final ArrayList corruptedFiles = new ArrayList();
     final Configuration conf = util.getConfiguration();
     SnapshotReferenceUtil.visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc,
-        new SnapshotReferenceUtil.StoreFileVisitor() {
-      @Override
-      public void storeFile(final RegionInfo regionInfo, final String family,
+      new SnapshotReferenceUtil.StoreFileVisitor() {
+        @Override
+        public void storeFile(final RegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-        String region = regionInfo.getEncodedName();
-        String hfile = storeFile.getName();
-        HFileLink link = HFileLink.build(conf, table, region, family, hfile);
-        if (corruptedFiles.size() % 2 == 0) {
-          fs.delete(link.getAvailablePath(fs), true);
-          corruptedFiles.add(hfile);
+          String region = regionInfo.getEncodedName();
+          String hfile = storeFile.getName();
+          HFileLink link = HFileLink.build(conf, table, region, family, hfile);
+          if (corruptedFiles.size() % 2 == 0) {
+            fs.delete(link.getAvailablePath(fs), true);
+            corruptedFiles.add(hfile);
+          }
         }
-      }
-    });
+      });
 
     assertTrue(corruptedFiles.size() > 0);
     return corruptedFiles;
   }
 
   // ==========================================================================
-  //  Snapshot Mock
+  // Snapshot Mock
   // ==========================================================================
   public static class SnapshotMock {
     protected final static String TEST_FAMILY = "cf";
@@ -469,10 +457,9 @@ public final class SnapshotTestingUtils {
       private Path snapshotDir;
       private int snapshotted = 0;
 
-      public SnapshotBuilder(final Configuration conf, final FileSystem fs,
-          final Path rootDir, final TableDescriptor htd,
-          final SnapshotProtos.SnapshotDescription desc, final RegionData[] tableRegions)
-          throws IOException {
+      public SnapshotBuilder(final Configuration conf, final FileSystem fs, final Path rootDir,
+          final TableDescriptor htd, final SnapshotProtos.SnapshotDescription desc,
+          final RegionData[] tableRegions) throws IOException {
         this.fs = fs;
         this.conf = conf;
         this.rootDir = rootDir;
@@ -533,8 +520,8 @@ public final class SnapshotTestingUtils {
         // Create a new region-manifest file
         FSDataOutputStream out = fs.create(p);
 
-        //Copy the first 25 bytes of the original region-manifest into the new one,
-        //make it a corrupted region-manifest file.
+        // Copy the first 25 bytes of the original region-manifest into the new one,
+        // make it a corrupted region-manifest file.
         FSDataInputStream input = fs.open(newP);
         byte[] buffer = new byte[25];
         int len = input.read(0, buffer, 0, 25);
@@ -549,12 +536,12 @@ public final class SnapshotTestingUtils {
 
       /**
        * Corrupt one region-manifest file
-       *
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptOneRegionManifest() throws IOException {
         FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
-          @Override public boolean accept(Path path) {
+          @Override
+          public boolean accept(Path path) {
             return path.getName().startsWith(SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX);
           }
         });
@@ -571,16 +558,15 @@ public final class SnapshotTestingUtils {
         for (FileStatus fileStatus : manifestFiles) {
           String fileName = fileStatus.getPath().getName();
           if (fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOTINFO_FILE)
-            || fileName.endsWith(".tabledesc")
-            || fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)) {
-              fs.delete(fileStatus.getPath(), true);
+              || fileName.endsWith(".tabledesc")
+              || fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)) {
+            fs.delete(fileStatus.getPath(), true);
           }
         }
       }
 
       /**
        * Corrupt data-manifest file
-       *
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptDataManifest() throws IOException {
@@ -631,7 +617,8 @@ public final class SnapshotTestingUtils {
 
     public SnapshotBuilder createSnapshotV1(final String snapshotName, final String tableName,
         final int numRegions) throws IOException {
-      return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV1.DESCRIPTOR_VERSION);
+      return createSnapshot(snapshotName, tableName, numRegions,
+        SnapshotManifestV1.DESCRIPTOR_VERSION);
     }
 
     public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName)
@@ -641,13 +628,14 @@ public final class SnapshotTestingUtils {
 
     public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName,
         final int numRegions) throws IOException {
-      return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV2.DESCRIPTOR_VERSION);
+      return createSnapshot(snapshotName, tableName, numRegions,
+        SnapshotManifestV2.DESCRIPTOR_VERSION);
     }
 
     public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName,
         final int numRegions, final long ttl) throws IOException {
       return createSnapshot(snapshotName, tableName, numRegions,
-          SnapshotManifestV2.DESCRIPTOR_VERSION, ttl);
+        SnapshotManifestV2.DESCRIPTOR_VERSION, ttl);
     }
 
     private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
@@ -661,10 +649,8 @@ public final class SnapshotTestingUtils {
       RegionData[] regions = createTable(htd, numRegions);
 
       SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
-        .setTable(htd.getTableName().getNameAsString())
-        .setName(snapshotName)
-        .setVersion(version)
-        .build();
+          .setTable(htd.getTableName().getNameAsString()).setName(snapshotName).setVersion(version)
+          .build();
 
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
       FileSystem workingFs = workingDir.getFileSystem(conf);
@@ -677,12 +663,8 @@ public final class SnapshotTestingUtils {
       TableDescriptor htd = createHtd(tableName);
       RegionData[] regions = createTable(htd, numRegions);
       SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
-          .setTable(htd.getTableName().getNameAsString())
-          .setName(snapshotName)
-          .setVersion(version)
-          .setCreationTime(EnvironmentEdgeManager.currentTime())
-          .setTtl(ttl)
-          .build();
+          .setTable(htd.getTableName().getNameAsString()).setName(snapshotName).setVersion(version)
+          .setCreationTime(EnvironmentEdgeManager.currentTime()).setTtl(ttl).build();
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
       SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
@@ -690,8 +672,7 @@ public final class SnapshotTestingUtils {
 
     public TableDescriptor createHtd(final String tableName) {
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
-              .build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     }
 
     private RegionData[] createTable(final TableDescriptor htd, final int nregions)
@@ -706,10 +687,8 @@ public final class SnapshotTestingUtils {
         byte[] endKey = Bytes.toBytes(1 + i * 2);
 
         // First region, simple with one plain hfile.
-        RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(startKey)
-            .setEndKey(endKey)
-            .build();
+        RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
+            .setEndKey(endKey).build();
         HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
         regions[i] = new RegionData(tableDir, hri, 3);
         for (int j = 0; j < regions[i].files.length; ++j) {
@@ -723,18 +702,17 @@ public final class SnapshotTestingUtils {
         endKey = Bytes.toBytes(3 + i * 2);
         hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
         rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
-        regions[i+1] = new RegionData(tableDir, hri, regions[i].files.length);
+        regions[i + 1] = new RegionData(tableDir, hri, regions[i].files.length);
         for (int j = 0; j < regions[i].files.length; ++j) {
           String refName = regions[i].files[j].getName() + '.' + regions[i].hri.getEncodedName();
           Path refFile = createStoreFile(new Path(rootDir, refName));
-          regions[i+1].files[j] = rfs.commitStoreFile(TEST_FAMILY, refFile);
+          regions[i + 1].files[j] = rfs.commitStoreFile(TEST_FAMILY, refFile);
         }
       }
       return regions;
     }
 
-    private Path createStoreFile(final Path storeFile)
-        throws IOException {
+    private Path createStoreFile(final Path storeFile) throws IOException {
       FSDataOutputStream out = fs.create(storeFile);
       try {
         out.write(Bytes.toBytes(storeFile.toString()));
@@ -746,10 +724,9 @@ public final class SnapshotTestingUtils {
   }
 
   // ==========================================================================
-  //  Table Helpers
+  // Table Helpers
   // ==========================================================================
-  public static void waitForTableToBeOnline(final HBaseTestingUtil util,
-                                            final TableName tableName)
+  public static void waitForTableToBeOnline(final HBaseTestingUtil util, final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
     List<HRegion> onlineRegions = rs.getRegions(tableName);
@@ -763,17 +740,15 @@ public final class SnapshotTestingUtils {
   public static void createTable(final HBaseTestingUtil util, final TableName tableName,
       int regionReplication, int nRegions, final byte[]... families)
       throws IOException, InterruptedException {
-    TableDescriptorBuilder builder
-      = TableDescriptorBuilder
-          .newBuilder(tableName)
-          .setRegionReplication(regionReplication);
+    TableDescriptorBuilder builder =
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     byte[][] splitKeys = getSplitKeys(nRegions);
     util.createTable(builder.build(), splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
-        util.getAdmin().getRegions(tableName).size());
+      util.getAdmin().getRegions(tableName).size());
   }
 
   public static byte[][] getSplitKeys() {
@@ -782,7 +757,7 @@ public final class SnapshotTestingUtils {
 
   public static byte[][] getSplitKeys(int nRegions) {
     nRegions = nRegions < KEYS.length ? nRegions : (KEYS.length - 1);
-    final byte[][] splitKeys = new byte[nRegions-1][];
+    final byte[][] splitKeys = new byte[nRegions - 1][];
     final int step = KEYS.length / nRegions;
     int keyIndex = 1;
     for (int i = 0; i < splitKeys.length; ++i) {
@@ -798,7 +773,8 @@ public final class SnapshotTestingUtils {
   }
 
   public static void createTable(final HBaseTestingUtil util, final TableName tableName,
-      final int regionReplication, final byte[]... families) throws IOException, InterruptedException {
+      final int regionReplication, final byte[]... families)
+      throws IOException, InterruptedException {
     createTable(util, tableName, regionReplication, KEYS.length, families);
   }
 
@@ -813,11 +789,11 @@ public final class SnapshotTestingUtils {
     loadData(util, mutator, rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtil util, final BufferedMutator mutator,
-      int rows, byte[]... families) throws IOException, InterruptedException {
+  public static void loadData(final HBaseTestingUtil util, final BufferedMutator mutator, int rows,
+      byte[]... families) throws IOException, InterruptedException {
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);
-    for (byte k0: KEYS) {
+    for (byte k0 : KEYS) {
       byte[] k = new byte[] { k0 };
       byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
@@ -830,8 +806,8 @@ public final class SnapshotTestingUtils {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
-        Bytes.toBytes(rows));
+      byte[] value =
+          Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       final byte[][] families1 = families;
       final byte[] key1 = key;
@@ -847,23 +823,21 @@ public final class SnapshotTestingUtils {
     byte[] q = Bytes.toBytes("q");
     Put put = new Put(key);
     put.setDurability(Durability.SKIP_WAL);
-    for (byte[] family: families) {
+    for (byte[] family : families) {
       put.addColumn(family, q, value);
     }
     return put;
   }
 
-  public static void deleteAllSnapshots(final Admin admin)
-      throws IOException {
+  public static void deleteAllSnapshots(final Admin admin) throws IOException {
     // Delete all the snapshots
-    for (SnapshotDescription snapshot: admin.listSnapshots()) {
+    for (SnapshotDescription snapshot : admin.listSnapshots()) {
       admin.deleteSnapshot(snapshot.getName());
     }
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-  public static void deleteArchiveDirectory(final HBaseTestingUtil util)
-      throws IOException {
+  public static void deleteArchiveDirectory(final HBaseTestingUtil util) throws IOException {
     // Ensure the archiver to be empty
     MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path archiveDir = new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);

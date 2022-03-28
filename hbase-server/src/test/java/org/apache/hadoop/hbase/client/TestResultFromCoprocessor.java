@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestResultFromCoprocessor {
 
   @ClassRule
@@ -58,21 +58,17 @@ public class TestResultFromCoprocessor {
   private static final byte[] VALUE = Bytes.toBytes(100L);
   private static final byte[] FIXED_VALUE = Bytes.toBytes("fixed_value");
   private static final Cell FIXED_CELL = ExtendedCellBuilderFactory
-    .create(CellBuilderType.DEEP_COPY)
-    .setRow(ROW).setFamily(FAMILY)
-    .setQualifier(QUAL).setTimestamp(0)
-    .setType(KeyValue.Type.Put.getCode())
-    .setValue(FIXED_VALUE)
-    .build();
+      .create(CellBuilderType.DEEP_COPY).setRow(ROW).setFamily(FAMILY).setQualifier(QUAL)
+      .setTimestamp(0).setType(KeyValue.Type.Put.getCode()).setValue(FIXED_VALUE).build();
   private static final Result FIXED_RESULT = Result.create(Arrays.asList(FIXED_CELL));
   private static final TableName TABLE_NAME = TableName.valueOf("TestResultFromCoprocessor");
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .setCoprocessor(MyObserver.class.getName())
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-            .build();
+    TableDescriptor desc =
+        TableDescriptorBuilder.newBuilder(TABLE_NAME).setCoprocessor(MyObserver.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 
@@ -124,13 +120,13 @@ public class TestResultFromCoprocessor {
 
     @Override
     public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Append append, final Result result) {
+        final Append append, final Result result) {
       return FIXED_RESULT;
     }
 
     @Override
     public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment, final Result result) {
+        final Increment increment, final Result result) {
       return FIXED_RESULT;
     }
 

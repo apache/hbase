@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -155,28 +155,18 @@ public class TestCompactionLifeCycleTracker {
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF1)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Cell.Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+              .setFamily(CF1).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(Cell.Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
       UTIL.getAdmin().flush(NAME);
       for (int i = 100; i < 200; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF1)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+              .setFamily(CF1).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
       UTIL.getAdmin().flush(NAME);
     }
@@ -277,7 +267,8 @@ public class TestCompactionLifeCycleTracker {
   // This test assumes that compaction wouldn't happen with null user.
   // But null user means system generated compaction so compaction should happen
   // even if the space quota is violated. So this test should be removed/ignored.
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testSpaceQuotaViolation() throws IOException, InterruptedException {
     region.getRegionServerServices().getRegionServerSpaceQuotaManager().enforceViolationPolicy(NAME,
       new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_WRITES_COMPACTIONS), 10L,

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,10 +43,10 @@ public class TestColumnFamilyDescriptorLowerCaseEnum {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnFamilyDescriptorLowerCaseEnum.class);
+      HBaseClassTestRule.forClass(TestColumnFamilyDescriptorLowerCaseEnum.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestColumnFamilyDescriptorLowerCaseEnum.class);
+      LoggerFactory.getLogger(TestColumnFamilyDescriptorLowerCaseEnum.class);
 
   private Method getSetMethod(Method getMethod, Class<?> enumType) throws NoSuchMethodException {
     String methodName = getMethod.getName().replaceFirst("get", "set");
@@ -71,7 +71,7 @@ public class TestColumnFamilyDescriptorLowerCaseEnum {
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
     Map<Method, Enum<?>> getMethod2Value = new HashMap<>();
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("test"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("test"));
     for (Method method : ColumnFamilyDescriptor.class.getMethods()) {
       if (method.getParameterCount() == 0 && method.getReturnType().isEnum()) {
         LOG.info("Checking " + method);
@@ -85,7 +85,7 @@ public class TestColumnFamilyDescriptorLowerCaseEnum {
     }
     ColumnFamilyDescriptor desc = builder.build();
     ColumnFamilyDescriptorBuilder builder2 =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("test2"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("test2"));
     desc.getValues().forEach((k, v) -> {
       LOG.info(k.toString() + "=>" + v.toString());
       String str = Bytes.toString(v.get(), v.getOffset(), v.getLength());

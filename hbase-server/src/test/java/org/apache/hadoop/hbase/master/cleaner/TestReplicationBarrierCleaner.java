@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,7 +73,7 @@ public class TestReplicationBarrierCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationBarrierCleaner.class);
+      HBaseClassTestRule.forClass(TestReplicationBarrierCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileCleaner.class);
 
@@ -95,8 +95,9 @@ public class TestReplicationBarrierCleaner {
   @After
   public void tearDown() throws IOException {
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
-        .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).setFilter(new FirstKeyOnlyFilter()))) {
+        ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
+            .addFamily(HConstants.REPLICATION_BARRIER_FAMILY)
+            .setFilter(new FirstKeyOnlyFilter()))) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {
@@ -139,7 +140,7 @@ public class TestReplicationBarrierCleaner {
 
   private ReplicationBarrierCleaner create(ReplicationPeerManager peerManager) throws IOException {
     return new ReplicationBarrierCleaner(UTIL.getConfiguration(), new WarnOnlyStoppable(),
-      UTIL.getConnection(), peerManager);
+        UTIL.getConnection(), peerManager);
   }
 
   private void addBarrier(RegionInfo region, long... barriers) throws IOException {
@@ -179,27 +180,27 @@ public class TestReplicationBarrierCleaner {
   public void testCleanNoPeers() throws IOException {
     TableName tableName1 = TableName.valueOf(name.getMethodName() + "_1");
     RegionInfo region11 =
-      RegionInfoBuilder.newBuilder(tableName1).setEndKey(Bytes.toBytes(1)).build();
+        RegionInfoBuilder.newBuilder(tableName1).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region11, 10, 20, 30, 40, 50, 60);
     fillCatalogFamily(region11);
     RegionInfo region12 =
-      RegionInfoBuilder.newBuilder(tableName1).setStartKey(Bytes.toBytes(1)).build();
+        RegionInfoBuilder.newBuilder(tableName1).setStartKey(Bytes.toBytes(1)).build();
     addBarrier(region12, 20, 30, 40, 50, 60, 70);
     fillCatalogFamily(region12);
 
     TableName tableName2 = TableName.valueOf(name.getMethodName() + "_2");
     RegionInfo region21 =
-      RegionInfoBuilder.newBuilder(tableName2).setEndKey(Bytes.toBytes(1)).build();
+        RegionInfoBuilder.newBuilder(tableName2).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region21, 100, 200, 300, 400);
     fillCatalogFamily(region21);
     RegionInfo region22 =
-      RegionInfoBuilder.newBuilder(tableName2).setStartKey(Bytes.toBytes(1)).build();
+        RegionInfoBuilder.newBuilder(tableName2).setStartKey(Bytes.toBytes(1)).build();
     addBarrier(region22, 200, 300, 400, 500, 600);
     fillCatalogFamily(region22);
 
     @SuppressWarnings("unchecked")
     ReplicationPeerManager peerManager =
-      create(null, Collections.emptyList(), Collections.emptyList());
+        create(null, Collections.emptyList(), Collections.emptyList());
     ReplicationBarrierCleaner cleaner = create(peerManager);
     cleaner.chore();
 
@@ -209,14 +210,14 @@ public class TestReplicationBarrierCleaner {
     verify(peerManager, times(2)).getSerialPeerIdsBelongsTo(any(TableName.class));
 
     assertArrayEquals(new long[] { 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region11.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region11.getRegionName()));
     assertArrayEquals(new long[] { 70 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region12.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region12.getRegionName()));
 
     assertArrayEquals(new long[] { 400 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region21.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region21.getRegionName()));
     assertArrayEquals(new long[] { 600 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region22.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region22.getRegionName()));
   }
 
   @Test
@@ -230,33 +231,33 @@ public class TestReplicationBarrierCleaner {
 
     @SuppressWarnings("unchecked")
     ReplicationPeerManager peerManager =
-      create(queueStorage, peerIds, peerIds, peerIds, peerIds, peerIds);
+        create(queueStorage, peerIds, peerIds, peerIds, peerIds, peerIds);
     ReplicationBarrierCleaner cleaner = create(peerManager);
 
     // beyond the first barrier, no deletion
     cleaner.chore();
     assertArrayEquals(new long[] { 10, 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the first range, still no deletion
     cleaner.chore();
     assertArrayEquals(new long[] { 10, 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the second range, 10 is deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // between 50 and 60, so the barriers before 50 will be deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the last open range, 50 is deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
   }
 
   @Test
@@ -275,15 +276,15 @@ public class TestReplicationBarrierCleaner {
     // we have something in catalog family, so only delete 40
     cleaner.chore();
     assertArrayEquals(new long[] { 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
+        .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
     verify(queueStorage, never()).removeLastSequenceIds(anyString(), anyList());
 
     // No catalog family, then we should remove the whole row
     clearCatalogFamily(region);
     cleaner.chore();
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      assertFalse(table
-        .exists(new Get(region.getRegionName()).addFamily(HConstants.REPLICATION_BARRIER_FAMILY)));
+      assertFalse(table.exists(
+        new Get(region.getRegionName()).addFamily(HConstants.REPLICATION_BARRIER_FAMILY)));
     }
     verify(queueStorage, times(1)).removeLastSequenceIds(peerId,
       Arrays.asList(region.getEncodedName()));

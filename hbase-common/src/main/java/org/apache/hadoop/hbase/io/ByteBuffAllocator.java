@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.nio.ByteBuffer;
@@ -38,12 +37,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * ByteBuffAllocator is a nio ByteBuffer pool.
- * It returns {@link ByteBuff}s which are wrappers of offheap {@link ByteBuffer} usually. If we are
- * sure that the returned ByteBuffs have reached the end of their life cycle, we must call
- * {@link ByteBuff#release()} to return buffers to the pool otherwise the pool will leak. If the
- * desired memory size is larger than what the ByteBufferPool has available, we'll downgrade to
- * allocate ByteBuffers from the heap. Increase the ByteBufferPool size if detect this case.<br/>
+ * ByteBuffAllocator is a nio ByteBuffer pool. It returns {@link ByteBuff}s which are wrappers of
+ * offheap {@link ByteBuffer} usually. If we are sure that the returned ByteBuffs have reached the
+ * end of their life cycle, we must call {@link ByteBuff#release()} to return buffers to the pool
+ * otherwise the pool will leak. If the desired memory size is larger than what the ByteBufferPool
+ * has available, we'll downgrade to allocate ByteBuffers from the heap. Increase the ByteBufferPool
+ * size if detect this case.<br/>
  * <br/>
  * For better memory/pool utilization, there is a lower bound named
  * <code>minSizeForReservoirUse</code> in this allocator, and if the desired size is less than
@@ -72,15 +71,14 @@ public class ByteBuffAllocator {
   public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
 
   /**
-   * Set an alternate bytebuffallocator by setting this config,
-   * e.g. we can config {@link DeallocateRewriteByteBuffAllocator} to find out
-   * prematurely release issues
+   * Set an alternate bytebuffallocator by setting this config, e.g. we can config
+   * {@link DeallocateRewriteByteBuffAllocator} to find out prematurely release issues
    */
   public static final String BYTEBUFF_ALLOCATOR_CLASS = "hbase.bytebuff.allocator.class";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
+   *             {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
    */
   @Deprecated
   public static final String DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY =
@@ -88,14 +86,14 @@ public class ByteBuffAllocator {
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
+   *             {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.reservoir.initial.max";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
+   *             {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
@@ -178,8 +176,8 @@ public class ByteBuffAllocator {
             HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
       Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
-      return (ByteBuffAllocator) ReflectionUtils
-        .newInstance(clazz, true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
+      return (ByteBuffAllocator) ReflectionUtils.newInstance(clazz, true, maxBuffCount, poolBufSize,
+        minSizeForReservoirUse);
     } else {
       return HEAP;
     }
@@ -195,7 +193,7 @@ public class ByteBuffAllocator {
   }
 
   protected ByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
-    int minSizeForReservoirUse) {
+      int minSizeForReservoirUse) {
     this.reservoirEnabled = reservoirEnabled;
     this.maxBufCount = maxBufCount;
     this.bufSize = bufSize;

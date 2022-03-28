@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,8 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).
-        numMasters(2).build();
+    StartTestingClusterOption option =
+        StartTestingClusterOption.builder().numRegionServers(2).numMasters(2).build();
     TEST_UTIL.startMiniCluster(option);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
@@ -107,18 +107,18 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
   @After
   public void tearDown() throws Exception {
     admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
-      .whenCompleteAsync((tables, err) -> {
-        if (tables != null) {
-          tables.forEach(table -> {
-            try {
-              admin.disableTable(table).join();
-            } catch (Exception e) {
-              LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
-            }
-            admin.deleteTable(table).join();
-          });
-        }
-      }, ForkJoinPool.commonPool()).join();
+        .whenCompleteAsync((tables, err) -> {
+          if (tables != null) {
+            tables.forEach(table -> {
+              try {
+                admin.disableTable(table).join();
+              } catch (Exception e) {
+                LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+              }
+              admin.deleteTable(table).join();
+            });
+          }
+        }, ForkJoinPool.commonPool()).join();
     if (!admin.isBalancerEnabled().join()) {
       admin.balancerSwitch(true, true);
     }
@@ -151,12 +151,12 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
   protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
       byte[][] splitKeys, byte[]... families) throws IOException {
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     CompletableFuture<Void> future = splitKeys == null ? admin.createTable(builder.build())
-      : admin.createTable(builder.build(), splitKeys);
+        : admin.createTable(builder.build(), splitKeys);
     future.join();
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
   }

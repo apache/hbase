@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,13 +37,12 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for all the Table procedures that want to use a StateMachineProcedure.
- * It provides helpers like basic locking, sync latch, and toStringClassDetails().
+ * Base class for all the Table procedures that want to use a StateMachineProcedure. It provides
+ * helpers like basic locking, sync latch, and toStringClassDetails().
  */
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineTableProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState>
-    implements TableProcedureInterface {
+    extends StateMachineProcedure<MasterProcedureEnv, TState> implements TableProcedureInterface {
 
   // used for compatibility with old clients
   private final ProcedurePrepareLatch syncLatch;
@@ -129,16 +128,16 @@ public abstract class AbstractStateMachineTableProcedure<TState>
 
   protected final Path getWALRegionDir(MasterProcedureEnv env, RegionInfo region)
       throws IOException {
-    return CommonFSUtils.getWALRegionDir(env.getMasterConfiguration(),
-        region.getTable(), region.getEncodedName());
+    return CommonFSUtils.getWALRegionDir(env.getMasterConfiguration(), region.getTable(),
+      region.getEncodedName());
   }
 
   /**
-   * Check that cluster is up and master is running. Check table is modifiable.
-   * If <code>enabled</code>, check table is enabled else check it is disabled.
-   * Call in Procedure constructor so can pass any exception to caller.
+   * Check that cluster is up and master is running. Check table is modifiable. If
+   * <code>enabled</code>, check table is enabled else check it is disabled. Call in Procedure
+   * constructor so can pass any exception to caller.
    * @param enabled If true, check table is enabled and throw exception if not. If false, do the
-   *                inverse. If null, do no table checks.
+   *          inverse. If null, do no table checks.
    */
   protected void preflightChecks(MasterProcedureEnv env, Boolean enabled) throws HBaseIOException {
     MasterServices master = env.getMasterServices();
@@ -146,8 +145,8 @@ public abstract class AbstractStateMachineTableProcedure<TState>
       throw new HBaseIOException("Cluster not up!");
     }
     if (master.isStopping() || master.isStopped()) {
-      throw new HBaseIOException("Master stopping=" + master.isStopping() +
-          ", stopped=" + master.isStopped());
+      throw new HBaseIOException(
+          "Master stopping=" + master.isStopping() + ", stopped=" + master.isStopped());
     }
     if (enabled == null) {
       // Don't do any table checks.
@@ -170,7 +169,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
       }
     } catch (IOException ioe) {
       if (ioe instanceof HBaseIOException) {
-        throw (HBaseIOException)ioe;
+        throw (HBaseIOException) ioe;
       }
       throw new HBaseIOException(ioe);
     }
@@ -187,7 +186,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   protected static void checkOnline(MasterProcedureEnv env, RegionInfo ri)
       throws DoNotRetryRegionException {
     RegionStateNode regionNode =
-      env.getAssignmentManager().getRegionStates().getRegionStateNode(ri);
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(ri);
     if (regionNode == null) {
       throw new UnknownRegionException("No RegionState found for " + ri.getEncodedName());
     }

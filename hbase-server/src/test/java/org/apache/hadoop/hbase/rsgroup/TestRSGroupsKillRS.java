@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsKillRS.class);
+      HBaseClassTestRule.forClass(TestRSGroupsKillRS.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsKillRS.class);
 
@@ -76,7 +76,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     // processed which causes dead lock.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     TEST_UTIL.getConfiguration()
-      .setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
+        .setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
     setUpTestBeforeClass();
   }
 
@@ -99,11 +99,11 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
   public void testKillRS() throws Exception {
     RSGroupInfo appInfo = addGroup("appInfo", 1);
     final TableName tableName =
-      TableName.valueOf(TABLE_PREFIX + "_ns", getNameWithoutIndex(name.getMethodName()));
+        TableName.valueOf(TABLE_PREFIX + "_ns", getNameWithoutIndex(name.getMethodName()));
     ADMIN.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     ADMIN.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -181,9 +181,9 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     assertEquals(2, servers.size());
     LOG.debug("group servers {}", servers);
     for (RegionInfo tr : MASTER.getAssignmentManager().getRegionStates()
-      .getRegionsOfTable(tableName)) {
+        .getRegionsOfTable(tableName)) {
       assertTrue(servers.contains(MASTER.getAssignmentManager().getRegionStates()
-        .getRegionAssignments().get(tr).getAddress()));
+          .getRegionAssignments().get(tr).getAddress()));
     }
 
     // Move a region, to ensure there exists a region whose 'lastHost' is in my_group
@@ -195,7 +195,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     }
     assertEquals(2, gsn.size());
     for (Map.Entry<RegionInfo, ServerName> entry : MASTER.getAssignmentManager().getRegionStates()
-      .getRegionAssignments().entrySet()) {
+        .getRegionAssignments().entrySet()) {
       if (entry.getKey().getTable().equals(tableName)) {
         LOG.debug("move region {} from {} to {}", entry.getKey().getRegionNameAsString(),
           entry.getValue(), gsn.get(1 - gsn.indexOf(entry.getValue())));
@@ -224,7 +224,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     // regionserver(from the 'default' group) to my_group,
     // and then check if all table regions are online
     for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getMiniHBaseCluster()
-      .getLiveRegionServerThreads()) {
+        .getLiveRegionServerThreads()) {
       if (rst.getRegionServer().getServerName().getAddress().equals(gsn.get(0).getAddress())) {
         TEST_UTIL.getMiniHBaseCluster().stopRegionServer(rst.getRegionServer().getServerName());
         break;
@@ -251,7 +251,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     toAddTables.add(TableName.META_TABLE_NAME);
     ADMIN.setRSGroup(toAddTables, groupName);
     assertTrue(ADMIN.getConfiguredNamespacesAndTablesInRSGroup(groupName).getSecond()
-      .contains(TableName.META_TABLE_NAME));
+        .contains(TableName.META_TABLE_NAME));
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";

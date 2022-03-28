@@ -37,7 +37,7 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocatorFailFast.class);
+      HBaseClassTestRule.forClass(TestAsyncMetaRegionLocatorFailFast.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +49,6 @@ public class MobFile {
 
   /**
    * Internal use only. This is used by the sweeper.
-   *
    * @return The store file scanner.
    * @throws IOException
    */
@@ -59,7 +56,7 @@ public class MobFile {
     List<HStoreFile> sfs = new ArrayList<>();
     sfs.add(sf);
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, false, sf.getMaxMemStoreTS());
+      false, false, sf.getMaxMemStoreTS());
 
     return sfScanners.get(0);
   }
@@ -114,8 +111,7 @@ public class MobFile {
   }
 
   /**
-   * Opens the underlying reader.
-   * It's not thread-safe. Use MobFileCache.openFile() instead.
+   * Opens the underlying reader. It's not thread-safe. Use MobFileCache.openFile() instead.
    * @throws IOException
    */
   public void open() throws IOException {
@@ -123,8 +119,8 @@ public class MobFile {
   }
 
   /**
-   * Closes the underlying reader, but do no evict blocks belonging to this file.
-   * It's not thread-safe. Use MobFileCache.closeFile() instead.
+   * Closes the underlying reader, but do no evict blocks belonging to this file. It's not
+   * thread-safe. Use MobFileCache.closeFile() instead.
    * @throws IOException
    */
   public void close() throws IOException {

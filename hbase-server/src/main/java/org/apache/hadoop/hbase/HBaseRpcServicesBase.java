@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,8 +92,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
  */
 @InterfaceAudience.Private
 public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
-  implements ClientMetaService.BlockingInterface, AdminService.BlockingInterface,
-  HBaseRPCErrorHandler, PriorityFunction, ConfigurationObserver {
+    implements ClientMetaService.BlockingInterface, AdminService.BlockingInterface,
+    HBaseRPCErrorHandler, PriorityFunction, ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseRpcServicesBase.class);
 
@@ -120,9 +120,9 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     final RpcSchedulerFactory rpcSchedulerFactory;
     try {
       rpcSchedulerFactory = getRpcSchedulerFactoryClass(conf).asSubclass(RpcSchedulerFactory.class)
-        .getDeclaredConstructor().newInstance();
+          .getDeclaredConstructor().newInstance();
     } catch (NoSuchMethodException | InvocationTargetException | InstantiationException
-      | IllegalAccessException e) {
+        | IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
     String hostname = DNS.getHostname(conf, getDNSServerType());
@@ -136,20 +136,20 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     priority = createPriority();
     // Using Address means we don't get the IP too. Shorten it more even to just the host name
     // w/o the domain.
-    final String name = processName + "/" +
-      Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
+    final String name = processName + "/"
+        + Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
     server.setName(name);
     // Set how many times to retry talking to another server over Connection.
     ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
     boolean reservoirEnabled =
-      conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, defaultReservoirEnabled());
+        conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, defaultReservoirEnabled());
     try {
       // use final bindAddress for this server.
       rpcServer = RpcServerFactory.createRpcServer(server, name, getServices(), bindAddress, conf,
         rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
     } catch (BindException be) {
-      throw new IOException(be.getMessage() + ". To switch ports use the '" + getPortConfigName() +
-        "' configuration property.", be.getCause() != null ? be.getCause() : be);
+      throw new IOException(be.getMessage() + ". To switch ports use the '" + getPortConfigName()
+          + "' configuration property.", be.getCause() != null ? be.getCause() : be);
     }
     final InetSocketAddress address = rpcServer.getListenerAddress();
     if (address == null) {
@@ -183,7 +183,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
     zkPermissionWatcher =
-      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
+        new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
     try {
       zkPermissionWatcher.start();
     } catch (KeeperException e) {
@@ -193,7 +193,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   }
 
   protected final void requirePermission(String request, Permission.Action perm)
-    throws IOException {
+      throws IOException {
     if (accessChecker != null) {
       accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
     }
@@ -260,44 +260,44 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
 
   @Override
   public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest request)
-    throws ServiceException {
+      throws ServiceException {
     return GetClusterIdResponse.newBuilder().setClusterId(server.getClusterId()).build();
   }
 
   @Override
   public GetActiveMasterResponse getActiveMaster(RpcController controller,
-    GetActiveMasterRequest request) throws ServiceException {
+      GetActiveMasterRequest request) throws ServiceException {
     GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
     server.getActiveMaster()
-      .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
+        .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
     return builder.build();
   }
 
   @Override
   public GetMastersResponse getMasters(RpcController controller, GetMastersRequest request)
-    throws ServiceException {
+      throws ServiceException {
     GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
     server.getActiveMaster()
-      .ifPresent(activeMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true)));
+        .ifPresent(activeMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+            .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true)));
     server.getBackupMasters()
-      .forEach(backupMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false)));
+        .forEach(backupMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+            .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false)));
     return builder.build();
   }
 
   @Override
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController controller,
-    GetMetaRegionLocationsRequest request) throws ServiceException {
+      GetMetaRegionLocationsRequest request) throws ServiceException {
     GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
     server.getMetaLocations()
-      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
+        .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
     return builder.build();
   }
 
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
-    GetBootstrapNodesRequest request) throws ServiceException {
+      GetBootstrapNodesRequest request) throws ServiceException {
     int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
       DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
     ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
@@ -305,13 +305,13 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
 
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
     sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
-      .forEach(builder::addServerName);
+        .forEach(builder::addServerName);
     return builder.build();
   }
 
   @Override
   public UpdateConfigurationResponse updateConfiguration(RpcController controller,
-    UpdateConfigurationRequest request) throws ServiceException {
+      UpdateConfigurationRequest request) throws ServiceException {
     try {
       requirePermission("updateConfiguration", Permission.Action.ADMIN);
       this.server.updateConfiguration();
@@ -324,24 +324,23 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
-    final ClearSlowLogResponseRequest request) throws ServiceException {
+      final ClearSlowLogResponseRequest request) throws ServiceException {
     try {
       requirePermission("clearSlowLogsResponses", Permission.Action.ADMIN);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
     final NamedQueueRecorder namedQueueRecorder = this.server.getNamedQueueRecorder();
-    boolean slowLogsCleaned = Optional.ofNullable(namedQueueRecorder)
-      .map(
-        queueRecorder -> queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG))
-      .orElse(false);
+    boolean slowLogsCleaned = Optional.ofNullable(namedQueueRecorder).map(
+      queueRecorder -> queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG))
+        .orElse(false);
     ClearSlowLogResponses clearSlowLogResponses =
-      ClearSlowLogResponses.newBuilder().setIsCleaned(slowLogsCleaned).build();
+        ClearSlowLogResponses.newBuilder().setIsCleaned(slowLogsCleaned).build();
     return clearSlowLogResponses;
   }
 
   private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
-    NamedQueueRecorder namedQueueRecorder) {
+      NamedQueueRecorder namedQueueRecorder) {
     if (namedQueueRecorder == null) {
       return Collections.emptyList();
     }
@@ -350,34 +349,34 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    slowLogPayloads = namedQueueGetResponse != null ? namedQueueGetResponse.getSlowLogPayloads() :
-      Collections.emptyList();
+        namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    slowLogPayloads = namedQueueGetResponse != null ? namedQueueGetResponse.getSlowLogPayloads()
+        : Collections.emptyList();
     return slowLogPayloads;
   }
 
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-    HBaseProtos.LogRequest request) throws ServiceException {
+      HBaseProtos.LogRequest request) throws ServiceException {
     try {
       final String logClassName = request.getLogClassName();
       Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("SlowLogResponseRequest")) {
         SlowLogResponseRequest slowLogResponseRequest =
-          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
+            (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
         final NamedQueueRecorder namedQueueRecorder = this.server.getNamedQueueRecorder();
         final List<SlowLogPayload> slowLogPayloads =
-          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
+            getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
         SlowLogResponses slowLogResponses =
-          SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
+            SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
         return HBaseProtos.LogEntry.newBuilder()
-          .setLogClassName(slowLogResponses.getClass().getName())
-          .setLogMessage(slowLogResponses.toByteString()).build();
+            .setLogClassName(slowLogResponses.getClass().getName())
+            .setLogMessage(slowLogResponses.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
+        | InvocationTargetException e) {
       LOG.error("Error while retrieving log entries.", e);
       throw new ServiceException(e);
     }

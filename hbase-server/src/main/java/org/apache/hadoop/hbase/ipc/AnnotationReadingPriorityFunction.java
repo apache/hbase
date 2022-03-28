@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 // to figure out whether it is a meta region or not.
 @InterfaceAudience.Private
 public abstract class AnnotationReadingPriorityFunction<T extends HBaseRpcServicesBase<?>>
-  implements PriorityFunction {
+    implements PriorityFunction {
 
   protected final Map<String, Integer> annotatedQos;
   // We need to mock the regionserver instance for some unit tests (set via

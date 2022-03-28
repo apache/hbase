@@ -69,7 +69,7 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
 
   /**
    * @return {@code true}, if {@link ObserverContext#bypass()} was called by one of the loaded
-   * coprocessors, {@code false} otherwise.
+   *         coprocessors, {@code false} otherwise.
    */
   public boolean shouldBypass() {
     if (!isBypassable()) {

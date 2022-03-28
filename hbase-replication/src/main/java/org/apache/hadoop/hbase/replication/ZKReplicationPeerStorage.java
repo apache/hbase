@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,16 +47,16 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
   public static final String PEERS_STATE_ZNODE_DEFAULT = "peer-state";
 
   public static final byte[] ENABLED_ZNODE_BYTES =
-    toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
   public static final byte[] DISABLED_ZNODE_BYTES =
-    toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
 
   public static final String SYNC_REPLICATION_STATE_ZNODE = "sync-rep-state";
 
   public static final String NEW_SYNC_REPLICATION_STATE_ZNODE = "new-sync-rep-state";
 
   public static final byte[] NONE_STATE_ZNODE_BYTES =
-    SyncReplicationState.toByteArray(SyncReplicationState.NONE);
+      SyncReplicationState.toByteArray(SyncReplicationState.NONE);
 
   /**
    * The name of the znode that contains the replication status of a remote slave (i.e. peer)
@@ -107,10 +107,9 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
       ZKUtil.createWithParents(zookeeper, peersZNode);
       ZKUtil.multiOrSequential(zookeeper, multiOps, false);
     } catch (KeeperException e) {
-      throw new ReplicationException(
-        "Could not add peer with id=" + peerId + ", peerConfig=>" + peerConfig + ", state=" +
-          (enabled ? "ENABLED" : "DISABLED") + ", syncReplicationState=" + syncReplicationState,
-        e);
+      throw new ReplicationException("Could not add peer with id=" + peerId + ", peerConfig=>"
+          + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED") + ", syncReplicationState="
+          + syncReplicationState, e);
     }
   }
 
@@ -141,7 +140,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
         ReplicationPeerConfigUtil.toByteArray(peerConfig));
     } catch (KeeperException e) {
       throw new ReplicationException(
-        "There was a problem trying to save changes to the " + "replication peer " + peerId, e);
+          "There was a problem trying to save changes to the " + "replication peer " + peerId, e);
     }
   }
 
@@ -175,13 +174,13 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
     }
     if (data == null || data.length == 0) {
       throw new ReplicationException(
-        "Replication peer config data shouldn't be empty, peerId=" + peerId);
+          "Replication peer config data shouldn't be empty, peerId=" + peerId);
     }
     try {
       return ReplicationPeerConfigUtil.parsePeerFrom(data);
     } catch (DeserializationException e) {
       throw new ReplicationException(
-        "Failed to parse replication peer config for peer with id=" + peerId, e);
+          "Failed to parse replication peer config for peer with id=" + peerId, e);
     }
   }
 
@@ -193,7 +192,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
         SyncReplicationState.toByteArray(state));
     } catch (KeeperException e) {
       throw new ReplicationException(
-        "Unable to set the new sync replication state for peer with id=" + peerId, e);
+          "Unable to set the new sync replication state for peer with id=" + peerId, e);
     }
   }
 
@@ -208,7 +207,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
         false);
     } catch (KeeperException | InterruptedException e) {
       throw new ReplicationException(
-        "Error transiting sync replication state for peer with id=" + peerId, e);
+          "Error transiting sync replication state for peer with id=" + peerId, e);
     }
   }
 
@@ -223,13 +222,14 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
           return SyncReplicationState.NONE;
         } else {
           throw new ReplicationException(
-            "Replication peer sync state shouldn't be empty, peerId=" + peerId);
+              "Replication peer sync state shouldn't be empty, peerId=" + peerId);
         }
       }
       return SyncReplicationState.parseFrom(data);
     } catch (KeeperException | InterruptedException | IOException e) {
       throw new ReplicationException(
-        "Error getting sync replication state of path " + path + " for peer with id=" + peerId, e);
+          "Error getting sync replication state of path " + path + " for peer with id=" + peerId,
+          e);
     }
   }
 

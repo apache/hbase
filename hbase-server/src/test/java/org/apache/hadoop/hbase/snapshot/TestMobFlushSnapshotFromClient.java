@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Test creating/using/deleting snapshots from the client
  * <p>
- * This is an end-to-end test for the snapshot utility
- *
- * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
- * because there will be a few more flavors of snapshots that need to run these tests.
+ * This is an end-to-end test for the snapshot utility TODO This is essentially a clone of
+ * TestSnapshotFromClient. This is worth refactoring this because there will be a few more flavors
+ * of snapshots that need to run these tests.
  */
-@Category({ClientTests.class, MediumTests.class})
+@Category({ ClientTests.class, MediumTests.class })
 public class TestMobFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
 
   @ClassRule

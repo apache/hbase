@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -62,14 +62,14 @@ import org.junit.runners.Parameterized.Parameters;
 public class TestVerifyReplicationSecureClusterCredentials {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplicationSecureClusterCredentials.class);
+      HBaseClassTestRule.forClass(TestVerifyReplicationSecureClusterCredentials.class);
 
   private static MiniKdc KDC;
   private static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
   private static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
   private static final File KEYTAB_FILE =
-    new File(UTIL1.getDataTestDir("keytab").toUri().getPath());
+      new File(UTIL1.getDataTestDir("keytab").toUri().getPath());
 
   private static final String LOCALHOST = "localhost";
   private static String CLUSTER_PRINCIPAL;
@@ -96,8 +96,8 @@ public class TestVerifyReplicationSecureClusterCredentials {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       AccessController.class.getName() + ',' + TokenProvider.class.getName());
 
-    HBaseKerberosUtils.setSecuredConfiguration(conf,
-      CLUSTER_PRINCIPAL + '@' + KDC.getRealm(), HTTP_PRINCIPAL + '@' + KDC.getRealm());
+    HBaseKerberosUtils.setSecuredConfiguration(conf, CLUSTER_PRINCIPAL + '@' + KDC.getRealm(),
+      HTTP_PRINCIPAL + '@' + KDC.getRealm());
 
     util.startMiniCluster();
   }
@@ -112,13 +112,14 @@ public class TestVerifyReplicationSecureClusterCredentials {
     setupCluster(UTIL2);
 
     try (Admin admin = UTIL1.getAdmin()) {
-      admin.addReplicationPeer("1", ReplicationPeerConfig.newBuilder()
-        .setClusterKey(ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration()))
-        .putConfiguration(HBaseKerberosUtils.KRB_PRINCIPAL,
-          UTIL2.getConfiguration().get(HBaseKerberosUtils.KRB_PRINCIPAL))
-        .putConfiguration(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL,
-          UTIL2.getConfiguration().get(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL))
-        .build());
+      admin.addReplicationPeer("1",
+        ReplicationPeerConfig.newBuilder()
+            .setClusterKey(ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration()))
+            .putConfiguration(HBaseKerberosUtils.KRB_PRINCIPAL,
+              UTIL2.getConfiguration().get(HBaseKerberosUtils.KRB_PRINCIPAL))
+            .putConfiguration(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL,
+              UTIL2.getConfiguration().get(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL))
+            .build());
     }
   }
 
@@ -130,10 +131,8 @@ public class TestVerifyReplicationSecureClusterCredentials {
 
   @Parameters
   public static Collection<Supplier<String>> peer() {
-    return Arrays.asList(
-      () -> "1",
-      () -> ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration())
-    );
+    return Arrays.asList(() -> "1",
+      () -> ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration()));
   }
 
   @Parameter
@@ -143,11 +142,7 @@ public class TestVerifyReplicationSecureClusterCredentials {
   @SuppressWarnings("unchecked")
   public void testJobCredentials() throws Exception {
     Job job = new VerifyReplication().createSubmittableJob(
-      new Configuration(UTIL1.getConfiguration()),
-      new String[] {
-        peer.get(),
-        "table"
-      });
+      new Configuration(UTIL1.getConfiguration()), new String[] { peer.get(), "table" });
 
     Credentials credentials = job.getCredentials();
     Collection<Token<? extends TokenIdentifier>> tokens = credentials.getAllTokens();
@@ -155,12 +150,12 @@ public class TestVerifyReplicationSecureClusterCredentials {
 
     String clusterId1 = ZKClusterId.readClusterIdZNode(UTIL1.getZooKeeperWatcher());
     Token<AuthenticationTokenIdentifier> tokenForCluster1 =
-      (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId1));
+        (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId1));
     assertEquals(FULL_USER_PRINCIPAL, tokenForCluster1.decodeIdentifier().getUsername());
 
     String clusterId2 = ZKClusterId.readClusterIdZNode(UTIL2.getZooKeeperWatcher());
     Token<AuthenticationTokenIdentifier> tokenForCluster2 =
-      (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId2));
+        (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId2));
     assertEquals(FULL_USER_PRINCIPAL, tokenForCluster2.decodeIdentifier().getUsername());
   }
 }

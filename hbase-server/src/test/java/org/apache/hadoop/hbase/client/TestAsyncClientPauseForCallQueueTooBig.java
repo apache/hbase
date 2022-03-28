@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 
@@ -60,7 +62,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClientPauseForCallQueueTooBig.class);
+      HBaseClassTestRule.forClass(TestAsyncClientPauseForCallQueueTooBig.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -84,7 +86,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
         int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
         Abortable server, int highPriorityLevel) {
       super(conf, handlerCount, priorityHandlerCount, replicationHandlerCount,
-        metaTransitionHandler, priority, server, highPriorityLevel);
+          metaTransitionHandler, priority, server, highPriorityLevel);
     }
 
     @Override
@@ -108,13 +110,13 @@ public class TestAsyncClientPauseForCallQueueTooBig {
       int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
         HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
       return new CQTBERpcScheduler(conf, handlerCount,
-        conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
-        conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
-        conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
-          HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
-        priority, server, HConstants.QOS_THRESHOLD);
+          conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
+            HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
+          conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
+            HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
+          conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
+            HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
+          priority, server, HConstants.QOS_THRESHOLD);
     }
 
   }
@@ -177,7 +179,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
       try (AsyncBufferedMutator mutator = CONN.getBufferedMutator(TABLE_NAME)) {
         for (int i = 100; i < 110; i++) {
           futures.add(mutator
-            .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
+              .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
         }
       }
       return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
@@ -189,7 +191,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
     // we will hit CallQueueTooBigException two times so the sleep time should be twice
     assertTime(() -> {
       try (
-        ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(80))) {
+          ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(80))) {
         for (int i = 0; i < 100; i++) {
           Result result = scanner.next();
           assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUALIFIER));

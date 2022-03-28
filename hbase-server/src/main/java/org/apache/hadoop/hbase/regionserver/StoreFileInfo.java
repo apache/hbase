@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
@@ -24,7 +22,6 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -63,11 +60,11 @@ public class StoreFileInfo implements Configurable {
   /** Regex that will work for hfiles */
   private static final Pattern HFILE_NAME_PATTERN = Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
 
-
   /**
    * Regex that will work for straight reference names ({@code <hfile>.<parentEncRegion>}) and
    * hfilelink reference names ({@code
-   * <table>
+   * 
+  <table>
    * =<region>-<hfile>.<parentEncRegion>}) If reference, then the regex has more than just one
    * group. Group 1, hfile/hfilelink pattern, is this file's id. Group 2 '(.+)' is the reference's
    * parent region name.
@@ -253,9 +250,8 @@ public class StoreFileInfo implements Configurable {
   }
 
   /**
-   * @return the Reference object associated to this StoreFileInfo.
-   *   null if the StoreFile is not a
-   *   reference.
+   * @return the Reference object associated to this StoreFileInfo. null if the StoreFile is not a
+   *         reference.
    */
   public Reference getReference() {
     return this.reference;
@@ -458,8 +454,7 @@ public class StoreFileInfo implements Configurable {
   }
 
   /**
-   * Checks if the file is a MOB reference file,
-   * created by snapshot
+   * Checks if the file is a MOB reference file, created by snapshot
    * @param path path to a file
    * @return true, if - yes, false otherwise
    */
@@ -476,7 +471,6 @@ public class StoreFileInfo implements Configurable {
     Matcher m = REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
   }
-
 
   /**
    * @param path Path to check.
@@ -633,8 +627,7 @@ public class StoreFileInfo implements Configurable {
     if (initialPath == null && o.initialPath != null) {
       return false;
     }
-    if (initialPath != o.initialPath && initialPath != null
-        && !initialPath.equals(o.initialPath)) {
+    if (initialPath != o.initialPath && initialPath != null && !initialPath.equals(o.initialPath)) {
       return false;
     }
     if (reference != null && o.reference == null) {
@@ -643,8 +636,7 @@ public class StoreFileInfo implements Configurable {
     if (reference == null && o.reference != null) {
       return false;
     }
-    if (reference != o.reference && reference != null
-        && !reference.equals(o.reference)) {
+    if (reference != o.reference && reference != null && !reference.equals(o.reference)) {
       return false;
     }
 

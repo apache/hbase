@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.mob;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -43,23 +43,16 @@ import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
-    Reproduction for MOB data loss
-
- 1. Settings: Region Size 200 MB,  Flush threshold 800 KB.
- 2. Insert 10 Million records
- 3. MOB Compaction and Archiver
-      a) Trigger MOB Compaction (every 2 minutes)
-      b) Trigger major compaction (every 2 minutes)
-      c) Trigger archive cleaner (every 3 minutes)
- 4. Validate MOB data after complete data load.
-
- This class is used by MobStressTool only. This is not a unit test
-
+ * Reproduction for MOB data loss 1. Settings: Region Size 200 MB, Flush threshold 800 KB. 2. Insert
+ * 10 Million records 3. MOB Compaction and Archiver a) Trigger MOB Compaction (every 2 minutes) b)
+ * Trigger major compaction (every 2 minutes) c) Trigger archive cleaner (every 3 minutes) 4.
+ * Validate MOB data after complete data load. This class is used by MobStressTool only. This is not
+ * a unit test
  */
 public class MobStressToolRunner {
   private static final Logger LOG = LoggerFactory.getLogger(MobStressToolRunner.class);
-
 
   private HBaseTestingUtil HTU;
 
@@ -92,10 +85,10 @@ public class MobStressToolRunner {
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
     this.familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
-      .setMobThreshold(mobLen).setMaxVersions(1).build();
+        .setMobThreshold(mobLen).setMaxVersions(1).build();
     this.tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("testMobCompactTable"))
-        .setColumnFamily(familyDescriptor).build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("testMobCompactTable"))
+            .setColumnFamily(familyDescriptor).build();
     if (admin.tableExists(tableDescriptor.getTableName())) {
       admin.disableTable(tableDescriptor.getTableName());
       admin.deleteTable(tableDescriptor.getTableName());
@@ -131,13 +124,12 @@ public class MobStressToolRunner {
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
     conf.setDouble("hbase.mob.compaction.fault.probability", failureProb);
-//    conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
-//      FaultyMobStoreCompactor.class.getName());
+    // conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+    // FaultyMobStoreCompactor.class.getName());
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
     conf.setLong(MobConstants.MOB_CLEANER_PERIOD, 0);
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 120000);
-    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY,
-      MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
+    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
 
   }
@@ -192,7 +184,7 @@ public class MobStressToolRunner {
         for (int i = 0; i < rows; i++) {
           byte[] key = Bytes.toBytes(i);
           Put p = new Put(key);
-          p.addColumn(fam, qualifier, Bytes.add(key,mobVal));
+          p.addColumn(fam, qualifier, Bytes.add(key, mobVal));
           table.put(p);
           if (i % 10000 == 0) {
             LOG.info("LOADED=" + i);
@@ -257,7 +249,7 @@ public class MobStressToolRunner {
 
   }
 
-  private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
+  private long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
@@ -265,7 +257,7 @@ public class MobStressToolRunner {
     long size = 0;
     for (FileStatus st : stat) {
       LOG.debug("MOB Directory content: {} len={}", st.getPath(), st.getLen());
-      size+= st.getLen();
+      size += st.getLen();
     }
     LOG.debug("MOB Directory content total files: {}, total size={}", stat.length, size);
 
@@ -288,10 +280,9 @@ public class MobStressToolRunner {
       int counter = 0;
       while ((result = scanner.next()) != null) {
         byte[] key = result.getRow();
-        assertTrue(Arrays.equals(result.getValue(fam, qualifier),
-          Bytes.add(key,mobVal)));
+        assertTrue(Arrays.equals(result.getValue(fam, qualifier), Bytes.add(key, mobVal)));
         if (counter % 10000 == 0) {
-          LOG.info("GET=" + counter+" key=" + Bytes.toInt(key));
+          LOG.info("GET=" + counter + " key=" + Bytes.toInt(key));
         }
         counter++;
       }

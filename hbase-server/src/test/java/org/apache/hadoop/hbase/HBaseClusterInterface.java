@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -125,7 +125,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @throws IOException if something goes wrong or timeout occurs
    */
   public void waitForRegionServerToStart(String hostname, int port, long timeout)
-    throws IOException {
+      throws IOException {
     long start = EnvironmentEdgeManager.currentTime();
     while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       for (ServerName server : getClusterMetrics().getLiveServerMetrics().keySet()) {
@@ -136,7 +136,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
       Threads.sleep(100);
     }
     throw new IOException(
-      "did timeout " + timeout + "ms waiting for region server to start: " + hostname);
+        "did timeout " + timeout + "ms waiting for region server to start: " + hostname);
   }
 
   /**
@@ -144,7 +144,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForRegionServerToStop(ServerName serverName, long timeout)
-    throws IOException;
+      throws IOException;
 
   /**
    * Suspend the region server
@@ -219,14 +219,14 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStart(ServerName serverName, long timeout)
-    throws IOException;
+      throws IOException;
 
   /**
    * Wait for the specified datanode to stop the thread / process.
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStop(ServerName serverName, long timeout)
-    throws IOException;
+      throws IOException;
 
   /**
    * Starts a new namenode on the given hostname or if this is a mini/local cluster, silently logs
@@ -253,14 +253,14 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForNameNodeToStart(ServerName serverName, long timeout)
-    throws IOException;
+      throws IOException;
 
   /**
    * Wait for the specified namenode to stop
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForNameNodeToStop(ServerName serverName, long timeout)
-    throws IOException;
+      throws IOException;
 
   /**
    * Starts a new master on the given hostname or if this is a mini/local cluster, starts a master
@@ -350,7 +350,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @return ServerName that hosts the region or null
    */
   public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-    throws IOException;
+      throws IOException;
 
   /**
    * @return whether we are interacting with a distributed cluster as opposed to an in-process

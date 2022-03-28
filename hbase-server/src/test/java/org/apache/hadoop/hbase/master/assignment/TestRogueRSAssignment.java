@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 /**
  * Tests to verify master/ assignment manager functionality against rogue RS
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRogueRSAssignment {
 
   @ClassRule
@@ -131,7 +131,7 @@ public class TestRogueRSAssignment {
 
   @After
   public void tearDown() throws Exception {
-    for (TableDescriptor td: UTIL.getAdmin().listTableDescriptors()) {
+    for (TableDescriptor td : UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + td.getTableName());
       UTIL.deleteTable(td.getTableName());
     }
@@ -149,9 +149,8 @@ public class TestRogueRSAssignment {
 
     List<RegionInfo> tableRegions = createTable(tableName);
 
-    final ServerName sn = ServerName.parseVersionedServerName(
-        ServerName.valueOf("1.example.org", 1, EnvironmentEdgeManager.currentTime())
-          .getVersionedBytes());
+    final ServerName sn = ServerName.parseVersionedServerName(ServerName
+        .valueOf("1.example.org", 1, EnvironmentEdgeManager.currentTime()).getVersionedBytes());
 
     // make fake request with a region assigned to different RS
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
@@ -173,15 +172,14 @@ public class TestRogueRSAssignment {
       rs.setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME);
       rs.setValue(UnsafeByteOperations.unsafeWrap(regions[i].getRegionName()));
 
-      ClusterStatusProtos.RegionLoad.Builder rl = ClusterStatusProtos.RegionLoad.newBuilder()
-          .setRegionSpecifier(rs.build());
+      ClusterStatusProtos.RegionLoad.Builder rl =
+          ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rs.build());
 
       sl.addRegionLoads(i, rl.build());
     }
 
     return RegionServerStatusProtos.RegionServerReportRequest.newBuilder()
-              .setServer(ProtobufUtil.toServerName(sn))
-              .setLoad(sl);
+        .setServer(ProtobufUtil.toServerName(sn)).setLoad(sl);
   }
 
   private List<RegionInfo> createTable(final TableName tableName) throws Exception {

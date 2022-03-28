@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestReopenTableRegionsProcedureInfiniteLoop {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReopenTableRegionsProcedureInfiniteLoop.class);
+      HBaseClassTestRule.forClass(TestReopenTableRegionsProcedureInfiniteLoop.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -79,7 +79,7 @@ public class TestReopenTableRegionsProcedureInfiniteLoop {
       procId = exec.submitProcedure(proc);
       UTIL.waitFor(30000, () -> proc.hasLock());
       TransitRegionStateProcedure trsp =
-        TransitRegionStateProcedure.reopen(exec.getEnvironment(), regionInfo);
+          TransitRegionStateProcedure.reopen(exec.getEnvironment(), regionInfo);
       regionNode.setProcedure(trsp);
       exec.submitProcedure(trsp);
     } finally {

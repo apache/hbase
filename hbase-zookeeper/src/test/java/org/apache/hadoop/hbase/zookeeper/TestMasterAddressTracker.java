@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestMasterAddressTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterAddressTracker.class);
+      HBaseClassTestRule.forClass(TestMasterAddressTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterAddressTracker.class);
 
@@ -78,7 +78,7 @@ public class TestMasterAddressTracker {
   @Test
   public void testDeleteIfEquals() throws Exception {
     final ServerName sn =
-      ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
+        ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertFalse("shouldn't have deleted wrong master server.",
@@ -95,7 +95,7 @@ public class TestMasterAddressTracker {
    * @param infoPort if there is an active master, set its info port.
    */
   private MasterAddressTracker setupMasterTracker(final ServerName sn, final int infoPort)
-    throws Exception {
+      throws Exception {
     zk = new ZKWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().backupMasterAddressesZNode);
@@ -108,7 +108,7 @@ public class TestMasterAddressTracker {
 
     // Use a listener to capture when the node is actually created
     NodeCreationListener listener =
-      new NodeCreationListener(zk, zk.getZNodePaths().masterAddressZNode);
+        new NodeCreationListener(zk, zk.getZNodePaths().masterAddressZNode);
     zk.registerListener(listener);
 
     if (sn != null) {
@@ -133,7 +133,7 @@ public class TestMasterAddressTracker {
     // Create the master node with a dummy address
     final int infoPort = 1235;
     final ServerName sn =
-      ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
+        ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, infoPort);
     try {
       assertTrue(addressTracker.hasMaster());
@@ -154,7 +154,7 @@ public class TestMasterAddressTracker {
   @Test
   public void testNoBackups() throws Exception {
     final ServerName sn =
-      ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
+        ServerName.valueOf("localhost", 1234, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertEquals("Should receive 0 for backup not found.", 0,
@@ -177,7 +177,7 @@ public class TestMasterAddressTracker {
   @Test
   public void testBackupMasters() throws Exception {
     final ServerName sn =
-      ServerName.valueOf("localhost", 5678, EnvironmentEdgeManager.currentTime());
+        ServerName.valueOf("localhost", 5678, EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1111);
     assertTrue(addressTracker.hasMaster());
     ServerName activeMaster = addressTracker.getMasterAddress();
@@ -187,10 +187,10 @@ public class TestMasterAddressTracker {
     assertEquals(0, backupMasters.size());
     ServerName backupMaster1 = ServerName.valueOf("localhost", 2222, -1);
     ServerName backupMaster2 = ServerName.valueOf("localhost", 3333, -1);
-    String backupZNode1 =
-      ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupMaster1.toString());
-    String backupZNode2 =
-      ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupMaster2.toString());
+    String backupZNode1 = ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode,
+      backupMaster1.toString());
+    String backupZNode2 = ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode,
+      backupMaster2.toString());
     // Add backup masters
     MasterAddressTracker.setMasterAddress(zk, backupZNode1, backupMaster1, 2222);
     MasterAddressTracker.setMasterAddress(zk, backupZNode2, backupMaster2, 3333);

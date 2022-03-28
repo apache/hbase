@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
@@ -73,10 +72,10 @@ public class TableNamespaceManager {
 
   private void migrateNamespaceTable() throws IOException {
     try (Table nsTable = masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
-      ResultScanner scanner = nsTable.getScanner(
-        new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
-      BufferedMutator mutator =
-        masterServices.getConnection().getBufferedMutator(TableName.META_TABLE_NAME)) {
+        ResultScanner scanner = nsTable.getScanner(new Scan()
+            .addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
+        BufferedMutator mutator =
+            masterServices.getConnection().getBufferedMutator(TableName.META_TABLE_NAME)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -84,10 +83,10 @@ public class TableNamespaceManager {
         }
         Put put = new Put(result.getRow());
         result
-          .getColumnCells(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES,
-            TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
-          .forEach(c -> put.addColumn(HConstants.NAMESPACE_FAMILY,
-            HConstants.NAMESPACE_COL_DESC_QUALIFIER, c.getTimestamp(), CellUtil.cloneValue(c)));
+            .getColumnCells(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES,
+              TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
+            .forEach(c -> put.addColumn(HConstants.NAMESPACE_FAMILY,
+              HConstants.NAMESPACE_COL_DESC_QUALIFIER, c.getTimestamp(), CellUtil.cloneValue(c)));
         mutator.mutate(put);
       }
     }
@@ -95,12 +94,12 @@ public class TableNamespaceManager {
     // wait until master is initialized, but we are part of the initialization...
     masterServices.getMasterProcedureExecutor().submitProcedure(
       new DisableTableProcedure(masterServices.getMasterProcedureExecutor().getEnvironment(),
-        TableName.NAMESPACE_TABLE_NAME, false));
+          TableName.NAMESPACE_TABLE_NAME, false));
   }
 
   private void loadNamespaceIntoCache() throws IOException {
     try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
+        ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -109,8 +108,8 @@ public class TableNamespaceManager {
         Cell cell = result.getColumnLatestCell(HConstants.NAMESPACE_FAMILY,
           HConstants.NAMESPACE_COL_DESC_QUALIFIER);
         NamespaceDescriptor ns = ProtobufUtil
-          .toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(CodedInputStream
-            .newInstance(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())));
+            .toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(CodedInputStream
+                .newInstance(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())));
         cache.put(ns.getName(), ns);
       }
     }
@@ -167,11 +166,11 @@ public class TableNamespaceManager {
   public void validateTableAndRegionCount(NamespaceDescriptor desc) throws IOException {
     if (getMaxRegions(desc) <= 0) {
       throw new ConstraintException(
-        "The max region quota for " + desc.getName() + " is less than or equal to zero.");
+          "The max region quota for " + desc.getName() + " is less than or equal to zero.");
     }
     if (getMaxTables(desc) <= 0) {
       throw new ConstraintException(
-        "The max tables quota for " + desc.getName() + " is less than or equal to zero.");
+          "The max tables quota for " + desc.getName() + " is less than or equal to zero.");
     }
   }
 

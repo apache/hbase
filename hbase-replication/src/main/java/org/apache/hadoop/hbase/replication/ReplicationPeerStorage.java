@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,8 +92,8 @@ public interface ReplicationPeerStorage {
   SyncReplicationState getPeerSyncReplicationState(String peerId) throws ReplicationException;
 
   /**
-   * Get the new sync replication state. Will return {@link SyncReplicationState#NONE} if we are
-   * not in a transition.
+   * Get the new sync replication state. Will return {@link SyncReplicationState#NONE} if we are not
+   * in a transition.
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   SyncReplicationState getPeerNewSyncReplicationState(String peerId) throws ReplicationException;

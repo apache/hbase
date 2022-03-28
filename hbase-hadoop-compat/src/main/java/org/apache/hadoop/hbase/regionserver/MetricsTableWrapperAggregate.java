@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface of class that will wrap a MetricsTableSource and export numbers so they can be
- * used in MetricsTableSource
+ * Interface of class that will wrap a MetricsTableSource and export numbers so they can be used in
+ * MetricsTableSource
  */
 @InterfaceAudience.Private
 public interface MetricsTableWrapperAggregate {
   public String HASH = "#";
+
   /**
    * Get the number of read requests that have been issued against this table
    */
@@ -43,6 +42,7 @@ public interface MetricsTableWrapperAggregate {
    * Get the total number of filtered read requests that have been issued against this table
    */
   long getFilteredReadRequestCount(String table);
+
   /**
    * Get the number of write requests that have been issued for this table
    */
@@ -67,7 +67,6 @@ public interface MetricsTableWrapperAggregate {
    * Get the table region size against this table
    */
   long getTableSize(String table);
-
 
   /**
    * Get the average region size for this table
@@ -100,12 +99,12 @@ public interface MetricsTableWrapperAggregate {
   long getMinStoreFileAge(String table);
 
   /**
-   *  @return Average age of store files for this table
+   * @return Average age of store files for this table
    */
   long getAvgStoreFileAge(String table);
 
   /**
-   *  @return Number of reference files for this table
+   * @return Number of reference files for this table
    */
   long getNumReferenceFiles(String table);
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
@@ -75,7 +74,7 @@ public class TestMultiActionMetricsFromClient {
       mutator.close();
 
       MetricsConnection metrics =
-        ((AsyncConnectionImpl) conn.toAsyncConnection()).getConnectionMetrics().get();
+          ((AsyncConnectionImpl) conn.toAsyncConnection()).getConnectionMetrics().get();
       assertEquals(1, metrics.multiTracker.reqHist.getCount());
       assertEquals(3, metrics.numActionsPerServerHist.getSnapshot().getMean(), 1e-15);
       assertEquals(1, metrics.numActionsPerServerHist.getCount());

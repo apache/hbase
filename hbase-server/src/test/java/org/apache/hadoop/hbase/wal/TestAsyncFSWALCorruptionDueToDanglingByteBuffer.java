@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,20 +43,20 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
-  extends WALCorruptionDueToDanglingByteBufferTestBase {
+    extends WALCorruptionDueToDanglingByteBufferTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
+      HBaseClassTestRule.forClass(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
 
   public static final class PauseWAL extends AsyncFSWAL {
 
     public PauseWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
+        Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
+        String prefix, String suffix, EventLoopGroup eventLoopGroup,
+        Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
       super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-        eventLoopGroup, channelClass);
+          eventLoopGroup, channelClass);
     }
 
     @Override
@@ -80,16 +80,16 @@ public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
     @Override
     protected PauseWAL createWAL() throws IOException {
       return new PauseWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
-        conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
-        channelClass);
+          getWALDirectoryName(factory.factoryId),
+          getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+          META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
+          channelClass);
     }
 
     @Override
     protected void doInit(Configuration conf) throws IOException {
       Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
-        NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
+          NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
       eventLoopGroup = eventLoopGroupAndChannelClass.getFirst();
       channelClass = eventLoopGroupAndChannelClass.getSecond();
     }

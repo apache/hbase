@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,13 +26,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestPaging {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPaging.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestPaging.class);
 
   @Test
   public void testArrowUpAndArrowDown() {
@@ -292,7 +290,7 @@ public class TestPaging {
   }
 
   private void assertPaging(Paging paging, int currentPosition, int pageStartPosition,
-    int pageEndPosition) {
+      int pageEndPosition) {
     assertThat(paging.getCurrentPosition(), is(currentPosition));
     assertThat(paging.getPageStartPosition(), is(pageStartPosition));
     assertThat(paging.getPageEndPosition(), is(pageEndPosition));

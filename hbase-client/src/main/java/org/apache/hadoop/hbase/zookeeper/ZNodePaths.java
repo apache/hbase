@@ -43,9 +43,8 @@ public class ZNodePaths {
   public final String baseZNode;
 
   /**
-   * The prefix of meta znode. Does not include baseZNode.
-   * Its a 'prefix' because meta replica id integer can be tagged on the end (if
-   * no number present, it is 'default' replica).
+   * The prefix of meta znode. Does not include baseZNode. Its a 'prefix' because meta replica id
+   * integer can be tagged on the end (if no number present, it is 'default' replica).
    */
   private final String metaZNodePrefix;
 
@@ -114,31 +113,24 @@ public class ZNodePaths {
     hfileRefsZNode = joinZNode(replicationZNode,
       conf.get("zookeeper.znode.replication.hfile.refs", "hfile-refs"));
     snapshotCleanupZNode = joinZNode(baseZNode,
-        conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
+      conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
   }
 
   @Override
   public String toString() {
-    return new StringBuilder()
-        .append("ZNodePaths [baseZNode=").append(baseZNode)
-        .append(", rsZNode=").append(rsZNode)
-        .append(", drainingZNode=").append(drainingZNode)
+    return new StringBuilder().append("ZNodePaths [baseZNode=").append(baseZNode)
+        .append(", rsZNode=").append(rsZNode).append(", drainingZNode=").append(drainingZNode)
         .append(", masterAddressZNode=").append(masterAddressZNode)
         .append(", backupMasterAddressesZNode=").append(backupMasterAddressesZNode)
-        .append(", clusterStateZNode=").append(clusterStateZNode)
-        .append(", tableZNode=").append(tableZNode)
-        .append(", clusterIdZNode=").append(clusterIdZNode)
-        .append(", splitLogZNode=").append(splitLogZNode)
-        .append(", balancerZNode=").append(balancerZNode)
-        .append(", regionNormalizerZNode=").append(regionNormalizerZNode)
-        .append(", switchZNode=").append(switchZNode)
-        .append(", masterMaintZNode=").append(masterMaintZNode)
-        .append(", replicationZNode=").append(replicationZNode)
-        .append(", peersZNode=").append(peersZNode)
-        .append(", queuesZNode=").append(queuesZNode)
-        .append(", hfileRefsZNode=").append(hfileRefsZNode)
-        .append(", snapshotCleanupZNode=").append(snapshotCleanupZNode)
-        .append("]").toString();
+        .append(", clusterStateZNode=").append(clusterStateZNode).append(", tableZNode=")
+        .append(tableZNode).append(", clusterIdZNode=").append(clusterIdZNode)
+        .append(", splitLogZNode=").append(splitLogZNode).append(", balancerZNode=")
+        .append(balancerZNode).append(", regionNormalizerZNode=").append(regionNormalizerZNode)
+        .append(", switchZNode=").append(switchZNode).append(", masterMaintZNode=")
+        .append(masterMaintZNode).append(", replicationZNode=").append(replicationZNode)
+        .append(", peersZNode=").append(peersZNode).append(", queuesZNode=").append(queuesZNode)
+        .append(", hfileRefsZNode=").append(hfileRefsZNode).append(", snapshotCleanupZNode=")
+        .append(snapshotCleanupZNode).append("]").toString();
   }
 
   /**
@@ -170,9 +162,8 @@ public class ZNodePaths {
    * @return replicaId
    */
   public int getMetaReplicaIdFromZNode(String znode) {
-    return znode.equals(metaZNodePrefix)?
-        RegionInfo.DEFAULT_REPLICA_ID:
-        Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
+    return znode.equals(metaZNodePrefix) ? RegionInfo.DEFAULT_REPLICA_ID
+        : Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
   }
 
   /**
@@ -198,10 +189,10 @@ public class ZNodePaths {
     // Developer notice: These znodes are world readable. DO NOT add more znodes here UNLESS
     // all clients need to access this data to work. Using zk for sharing data to clients (other
     // than service lookup case is not a recommended design pattern.
-    return path.equals(baseZNode) || isMetaZNodePath(path) || path.equals(masterAddressZNode) ||
-      path.equals(clusterIdZNode) || path.equals(rsZNode) ||
-      // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
-      path.equals(tableZNode) || path.startsWith(tableZNode + "/");
+    return path.equals(baseZNode) || isMetaZNodePath(path) || path.equals(masterAddressZNode)
+        || path.equals(clusterIdZNode) || path.equals(rsZNode) ||
+        // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
+        path.equals(tableZNode) || path.startsWith(tableZNode + "/");
   }
 
   public String getRsPath(ServerName sn) {

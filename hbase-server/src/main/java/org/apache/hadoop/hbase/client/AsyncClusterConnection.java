@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,8 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * @param replicate flags if the bulkload is targeted for replication.
    */
   CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
-    byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
-    List<String> clusterIds, boolean replicate);
+      byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
+      List<String> clusterIds, boolean replicate);
 
   /**
    * Clean up after finishing bulk load, no matter success or not.
@@ -97,7 +97,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Get live region servers from masters.
    */
   CompletableFuture<List<ServerName>> getLiveRegionServers(MasterAddressTracker masterAddrTracker,
-    int count);
+      int count);
 
   /**
    * Get the bootstrap node list of another region server.
@@ -108,5 +108,5 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Replicate wal edits to a secondary replica.
    */
   CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int numRetries,
-    long rpcTimeoutNs, long operationTimeoutNs);
+      long rpcTimeoutNs, long operationTimeoutNs);
 }

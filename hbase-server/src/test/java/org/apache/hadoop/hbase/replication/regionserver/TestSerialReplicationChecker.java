@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ public class TestSerialReplicationChecker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSerialReplicationChecker.class);
+      HBaseClassTestRule.forClass(TestSerialReplicationChecker.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -139,7 +139,7 @@ public class TestSerialReplicationChecker {
 
   private Cell createCell(RegionInfo region) {
     return CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(region.getStartKey())
-      .setType(Type.Put).build();
+        .setType(Type.Put).build();
   }
 
   @Test
@@ -245,9 +245,9 @@ public class TestSerialReplicationChecker {
     // 0xFF is the escape byte when storing region name so let's make sure it can work.
     byte[] endKey = new byte[] { (byte) 0xFF, 0x00, (byte) 0xFF, (byte) 0xFF, 0x01 };
     RegionInfo regionA =
-      RegionInfoBuilder.newBuilder(tableName).setEndKey(endKey).setRegionId(1).build();
+        RegionInfoBuilder.newBuilder(tableName).setEndKey(endKey).setRegionId(1).build();
     RegionInfo regionB =
-      RegionInfoBuilder.newBuilder(tableName).setStartKey(endKey).setRegionId(2).build();
+        RegionInfoBuilder.newBuilder(tableName).setStartKey(endKey).setRegionId(2).build();
     RegionInfo region = RegionInfoBuilder.newBuilder(tableName).setRegionId(3).build();
     addStateAndBarrier(regionA, null, 10, 100);
     addStateAndBarrier(regionB, null, 20, 200);
@@ -270,9 +270,9 @@ public class TestSerialReplicationChecker {
     byte[] endKey = new byte[] { (byte) 0xFF, 0x00, (byte) 0xFF, (byte) 0xFF, 0x01 };
     RegionInfo region = RegionInfoBuilder.newBuilder(tableName).setRegionId(1).build();
     RegionInfo regionA =
-      RegionInfoBuilder.newBuilder(tableName).setEndKey(endKey).setRegionId(2).build();
+        RegionInfoBuilder.newBuilder(tableName).setEndKey(endKey).setRegionId(2).build();
     RegionInfo regionB =
-      RegionInfoBuilder.newBuilder(tableName).setStartKey(endKey).setRegionId(3).build();
+        RegionInfoBuilder.newBuilder(tableName).setStartKey(endKey).setRegionId(3).build();
     addStateAndBarrier(region, null, 10, 100);
     addStateAndBarrier(regionA, RegionState.State.OPEN, 100, 200);
     addStateAndBarrier(regionB, RegionState.State.OPEN, 100, 300);

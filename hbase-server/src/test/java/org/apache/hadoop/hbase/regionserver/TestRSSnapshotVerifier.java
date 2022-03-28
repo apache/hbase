@@ -43,6 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -52,15 +53,15 @@ public class TestRSSnapshotVerifier {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSSnapshotVerifier.class);
+      HBaseClassTestRule.forClass(TestRSSnapshotVerifier.class);
 
   private HBaseTestingUtil TEST_UTIL;
   private final TableName tableName = TableName.valueOf("TestRSSnapshotVerifier");
   private final byte[] cf = Bytes.toBytes("cf");
   private final SnapshotDescription snapshot =
-    new SnapshotDescription("test-snapshot", tableName, SnapshotType.FLUSH);
+      new SnapshotDescription("test-snapshot", tableName, SnapshotType.FLUSH);
   private SnapshotProtos.SnapshotDescription snapshotProto =
-    ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
 
   @Before
   public void setup() throws Exception {
@@ -81,28 +82,27 @@ public class TestRSSnapshotVerifier {
       workingDirFs.mkdirs(workingDir);
     }
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    SnapshotManifest manifest = SnapshotManifest
-      .create(conf, workingDirFs, workingDir, snapshotProto, monitor);
-    manifest.addTableDescriptor(TEST_UTIL.getHBaseCluster()
-      .getMaster().getTableDescriptors().get(tableName));
+    SnapshotManifest manifest =
+        SnapshotManifest.create(conf, workingDirFs, workingDir, snapshotProto, monitor);
+    manifest.addTableDescriptor(
+      TEST_UTIL.getHBaseCluster().getMaster().getTableDescriptors().get(tableName));
     SnapshotDescriptionUtils.writeSnapshotInfo(snapshotProto, workingDir, workingDirFs);
-    TEST_UTIL.getHBaseCluster()
-      .getRegions(tableName).forEach(r -> {
-        try {
-          r.addRegionToSnapshot(snapshotProto, monitor);
-        } catch (IOException e) {
-          LOG.warn("Failed snapshot region {}", r.getRegionInfo());
-        }
-      });
+    TEST_UTIL.getHBaseCluster().getRegions(tableName).forEach(r -> {
+      try {
+        r.addRegionToSnapshot(snapshotProto, monitor);
+      } catch (IOException e) {
+        LOG.warn("Failed snapshot region {}", r.getRegionInfo());
+      }
+    });
     manifest.consolidate();
   }
 
   @Test(expected = org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException.class)
   public void testVerifyStoreFile() throws Exception {
-    RSSnapshotVerifier verifier = TEST_UTIL
-      .getHBaseCluster().getRegionServer(0).getRsSnapshotVerifier();
+    RSSnapshotVerifier verifier =
+        TEST_UTIL.getHBaseCluster().getRegionServer(0).getRsSnapshotVerifier();
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(tableName).stream()
-      .filter(r -> !r.getStore(cf).getStorefiles().isEmpty()).findFirst().get();
+        .filter(r -> !r.getStore(cf).getStorefiles().isEmpty()).findFirst().get();
     Path filePath = new ArrayList<>(region.getStore(cf).getStorefiles()).get(0).getPath();
     TEST_UTIL.getDFSCluster().getFileSystem().delete(filePath, true);
     LOG.info("delete store file {}", filePath);

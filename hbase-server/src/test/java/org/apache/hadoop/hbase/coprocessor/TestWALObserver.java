@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,11 +77,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests invocation of the
- * {@link org.apache.hadoop.hbase.coprocessor.MasterObserver} interface hooks at
- * all appropriate times during normal HMaster operations.
+ * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver} interface
+ * hooks at all appropriate times during normal HMaster operations.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestWALObserver {
 
   @ClassRule
@@ -92,12 +91,12 @@ public class TestWALObserver {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] TEST_TABLE = Bytes.toBytes("observedTable");
-  private static byte[][] TEST_FAMILY = { Bytes.toBytes("fam1"),
-      Bytes.toBytes("fam2"), Bytes.toBytes("fam3"), };
-  private static byte[][] TEST_QUALIFIER = { Bytes.toBytes("q1"),
-      Bytes.toBytes("q2"), Bytes.toBytes("q3"), };
-  private static byte[][] TEST_VALUE = { Bytes.toBytes("v1"),
-      Bytes.toBytes("v2"), Bytes.toBytes("v3"), };
+  private static byte[][] TEST_FAMILY =
+      { Bytes.toBytes("fam1"), Bytes.toBytes("fam2"), Bytes.toBytes("fam3"), };
+  private static byte[][] TEST_QUALIFIER =
+      { Bytes.toBytes("q1"), Bytes.toBytes("q2"), Bytes.toBytes("q3"), };
+  private static byte[][] TEST_VALUE =
+      { Bytes.toBytes("v1"), Bytes.toBytes("v2"), Bytes.toBytes("v3"), };
   private static byte[] TEST_ROW = Bytes.toBytes("testRow");
 
   @Rule
@@ -115,16 +114,15 @@ public class TestWALObserver {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-        SampleRegionWALCoprocessor.class.getName());
+      SampleRegionWALCoprocessor.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        SampleRegionWALCoprocessor.class.getName());
+      SampleRegionWALCoprocessor.class.getName());
     conf.setInt("dfs.client.block.recovery.retries", 2);
 
     TEST_UTIL.startMiniCluster(1);
-    Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
-        .makeQualified(new Path("/hbase"));
-    Path hbaseWALRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
-            .makeQualified(new Path("/hbaseLogRoot"));
+    Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
+    Path hbaseWALRootDir =
+        TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbaseLogRoot"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
     CommonFSUtils.setRootDir(conf, hbaseRootDir);
     CommonFSUtils.setWALRootDir(conf, hbaseWALRootDir);
@@ -143,10 +141,11 @@ public class TestWALObserver {
     this.hbaseRootDir = CommonFSUtils.getRootDir(conf);
     this.hbaseWALRootDir = CommonFSUtils.getWALRootDir(conf);
     this.oldLogDir = new Path(this.hbaseWALRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    String serverName = ServerName.valueOf(currentTest.getMethodName(), 16010,
-      EnvironmentEdgeManager.currentTime()).toString();
-    this.logDir = new Path(this.hbaseWALRootDir,
-      AbstractFSWALProvider.getWALDirectoryName(serverName));
+    String serverName =
+        ServerName.valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
+            .toString();
+    this.logDir =
+        new Path(this.hbaseWALRootDir, AbstractFSWALProvider.getWALDirectoryName(serverName));
 
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
@@ -171,9 +170,8 @@ public class TestWALObserver {
   }
 
   /**
-   * Test WAL write behavior with WALObserver. The coprocessor monitors a
-   * WALEdit written to WAL, and ignore, modify, and add KeyValue's for the
-   * WALEdit.
+   * Test WAL write behavior with WALObserver. The coprocessor monitors a WALEdit written to WAL,
+   * and ignore, modify, and add KeyValue's for the WALEdit.
    */
   @Test
   public void testWALObserverWriteToWAL() throws Exception {
@@ -184,8 +182,7 @@ public class TestWALObserver {
   private void verifyWritesSeen(final WAL log, final SampleRegionWALCoprocessor cp,
       final boolean seesLegacy) throws Exception {
     RegionInfo hri = createBasicHRegionInfo(Bytes.toString(TEST_TABLE));
-    TableDescriptor htd = createBasic3FamilyHTD(Bytes
-        .toString(TEST_TABLE));
+    TableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
@@ -197,8 +194,8 @@ public class TestWALObserver {
     // TEST_FAMILY[0] shall be removed from WALEdit.
     // TEST_FAMILY[1] value shall be changed.
     // TEST_FAMILY[2] shall be added to WALEdit, although it's not in the put.
-    cp.setTestValues(TEST_TABLE, TEST_ROW, TEST_FAMILY[0], TEST_QUALIFIER[0],
-        TEST_FAMILY[1], TEST_QUALIFIER[1], TEST_FAMILY[2], TEST_QUALIFIER[2]);
+    cp.setTestValues(TEST_TABLE, TEST_ROW, TEST_FAMILY[0], TEST_QUALIFIER[0], TEST_FAMILY[1],
+      TEST_QUALIFIER[1], TEST_FAMILY[2], TEST_QUALIFIER[2]);
 
     assertFalse(cp.isPreWALWriteCalled());
     assertFalse(cp.isPostWALWriteCalled());
@@ -239,7 +236,8 @@ public class TestWALObserver {
     long now = EnvironmentEdgeManager.currentTime();
     // we use HLogKey here instead of WALKeyImpl directly to support legacy coprocessors.
     long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now,
-      new MultiVersionConcurrencyControl(), scopes), edit);
+        new MultiVersionConcurrencyControl(), scopes),
+      edit);
     log.sync(txid);
 
     // the edit shall have been change now by the coprocessor.
@@ -276,7 +274,7 @@ public class TestWALObserver {
     TableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(byte[] fam : htd.getColumnFamilyNames()) {
+    for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
     WAL log = wals.getWAL(null);
@@ -342,24 +340,22 @@ public class TestWALObserver {
     // sync to fs.
     wal.sync();
 
-    User user = HBaseTestingUtil.getDifferentUser(newConf,
-        ".replay.wal.secondtime");
+    User user = HBaseTestingUtil.getDifferentUser(newConf, ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf,
-            ServerName.valueOf(currentTest.getMethodName() + "2", 16010,
-              EnvironmentEdgeManager.currentTime())
-                .toString());
+        final WALFactory wals2 = new WALFactory(conf, ServerName
+            .valueOf(currentTest.getMethodName() + "2", 16010, EnvironmentEdgeManager.currentTime())
+            .toString());
         WAL wal2 = wals2.getWAL(null);
-        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
-            hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
+        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri,
+          htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
 
         SampleRegionWALCoprocessor cp2 =
-          region.getCoprocessorHost().findCoprocessor(SampleRegionWALCoprocessor.class);
+            region.getCoprocessorHost().findCoprocessor(SampleRegionWALCoprocessor.class);
         // TODO: asserting here is problematic.
         assertNotNull(cp2);
         assertTrue(cp2.isPreWALRestoreCalled());
@@ -372,9 +368,8 @@ public class TestWALObserver {
   }
 
   /**
-   * Test to see CP loaded successfully or not. There is a duplication at
-   * TestHLog, but the purpose of that one is to see whether the loaded CP will
-   * impact existing WAL tests or not.
+   * Test to see CP loaded successfully or not. There is a duplication at TestHLog, but the purpose
+   * of that one is to see whether the loaded CP will impact existing WAL tests or not.
    */
   @Test
   public void testWALObserverLoaded() throws Exception {
@@ -431,8 +426,8 @@ public class TestWALObserver {
   }
 
   private Path runWALSplit(final Configuration c) throws IOException {
-    List<Path> splits = WALSplitter.split(
-      hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c, wals);
+    List<Path> splits =
+        WALSplitter.split(hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c, wals);
     // Split should generate only 1 file since there's only 1 region
     assertEquals(1, splits.size());
     // Make sure the file exists

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,47 +54,41 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * The RPC server with native java NIO implementation deriving from Hadoop to
- * host protobuf described Services. It's the original one before HBASE-17262,
- * and the default RPC server for now.
- *
- * An RpcServer instance has a Listener that hosts the socket.  Listener has fixed number
- * of Readers in an ExecutorPool, 10 by default.  The Listener does an accept and then
- * round robin a Reader is chosen to do the read.  The reader is registered on Selector.  Read does
- * total read off the channel and the parse from which it makes a Call.  The call is wrapped in a
- * CallRunner and passed to the scheduler to be run.  Reader goes back to see if more to be done
- * and loops till done.
- *
- * <p>Scheduler can be variously implemented but default simple scheduler has handlers to which it
- * has given the queues into which calls (i.e. CallRunner instances) are inserted.  Handlers run
- * taking from the queue.  They run the CallRunner#run method on each item gotten from queue
- * and keep taking while the server is up.
- *
- * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
- * queue for Responder to pull from and return result to client.
- *
+ * The RPC server with native java NIO implementation deriving from Hadoop to host protobuf
+ * described Services. It's the original one before HBASE-17262, and the default RPC server for now.
+ * An RpcServer instance has a Listener that hosts the socket. Listener has fixed number of Readers
+ * in an ExecutorPool, 10 by default. The Listener does an accept and then round robin a Reader is
+ * chosen to do the read. The reader is registered on Selector. Read does total read off the channel
+ * and the parse from which it makes a Call. The call is wrapped in a CallRunner and passed to the
+ * scheduler to be run. Reader goes back to see if more to be done and loops till done.
+ * <p>
+ * Scheduler can be variously implemented but default simple scheduler has handlers to which it has
+ * given the queues into which calls (i.e. CallRunner instances) are inserted. Handlers run taking
+ * from the queue. They run the CallRunner#run method on each item gotten from queue and keep taking
+ * while the server is up. CallRunner#run executes the call. When done, asks the included Call to
+ * put itself on new queue for Responder to pull from and return result to client.
  * @see BlockingRpcClient
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class SimpleRpcServer extends RpcServer {
 
-  protected int port;                             // port we listen on
-  protected InetSocketAddress address;            // inet address we listen on
-  private int readThreads;                        // number of read threads
+  protected int port; // port we listen on
+  protected InetSocketAddress address; // inet address we listen on
+  private int readThreads; // number of read threads
 
   protected int socketSendBufferSize;
-  protected final long purgeTimeout;    // in milliseconds
+  protected final long purgeTimeout; // in milliseconds
 
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
   protected SimpleRpcServerResponder responder = null;
 
-  /** Listens on the socket. Creates jobs for the handler threads*/
+  /** Listens on the socket. Creates jobs for the handler threads */
   private class Listener extends Thread {
 
-    private ServerSocketChannel acceptChannel = null; //the accept channel
-    private Selector selector = null; //the selector that we use for the server
+    private ServerSocketChannel acceptChannel = null; // the accept channel
+    private Selector selector = null; // the selector that we use for the server
     private Reader[] readers = null;
     private int currentReader = 0;
     private final int readerPendingConnectionQueueLength;
@@ -113,19 +107,17 @@ public class SimpleRpcServer extends RpcServer {
 
       // Bind the server socket to the binding addrees (can be different from the default interface)
       bind(acceptChannel.socket(), bindAddress, backlogLength);
-      port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
-      address = (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
+      port = acceptChannel.socket().getLocalPort(); // Could be an ephemeral port
+      address = (InetSocketAddress) acceptChannel.socket().getLocalSocketAddress();
       // create a selector;
       selector = Selector.open();
 
       readers = new Reader[readThreads];
       // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
       // has an advantage in that it is easy to shutdown the pool.
-      readPool = Executors.newFixedThreadPool(readThreads,
-        new ThreadFactoryBuilder().setNameFormat(
-          "Reader=%d,bindAddress=" + bindAddress.getHostName() +
-          ",port=" + port).setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      readPool = Executors.newFixedThreadPool(readThreads, new ThreadFactoryBuilder()
+          .setNameFormat("Reader=%d,bindAddress=" + bindAddress.getHostName() + ",port=" + port)
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       for (int i = 0; i < readThreads; ++i) {
         Reader reader = new Reader();
         readers[i] = reader;
@@ -138,7 +130,6 @@ public class SimpleRpcServer extends RpcServer {
       this.setName("Listener,port=" + port);
       this.setDaemon(true);
     }
-
 
     private class Reader implements Runnable {
       final private LinkedBlockingQueue<SimpleServerRpcConnection> pendingConnections;
@@ -168,7 +159,7 @@ public class SimpleRpcServer extends RpcServer {
             // Consume as many connections as currently queued to avoid
             // unbridled acceptance of connections that starves the select
             int size = pendingConnections.size();
-            for (int i=size; i>0; i--) {
+            for (int i = size; i > 0; i--) {
               SimpleServerRpcConnection conn = pendingConnections.take();
               conn.channel.register(readSelector, SelectionKey.OP_READ, conn);
             }
@@ -185,7 +176,7 @@ public class SimpleRpcServer extends RpcServer {
               key = null;
             }
           } catch (InterruptedException e) {
-            if (running) {                      // unexpected -- log it
+            if (running) { // unexpected -- log it
               LOG.info(Thread.currentThread().getName() + " unexpectedly interrupted", e);
             }
           } catch (CancelledKeyException e) {
@@ -197,9 +188,9 @@ public class SimpleRpcServer extends RpcServer {
       }
 
       /**
-       * Updating the readSelector while it's being used is not thread-safe,
-       * so the connection must be queued.  The reader will drain the queue
-       * and update its readSelector before performing the next select
+       * Updating the readSelector while it's being used is not thread-safe, so the connection must
+       * be queued. The reader will drain the queue and update its readSelector before performing
+       * the next select
        */
       public void addConnection(SimpleServerRpcConnection conn) throws IOException {
         pendingConnections.add(conn);
@@ -208,9 +199,9 @@ public class SimpleRpcServer extends RpcServer {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-      justification="selector access is not synchronized; seems fine but concerned changing " +
-        "it will have per impact")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+        justification = "selector access is not synchronized; seems fine but concerned changing "
+            + "it will have per impact")
     public void run() {
       LOG.info(getName() + ": starting");
       connectionManager.startIdleScan();
@@ -224,8 +215,7 @@ public class SimpleRpcServer extends RpcServer {
             iter.remove();
             try {
               if (key.isValid()) {
-                if (key.isAcceptable())
-                  doAccept(key);
+                if (key.isAcceptable()) doAccept(key);
               }
             } catch (IOException ignored) {
               if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
@@ -266,8 +256,8 @@ public class SimpleRpcServer extends RpcServer {
           if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
         }
 
-        selector= null;
-        acceptChannel= null;
+        selector = null;
+        acceptChannel = null;
 
         // close all connections
         connectionManager.stopIdleScan();
@@ -277,7 +267,7 @@ public class SimpleRpcServer extends RpcServer {
 
     private void closeCurrentConnection(SelectionKey key, Throwable e) {
       if (key != null) {
-        SimpleServerRpcConnection c = (SimpleServerRpcConnection)key.attachment();
+        SimpleServerRpcConnection c = (SimpleServerRpcConnection) key.attachment();
         if (c != null) {
           closeConnection(c);
           key.attach(null);
@@ -305,7 +295,7 @@ public class SimpleRpcServer extends RpcServer {
           }
           continue;
         }
-        key.attach(c);  // so closeCurrentConnection can get the object
+        key.attach(c); // so closeCurrentConnection can get the object
         reader.addConnection(c);
       }
     }
@@ -320,13 +310,14 @@ public class SimpleRpcServer extends RpcServer {
       try {
         count = c.readAndProcess();
       } catch (InterruptedException ieo) {
-        LOG.info(Thread.currentThread().getName() + ": readAndProcess caught InterruptedException", ieo);
+        LOG.info(Thread.currentThread().getName() + ": readAndProcess caught InterruptedException",
+          ieo);
         throw ieo;
       } catch (Exception e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Caught exception while reading:", e);
         }
-        count = -1; //so that the (count < 0) block is executed
+        count = -1; // so that the (count < 0) block is executed
       }
       if (count < 0) {
         closeConnection(c);
@@ -361,8 +352,8 @@ public class SimpleRpcServer extends RpcServer {
 
   /**
    * Constructs a server listening on the named port and address.
-   * @param server hosting instance of {@link Server}. We will do authentications if an
-   * instance else pass null for no authentication check.
+   * @param server hosting instance of {@link Server}. We will do authentications if an instance
+   *          else pass null for no authentication check.
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
    * @param bindAddress Where to listen
@@ -371,9 +362,8 @@ public class SimpleRpcServer extends RpcServer {
    * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public SimpleRpcServer(final Server server, final String name,
-      final List<BlockingServiceAndInterface> services,
-      final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+      final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.socketSendBufferSize = 0;
     this.readThreads = conf.getInt("hbase.ipc.server.read.threadpool.size", 10);
@@ -393,8 +383,7 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   /**
-   * Subclasses of HBaseServer can override this to provide their own
-   * Connection implementations.
+   * Subclasses of HBaseServer can override this to provide their own Connection implementations.
    */
   protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
     return new SimpleServerRpcConnection(this, channel, time);
@@ -404,11 +393,14 @@ public class SimpleRpcServer extends RpcServer {
     connectionManager.close(connection);
   }
 
-  /** Sets the socket buffer size used for responding to RPCs.
+  /**
+   * Sets the socket buffer size used for responding to RPCs.
    * @param size send size
    */
   @Override
-  public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
+  public void setSocketSendBufSize(int size) {
+    this.socketSendBufferSize = size;
+  }
 
   /** Starts the service. Must be called before any calls will be handled. */
   @Override
@@ -461,10 +453,10 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   /**
-   * Return the socket (ip+port) on which the RPC server is listening to. May return null if
-   * the listener channel is closed.
+   * Return the socket (ip+port) on which the RPC server is listening to. May return null if the
+   * listener channel is closed.
    * @return the socket (ip+port) on which the RPC server is listening to, or null if this
-   * information cannot be determined
+   *         information cannot be determined
    */
   @Override
   public synchronized InetSocketAddress getListenerAddress() {
@@ -475,20 +467,18 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   /**
-   * This is a wrapper around {@link java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)}.
-   * If the amount of data is large, it writes to channel in smaller chunks.
-   * This is to avoid jdk from creating many direct buffers as the size of
-   * buffer increases. This also minimizes extra copies in NIO layer
-   * as a result of multiple write operations required to write a large
-   * buffer.
-   *
+   * This is a wrapper around
+   * {@link java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)}. If the amount of data
+   * is large, it writes to channel in smaller chunks. This is to avoid jdk from creating many
+   * direct buffers as the size of buffer increases. This also minimizes extra copies in NIO layer
+   * as a result of multiple write operations required to write a large buffer.
    * @param channel writable byte channel to write to
    * @param bufferChain Chain of buffers to write
    * @return number of bytes written
    * @see java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)
    */
   protected long channelWrite(GatheringByteChannel channel, BufferChain bufferChain)
-    throws IOException {
+      throws IOException {
     long count = bufferChain.write(channel, NIO_BUFFER_LIMIT);
     if (count > 0) {
       this.metrics.sentBytes(count);
@@ -497,8 +487,8 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   /**
-   * A convenience method to bind to a given address and report
-   * better exceptions if the address is not a valid host.
+   * A convenience method to bind to a given address and report better exceptions if the address is
+   * not a valid host.
    * @param socket the socket to bind
    * @param address the address to bind to
    * @param backlog the number of connections allowed in the queue
@@ -507,12 +497,12 @@ public class SimpleRpcServer extends RpcServer {
    * @throws IOException other random errors from bind
    */
   public static void bind(ServerSocket socket, InetSocketAddress address, int backlog)
-    throws IOException {
+      throws IOException {
     try {
       socket.bind(address, backlog);
     } catch (BindException e) {
       BindException bindException =
-        new BindException("Problem binding to " + address + " : " + e.getMessage());
+          new BindException("Problem binding to " + address + " : " + e.getMessage());
       bindException.initCause(e);
       throw bindException;
     } catch (SocketException e) {
@@ -552,14 +542,14 @@ public class SimpleRpcServer extends RpcServer {
       this.maxIdleTime = 2 * conf.getInt("hbase.ipc.client.connection.maxidletime", 10000);
       this.maxIdleToClose = conf.getInt("hbase.ipc.client.kill.max", 10);
       int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
       int maxConnectionQueueSize =
           handlerCount * conf.getInt("hbase.ipc.server.handler.queue.size", 100);
       // create a set with concurrency -and- a thread-safe iterator, add 2
       // for listener and idle closer threads
-      this.connections = Collections.newSetFromMap(
-          new ConcurrentHashMap<SimpleServerRpcConnection,Boolean>(
-              maxConnectionQueueSize, 0.75f, readThreads+2));
+      this.connections =
+          Collections.newSetFromMap(new ConcurrentHashMap<SimpleServerRpcConnection, Boolean>(
+              maxConnectionQueueSize, 0.75f, readThreads + 2));
     }
 
     private boolean add(SimpleServerRpcConnection connection) {
@@ -587,16 +577,15 @@ public class SimpleRpcServer extends RpcServer {
     }
 
     SimpleServerRpcConnection register(SocketChannel channel) {
-      SimpleServerRpcConnection connection = getConnection(channel,
-        EnvironmentEdgeManager.currentTime());
+      SimpleServerRpcConnection connection =
+          getConnection(channel, EnvironmentEdgeManager.currentTime());
       add(connection);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Connection from " + connection +
-            "; connections=" + size() +
-            ", queued calls size (bytes)=" + callQueueSizeInBytes.sum() +
-            ", general queued calls=" + scheduler.getGeneralQueueLength() +
-            ", priority queued calls=" + scheduler.getPriorityQueueLength() +
-            ", meta priority queued calls=" + scheduler.getMetaPriorityQueueLength());
+        LOG.trace("Connection from " + connection + "; connections=" + size()
+            + ", queued calls size (bytes)=" + callQueueSizeInBytes.sum()
+            + ", general queued calls=" + scheduler.getGeneralQueueLength()
+            + ", priority queued calls=" + scheduler.getPriorityQueueLength()
+            + ", meta priority queued calls=" + scheduler.getMetaPriorityQueueLength());
       }
       return connection;
     }
@@ -605,9 +594,8 @@ public class SimpleRpcServer extends RpcServer {
       boolean exists = remove(connection);
       if (exists) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(Thread.currentThread().getName() +
-              ": disconnecting client " + connection +
-              ". Number of active connections: "+ size());
+          LOG.trace(Thread.currentThread().getName() + ": disconnecting client " + connection
+              + ". Number of active connections: " + size());
         }
         // only close if actually removed to avoid double-closing due
         // to possible races
@@ -630,10 +618,8 @@ public class SimpleRpcServer extends RpcServer {
           break;
         }
         // stop if not scanning all and max connections are closed
-        if (connection.isIdle() &&
-            connection.getLastContact() < minLastContact &&
-            close(connection) &&
-            !scanAll && (++closed == maxIdleToClose)) {
+        if (connection.isIdle() && connection.getLastContact() < minLastContact && close(connection)
+            && !scanAll && (++closed == maxIdleToClose)) {
           break;
         }
       }
@@ -659,7 +645,7 @@ public class SimpleRpcServer extends RpcServer {
       if (!running) {
         return;
       }
-      TimerTask idleScanTask = new TimerTask(){
+      TimerTask idleScanTask = new TimerTask() {
         @Override
         public void run() {
           if (!running) {

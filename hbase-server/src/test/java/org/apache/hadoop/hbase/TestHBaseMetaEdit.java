@@ -70,12 +70,12 @@ public class TestHBaseMetaEdit {
     Admin admin = UTIL.getAdmin();
     TableDescriptor get = admin.getDescriptor(TableName.META_TABLE_NAME);
     TableDescriptor list =
-      admin.listTableDescriptors(true).stream().filter(td -> td.isMetaTable()).findAny().get();
+        admin.listTableDescriptors(true).stream().filter(td -> td.isMetaTable()).findAny().get();
     TableDescriptor listByName =
-      admin.listTableDescriptors(Collections.singletonList(TableName.META_TABLE_NAME)).get(0);
+        admin.listTableDescriptors(Collections.singletonList(TableName.META_TABLE_NAME)).get(0);
     TableDescriptor listByNs =
-      admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
-        .filter(td -> td.isMetaTable()).findAny().get();
+        admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
+            .filter(td -> td.isMetaTable()).findAny().get();
     assertEquals(get, list);
     assertEquals(get, listByName);
     assertEquals(get, listByNs);
@@ -83,10 +83,10 @@ public class TestHBaseMetaEdit {
   }
 
   /**
-   * Set versions, set HBASE-16213 indexed block encoding, and add a column family.
-   * Delete the column family. Then try to delete a core hbase:meta family (should fail).
-   * Verify they are all in place by looking at TableDescriptor AND by checking
-   * what the RegionServer sees after opening Region.
+   * Set versions, set HBASE-16213 indexed block encoding, and add a column family. Delete the
+   * column family. Then try to delete a core hbase:meta family (should fail). Verify they are all
+   * in place by looking at TableDescriptor AND by checking what the RegionServer sees after opening
+   * Region.
    */
   @Test
   public void testEditMeta() throws IOException {
@@ -96,32 +96,33 @@ public class TestHBaseMetaEdit {
     ColumnFamilyDescriptor cfd = originalDescriptor.getColumnFamily(HConstants.CATALOG_FAMILY);
     int oldVersions = cfd.getMaxVersions();
     // Add '1' to current versions count. Set encoding too.
-    cfd = ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(oldVersions + 1).
-        setConfiguration(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING,
-            DataBlockEncoding.ROW_INDEX_V1.toString()).build();
+    cfd = ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(oldVersions + 1)
+        .setConfiguration(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING,
+          DataBlockEncoding.ROW_INDEX_V1.toString())
+        .build();
     admin.modifyColumnFamily(TableName.META_TABLE_NAME, cfd);
-    byte [] extraColumnFamilyName = Bytes.toBytes("xtra");
+    byte[] extraColumnFamilyName = Bytes.toBytes("xtra");
     ColumnFamilyDescriptor newCfd =
-      ColumnFamilyDescriptorBuilder.newBuilder(extraColumnFamilyName).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(extraColumnFamilyName).build();
     admin.addColumnFamily(TableName.META_TABLE_NAME, newCfd);
     TableDescriptor descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
-        descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
+      descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
     descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
-        descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
+      descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
     assertTrue(descriptor.getColumnFamily(newCfd.getName()) != null);
-    String encoding = descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getConfiguration().
-        get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
+    String encoding = descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getConfiguration()
+        .get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
-    Region r = UTIL.getHBaseCluster().getRegionServer(0).
-        getRegion(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    Region r = UTIL.getHBaseCluster().getRegionServer(0)
+        .getRegion(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     assertEquals(oldVersions + 1,
-        r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().getMaxVersions());
-    encoding = r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().
-        getConfigurationValue(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
+      r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().getMaxVersions());
+    encoding = r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor()
+        .getConfigurationValue(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
     assertTrue(r.getStore(extraColumnFamilyName) != null);
     // Assert we can't drop critical hbase:meta column family but we can drop any other.

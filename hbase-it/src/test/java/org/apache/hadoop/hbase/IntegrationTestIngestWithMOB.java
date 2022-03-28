@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,14 +55,10 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   private int maxMobDataSize = threshold * 5; // 5KB
   private static final long JUNIT_RUN_TIME = 2 * 60 * 1000; // 2 minutes
 
-  //similar to LOAD_TEST_TOOL_INIT_ARGS except OPT_IN_MEMORY is removed
-  protected String[] LOAD_TEST_TOOL_MOB_INIT_ARGS = {
-      LoadTestTool.OPT_COMPRESSION,
-      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
-      LoadTestTool.OPT_ENCRYPTION,
-      LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
-      LoadTestTool.OPT_REGION_REPLICATION,
-  };
+  // similar to LOAD_TEST_TOOL_INIT_ARGS except OPT_IN_MEMORY is removed
+  protected String[] LOAD_TEST_TOOL_MOB_INIT_ARGS = { LoadTestTool.OPT_COMPRESSION,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING, LoadTestTool.OPT_ENCRYPTION,
+      LoadTestTool.OPT_NUM_REGIONS_PER_SERVER, LoadTestTool.OPT_REGION_REPLICATION, };
 
   @Override
   protected String[] getArgsForLoadTestToolInitTable() {
@@ -119,13 +115,13 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
 
     TableName tableName = getTablename();
     try (Connection connection = ConnectionFactory.createConnection();
-         Admin admin = connection.getAdmin()) {
+        Admin admin = connection.getAdmin()) {
       TableDescriptor tableDesc = admin.getDescriptor(tableName);
       LOG.info("Disabling table " + getTablename());
       admin.disableTable(tableName);
       ColumnFamilyDescriptor mobColumn = tableDesc.getColumnFamily(mobColumnFamily);
       ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(mobColumn)
-        .setMobEnabled(true).setMobThreshold((long) threshold).build();
+          .setMobEnabled(true).setMobThreshold((long) threshold).build();
       admin.modifyColumnFamily(tableName, cfd);
       LOG.info("Enabling table " + getTablename());
       admin.enableTable(tableName);

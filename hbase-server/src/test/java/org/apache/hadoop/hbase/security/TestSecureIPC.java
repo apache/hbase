@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -100,8 +100,8 @@ public class TestSecureIPC {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static final File KEYTAB_FILE = new File(
-      TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE =
+      new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
@@ -119,10 +119,10 @@ public class TestSecureIPC {
   @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
   public static Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>();
-    List<String> rpcClientImpls = Arrays.asList(
-        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
-    List<String> rpcServerImpls = Arrays.asList(
-        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+    List<String> rpcClientImpls =
+        Arrays.asList(BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+    List<String> rpcServerImpls =
+        Arrays.asList(SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
         params.add(new Object[] { rpcClientImpl, rpcServerImpl });
@@ -161,8 +161,7 @@ public class TestSecureIPC {
     clientConf = getSecuredConfiguration();
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
     serverConf = getSecuredConfiguration();
-    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        rpcServerImpl);
+    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
   }
 
   @Test
@@ -212,39 +211,38 @@ public class TestSecureIPC {
   }
 
   private static void enableCanonicalHostnameTesting(Configuration conf, String canonicalHostname) {
-    conf.setClass(SELECTOR_KEY,
-      CanonicalHostnameTestingAuthenticationProviderSelector.class,
+    conf.setClass(SELECTOR_KEY, CanonicalHostnameTestingAuthenticationProviderSelector.class,
       AuthenticationProviderSelector.class);
     conf.set(CanonicalHostnameTestingAuthenticationProviderSelector.CANONICAL_HOST_NAME_KEY,
       canonicalHostname);
   }
 
-  public static class CanonicalHostnameTestingAuthenticationProviderSelector extends
-    BuiltInProviderSelector {
+  public static class CanonicalHostnameTestingAuthenticationProviderSelector
+      extends BuiltInProviderSelector {
     private static final String CANONICAL_HOST_NAME_KEY =
-      "CanonicalHostnameTestingAuthenticationProviderSelector.canonicalHostName";
+        "CanonicalHostnameTestingAuthenticationProviderSelector.canonicalHostName";
 
     @Override
-    public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User user) {
+    public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+        selectProvider(String clusterId, User user) {
       final Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
-        super.selectProvider(clusterId, user);
+          super.selectProvider(clusterId, user);
       pair.setFirst(createCanonicalHostNameTestingProvider(pair.getFirst()));
       return pair;
     }
 
-    SaslClientAuthenticationProvider createCanonicalHostNameTestingProvider(
-      SaslClientAuthenticationProvider delegate) {
+    SaslClientAuthenticationProvider
+        createCanonicalHostNameTestingProvider(SaslClientAuthenticationProvider delegate) {
       return new SaslClientAuthenticationProvider() {
         @Override
         public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-          SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
-          boolean fallbackAllowed, Map<String, String> saslProps) throws IOException {
-          final String s =
-            conf.get(CANONICAL_HOST_NAME_KEY);
+            SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
+            boolean fallbackAllowed, Map<String, String> saslProps) throws IOException {
+          final String s = conf.get(CANONICAL_HOST_NAME_KEY);
           if (s != null) {
             try {
-              final Field canonicalHostName = InetAddress.class.getDeclaredField("canonicalHostName");
+              final Field canonicalHostName =
+                  InetAddress.class.getDeclaredField("canonicalHostName");
               canonicalHostName.setAccessible(true);
               canonicalHostName.set(serverAddr, s);
             } catch (NoSuchFieldException | IllegalAccessException e) {
@@ -252,7 +250,8 @@ public class TestSecureIPC {
             }
           }
 
-          return delegate.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
+          return delegate.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed,
+            saslProps);
         }
 
         @Override
@@ -291,8 +290,8 @@ public class TestSecureIPC {
   @Test
   public void testRpcFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
-    UserGroupInformation clientUgi = UserGroupInformation.createUserForTesting(clientUsername,
-      new String[] { clientUsername });
+    UserGroupInformation clientUgi =
+        UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
 
     // check that the client user is insecure
     assertNotSame(ugi, clientUgi);
@@ -397,13 +396,14 @@ public class TestSecureIPC {
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
     RpcServerInterface rpcServer = RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
-        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)), isa,
-        serverConf, new FifoRpcScheduler(serverConf, 1));
+      Lists
+          .newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+      isa, serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
-    try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
-      HConstants.DEFAULT_CLUSTER_ID.toString())) {
-      BlockingInterface stub = newBlockingStub(rpcClient, rpcServer.getListenerAddress(),
-        clientUser);
+    try (RpcClient rpcClient =
+        RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
+      BlockingInterface stub =
+          newBlockingStub(rpcClient, rpcServer.getListenerAddress(), clientUser);
       TestThread th1 = new TestThread(stub);
       final Throwable exception[] = new Throwable[1];
       Collections.synchronizedList(new ArrayList<Throwable>());
@@ -441,9 +441,9 @@ public class TestSecureIPC {
         int[] messageSize = new int[] { 100, 1000, 10000 };
         for (int i = 0; i < messageSize.length; i++) {
           String input = RandomStringUtils.random(messageSize[i]);
-          String result = stub
-              .echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
-              .getMessage();
+          String result =
+              stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
+                  .getMessage();
           assertEquals(input, result);
         }
       } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {

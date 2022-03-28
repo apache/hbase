@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,10 +58,10 @@ public class TestScannerWithCorruptHFile {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerWithCorruptHFile.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -81,7 +81,7 @@ public class TestScannerWithCorruptHFile {
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
-      InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+        InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       throw new CorruptHFileException("For test");
     }
   }
@@ -90,8 +90,8 @@ public class TestScannerWithCorruptHFile {
   public void testScanOnCorruptHFile() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-      .setCoprocessor(CorruptHFileCoprocessor.class.getName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
+        .setCoprocessor(CorruptHFileCoprocessor.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     try {
       loadTable(table, 1);

@@ -28,13 +28,13 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 
 /**
- * A very simple {@code }RpcScheduler} that serves incoming requests in order.
- *
- * This can be used for HMaster, where no prioritization is needed.
+ * A very simple {@code }RpcScheduler} that serves incoming requests in order. This can be used for
+ * HMaster, where no prioritization is needed.
  */
 @InterfaceAudience.Private
 public class FifoRpcScheduler extends RpcScheduler {
@@ -47,7 +47,7 @@ public class FifoRpcScheduler extends RpcScheduler {
   public FifoRpcScheduler(Configuration conf, int handlerCount) {
     this.handlerCount = handlerCount;
     this.maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
-        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
   }
 
   @Override
@@ -60,10 +60,10 @@ public class FifoRpcScheduler extends RpcScheduler {
     LOG.info("Using {} as user call queue; handlerCount={}; maxQueueLength={}",
       this.getClass().getSimpleName(), handlerCount, maxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
-      new ArrayBlockingQueue<>(maxQueueLength),
-      new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-      new ThreadPoolExecutor.CallerRunsPolicy());
+        new ArrayBlockingQueue<>(maxQueueLength),
+        new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   @Override
@@ -103,7 +103,7 @@ public class FifoRpcScheduler extends RpcScheduler {
       return false;
     }
 
-    executor.execute(new FifoCallRunner(task){
+    executor.execute(new FifoCallRunner(task) {
       @Override
       public void run() {
         task.setStatus(RpcServer.getStatus());

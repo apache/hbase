@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -114,14 +114,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
       "hbase.lru.blockcache.memory.percentage";
 
   /**
-   * Configuration key to force data-block always (except in-memory are too much)
-   * cached in memory for in-memory hfile, unlike inMemory, which is a column-family
-   * configuration, inMemoryForceMode is a cluster-wide configuration
+   * Configuration key to force data-block always (except in-memory are too much) cached in memory
+   * for in-memory hfile, unlike inMemory, which is a column-family configuration, inMemoryForceMode
+   * is a cluster-wide configuration
    */
   private static final String LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME =
       "hbase.lru.rs.inmemoryforcemode";
 
-  /* Default Configuration Parameters*/
+  /* Default Configuration Parameters */
 
   /* Backing Concurrent Map Configuration */
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
@@ -167,8 +167,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private transient final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
-      .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
+      Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+          .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -220,19 +220,16 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Where to send victims (blocks evicted/missing from the cache). This is used only when we use an
-   * external cache as L2.
-   * Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
+   * external cache as L2. Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
    */
   private transient BlockCache victimHandler = null;
 
   /**
-   * Default constructor.  Specify maximum size and expected average block
-   * size (approximation is fine).
-   *
-   * <p>All other factors will be calculated based on defaults specified in
-   * this class.
-   *
-   * @param maxSize   maximum size of cache, in bytes
+   * Default constructor. Specify maximum size and expected average block size (approximation is
+   * fine).
+   * <p>
+   * All other factors will be calculated based on defaults specified in this class.
+   * @param maxSize maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
    */
   public LruBlockCache(long maxSize, long blockSize) {
@@ -240,33 +237,25 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Constructor used for testing.  Allows disabling of the eviction thread.
+   * Constructor used for testing. Allows disabling of the eviction thread.
    */
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread) {
-    this(maxSize, blockSize, evictionThread,
-        (int) Math.ceil(1.2 * maxSize / blockSize),
-        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
-        DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
-        DEFAULT_SINGLE_FACTOR,
-        DEFAULT_MULTI_FACTOR,
-        DEFAULT_MEMORY_FACTOR,
-        DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
-        false,
-        DEFAULT_MAX_BLOCK_SIZE);
+    this(maxSize, blockSize, evictionThread, (int) Math.ceil(1.2 * maxSize / blockSize),
+        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL, DEFAULT_MIN_FACTOR,
+        DEFAULT_ACCEPTABLE_FACTOR, DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
+        DEFAULT_MEMORY_FACTOR, DEFAULT_HARD_CAPACITY_LIMIT_FACTOR, false, DEFAULT_MAX_BLOCK_SIZE);
   }
 
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
-    this(maxSize, blockSize, evictionThread,
-        (int) Math.ceil(1.2 * maxSize / blockSize),
-        DEFAULT_LOAD_FACTOR,
-        DEFAULT_CONCURRENCY_LEVEL,
+    this(maxSize, blockSize, evictionThread, (int) Math.ceil(1.2 * maxSize / blockSize),
+        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
         conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
         conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
         conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
         conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
         conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
         conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
-                      DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
+          DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
         conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
         conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE));
   }
@@ -276,30 +265,28 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Configurable constructor.  Use this constructor if not using defaults.
-   *
-   * @param maxSize             maximum size of this cache, in bytes
-   * @param blockSize           expected average size of blocks, in bytes
-   * @param evictionThread      whether to run evictions in a bg thread or not
-   * @param mapInitialSize      initial size of backing ConcurrentHashMap
-   * @param mapLoadFactor       initial load factor of backing ConcurrentHashMap
+   * Configurable constructor. Use this constructor if not using defaults.
+   * @param maxSize maximum size of this cache, in bytes
+   * @param blockSize expected average size of blocks, in bytes
+   * @param evictionThread whether to run evictions in a bg thread or not
+   * @param mapInitialSize initial size of backing ConcurrentHashMap
+   * @param mapLoadFactor initial load factor of backing ConcurrentHashMap
    * @param mapConcurrencyLevel initial concurrency factor for backing CHM
-   * @param minFactor           percentage of total size that eviction will evict until
-   * @param acceptableFactor    percentage of total size that triggers eviction
-   * @param singleFactor        percentage of total size for single-access blocks
-   * @param multiFactor         percentage of total size for multiple-access blocks
-   * @param memoryFactor        percentage of total size for in-memory blocks
+   * @param minFactor percentage of total size that eviction will evict until
+   * @param acceptableFactor percentage of total size that triggers eviction
+   * @param singleFactor percentage of total size for single-access blocks
+   * @param multiFactor percentage of total size for multiple-access blocks
+   * @param memoryFactor percentage of total size for in-memory blocks
    */
-  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
-      int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
-      float minFactor, float acceptableFactor, float singleFactor,
-      float multiFactor, float memoryFactor, float hardLimitFactor,
+  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, int mapInitialSize,
+      float mapLoadFactor, int mapConcurrencyLevel, float minFactor, float acceptableFactor,
+      float singleFactor, float multiFactor, float memoryFactor, float hardLimitFactor,
       boolean forceInMemory, long maxBlockSize) {
     this.maxBlockSize = maxBlockSize;
-    if(singleFactor + multiFactor + memoryFactor != 1 ||
-        singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
-      throw new IllegalArgumentException("Single, multi, and memory factors " +
-          " should be non-negative and total 1.0");
+    if (singleFactor + multiFactor + memoryFactor != 1 || singleFactor < 0 || multiFactor < 0
+        || memoryFactor < 0) {
+      throw new IllegalArgumentException(
+          "Single, multi, and memory factors " + " should be non-negative and total 1.0");
     }
     if (minFactor >= acceptableFactor) {
       throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");
@@ -330,10 +317,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
     } else {
       this.evictionThread = null;
     }
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
+    // TODO: Add means of turning this off. Bit obnoxious running thread just to make a log
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
-                                                STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+      STAT_THREAD_PERIOD, TimeUnit.SECONDS);
   }
 
   @Override
@@ -385,9 +372,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * <p>
    * It is assumed this will NOT be called on an already cached block. In rare cases (HBASE-8547)
    * this can happen, for which we compare the buffer contents.
-   *
    * @param cacheKey block's cache key
-   * @param buf      block buffer
+   * @param buf block buffer
    * @param inMemory if block is in-memory
    */
   @Override
@@ -397,11 +383,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
       // big this can make the logs way too noisy.
       // So we log 2%
       if (stats.failInsert() % 50 == 0) {
-        LOG.warn("Trying to cache too large a block "
-            + cacheKey.getHfileName() + " @ "
-            + cacheKey.getOffset()
-            + " is " + buf.heapSize()
-            + " which is larger than " + maxBlockSize);
+        LOG.warn("Trying to cache too large a block " + cacheKey.getHfileName() + " @ "
+            + cacheKey.getOffset() + " is " + buf.heapSize() + " which is larger than "
+            + maxBlockSize);
       }
       return;
     }
@@ -417,9 +401,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
       stats.failInsert();
       if (LOG.isTraceEnabled()) {
         LOG.trace("LruBlockCache current size " + StringUtils.byteDesc(currentSize)
-          + " has exceeded acceptable size " + StringUtils.byteDesc(currentAcceptableSize) + "."
-          + " The hard limit size is " + StringUtils.byteDesc(hardLimitSize)
-          + ", failed to put cacheKey:" + cacheKey + " into LruBlockCache.");
+            + " has exceeded acceptable size " + StringUtils.byteDesc(currentAcceptableSize) + "."
+            + " The hard limit size is " + StringUtils.byteDesc(hardLimitSize)
+            + ", failed to put cacheKey:" + cacheKey + " into LruBlockCache.");
       }
       if (!evictionInProgress) {
         runEviction();
@@ -445,20 +429,20 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Sanity-checking for parity between actual block cache content and metrics.
-   * Intended only for use with TRACE level logging and -ea JVM.
+   * Sanity-checking for parity between actual block cache content and metrics. Intended only for
+   * use with TRACE level logging and -ea JVM.
    */
   private static void assertCounterSanity(long mapSize, long counterVal) {
     if (counterVal < 0) {
-      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal +
-        ", mapSize=" + mapSize);
+      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal
+          + ", mapSize=" + mapSize);
       return;
     }
     if (mapSize < Integer.MAX_VALUE) {
       double pct_diff = Math.abs((((double) counterVal) / ((double) mapSize)) - 1.);
       if (pct_diff > 0.05) {
-        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal +
-          ", mapSize=" + mapSize);
+        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal
+            + ", mapSize=" + mapSize);
       }
     }
   }
@@ -479,9 +463,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Helper function that updates the local size counter and also updates any
-   * per-cf or per-blocktype metrics it can discern from given
-   * {@link LruCachedBlock}
+   * Helper function that updates the local size counter and also updates any per-cf or
+   * per-blocktype metrics it can discern from given {@link LruCachedBlock}
    */
   private long updateSizeMetrics(LruCachedBlock cb, boolean evict) {
     long heapsize = cb.heapSize();
@@ -497,14 +480,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Get the buffer of the block with the specified name.
-   *
-   * @param cacheKey           block's cache key
-   * @param caching            true if the caller caches blocks on cache misses
-   * @param repeat             Whether this is a repeat lookup for the same block
-   *                           (used to avoid double counting cache misses when doing double-check
-   *                           locking)
+   * @param cacheKey block's cache key
+   * @param caching true if the caller caches blocks on cache misses
+   * @param repeat Whether this is a repeat lookup for the same block (used to avoid double counting
+   *          cache misses when doing double-check locking)
    * @param updateCacheMetrics Whether to update cache metrics or not
-   *
    * @return buffer of specified cache key, or null if not in cache
    */
   @Override
@@ -547,7 +527,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Whether the cache contains block with specified cacheKey
-   *
    * @return true if contains the block
    */
   @Override
@@ -562,13 +541,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Evicts all blocks for a specific HFile. This is an
-   * expensive operation implemented as a linear-time search through all blocks
-   * in the cache. Ideally this should be a search in a log-access-time map.
-   *
+   * Evicts all blocks for a specific HFile. This is an expensive operation implemented as a
+   * linear-time search through all blocks in the cache. Ideally this should be a search in a
+   * log-access-time map.
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
-   *
    * @return the number of blocks evicted
    */
   @Override
@@ -588,11 +565,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Evict the block, and it will be cached by the victim handler if exists &amp;&amp;
-   * block may be read again later
-   *
-   * @param evictedByEvictionProcess true if the given block is evicted by
-   *          EvictionThread
+   * Evict the block, and it will be cached by the victim handler if exists &amp;&amp; block may be
+   * read again later
+   * @param evictedByEvictionProcess true if the given block is evicted by EvictionThread
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
@@ -659,9 +634,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
       long bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Block cache LRU eviction started; Attempting to free " +
-          StringUtils.byteDesc(bytesToFree) + " of total=" +
-          StringUtils.byteDesc(currentSize));
+        LOG.trace("Block cache LRU eviction started; Attempting to free "
+            + StringUtils.byteDesc(bytesToFree) + " of total=" + StringUtils.byteDesc(currentSize));
       }
 
       if (bytesToFree <= 0) {
@@ -701,13 +675,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
           bytesFreed = bucketSingle.free(s);
           bytesFreed += bucketMulti.free(m);
           if (LOG.isTraceEnabled()) {
-            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
-              " from single and multi buckets");
+            LOG.trace(
+              "freed " + StringUtils.byteDesc(bytesFreed) + " from single and multi buckets");
           }
           bytesFreed += bucketMemory.free(bytesToFree - bytesFreed);
           if (LOG.isTraceEnabled()) {
-            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
-              " total from all three buckets ");
+            LOG.trace(
+              "freed " + StringUtils.byteDesc(bytesFreed) + " total from all three buckets ");
           }
         } else {
           // this means no need to evict block in memory bucket,
@@ -754,12 +728,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
         long single = bucketSingle.totalSize();
         long multi = bucketMulti.totalSize();
         long memory = bucketMemory.totalSize();
-        LOG.trace("Block cache LRU eviction completed; " +
-          "freed=" + StringUtils.byteDesc(bytesFreed) + ", " +
-          "total=" + StringUtils.byteDesc(this.size.get()) + ", " +
-          "single=" + StringUtils.byteDesc(single) + ", " +
-          "multi=" + StringUtils.byteDesc(multi) + ", " +
-          "memory=" + StringUtils.byteDesc(memory));
+        LOG.trace(
+          "Block cache LRU eviction completed; " + "freed=" + StringUtils.byteDesc(bytesFreed)
+              + ", " + "total=" + StringUtils.byteDesc(this.size.get()) + ", " + "single="
+              + StringUtils.byteDesc(single) + ", " + "multi=" + StringUtils.byteDesc(multi) + ", "
+              + "memory=" + StringUtils.byteDesc(memory));
       }
     } finally {
       stats.evict();
@@ -770,26 +743,21 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-      .add("blockCount", getBlockCount())
-      .add("currentSize", StringUtils.byteDesc(getCurrentSize()))
-      .add("freeSize", StringUtils.byteDesc(getFreeSize()))
-      .add("maxSize", StringUtils.byteDesc(getMaxSize()))
-      .add("heapSize", StringUtils.byteDesc(heapSize()))
-      .add("minSize", StringUtils.byteDesc(minSize()))
-      .add("minFactor", minFactor)
-      .add("multiSize", StringUtils.byteDesc(multiSize()))
-      .add("multiFactor", multiFactor)
-      .add("singleSize", StringUtils.byteDesc(singleSize()))
-      .add("singleFactor", singleFactor)
-      .toString();
+    return MoreObjects.toStringHelper(this).add("blockCount", getBlockCount())
+        .add("currentSize", StringUtils.byteDesc(getCurrentSize()))
+        .add("freeSize", StringUtils.byteDesc(getFreeSize()))
+        .add("maxSize", StringUtils.byteDesc(getMaxSize()))
+        .add("heapSize", StringUtils.byteDesc(heapSize()))
+        .add("minSize", StringUtils.byteDesc(minSize())).add("minFactor", minFactor)
+        .add("multiSize", StringUtils.byteDesc(multiSize())).add("multiFactor", multiFactor)
+        .add("singleSize", StringUtils.byteDesc(singleSize())).add("singleFactor", singleFactor)
+        .toString();
   }
 
   /**
-   * Used to group blocks into priority buckets.  There will be a BlockBucket
-   * for each priority (single, multi, memory).  Once bucketed, the eviction
-   * algorithm takes the appropriate number of elements out of each according
-   * to configuration parameters and their relatives sizes.
+   * Used to group blocks into priority buckets. There will be a BlockBucket for each priority
+   * (single, multi, memory). Once bucketed, the eviction algorithm takes the appropriate number of
+   * elements out of each according to configuration parameters and their relatives sizes.
    */
   private class BlockBucket implements Comparable<BlockBucket> {
 
@@ -846,7 +814,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       if (that == null || !(that instanceof BlockBucket)) {
         return false;
       }
-      return compareTo((BlockBucket)that) == 0;
+      return compareTo((BlockBucket) that) == 0;
     }
 
     @Override
@@ -856,17 +824,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-        .add("name", name)
-        .add("totalSize", StringUtils.byteDesc(totalSize))
-        .add("bucketSize", StringUtils.byteDesc(bucketSize))
-        .toString();
+      return MoreObjects.toStringHelper(this).add("name", name)
+          .add("totalSize", StringUtils.byteDesc(totalSize))
+          .add("bucketSize", StringUtils.byteDesc(bucketSize)).toString();
     }
   }
 
   /**
    * Get the maximum size of this cache.
-   *
    * @return max size in bytes
    */
 
@@ -910,10 +875,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /*
-   * Eviction thread.  Sits in waiting state until an eviction is triggered
-   * when the cache size grows above the acceptable level.<p>
-   *
-   * Thread is triggered into action by {@link LruBlockCache#runEviction()}
+   * Eviction thread. Sits in waiting state until an eviction is triggered when the cache size grows
+   * above the acceptable level.<p> Thread is triggered into action by {@link
+   * LruBlockCache#runEviction()}
    */
   static class EvictionThread extends Thread {
 
@@ -934,7 +898,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       while (this.go) {
         synchronized (this) {
           try {
-            this.wait(1000 * 10/*Don't wait for ever*/);
+            this.wait(1000 * 10/* Don't wait for ever */);
           } catch (InterruptedException e) {
             LOG.warn("Interrupted eviction thread ", e);
             Thread.currentThread().interrupt();
@@ -949,8 +913,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
       }
     }
 
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
-        justification="This is what we want")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NN_NAKED_NOTIFY",
+        justification = "This is what we want")
     public void evict() {
       synchronized (this) {
         this.notifyAll();
@@ -975,7 +939,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /*
-   * Statistics thread.  Periodically prints the cache statistics to the log.
+   * Statistics thread. Periodically prints the cache statistics to the log.
    */
   static class StatisticsThread extends Thread {
 
@@ -997,28 +961,24 @@ public class LruBlockCache implements FirstLevelBlockCache {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
-        "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
-        "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
-        "blockCount=" + getBlockCount() + ", " +
-        "accesses=" + stats.getRequestCount() + ", " +
-        "hits=" + stats.getHitCount() + ", " +
-        "hitRatio=" + (stats.getHitCount() == 0 ?
-          "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
-        "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
-        "cachingHits=" + stats.getHitCachingCount() + ", " +
-        "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
-          "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
-        "evictions=" + stats.getEvictionCount() + ", " +
-        "evicted=" + stats.getEvictedCount() + ", " +
-        "evictedPerRun=" + stats.evictedPerEviction());
+    LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " + "freeSize="
+        + StringUtils.byteDesc(freeSize) + ", " + "max=" + StringUtils.byteDesc(this.maxSize) + ", "
+        + "blockCount=" + getBlockCount() + ", " + "accesses=" + stats.getRequestCount() + ", "
+        + "hits=" + stats.getHitCount() + ", " + "hitRatio="
+        + (stats.getHitCount() == 0 ? "0"
+            : (StringUtils.formatPercent(stats.getHitRatio(), 2) + ", "))
+        + ", " + "cachingAccesses=" + stats.getRequestCachingCount() + ", " + "cachingHits="
+        + stats.getHitCachingCount() + ", " + "cachingHitsRatio="
+        + (stats.getHitCachingCount() == 0 ? "0,"
+            : (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", "))
+        + "evictions=" + stats.getEvictionCount() + ", " + "evicted=" + stats.getEvictedCount()
+        + ", " + "evictedPerRun=" + stats.evictedPerEviction());
   }
 
   /**
    * Get counter statistics for this cache.
-   *
-   * <p>Includes: total accesses, hits, misses, evicted blocks, and runs
-   * of the eviction processes.
+   * <p>
+   * Includes: total accesses, hits, misses, evicted blocks, and runs of the eviction processes.
    */
   @Override
   public CacheStats getStats() {
@@ -1036,8 +996,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static long calculateOverhead(long maxSize, long blockSize, int concurrency) {
     // FindBugs ICAST_INTEGER_MULTIPLY_CAST_TO_LONG
     return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
-           + ((long) Math.ceil(maxSize * 1.2 / blockSize) * ClassSize.CONCURRENT_HASHMAP_ENTRY)
-           + ((long) concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+        + ((long) Math.ceil(maxSize * 1.2 / blockSize) * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+        + ((long) concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
 
   @Override
@@ -1115,7 +1075,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           @Override
           public boolean equals(Object obj) {
             if (obj instanceof CachedBlock) {
-              CachedBlock cb = (CachedBlock)obj;
+              CachedBlock cb = (CachedBlock) obj;
               return compareTo(cb) == 0;
             } else {
               return false;
@@ -1134,17 +1094,21 @@ public class LruBlockCache implements FirstLevelBlockCache {
   // Simple calculators of sizes given factors and maxSize
 
   long acceptableSize() {
-    return (long)Math.floor(this.maxSize * this.acceptableFactor);
+    return (long) Math.floor(this.maxSize * this.acceptableFactor);
   }
+
   private long minSize() {
-    return (long)Math.floor(this.maxSize * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.minFactor);
   }
+
   private long singleSize() {
-    return (long)Math.floor(this.maxSize * this.singleFactor * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.singleFactor * this.minFactor);
   }
+
   private long multiSize() {
-    return (long)Math.floor(this.maxSize * this.multiFactor * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.multiFactor * this.minFactor);
   }
+
   private long memorySize() {
     return (long) Math.floor(this.maxSize * this.memoryFactor * this.minFactor);
   }
@@ -1182,7 +1146,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Used in testing. May be very inefficient.
-   *
    * @return the set of cached file names
    */
   SortedSet<String> getCachedFileNamesForTest() {

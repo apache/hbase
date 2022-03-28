@@ -61,13 +61,13 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
    * The default value for initial refresh delay is 1/10 of periodic refresh interval.
    */
   public static final String INITIAL_REFRESH_DELAY_SECS =
-    "hbase.client.bootstrap.initial_refresh_delay_secs";
+      "hbase.client.bootstrap.initial_refresh_delay_secs";
 
   public static final String PERIODIC_REFRESH_INTERVAL_SECS =
-    "hbase.client.bootstrap.refresh_interval_secs";
+      "hbase.client.bootstrap.refresh_interval_secs";
 
   public static final String MIN_SECS_BETWEEN_REFRESHES =
-    "hbase.client.bootstrap.min_secs_between_refreshes";
+      "hbase.client.bootstrap.min_secs_between_refreshes";
 
   public static final String BOOTSTRAP_NODES = "hbase.client.bootstrap.servers";
 
@@ -77,7 +77,7 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
   RpcConnectionRegistry(Configuration conf) throws IOException {
     super(conf, HEDGED_REQS_FANOUT_KEY, INITIAL_REFRESH_DELAY_SECS, PERIODIC_REFRESH_INTERVAL_SECS,
-      MIN_SECS_BETWEEN_REFRESHES);
+        MIN_SECS_BETWEEN_REFRESHES);
     connectionString = buildConnectionString(conf);
   }
 
@@ -86,10 +86,8 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
     if (StringUtils.isBlank(configuredBootstrapNodes)) {
       return MasterRegistry.getConnectionString(conf);
     }
-    return Splitter.on(ADDRS_CONF_SEPARATOR)
-      .trimResults()
-      .splitToStream(configuredBootstrapNodes)
-      .collect(Collectors.joining(String.valueOf(ADDRS_CONF_SEPARATOR)));
+    return Splitter.on(ADDRS_CONF_SEPARATOR).trimResults().splitToStream(configuredBootstrapNodes)
+        .collect(Collectors.joining(String.valueOf(ADDRS_CONF_SEPARATOR)));
   }
 
   @Override
@@ -98,8 +96,8 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
     String configuredBootstrapNodes = conf.get(BOOTSTRAP_NODES);
     if (!StringUtils.isBlank(configuredBootstrapNodes)) {
       return Splitter.on(ADDRS_CONF_SEPARATOR).trimResults().splitToStream(configuredBootstrapNodes)
-        .map(addr -> ServerName.valueOf(addr, ServerName.NON_STARTCODE))
-        .collect(Collectors.toSet());
+          .map(addr -> ServerName.valueOf(addr, ServerName.NON_STARTCODE))
+          .collect(Collectors.toSet());
     } else {
       // otherwise, just use master addresses
       return MasterRegistry.parseMasterAddrs(conf);
@@ -113,15 +111,15 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
   private static Set<ServerName> transformServerNames(GetBootstrapNodesResponse resp) {
     return resp.getServerNameList().stream().map(ProtobufUtil::toServerName)
-      .collect(Collectors.toSet());
+        .collect(Collectors.toSet());
   }
 
   private CompletableFuture<Set<ServerName>> getBootstrapNodes() {
     return this
-      .<GetBootstrapNodesResponse> call(
-        (c, s, d) -> s.getBootstrapNodes(c, GetBootstrapNodesRequest.getDefaultInstance(), d),
-        r -> r.getServerNameCount() != 0, "getBootstrapNodes()")
-      .thenApply(RpcConnectionRegistry::transformServerNames);
+        .<GetBootstrapNodesResponse> call(
+          (c, s, d) -> s.getBootstrapNodes(c, GetBootstrapNodesRequest.getDefaultInstance(), d),
+          r -> r.getServerNameCount() != 0, "getBootstrapNodes()")
+        .thenApply(RpcConnectionRegistry::transformServerNames);
   }
 
   @Override

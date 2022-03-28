@@ -62,8 +62,8 @@ public class TestMetaShutdownHandler {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numRegionServers(3).rsClass(MyRegionServer.class).numDataNodes(3).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(3)
+        .rsClass(MyRegionServer.class).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -73,13 +73,10 @@ public class TestMetaShutdownHandler {
   }
 
   /**
-   * This test will test the expire handling of a meta-carrying
-   * region server.
-   * After HBaseMiniCluster is up, we will delete the ephemeral
-   * node of the meta-carrying region server, which will trigger
-   * the expire of this region server on the master.
-   * On the other hand, we will slow down the abort process on
-   * the region server so that it is still up during the master SSH.
+   * This test will test the expire handling of a meta-carrying region server. After
+   * HBaseMiniCluster is up, we will delete the ephemeral node of the meta-carrying region server,
+   * which will trigger the expire of this region server on the master. On the other hand, we will
+   * slow down the abort process on the region server so that it is still up during the master SSH.
    * We will check that the master SSH is still successfully done.
    */
   @Test
@@ -88,17 +85,17 @@ public class TestMetaShutdownHandler {
     HMaster master = cluster.getMaster();
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     ServerName metaServerName =
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    if (master.getServerName().equals(metaServerName) || metaServerName == null ||
-      !metaServerName.equals(cluster.getServerHoldingMeta())) {
+        regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    if (master.getServerName().equals(metaServerName) || metaServerName == null
+        || !metaServerName.equals(cluster.getServerHoldingMeta())) {
       // Move meta off master
       metaServerName =
-        cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
+          cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
       master.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(metaServerName.getServerName()));
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       metaServerName =
-        regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+          regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
     }
     RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
     assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
@@ -107,9 +104,8 @@ public class TestMetaShutdownHandler {
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
-    String rsEphemeralNodePath =
-        ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
-                metaServerName.toString());
+    String rsEphemeralNodePath = ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
+      metaServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
     LOG.info("Deleted the znode for the RegionServer hosting hbase:meta; waiting on SSH");
     // Wait for SSH to finish
@@ -139,8 +135,8 @@ public class TestMetaShutdownHandler {
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {
 
-    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
-        InterruptedException {
+    public MyRegionServer(Configuration conf)
+        throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 
@@ -148,7 +144,7 @@ public class TestMetaShutdownHandler {
     public void abort(String reason, Throwable cause) {
       // sleep to slow down the region server abort
       try {
-        Thread.sleep(30*1000);
+        Thread.sleep(30 * 1000);
       } catch (InterruptedException e) {
         return;
       }

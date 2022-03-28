@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,9 +39,11 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos;
@@ -74,9 +76,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Rena
  * Implementation of RSGroupAdminService defined in RSGroupAdmin.proto. This class calls
  * {@link RSGroupInfoManagerImpl} for actual work, converts result to protocol buffer response,
  * handles exceptions if any occurred and then calls the {@code RpcCallback} with the response.
- *
- * @deprecated Keep it here only for compatibility with {@link RSGroupAdminClient},
- *     using {@link org.apache.hadoop.hbase.master.MasterRpcServices} instead.
+ * @deprecated Keep it here only for compatibility with {@link RSGroupAdminClient}, using
+ *             {@link org.apache.hadoop.hbase.master.MasterRpcServices} instead.
  */
 @Deprecated
 class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
@@ -90,7 +91,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
   RSGroupAdminServiceImpl() {
   }
 
-  void initialize(MasterServices masterServices){
+  void initialize(MasterServices masterServices) {
     this.master = masterServices;
     this.rsGroupInfoManager = masterServices.getRSGroupInfoManager();
   }
@@ -136,7 +137,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
         master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
       }
       Optional<RSGroupInfo> optGroup =
-        RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
+          RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
       if (optGroup.isPresent()) {
         builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(optGroup.get())));
       } else {
@@ -163,8 +164,8 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     for (HBaseProtos.ServerName el : request.getServersList()) {
       hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
     }
-    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup " +
-        request.getTargetGroup());
+    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup "
+        + request.getTargetGroup());
     try {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
@@ -208,8 +209,8 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     for (HBaseProtos.TableName tableName : request.getTableNameList()) {
       tables.add(ProtobufUtil.toTableName(tableName));
     }
-    LOG.info(master.getClientIdAuditPrefix() + " move tables " + tables + " to rsgroup " +
-        request.getTargetGroup());
+    LOG.info(master.getClientIdAuditPrefix() + " move tables " + tables + " to rsgroup "
+        + request.getTargetGroup());
     try {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveTables(tables, request.getTargetGroup());
@@ -266,24 +267,24 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
   public void balanceRSGroup(RpcController controller, BalanceRSGroupRequest request,
       RpcCallback<BalanceRSGroupResponse> done) {
     BalanceRequest balanceRequest = ProtobufUtil.toBalanceRequest(request);
-    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder()
-      .setBalanceRan(false);
+    BalanceRSGroupResponse.Builder builder =
+        BalanceRSGroupResponse.newBuilder().setBalanceRan(false);
 
     LOG.info(
       master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
     try {
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost()
-          .preBalanceRSGroup(request.getRSGroupName(), balanceRequest);
+        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName(),
+          balanceRequest);
       }
 
       BalanceResponse response =
-        rsGroupInfoManager.balanceRSGroup(request.getRSGroupName(), balanceRequest);
+          rsGroupInfoManager.balanceRSGroup(request.getRSGroupName(), balanceRequest);
       ProtobufUtil.populateBalanceRSGroupResponse(builder, response);
 
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost()
-          .postBalanceRSGroup(request.getRSGroupName(), balanceRequest, response);
+        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(),
+          balanceRequest, response);
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -362,8 +363,8 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     for (HBaseProtos.TableName tableName : request.getTableNameList()) {
       tables.add(ProtobufUtil.toTableName(tableName));
     }
-    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " and tables " +
-        tables + " to rsgroup" + request.getTargetGroup());
+    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " and tables "
+        + tables + " to rsgroup" + request.getTargetGroup());
     try {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveServersAndTables(hostPorts, tables,
@@ -410,8 +411,8 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       RpcCallback<RenameRSGroupResponse> done) {
     String oldRSGroup = request.getOldRsgroupName();
     String newRSGroup = request.getNewRsgroupName();
-    LOG.info("{} rename rsgroup from {} to {}",
-      master.getClientIdAuditPrefix(), oldRSGroup, newRSGroup);
+    LOG.info("{} rename rsgroup from {} to {}", master.getClientIdAuditPrefix(), oldRSGroup,
+      newRSGroup);
 
     RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
     try {

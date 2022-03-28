@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
@@ -39,58 +38,54 @@ import org.slf4j.LoggerFactory;
 public final class ZKAuthentication {
   private static final Logger LOG = LoggerFactory.getLogger(ZKAuthentication.class);
 
-  private ZKAuthentication() {}
-
-  /**
-   * Log in the current zookeeper server process using the given configuration
-   * keys for the credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
-   * </p>
-   *
-   * @param conf The configuration data to use
-   * @param keytabFileKey Property key used to configure the path to the credential file
-   * @param userNameKey Property key used to configure the login principal
-   * @param hostname Current hostname to use in any credentials
-   * @throws IOException underlying exception from SecurityUtil.login() call
-   */
-  public static void loginServer(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname) throws IOException {
-    login(conf, keytabFileKey, userNameKey, hostname,
-          ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY,
-          JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME);
+  private ZKAuthentication() {
   }
 
   /**
-   * Log in the current zookeeper client using the given configuration
-   * keys for the credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
-   * </p>
-   *
-   * @param conf The configuration data to use
-   * @param keytabFileKey Property key used to configure the path to the credential file
-   * @param userNameKey Property key used to configure the login principal
-   * @param hostname Current hostname to use in any credentials
-   * @throws IOException underlying exception from SecurityUtil.login() call
-   */
-  public static void loginClient(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname) throws IOException {
-    login(conf, keytabFileKey, userNameKey, hostname,
-          ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-          JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME);
-  }
-
-  /**
-   * Log in the current process using the given configuration keys for the
+   * Log in the current zookeeper server process using the given configuration keys for the
    * credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
+   * <p>
+   * <strong>This is only applicable when running on secure hbase</strong> On regular HBase (without
+   * security features), this will safely be ignored.
    * </p>
-   *
+   * @param conf The configuration data to use
+   * @param keytabFileKey Property key used to configure the path to the credential file
+   * @param userNameKey Property key used to configure the login principal
+   * @param hostname Current hostname to use in any credentials
+   * @throws IOException underlying exception from SecurityUtil.login() call
+   */
+  public static void loginServer(Configuration conf, String keytabFileKey, String userNameKey,
+      String hostname) throws IOException {
+    login(conf, keytabFileKey, userNameKey, hostname, ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY,
+      JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME);
+  }
+
+  /**
+   * Log in the current zookeeper client using the given configuration keys for the credential file
+   * and login principal.
+   * <p>
+   * <strong>This is only applicable when running on secure hbase</strong> On regular HBase (without
+   * security features), this will safely be ignored.
+   * </p>
+   * @param conf The configuration data to use
+   * @param keytabFileKey Property key used to configure the path to the credential file
+   * @param userNameKey Property key used to configure the login principal
+   * @param hostname Current hostname to use in any credentials
+   * @throws IOException underlying exception from SecurityUtil.login() call
+   */
+  public static void loginClient(Configuration conf, String keytabFileKey, String userNameKey,
+      String hostname) throws IOException {
+    login(conf, keytabFileKey, userNameKey, hostname, ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
+      JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME);
+  }
+
+  /**
+   * Log in the current process using the given configuration keys for the credential file and login
+   * principal.
+   * <p>
+   * <strong>This is only applicable when running on secure hbase</strong> On regular HBase (without
+   * security features), this will safely be ignored.
+   * </p>
    * @param conf The configuration data to use
    * @param keytabFileKey Property key used to configure the path to the credential file
    * @param userNameKey Property key used to configure the login principal
@@ -99,10 +94,8 @@ public final class ZKAuthentication {
    * @param loginContextName jaas entry name
    * @throws IOException underlying exception from SecurityUtil.login() call
    */
-  private static void login(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname,
-      String loginContextProperty, String loginContextName)
-      throws IOException {
+  private static void login(Configuration conf, String keytabFileKey, String userNameKey,
+      String hostname, String loginContextProperty, String loginContextName) throws IOException {
     if (!isSecureZooKeeper(conf)) {
       return;
     }
@@ -126,16 +119,15 @@ public final class ZKAuthentication {
     // Initialize the "jaas.conf" for keyTab/principal,
     // If keyTab is not specified use the Ticket Cache.
     // and set the zookeeper login context name.
-    JaasConfiguration jaasConf = new JaasConfiguration(loginContextName,
-        principalName, keytabFilename);
+    JaasConfiguration jaasConf =
+        new JaasConfiguration(loginContextName, principalName, keytabFilename);
     javax.security.auth.login.Configuration.setConfiguration(jaasConf);
     System.setProperty(loginContextProperty, loginContextName);
   }
 
   /**
-   * Returns {@code true} when secure authentication is enabled
-   * (whether {@code hbase.security.authentication} is set to
-   * "{@code kerberos}").
+   * Returns {@code true} when secure authentication is enabled (whether
+   * {@code hbase.security.authentication} is set to "{@code kerberos}").
    */
   public static boolean isSecureZooKeeper(Configuration conf) {
     // Detection for embedded HBase client with jaas configuration
@@ -147,13 +139,13 @@ public final class ZKAuthentication {
           && testConfig.getAppConfigurationEntry(
             JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME) == null
           && testConfig.getAppConfigurationEntry(
-              JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null
+            JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null
           && conf.get(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL) == null
           && conf.get(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL) == null) {
 
         return false;
       }
-    } catch(Exception e) {
+    } catch (Exception e) {
       // No Jaas configuration defined.
       return false;
     }
@@ -169,9 +161,9 @@ public final class ZKAuthentication {
     private static final Logger LOG = LoggerFactory.getLogger(JaasConfiguration.class);
 
     public static final String SERVER_KEYTAB_KERBEROS_CONFIG_NAME =
-      "zookeeper-server-keytab-kerberos";
+        "zookeeper-server-keytab-kerberos";
     public static final String CLIENT_KEYTAB_KERBEROS_CONFIG_NAME =
-      "zookeeper-client-keytab-kerberos";
+        "zookeeper-client-keytab-kerberos";
 
     private static final Map<String, String> BASIC_JAAS_OPTIONS = new HashMap<>();
 
@@ -192,11 +184,11 @@ public final class ZKAuthentication {
     }
 
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
-      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
-        AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, KEYTAB_KERBEROS_OPTIONS);
+        new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
+            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, KEYTAB_KERBEROS_OPTIONS);
 
     private static final AppConfigurationEntry[] KEYTAB_KERBEROS_CONF =
-      new AppConfigurationEntry[] { KEYTAB_KERBEROS_LOGIN };
+        new AppConfigurationEntry[] { KEYTAB_KERBEROS_LOGIN };
 
     private javax.security.auth.login.Configuration baseConfig;
     private final String loginContextName;
@@ -209,7 +201,7 @@ public final class ZKAuthentication {
     }
 
     private JaasConfiguration(String loginContextName, String principal, String keytabFile,
-      boolean useTicketCache) {
+        boolean useTicketCache) {
       try {
         this.baseConfig = javax.security.auth.login.Configuration.getConfiguration();
       } catch (SecurityException e) {
@@ -219,12 +211,12 @@ public final class ZKAuthentication {
       this.useTicketCache = useTicketCache;
       this.keytabFile = keytabFile;
       this.principal = principal;
-      LOG.info(
-        "JaasConfiguration loginContextName={} principal={} useTicketCache={} keytabFile={}",
+      LOG.info("JaasConfiguration loginContextName={} principal={} useTicketCache={} keytabFile={}",
         loginContextName, principal, useTicketCache, keytabFile);
     }
 
-    @Override public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
       if (loginContextName.equals(appName)) {
         if (!useTicketCache) {
           KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);

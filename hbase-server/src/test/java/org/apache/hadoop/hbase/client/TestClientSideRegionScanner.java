@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +44,7 @@ import org.junit.experimental.categories.Category;
 public class TestClientSideRegionScanner {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientSideRegionScanner.class);
+      HBaseClassTestRule.forClass(TestClientSideRegionScanner.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -78,13 +79,13 @@ public class TestClientSideRegionScanner {
   public void testDefaultBlockCache() throws IOException {
     Configuration copyConf = new Configuration(conf);
     ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
+        new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
     assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
     assertTrue(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT == blockCache
-      .getMaxSize());
+        .getMaxSize());
   }
 
   @Test
@@ -94,7 +95,7 @@ public class TestClientSideRegionScanner {
     long blockCacheFixedSize = 1024 * 1024L;
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
     ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
+        new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
@@ -107,7 +108,7 @@ public class TestClientSideRegionScanner {
     Configuration copyConf = new Configuration(conf);
     copyConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
+        new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNull(blockCache);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,7 +77,7 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
 
   @Override
   protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
+      Collection<StoreFileInfo> newFiles) throws IOException {
     src.doAddCompactionResults(compactedFiles, newFiles);
     dst.doAddCompactionResults(compactedFiles, newFiles);
   }
@@ -85,7 +85,7 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   @Override
   protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
     throw new UnsupportedOperationException(
-      "Should not call this method on " + getClass().getSimpleName());
+        "Should not call this method on " + getClass().getSimpleName());
   }
 
   static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {

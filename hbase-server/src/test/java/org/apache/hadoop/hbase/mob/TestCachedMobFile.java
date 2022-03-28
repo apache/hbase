@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,9 +66,9 @@ public class TestCachedMobFile {
     String caseName = testName.getMethodName();
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(testDir).withFileContext(meta).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
+        .withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile = CachedMobFile.create(fs, writer.getPath(), conf, cacheConf);
     assertEquals(EXPECTED_REFERENCE_ZERO, cachedMobFile.getReferenceCount());
@@ -96,9 +96,7 @@ public class TestCachedMobFile {
     CachedMobFile cachedMobFile1 = CachedMobFile.create(fs, writer1.getPath(), conf, cacheConf);
     Path outputDir2 = new Path(testDir, FAMILY2);
     StoreFileWriter writer2 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(outputDir2)
-        .withFileContext(meta)
-        .build();
+        .withOutputDir(outputDir2).withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer2, caseName);
     CachedMobFile cachedMobFile2 = CachedMobFile.create(fs, writer2.getPath(), conf, cacheConf);
     cachedMobFile1.access(1);

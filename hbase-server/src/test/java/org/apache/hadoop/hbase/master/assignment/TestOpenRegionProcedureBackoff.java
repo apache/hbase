@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestOpenRegionProcedureBackoff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionProcedureBackoff.class);
+      HBaseClassTestRule.forClass(TestOpenRegionProcedureBackoff.class);
 
   private static volatile boolean FAIL = false;
 
@@ -77,7 +77,7 @@ public class TestOpenRegionProcedureBackoff {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
   }
@@ -110,9 +110,9 @@ public class TestOpenRegionProcedureBackoff {
   public void testBackoff() throws IOException, InterruptedException, ExecutionException {
     FAIL = true;
     AsyncAdmin admin = UTIL.getAsyncConnection().getAdminBuilder()
-      .setRpcTimeout(5, TimeUnit.MINUTES).setOperationTimeout(10, TimeUnit.MINUTES).build();
+        .setRpcTimeout(5, TimeUnit.MINUTES).setOperationTimeout(10, TimeUnit.MINUTES).build();
     CompletableFuture<?> future = admin.createTable(TableDescriptorBuilder.newBuilder(NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
     assertBackoffIncrease();
     FAIL = false;
     future.get();

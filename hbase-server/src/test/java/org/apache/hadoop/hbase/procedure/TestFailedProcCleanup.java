@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,9 +139,8 @@ public class TestFailedProcCleanup {
   public static class CreateFailObserverHandler implements MasterCoprocessor, MasterObserver {
 
     @Override
-    public void preCreateTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableDescriptor desc,
-        final RegionInfo[] regions) throws IOException {
+    public void preCreateTableAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableDescriptor desc, final RegionInfo[] regions) throws IOException {
 
       if (desc.getTableName().equals(TABLE)) {
         throw new AccessDeniedException("Don't allow creation of table");

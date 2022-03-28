@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationWithTags {
 
   @ClassRule
@@ -114,7 +114,7 @@ public class TestReplicationWithTags {
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTagsAtSource.class.getName());
+      TestCoprocessorForTagsAtSource.class.getName());
 
     utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
@@ -132,7 +132,7 @@ public class TestReplicationWithTags {
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-            TestCoprocessorForTagsAtSink.class.getName());
+      TestCoprocessorForTagsAtSink.class.getName());
 
     utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
@@ -143,14 +143,14 @@ public class TestReplicationWithTags {
 
     connection1 = ConnectionFactory.createConnection(conf1);
     replicationAdmin = connection1.getAdmin();
-    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(utility2.getClusterKey()).build();
+    ReplicationPeerConfig rpc =
+        ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey()).build();
     replicationAdmin.addReplicationPeer("2", rpc);
 
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .build();
     try (Connection conn = ConnectionFactory.createConnection(conf1);
         Admin admin = conn.getAdmin()) {
       admin.createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);

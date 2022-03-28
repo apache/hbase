@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,10 +59,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Testing sync/append failures.
- * Copied from TestHRegion.
+ * Testing sync/append failures. Copied from TestHRegion.
  */
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestFailedAppendAndSync {
 
   @ClassRule
@@ -71,15 +69,16 @@ public class TestFailedAppendAndSync {
       HBaseClassTestRule.forClass(TestFailedAppendAndSync.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedAppendAndSync.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";
-  private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
+  private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
 
   HRegion region = null;
-  // Do not run unit tests in parallel (? Why not?  It don't work?  Why not?  St.Ack)
+  // Do not run unit tests in parallel (? Why not? It don't work? Why not? St.Ack)
   private static HBaseTestingUtil TEST_UTIL;
-  public static Configuration CONF ;
+  public static Configuration CONF;
   private String dir;
 
   // Test names
@@ -176,11 +175,11 @@ public class TestFailedAppendAndSync {
       };
     }
   }
+
   /**
-   * Reproduce locking up that happens when we get an exceptions appending and syncing.
-   * See HBASE-14317.
-   * First I need to set up some mocks for Server and RegionServerServices. I also need to
-   * set up a dodgy WAL that will throw an exception when we go to append to it.
+   * Reproduce locking up that happens when we get an exceptions appending and syncing. See
+   * HBASE-14317. First I need to set up some mocks for Server and RegionServerServices. I also need
+   * to set up a dodgy WAL that will throw an exception when we go to append to it.
    */
   @Test
   public void testLockupAroundBadAssignSync() throws IOException {
@@ -193,7 +192,7 @@ public class TestFailedAppendAndSync {
     // the test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
-    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, (Server)services, rootDir, getName(), CONF);
+    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, (Server) services, rootDir, getName(), CONF);
     dodgyWAL.init();
     LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
@@ -313,13 +312,13 @@ public class TestFailedAppendAndSync {
   }
 
   /**
-   * @return A region on which you must call
-   *         {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} when done.
+   * @return A region on which you must call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
+   *         when done.
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       Configuration conf, WAL wal) throws IOException {
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false,
       Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
   }

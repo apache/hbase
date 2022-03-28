@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,11 +32,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedInt32 {
-  private static final Integer[] VALUES = new Integer[] {
-    1, 22, 333, 4444, 55555, 666666, 7777777, 88888888, 999999999
-  };
+  private static final Integer[] VALUES =
+      new Integer[] { 1, 22, 333, 4444, 55555, 666666, 7777777, 88888888, 999999999 };
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,13 +62,12 @@ public class TestOrderedInt32 {
   public void testEncodedLength() {
     final PositionedByteRange buffer = new SimplePositionedMutableByteRange(20);
     for (final DataType<Integer> type : new OrderedInt32[] { new OrderedInt32(Order.ASCENDING),
-      new OrderedInt32(Order.DESCENDING) }) {
+        new OrderedInt32(Order.DESCENDING) }) {
       for (final Integer val : VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals(
-            "encodedLength does not match actual, " + val,
-            buffer.getPosition(), type.encodedLength(val));
+        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
+          type.encodedLength(val));
       }
     }
   }
@@ -87,12 +85,12 @@ public class TestOrderedInt32 {
   public void testEncodedFloatLength() {
     final PositionedByteRange buffer = new SimplePositionedMutableByteRange(20);
     for (final OrderedInt32 type : new OrderedInt32[] { new OrderedInt32(Order.ASCENDING),
-      new OrderedInt32(Order.DESCENDING) }) {
+        new OrderedInt32(Order.DESCENDING) }) {
       for (final Integer val : VALUES) {
         buffer.setPosition(0);
         type.encodeInt(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val,
-            buffer.getPosition(), type.encodedLength(val));
+        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
+          type.encodedLength(val));
       }
     }
   }

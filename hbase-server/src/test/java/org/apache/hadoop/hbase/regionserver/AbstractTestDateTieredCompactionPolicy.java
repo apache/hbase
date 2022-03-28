@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -50,7 +49,8 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     for (int i = 0; i < sizes.length; i++) {
       MockHStoreFile msf =
           new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
-      msf.setTimeRangeTracker(TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
+      msf.setTimeRangeTracker(
+        TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
       ret.add(msf);
     }
     return ret;
@@ -72,7 +72,7 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     timeMachine.setValue(now);
     DateTieredCompactionRequest request;
     DateTieredCompactionPolicy policy =
-      (DateTieredCompactionPolicy) store.storeEngine.getCompactionPolicy();
+        (DateTieredCompactionPolicy) store.storeEngine.getCompactionPolicy();
     if (isMajor) {
       for (HStoreFile file : candidates) {
         ((MockHStoreFile) file).setIsMajor(true);
@@ -82,7 +82,7 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     } else {
       assertEquals(toCompact, policy.needsCompaction(candidates, ImmutableList.of()));
       request =
-        (DateTieredCompactionRequest) policy.selectMinorCompaction(candidates, false, false);
+          (DateTieredCompactionRequest) policy.selectMinorCompaction(candidates, false, false);
     }
     return request;
   }

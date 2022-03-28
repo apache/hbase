@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -100,8 +100,8 @@ public class TestDateTieredCompactor {
     final Scanner scanner = new Scanner(input);
     // Create store mock that is satisfactory for compactor.
     ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
-    ScanInfo si = new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0,
-      CellComparatorImpl.COMPARATOR);
+    ScanInfo si =
+        new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
     HStore store = mock(HStore.class);
     when(store.getStorefiles()).thenReturn(storefiles);
     when(store.getColumnFamilyDescriptor()).thenReturn(familyDescriptor);
@@ -167,8 +167,8 @@ public class TestDateTieredCompactor {
   public void testEmptyOutputFile() throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     CompactionRequestImpl request = createDummyRequest();
-    DateTieredCompactor dtc = createCompactor(writers, new KeyValue[0],
-      new ArrayList<>(request.getFiles()));
+    DateTieredCompactor dtc =
+        createCompactor(writers, new KeyValue[0], new ArrayList<>(request.getFiles()));
     List<Path> paths = dtc.compact(request, Arrays.asList(Long.MIN_VALUE, Long.MAX_VALUE),
       new HashMap<Long, String>(), NoLimitThroughputController.INSTANCE, null);
     assertEquals(1, paths.size());

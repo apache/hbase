@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,18 +37,18 @@ public class TestLog4jUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLog4jUtils.class);
+      HBaseClassTestRule.forClass(TestLog4jUtils.class);
 
   @Test
   public void test() {
     org.apache.logging.log4j.Logger zk =
-      org.apache.logging.log4j.LogManager.getLogger("org.apache.zookeeper");
+        org.apache.logging.log4j.LogManager.getLogger("org.apache.zookeeper");
     org.apache.logging.log4j.Level zkLevel = zk.getLevel();
     org.apache.logging.log4j.Logger hbaseZk =
-      org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
+        org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
     org.apache.logging.log4j.Level hbaseZkLevel = hbaseZk.getLevel();
     org.apache.logging.log4j.Logger client =
-      org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.client");
+        org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.client");
     org.apache.logging.log4j.Level clientLevel = client.getLevel();
     Log4jUtils.disableZkAndClientLoggers();
     assertEquals(org.apache.logging.log4j.Level.OFF, zk.getLevel());

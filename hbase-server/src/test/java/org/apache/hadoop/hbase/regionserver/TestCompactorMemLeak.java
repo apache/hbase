@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_CO
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -128,8 +127,8 @@ public class TestCompactorMemLeak {
     }
 
     @Override
-    protected List<Path> commitWriter(FileDetails fd,
-        CompactionRequestImpl request) throws IOException {
+    protected List<Path> commitWriter(FileDetails fd, CompactionRequestImpl request)
+        throws IOException {
       HFileWriterImpl writerImpl = (HFileWriterImpl) writer.writer;
       Cell cell = writerImpl.getLastCell();
       // The cell should be backend with an KeyOnlyKeyValue.

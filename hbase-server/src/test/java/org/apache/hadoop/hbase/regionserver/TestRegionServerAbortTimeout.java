@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.TimerTask;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -81,11 +80,11 @@ public class TestRegionServerAbortTimeout {
     conf.setLong(HRegionServer.ABORT_TIMEOUT, SLEEP_TIME_WHEN_CLOSE_REGION);
     conf.set(HRegionServer.ABORT_TIMEOUT_TASK, TestAbortTimeoutTask.class.getName());
     StartTestingClusterOption option =
-      StartTestingClusterOption.builder().numRegionServers(2).build();
+        StartTestingClusterOption.builder().numRegionServers(2).build();
     UTIL.startMiniCluster(option);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
+        .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
     UTIL.getAdmin().createTable(td, Bytes.toBytes("0"), Bytes.toBytes("9"), REGIONS_NUM);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -316,7 +316,7 @@ public class TestScannerHeartbeatMessages {
         scan.setCaching(Integer.MAX_VALUE);
         scan.setFilter(new SparseCellFilter());
         try (ScanPerNextResultScanner scanner =
-          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+            new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
           int num = 0;
           while (scanner.next() != null) {
             num++;
@@ -330,7 +330,7 @@ public class TestScannerHeartbeatMessages {
         scan.setFilter(new SparseCellFilter());
         scan.setAllowPartialResults(true);
         try (ScanPerNextResultScanner scanner =
-          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+            new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
           int num = 0;
           while (scanner.next() != null) {
             num++;
@@ -356,7 +356,7 @@ public class TestScannerHeartbeatMessages {
         scan.setCaching(Integer.MAX_VALUE);
         scan.setFilter(new SparseRowFilter());
         try (ScanPerNextResultScanner scanner =
-          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+            new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
           int num = 0;
           while (scanner.next() != null) {
             num++;
@@ -566,11 +566,9 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap =
-          new HeartbeatKVHeap(scanners, region.getCellComparator());
+      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap =
-            new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
+        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }

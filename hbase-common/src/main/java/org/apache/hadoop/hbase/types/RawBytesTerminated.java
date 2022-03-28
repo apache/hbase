@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes variable-length values encoded using
- * {@link org.apache.hadoop.hbase.util.Bytes#putBytes(byte[], int, byte[], int, int)}. 
- * Includes a termination marker following the raw {@code byte[]} value. Intended to make it easier 
- * to transition away from direct use of {@link org.apache.hadoop.hbase.util.Bytes}.
+ * {@link org.apache.hadoop.hbase.util.Bytes#putBytes(byte[], int, byte[], int, int)}. Includes a
+ * termination marker following the raw {@code byte[]} value. Intended to make it easier to
+ * transition away from direct use of {@link org.apache.hadoop.hbase.util.Bytes}.
  * @see org.apache.hadoop.hbase.util.Bytes#putBytes(byte[], int, byte[], int, int)
  * @see RawBytes
  * @see OrderedBlob
@@ -34,8 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RawBytesTerminated extends TerminatedWrapper<byte[]> {
 
   /**
-   * Create a {@code RawBytesTerminated} using the specified terminator and
-   * {@code order}.
+   * Create a {@code RawBytesTerminated} using the specified terminator and {@code order}.
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawBytesTerminated(Order order, byte[] term) {
@@ -43,8 +42,7 @@ public class RawBytesTerminated extends TerminatedWrapper<byte[]> {
   }
 
   /**
-   * Create a {@code RawBytesTerminated} using the specified terminator and
-   * {@code order}.
+   * Create a {@code RawBytesTerminated} using the specified terminator and {@code order}.
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawBytesTerminated(Order order, String term) {
@@ -75,8 +73,7 @@ public class RawBytesTerminated extends TerminatedWrapper<byte[]> {
   }
 
   /**
-   * Write {@code val} into {@code dst}, respecting {@code offset} and
-   * {@code length}.
+   * Write {@code val} into {@code dst}, respecting {@code offset} and {@code length}.
    * @return number of bytes written.
    */
   public int encode(PositionedByteRange dst, byte[] val, int voff, int vlen) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestChoreService {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChoreService.class);
+      HBaseClassTestRule.forClass(TestChoreService.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChoreService.class);
 
@@ -279,12 +279,12 @@ public class TestChoreService {
     final TimeUnit UNIT = TimeUnit.NANOSECONDS;
 
     ScheduledChore chore1 =
-      new ScheduledChore(NAME, new SampleStopper(), PERIOD, VALID_DELAY, UNIT) {
-        @Override
-        protected void chore() {
-          // DO NOTHING
-        }
-      };
+        new ScheduledChore(NAME, new SampleStopper(), PERIOD, VALID_DELAY, UNIT) {
+          @Override
+          protected void chore() {
+            // DO NOTHING
+          }
+        };
 
     assertEquals("Name construction failed", NAME, chore1.getName());
     assertEquals("Period construction failed", PERIOD, chore1.getPeriod());
@@ -292,12 +292,12 @@ public class TestChoreService {
     assertEquals("TimeUnit construction failed", UNIT, chore1.getTimeUnit());
 
     ScheduledChore invalidDelayChore =
-      new ScheduledChore(NAME, new SampleStopper(), PERIOD, INVALID_DELAY, UNIT) {
-        @Override
-        protected void chore() {
-          // DO NOTHING
-        }
-      };
+        new ScheduledChore(NAME, new SampleStopper(), PERIOD, INVALID_DELAY, UNIT) {
+          @Override
+          protected void chore() {
+            // DO NOTHING
+          }
+        };
 
     assertEquals("Initial Delay should be set to 0 when invalid", 0,
       invalidDelayChore.getInitialDelay());
@@ -309,7 +309,7 @@ public class TestChoreService {
     final int defaultCorePoolSize = ChoreService.MIN_CORE_POOL_SIZE;
 
     ChoreService customInit =
-      new ChoreService("testChoreServiceConstruction_custom", corePoolSize, false);
+        new ChoreService("testChoreServiceConstruction_custom", corePoolSize, false);
     try {
       assertEquals(corePoolSize, customInit.getCorePoolSize());
     } finally {

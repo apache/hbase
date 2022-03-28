@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,15 +42,15 @@ public class TestSyncReplicationShipperQuit extends SyncReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationShipperQuit.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationShipperQuit.class);
 
   @Test
   public void testShipperQuitWhenDA() throws Exception {
     // set to serial replication
     UTIL1.getAdmin().updateReplicationPeerConfig(PEER_ID, ReplicationPeerConfig
-      .newBuilder(UTIL1.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(true).build());
+        .newBuilder(UTIL1.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(true).build());
     UTIL2.getAdmin().updateReplicationPeerConfig(PEER_ID, ReplicationPeerConfig
-      .newBuilder(UTIL2.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(true).build());
+        .newBuilder(UTIL2.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(true).build());
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.STANDBY);
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
@@ -59,12 +59,12 @@ public class TestSyncReplicationShipperQuit extends SyncReplicationTestBase {
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
     DualAsyncFSWAL wal =
-      (DualAsyncFSWAL) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+        (DualAsyncFSWAL) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     String walGroupId =
-      AbstractFSWALProvider.getWALPrefixFromWALName(wal.getCurrentFileName().getName());
+        AbstractFSWALProvider.getWALPrefixFromWALName(wal.getCurrentFileName().getName());
     ReplicationSourceShipper shipper =
-      ((ReplicationSource) ((Replication) rs.getReplicationSourceService()).getReplicationManager()
-        .getSource(PEER_ID)).workerThreads.get(walGroupId);
+        ((ReplicationSource) ((Replication) rs.getReplicationSourceService())
+            .getReplicationManager().getSource(PEER_ID)).workerThreads.get(walGroupId);
     assertFalse(shipper.isFinished());
 
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
@@ -72,7 +72,7 @@ public class TestSyncReplicationShipperQuit extends SyncReplicationTestBase {
     writeAndVerifyReplication(UTIL1, UTIL2, 100, 200);
 
     ReplicationSource source = (ReplicationSource) ((Replication) rs.getReplicationSourceService())
-      .getReplicationManager().getSource(PEER_ID);
+        .getReplicationManager().getSource(PEER_ID);
     // the peer is serial so here we can make sure that the previous wals have already been
     // replicated, and finally the shipper should be removed from the worker pool
     UTIL1.waitFor(10000, () -> !source.workerThreads.containsKey(walGroupId));

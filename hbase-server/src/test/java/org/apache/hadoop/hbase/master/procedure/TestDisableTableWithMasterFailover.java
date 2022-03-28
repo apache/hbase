@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestDisableTableWithMasterFailover extends MasterFailoverWithProced
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDisableTableWithMasterFailover.class);
+      HBaseClassTestRule.forClass(TestDisableTableWithMasterFailover.class);
 
   // ==========================================================================
   // Test Disable Table
@@ -56,7 +56,7 @@ public class TestDisableTableWithMasterFailover extends MasterFailoverWithProced
 
     // create the table
     final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(), tableName, splitKeys,
       "f1", "f2");
 
@@ -65,7 +65,7 @@ public class TestDisableTableWithMasterFailover extends MasterFailoverWithProced
 
     // Start the Delete procedure && kill the executor
     long procId = procExec
-      .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
+        .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),

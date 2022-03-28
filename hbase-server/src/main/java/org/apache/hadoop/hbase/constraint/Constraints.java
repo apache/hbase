@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public final class Constraints {
   private static final Logger LOG = LoggerFactory.getLogger(Constraints.class);
   private static final String CONSTRAINT_HTD_KEY_PREFIX = "constraint $";
   private static final Pattern CONSTRAINT_HTD_ATTR_KEY_PATTERN =
-    Pattern.compile(CONSTRAINT_HTD_KEY_PREFIX, Pattern.LITERAL);
+      Pattern.compile(CONSTRAINT_HTD_KEY_PREFIX, Pattern.LITERAL);
 
   // configuration key for if the constraint is enabled
   private static final String ENABLED_KEY = "_ENABLED";
@@ -105,7 +105,7 @@ public final class Constraints {
   public static TableDescriptorBuilder remove(TableDescriptorBuilder builder) throws IOException {
     disable(builder);
     return builder
-      .removeValue((k, v) -> CONSTRAINT_HTD_ATTR_KEY_PATTERN.split(k.toString()).length == 2);
+        .removeValue((k, v) -> CONSTRAINT_HTD_ATTR_KEY_PATTERN.split(k.toString()).length == 2);
   }
 
   /**
@@ -127,7 +127,7 @@ public final class Constraints {
    *         {@code null} otherwise.
    */
   private static Pair<String, String> getKeyValueForClass(TableDescriptor desc,
-    Class<? extends Constraint> clazz) {
+      Class<? extends Constraint> clazz) {
     // get the serialized version of the constraint
     String key = serializeConstraintClass(clazz);
     String value = desc.getValue(key);
@@ -143,7 +143,7 @@ public final class Constraints {
    *         {@code null} otherwise.
    */
   private static Pair<String, String> getKeyValueForClass(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz) {
+      Class<? extends Constraint> clazz) {
     // get the serialized version of the constraint
     String key = serializeConstraintClass(clazz);
     String value = builder.getValue(key);
@@ -168,7 +168,7 @@ public final class Constraints {
    */
   @SafeVarargs
   public static TableDescriptorBuilder add(TableDescriptorBuilder builder,
-    Class<? extends Constraint>... constraints) throws IOException {
+      Class<? extends Constraint>... constraints) throws IOException {
     // make sure constraints are enabled
     enable(builder);
     long priority = getNextPriority(builder);
@@ -199,7 +199,7 @@ public final class Constraints {
    */
   @SafeVarargs
   public static TableDescriptorBuilder add(TableDescriptorBuilder builder,
-    Pair<Class<? extends Constraint>, Configuration>... constraints) throws IOException {
+      Pair<Class<? extends Constraint>, Configuration>... constraints) throws IOException {
     enable(builder);
     long priority = getNextPriority(builder);
     for (Pair<Class<? extends Constraint>, Configuration> pair : constraints) {
@@ -222,7 +222,7 @@ public final class Constraints {
    *           be enforced.
    */
   public static TableDescriptorBuilder add(TableDescriptorBuilder builder,
-    Class<? extends Constraint> constraint, Configuration conf) throws IOException {
+      Class<? extends Constraint> constraint, Configuration conf) throws IOException {
     enable(builder);
     long priority = getNextPriority(builder);
     addConstraint(builder, constraint, conf, priority++);
@@ -239,7 +239,7 @@ public final class Constraints {
    * When a constraint is added, it is automatically enabled.
    */
   private static TableDescriptorBuilder addConstraint(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz, Configuration conf, long priority) throws IOException {
+      Class<? extends Constraint> clazz, Configuration conf, long priority) throws IOException {
     return writeConstraint(builder, serializeConstraintClass(clazz),
       configure(conf, true, priority));
   }
@@ -282,7 +282,7 @@ public final class Constraints {
    * Write the given key and associated configuration to the {@link TableDescriptorBuilder}.
    */
   private static TableDescriptorBuilder writeConstraint(TableDescriptorBuilder builder, String key,
-    Configuration conf) throws IOException {
+      Configuration conf) throws IOException {
     // store the key and conf in the descriptor
     return builder.setValue(key, serializeConfiguration(conf));
   }
@@ -339,7 +339,7 @@ public final class Constraints {
   }
 
   private static TableDescriptorBuilder updateLatestPriority(TableDescriptorBuilder builder,
-    long priority) {
+      long priority) {
     // update the max priority
     return builder.setValue(COUNTER_KEY, Long.toString(priority));
   }
@@ -354,14 +354,14 @@ public final class Constraints {
    * @throws IllegalArgumentException if the Constraint was not present on this table.
    */
   public static TableDescriptorBuilder setConfiguration(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz, Configuration configuration)
-    throws IOException, IllegalArgumentException {
+      Class<? extends Constraint> clazz, Configuration configuration)
+      throws IOException, IllegalArgumentException {
     // get the entry for this class
     Pair<String, String> e = getKeyValueForClass(builder, clazz);
 
     if (e == null) {
       throw new IllegalArgumentException(
-        "Constraint: " + clazz.getName() + " is not associated with this table.");
+          "Constraint: " + clazz.getName() + " is not associated with this table.");
     }
 
     // clone over the configuration elements
@@ -384,7 +384,7 @@ public final class Constraints {
    * @param clazz {@link Constraint} class to remove
    */
   public static TableDescriptorBuilder remove(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz) {
+      Class<? extends Constraint> clazz) {
     String key = serializeConstraintClass(clazz);
     return builder.removeValue(key);
   }
@@ -397,7 +397,7 @@ public final class Constraints {
    * @throws IOException If the constraint cannot be properly deserialized
    */
   public static void enableConstraint(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz) throws IOException {
+      Class<? extends Constraint> clazz) throws IOException {
     changeConstraintEnabled(builder, clazz, true);
   }
 
@@ -409,7 +409,7 @@ public final class Constraints {
    * @throws IOException if the constraint cannot be found
    */
   public static void disableConstraint(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz) throws IOException {
+      Class<? extends Constraint> clazz) throws IOException {
     changeConstraintEnabled(builder, clazz, false);
   }
 
@@ -417,12 +417,12 @@ public final class Constraints {
    * Change the whether the constraint (if it is already present) is enabled or disabled.
    */
   private static TableDescriptorBuilder changeConstraintEnabled(TableDescriptorBuilder builder,
-    Class<? extends Constraint> clazz, boolean enabled) throws IOException {
+      Class<? extends Constraint> clazz, boolean enabled) throws IOException {
     // get the original constraint
     Pair<String, String> entry = getKeyValueForClass(builder, clazz);
     if (entry == null) {
-      throw new IllegalArgumentException("Constraint: " + clazz.getName() +
-        " is not associated with this table. You can't enable it!");
+      throw new IllegalArgumentException("Constraint: " + clazz.getName()
+          + " is not associated with this table. You can't enable it!");
     }
 
     // create a new configuration from that conf
@@ -444,7 +444,7 @@ public final class Constraints {
    * @throws IOException If the constraint has improperly stored in the table
    */
   public static boolean enabled(TableDescriptor desc, Class<? extends Constraint> clazz)
-    throws IOException {
+      throws IOException {
     // get the kv
     Pair<String, String> entry = getKeyValueForClass(desc, clazz);
     // its not enabled so just return false. In fact, its not even present!
@@ -469,7 +469,7 @@ public final class Constraints {
    * @throws IOException if any part of reading/arguments fails
    */
   static List<? extends Constraint> getConstraints(TableDescriptor desc, ClassLoader classloader)
-    throws IOException {
+      throws IOException {
     List<Constraint> constraints = new ArrayList<>();
     // loop through all the key, values looking for constraints
     for (Map.Entry<Bytes, Bytes> e : desc.getValues().entrySet()) {
@@ -501,12 +501,12 @@ public final class Constraints {
         try {
           // add the constraint, now that we expect it to be valid.
           Class<? extends Constraint> clazz =
-            classloader.loadClass(key).asSubclass(Constraint.class);
+              classloader.loadClass(key).asSubclass(Constraint.class);
           Constraint constraint = clazz.getDeclaredConstructor().newInstance();
           constraint.setConf(conf);
           constraints.add(constraint);
         } catch (InvocationTargetException | NoSuchMethodException | ClassNotFoundException
-          | InstantiationException | IllegalAccessException e1) {
+            | InstantiationException | IllegalAccessException e1) {
           throw new IOException(e1);
         }
       }

@@ -34,25 +34,24 @@ import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * This class will coalesce increments from a thift server if
- * hbase.regionserver.thrift.coalesceIncrement is set to true. Turning this
- * config to true will cause the thrift server to queue increments into an
- * instance of this class. The thread pool associated with this class will drain
- * the coalesced increments as the thread is able. This can cause data loss if the
- * thrift server dies or is shut down before everything in the queue is drained.
- *
+ * hbase.regionserver.thrift.coalesceIncrement is set to true. Turning this config to true will
+ * cause the thrift server to queue increments into an instance of this class. The thread pool
+ * associated with this class will drain the coalesced increments as the thread is able. This can
+ * cause data loss if the thrift server dies or is shut down before everything in the queue is
+ * drained.
  */
 @InterfaceAudience.Private
 public class IncrementCoalescer implements IncrementCoalescerMBean {
   /**
    * Used to identify a cell that will be incremented.
-   *
    */
   static class FullyQualifiedRow {
     private byte[] table;
@@ -152,8 +151,8 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     pool = new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
-      new ThreadFactoryBuilder().setNameFormat("IncrementCoalescer-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        new ThreadFactoryBuilder().setNameFormat("IncrementCoalescer-pool-%d").setDaemon(true)
+            .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     MBeans.register("thrift", "Thrift", this);
   }
 
@@ -190,11 +189,11 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  private boolean internalQueueIncrement(byte[] tableName, byte[] rowKey, byte[] fam,
-      byte[] qual, long ammount) {
+  private boolean internalQueueIncrement(byte[] tableName, byte[] rowKey, byte[] fam, byte[] qual,
+      long ammount) {
     int countersMapSize = countersMap.size();
 
-    //Make sure that the number of threads is scaled.
+    // Make sure that the number of threads is scaled.
     dynamicallySetCoreSize(countersMapSize);
 
     totalIncrements.increment();
@@ -254,17 +253,16 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
           if (failures > 2) {
             throw new IOException("Auto-Fail rest of ICVs");
           }
-          table.incrementColumnValue(row.getRowKey(), row.getFamily(), row.getQualifier(),
-            counter);
+          table.incrementColumnValue(row.getRowKey(), row.getFamily(), row.getQualifier(), counter);
         } catch (IOException e) {
           // log failure of increment
           failures++;
           LOG.error("FAILED_ICV: " + Bytes.toString(row.getTable()) + ", "
-              + Bytes.toStringBinary(row.getRowKey()) + ", "
-              + Bytes.toStringBinary(row.getFamily()) + ", "
-              + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
-        } finally{
-          if(table != null){
+              + Bytes.toStringBinary(row.getRowKey()) + ", " + Bytes.toStringBinary(row.getFamily())
+              + ", " + Bytes.toStringBinary(row.getQualifier()) + ", " + counter,
+            e);
+        } finally {
+          if (table != null) {
             table.close();
           }
         }
@@ -274,8 +272,8 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   /**
-   * This method samples the incoming requests and, if selected, will check if
-   * the corePoolSize should be changed.
+   * This method samples the incoming requests and, if selected, will check if the corePoolSize
+   * should be changed.
    * @param countersMapSize the size of the counters map
    */
   private void dynamicallySetCoreSize(int countersMapSize) {

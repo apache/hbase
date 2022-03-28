@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool;
-
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -39,7 +36,6 @@ public interface Canary {
 
   /**
    * Run Canary in Region mode.
-   *
    * @param targets -- list of monitor tables.
    * @return the exit code of the Canary tool.
    */
@@ -47,7 +43,6 @@ public interface Canary {
 
   /**
    * Runs Canary in Region server mode.
-   *
    * @param targets -- list of monitor tables.
    * @return the exit code of the Canary tool.
    */
@@ -55,7 +50,6 @@ public interface Canary {
 
   /**
    * Runs Canary in Zookeeper mode.
-   *
    * @return the exit code of the Canary tool.
    */
   public int checkZooKeeper() throws Exception;

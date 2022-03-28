@@ -53,7 +53,7 @@ public class TableStateManager {
   private final MasterServices master;
 
   private final ConcurrentMap<TableName, TableState.State> tableName2State =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   TableStateManager(MasterServices master) {
     this.master = master;
@@ -148,8 +148,8 @@ public class TableStateManager {
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      if (TableState.State.DISABLING.equals(newState) ||
-          TableState.State.DISABLED.equals(newState)) {
+      if (TableState.State.DISABLING.equals(newState)
+          || TableState.State.DISABLED.equals(newState)) {
         throw new IllegalArgumentIOException("Cannot disable meta table; " + newState);
       }
       // Otherwise, just return; no need to set ENABLED on meta -- it is always ENABLED.

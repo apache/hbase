@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,9 +40,9 @@ public abstract class AbstractTestCIRpcTimeout extends AbstractTestCITimeout {
   @Before
   public void setUp() throws IOException {
     tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(tableName).setCoprocessor(SleepCoprocessor.class.getName())
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+        .setCoprocessor(SleepCoprocessor.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
     TEST_UTIL.getAdmin().createTable(htd);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -75,7 +75,7 @@ public class TestAdmin3 extends TestAdminBase {
 
     ADMIN.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
 
     // Test that table is disabled
@@ -102,7 +102,7 @@ public class TestAdmin3 extends TestAdminBase {
     assertTrue(ok);
     ADMIN.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-      .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
 
     // Test that table is enabled
@@ -184,11 +184,11 @@ public class TestAdmin3 extends TestAdminBase {
   public void testEnableTableRetainAssignment() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     ADMIN.createTable(desc, splitKeys);
 
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
@@ -237,16 +237,18 @@ public class TestAdmin3 extends TestAdminBase {
   @Test
   public void testGetTableDescriptor() throws IOException {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam2"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam3")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam2"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam3")).build();
     ADMIN.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     TableDescriptor confirmedHtd = table.getDescriptor();
-    //HBASE-26246 introduced persist of store file tracker into table descriptor
-    htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACKER_IMPL,
-      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).
-      build();
+    // HBASE-26246 introduced persist of store file tracker into table descriptor
+    htd =
+        TableDescriptorBuilder.newBuilder(htd)
+            .setValue(TRACKER_IMPL,
+              StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration()))
+            .build();
     assertEquals(0, TableDescriptor.COMPARATOR.compare(htd, confirmedHtd));
     MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
@@ -262,12 +264,12 @@ public class TestAdmin3 extends TestAdminBase {
 
     // Make table read only
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName)).setReadOnly(true).build();
+        TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName)).setReadOnly(true).build();
     ADMIN.modifyTable(htd);
 
     // try to modify the read only table now
     htd = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
-      .setCompactionEnabled(false).build();
+        .setCompactionEnabled(false).build();
     ADMIN.modifyTable(htd);
     // Delete the table
     ADMIN.disableTable(tableName);
@@ -361,7 +363,7 @@ public class TestAdmin3 extends TestAdminBase {
     exception = null;
     try {
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(nonexistentTable)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
       ADMIN.modifyTable(htd);
     } catch (IOException e) {
       exception = e;
@@ -371,9 +373,9 @@ public class TestAdmin3 extends TestAdminBase {
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
     final TableName tableName =
-      TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
+        TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     ADMIN.createTable(htd);
     try {
       exception = null;
@@ -404,7 +406,7 @@ public class TestAdmin3 extends TestAdminBase {
   private static final String DST_IMPL = "hbase.store.file-tracker.migration.dst.impl";
 
   private void verifyModifyTableResult(TableName tableName, byte[] family, byte[] qual, byte[] row,
-    byte[] value, String sft) throws IOException {
+      byte[] value, String sft) throws IOException {
     TableDescriptor td = ADMIN.getDescriptor(tableName);
     assertEquals(sft, td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
     // no migration related configs
@@ -437,33 +439,27 @@ public class TestAdmin3 extends TestAdminBase {
 
     // change to MIGRATION, and then to FILE
     ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL,
-        StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL,
-        StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build());
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build());
     ADMIN.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.FILE.name());
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.FILE.name());
 
     // change to MIGRATION, and then to DEFAULT
     ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL,
-        StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL,
-        StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build());
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build());
     ADMIN.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.DEFAULT.name());
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.DEFAULT.name());
   }
 
   private void verifyModifyColumnFamilyResult(TableName tableName, byte[] family, byte[] qual,
-    byte[] row, byte[] value, String sft) throws IOException {
+      byte[] row, byte[] value, String sft) throws IOException {
     TableDescriptor td = ADMIN.getDescriptor(tableName);
     ColumnFamilyDescriptor cfd = td.getColumnFamily(family);
     assertEquals(sft, cfd.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL));
@@ -501,13 +497,15 @@ public class TestAdmin3 extends TestAdminBase {
 
     // change to MIGRATION, and then to FILE
     TableDescriptor current = ADMIN.getDescriptor(tableName);
-    ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(current)
-      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.MIGRATION.name())
-        .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-        .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
-      .build());
+    ADMIN.modifyTable(
+      TableDescriptorBuilder.newBuilder(current)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder
+              .newBuilder(current.getColumnFamily(family))
+              .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
+                StoreFileTrackerFactory.Trackers.MIGRATION.name())
+              .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+              .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
+          .build());
     ADMIN.modifyColumnFamilyStoreFileTracker(tableName, family,
       StoreFileTrackerFactory.Trackers.FILE.name());
     verifyModifyColumnFamilyResult(tableName, family, qual, row, value,
@@ -515,13 +513,15 @@ public class TestAdmin3 extends TestAdminBase {
 
     // change to MIGRATION, and then to DEFAULT
     current = ADMIN.getDescriptor(tableName);
-    ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(current)
-      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.MIGRATION.name())
-        .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-        .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
-      .build());
+    ADMIN.modifyTable(
+      TableDescriptorBuilder.newBuilder(current)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder
+              .newBuilder(current.getColumnFamily(family))
+              .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
+                StoreFileTrackerFactory.Trackers.MIGRATION.name())
+              .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+              .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
+          .build());
     ADMIN.modifyColumnFamilyStoreFileTracker(tableName, family,
       StoreFileTrackerFactory.Trackers.DEFAULT.name());
     verifyModifyColumnFamilyResult(tableName, family, qual, row, value,

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
@@ -29,24 +29,20 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
-
-import edu.umd.cs.findbugs.annotations.NonNull;
 
 @InterfaceAudience.Private
 public class ReflectionUtils {
   @SuppressWarnings("unchecked")
-  public static <T> T instantiateWithCustomCtor(String className,
-      Class<? >[] ctorArgTypes, Object[] ctorArgs) {
+  public static <T> T instantiateWithCustomCtor(String className, Class<?>[] ctorArgTypes,
+      Object[] ctorArgs) {
     try {
       Class<? extends T> resultType = (Class<? extends T>) Class.forName(className);
       Constructor<? extends T> ctor = resultType.getDeclaredConstructor(ctorArgTypes);
       return instantiate(className, ctor, ctorArgs);
     } catch (ClassNotFoundException e) {
-      throw new UnsupportedOperationException(
-          "Unable to find " + className, e);
+      throw new UnsupportedOperationException("Unable to find " + className, e);
     } catch (NoSuchMethodException e) {
       throw new UnsupportedOperationException(
           "Unable to find suitable constructor for class " + className, e);
@@ -58,14 +54,12 @@ public class ReflectionUtils {
       ctor.setAccessible(true);
       return ctor.newInstance(ctorArgs);
     } catch (IllegalAccessException e) {
-      throw new UnsupportedOperationException(
-          "Unable to access specified class " + className, e);
+      throw new UnsupportedOperationException("Unable to access specified class " + className, e);
     } catch (InstantiationException e) {
-      throw new UnsupportedOperationException(
-          "Unable to instantiate specified class " + className, e);
+      throw new UnsupportedOperationException("Unable to instantiate specified class " + className,
+          e);
     } catch (InvocationTargetException e) {
-      throw new UnsupportedOperationException(
-          "Constructor threw an exception for " + className, e);
+      throw new UnsupportedOperationException("Constructor threw an exception for " + className, e);
     }
   }
 
@@ -89,13 +83,13 @@ public class ReflectionUtils {
         } else {
           Class<?> paramType = paramTypes[i].getClass();
           match = (!ctorParamTypes[i].isPrimitive()) ? ctorParamTypes[i].isAssignableFrom(paramType)
-            : ((int.class.equals(ctorParamTypes[i]) && Integer.class.equals(paramType)) ||
-              (long.class.equals(ctorParamTypes[i]) && Long.class.equals(paramType)) ||
-              (double.class.equals(ctorParamTypes[i]) && Double.class.equals(paramType)) ||
-              (char.class.equals(ctorParamTypes[i]) && Character.class.equals(paramType)) ||
-              (short.class.equals(ctorParamTypes[i]) && Short.class.equals(paramType)) ||
-              (boolean.class.equals(ctorParamTypes[i]) && Boolean.class.equals(paramType)) ||
-              (byte.class.equals(ctorParamTypes[i]) && Byte.class.equals(paramType)));
+              : ((int.class.equals(ctorParamTypes[i]) && Integer.class.equals(paramType))
+                  || (long.class.equals(ctorParamTypes[i]) && Long.class.equals(paramType))
+                  || (double.class.equals(ctorParamTypes[i]) && Double.class.equals(paramType))
+                  || (char.class.equals(ctorParamTypes[i]) && Character.class.equals(paramType))
+                  || (short.class.equals(ctorParamTypes[i]) && Short.class.equals(paramType))
+                  || (boolean.class.equals(ctorParamTypes[i]) && Boolean.class.equals(paramType))
+                  || (byte.class.equals(ctorParamTypes[i]) && Byte.class.equals(paramType)));
         }
       }
 
@@ -104,7 +98,7 @@ public class ReflectionUtils {
       }
     }
     throw new UnsupportedOperationException(
-      "Unable to find suitable constructor for class " + type.getName());
+        "Unable to find suitable constructor for class " + type.getName());
   }
 
   /* synchronized on ReflectionUtils.class */
@@ -117,9 +111,7 @@ public class ReflectionUtils {
    * @param title a descriptive title for the call stacks
    * @param minInterval the minimum time from the last
    */
-  public static void logThreadInfo(Logger log,
-                                   String title,
-                                   long minInterval) {
+  public static void logThreadInfo(Logger log, String title, long minInterval) {
     boolean dumpStack = false;
     if (log.isInfoEnabled()) {
       synchronized (ReflectionUtils.class) {
@@ -135,8 +127,8 @@ public class ReflectionUtils {
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
           log.info(buffer.toString(Charset.defaultCharset().name()));
         } catch (UnsupportedEncodingException ignored) {
-          log.warn("Could not write thread info about '" + title +
-              "' due to a string encoding issue.");
+          log.warn(
+            "Could not write thread info about '" + title + "' due to a string encoding issue.");
         }
       }
     }
@@ -144,26 +136,22 @@ public class ReflectionUtils {
 
   /**
    * Print all of the thread's information and stack traces.
-   *
    * @param stream the stream to
    * @param title a string title for the stack trace
    */
-  static void printThreadInfo(PrintStream stream,
-                                     String title) {
+  static void printThreadInfo(PrintStream stream, String title) {
     final int STACK_DEPTH = 20;
     boolean contention = threadBean.isThreadContentionMonitoringEnabled();
     long[] threadIds = threadBean.getAllThreadIds();
     stream.println("Process Thread Dump: " + title);
     stream.println(threadIds.length + " active threads");
-    for (long tid: threadIds) {
+    for (long tid : threadIds) {
       ThreadInfo info = threadBean.getThreadInfo(tid, STACK_DEPTH);
       if (info == null) {
         stream.println("  Inactive");
         continue;
       }
-      stream.println("Thread " +
-                     getTaskName(info.getThreadId(),
-                                 info.getThreadName()) + ":");
+      stream.println("Thread " + getTaskName(info.getThreadId(), info.getThreadName()) + ":");
       Thread.State state = info.getThreadState();
       stream.println("  State: " + state);
       stream.println("  Blocked count: " + info.getBlockedCount());
@@ -174,14 +162,13 @@ public class ReflectionUtils {
       }
       if (state == Thread.State.WAITING) {
         stream.println("  Waiting on " + info.getLockName());
-      } else  if (state == Thread.State.BLOCKED) {
+      } else if (state == Thread.State.BLOCKED) {
         stream.println("  Blocked on " + info.getLockName());
-        stream.println("  Blocked by " +
-                       getTaskName(info.getLockOwnerId(),
-                                   info.getLockOwnerName()));
+        stream
+            .println("  Blocked by " + getTaskName(info.getLockOwnerId(), info.getLockOwnerName()));
       }
       stream.println("  Stack:");
-      for (StackTraceElement frame: info.getStackTrace()) {
+      for (StackTraceElement frame : info.getStackTrace()) {
         stream.println("    " + frame.toString());
       }
     }
@@ -237,8 +224,8 @@ public class ReflectionUtils {
       modifiersField = Field.class.getDeclaredField("modifiers");
     } catch (NoSuchFieldException e) {
       try {
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod(
-          "getDeclaredFields0",boolean.class);
+        Method getDeclaredFields0 =
+            Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
         boolean accessibleBeforeSet = getDeclaredFields0.isAccessible();
         getDeclaredFields0.setAccessible(true);
         Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);

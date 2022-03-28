@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -27,12 +26,11 @@ import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@link Number} of arbitrary precision and variable-length encoding. The
- * resulting length of encoded values is determined by the numerical (base
- * 100) precision, not absolute value. Use this data type anywhere you would
- * expect to use a {@code DECIMAL} type, a {@link BigDecimal}, a
- * {@link BigInteger}, or any time you've parsed floating precision values
- * from text. Built on {@link OrderedBytes#encodeNumeric(PositionedByteRange, BigDecimal, Order)}.
+ * An {@link Number} of arbitrary precision and variable-length encoding. The resulting length of
+ * encoded values is determined by the numerical (base 100) precision, not absolute value. Use this
+ * data type anywhere you would expect to use a {@code DECIMAL} type, a {@link BigDecimal}, a
+ * {@link BigInteger}, or any time you've parsed floating precision values from text. Built on
+ * {@link OrderedBytes#encodeNumeric(PositionedByteRange, BigDecimal, Order)}.
  */
 @InterfaceAudience.Public
 public class OrderedNumeric extends OrderedBytesBase<Number> {
@@ -49,7 +47,6 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Creates a new {@link Number} of arbitrary precision and variable-length encoding.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedNumeric(Order order) {
@@ -94,7 +91,6 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Read a {@code long} value from the buffer {@code src}.
-   *
    * @param src the {@link PositionedByteRange} to read the {@code long} from
    * @return the {@code long} read from the buffer
    */
@@ -104,7 +100,6 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
-   *
    * @param dst the {@link PositionedByteRange} to write to
    * @param val the value to write to {@code dst}
    * @return the number of bytes written
@@ -115,7 +110,6 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Read a {@code double} value from the buffer {@code src}.
-   *
    * @param src the {@link PositionedByteRange} to read the {@code double} from
    * @return the {@code double} read from the buffer
    */
@@ -125,7 +119,6 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
-   *
    * @param dst the {@link PositionedByteRange} to write to
    * @param val the value to write to {@code dst}
    * @return the number of bytes written

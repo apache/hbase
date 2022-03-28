@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,15 +43,15 @@ public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
 
-    /**
-     * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
-     * @deprecated External users should not use this method. Please post on
-     *   the HBase dev mailing list if you need this method. Internal
-     *   HBase code should use {@link ClientTokenUtil} instead.
-     */
+  /**
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing
+   *             list if you need this method. Internal HBase code should use
+   *             {@link ClientTokenUtil} instead.
+   */
   @Deprecated
-  public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
-      AsyncConnection conn) {
+  public static CompletableFuture<Token<AuthenticationTokenIdentifier>>
+      obtainToken(AsyncConnection conn) {
     return ClientTokenUtil.obtainToken(conn);
   }
 
@@ -70,9 +70,9 @@ public class TokenUtil {
 
   /**
    * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
-   * @deprecated External users should not use this method. Please post on
-   *   the HBase dev mailing list if you need this method. Internal
-   *   HBase code should use {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing
+   *             list if you need this method. Internal HBase code should use
+   *             {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(Connection conn)
@@ -80,12 +80,11 @@ public class TokenUtil {
     return ClientTokenUtil.obtainToken(conn);
   }
 
-
   /**
    * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
-   * @deprecated External users should not use this method. Please post on
-   *   the HBase dev mailing list if you need this method. Internal
-   *   HBase code should use {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing
+   *             list if you need this method. Internal HBase code should use
+   *             {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
@@ -93,56 +92,52 @@ public class TokenUtil {
   }
 
   /**
-   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection,
-   * org.apache.hadoop.hbase.security.User)}.
-   * @deprecated External users should not use this method. Please post on
-   *   the HBase dev mailing list if you need this method. Internal
-   *   HBase code should use {@link ClientTokenUtil} instead.
+   * See
+   * {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection, org.apache.hadoop.hbase.security.User)}.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing
+   *             list if you need this method. Internal HBase code should use
+   *             {@link ClientTokenUtil} instead.
    */
   @Deprecated
-  public static Token<AuthenticationTokenIdentifier> obtainToken(
-      final Connection conn, User user) throws IOException, InterruptedException {
+  public static Token<AuthenticationTokenIdentifier> obtainToken(final Connection conn, User user)
+      throws IOException, InterruptedException {
     return ClientTokenUtil.obtainToken(conn, user);
   }
 
   /**
-   * See {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection,
-   * org.apache.hadoop.hbase.security.User)}.
+   * See
+   * {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection, org.apache.hadoop.hbase.security.User)}.
    */
-  public static void obtainAndCacheToken(final Connection conn,
-      User user)
+  public static void obtainAndCacheToken(final Connection conn, User user)
       throws IOException, InterruptedException {
     ClientTokenUtil.obtainAndCacheToken(conn, user);
   }
 
   /**
    * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
-   * @deprecated External users should not use this method. Please post on
-   *   the HBase dev mailing list if you need this method. Internal
-   *   HBase code should use {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing
+   *             list if you need this method. Internal HBase code should use
+   *             {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
     return ClientTokenUtil.toToken(proto);
   }
 
-  private static Text getClusterId(Token<AuthenticationTokenIdentifier> token)
-      throws IOException {
-    return token.getService() != null
-        ? token.getService() : new Text("default");
+  private static Text getClusterId(Token<AuthenticationTokenIdentifier> token) throws IOException {
+    return token.getService() != null ? token.getService() : new Text("default");
   }
 
   /**
-   * Obtain an authentication token on behalf of the given user and add it to
-   * the credentials for the given map reduce job.
+   * Obtain an authentication token on behalf of the given user and add it to the credentials for
+   * the given map reduce job.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job instance in which the token should be stored
    * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
-  public static void obtainTokenForJob(final Connection conn,
-      User user, Job job)
+  public static void obtainTokenForJob(final Connection conn, User user, Job job)
       throws IOException, InterruptedException {
     try {
       Token<AuthenticationTokenIdentifier> token = ClientTokenUtil.obtainToken(conn, user);
@@ -152,8 +147,8 @@ public class TokenUtil {
       }
       Text clusterId = getClusterId(token);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Obtained token " + token.getKind().toString() + " for user " +
-            user.getName() + " on cluster " + clusterId.toString());
+        LOG.debug("Obtained token " + token.getKind().toString() + " for user " + user.getName()
+            + " on cluster " + clusterId.toString());
       }
       job.getCredentials().addToken(clusterId, token);
     } catch (IOException ioe) {
@@ -169,8 +164,8 @@ public class TokenUtil {
   }
 
   /**
-   * Obtain an authentication token on behalf of the given user and add it to
-   * the credentials for the given map reduce job.
+   * Obtain an authentication token on behalf of the given user and add it to the credentials for
+   * the given map reduce job.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job configuration in which the token should be stored
@@ -187,8 +182,8 @@ public class TokenUtil {
       }
       Text clusterId = getClusterId(token);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Obtained token " + token.getKind().toString() + " for user " +
-            user.getName() + " on cluster " + clusterId.toString());
+        LOG.debug("Obtained token " + token.getKind().toString() + " for user " + user.getName()
+            + " on cluster " + clusterId.toString());
       }
       job.getCredentials().addToken(clusterId, token);
     } catch (IOException ioe) {
@@ -199,14 +194,13 @@ public class TokenUtil {
       throw re;
     } catch (Exception e) {
       throw new UndeclaredThrowableException(e,
-          "Unexpected exception obtaining token for user "+user.getName());
+          "Unexpected exception obtaining token for user " + user.getName());
     }
   }
 
   /**
-   * Checks for an authentication token for the given user, obtaining a new token if necessary,
-   * and adds it to the credentials for the given map reduce job.
-   *
+   * Checks for an authentication token for the given user, obtaining a new token if necessary, and
+   * adds it to the credentials for the given map reduce job.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job configuration in which the token should be stored
@@ -224,9 +218,8 @@ public class TokenUtil {
   }
 
   /**
-   * Checks for an authentication token for the given user, obtaining a new token if necessary,
-   * and adds it to the credentials for the given map reduce job.
-   *
+   * Checks for an authentication token for the given user, obtaining a new token if necessary, and
+   * adds it to the credentials for the given map reduce job.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job instance in which the token should be stored
@@ -243,9 +236,8 @@ public class TokenUtil {
   }
 
   /**
-   * Checks if an authentication tokens exists for the connected cluster,
-   * obtaining one if needed and adding it to the user's credentials.
-   *
+   * Checks if an authentication tokens exists for the connected cluster, obtaining one if needed
+   * and adding it to the user's credentials.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @throws IOException If making a remote call to the authentication service fails

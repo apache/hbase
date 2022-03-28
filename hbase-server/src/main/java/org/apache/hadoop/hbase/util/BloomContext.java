@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,15 +18,13 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The bloom context that is used by the StorefileWriter to add the bloom details
- * per cell
+ * The bloom context that is used by the StorefileWriter to add the bloom details per cell
  */
 @InterfaceAudience.Private
 public abstract class BloomContext {

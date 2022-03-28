@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -70,15 +71,15 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
       this.getClass().getSimpleName(), handlerCount, maxQueueLength, rsReportHandlerCount,
       rsRsreportMaxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
-      new ArrayBlockingQueue<>(maxQueueLength),
-      new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.call.handler-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-      new ThreadPoolExecutor.CallerRunsPolicy());
+        new ArrayBlockingQueue<>(maxQueueLength),
+        new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.call.handler-pool-%d")
+            .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        new ThreadPoolExecutor.CallerRunsPolicy());
     this.rsReportExecutor = new ThreadPoolExecutor(rsReportHandlerCount, rsReportHandlerCount, 60,
-      TimeUnit.SECONDS, new ArrayBlockingQueue<>(rsRsreportMaxQueueLength),
-      new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.RSReport.handler-pool-%d")
-        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-      new ThreadPoolExecutor.CallerRunsPolicy());
+        TimeUnit.SECONDS, new ArrayBlockingQueue<>(rsRsreportMaxQueueLength),
+        new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.RSReport.handler-pool-%d")
+            .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   @Override

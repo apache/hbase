@@ -38,11 +38,11 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancerHeterogeneousCostRulesLoadFromHDFS
-  extends StochasticBalancerTestBase {
+    extends StochasticBalancerTestBase {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRulesLoadFromHDFS.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
+      .forClass(TestStochasticLoadBalancerHeterogeneousCostRulesLoadFromHDFS.class);
 
   private HeterogeneousRegionCountCostFunction costFunction;
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();

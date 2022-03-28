@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestTestingHBaseCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTestingHBaseCluster.class);
+      HBaseClassTestRule.forClass(TestTestingHBaseCluster.class);
 
   private static TestingHBaseCluster CLUSTER;
 
@@ -60,7 +60,7 @@ public class TestTestingHBaseCluster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     CLUSTER = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().numMasters(2)
-      .numRegionServers(3).numDataNodes(3).build());
+        .numRegionServers(3).numDataNodes(3).build());
   }
 
   @AfterClass

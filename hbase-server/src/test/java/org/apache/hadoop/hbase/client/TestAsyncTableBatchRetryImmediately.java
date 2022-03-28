@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestAsyncTableBatchRetryImmediately {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableBatchRetryImmediately.class);
+      HBaseClassTestRule.forClass(TestAsyncTableBatchRetryImmediately.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -93,7 +93,7 @@ public class TestAsyncTableBatchRetryImmediately {
     // if we do not deal with RetryImmediatelyException, we will timeout here since we need to retry
     // hundreds times.
     List<Get> gets = IntStream.range(0, COUNT).mapToObj(i -> new Get(Bytes.toBytes(i)))
-      .collect(Collectors.toList());
+        .collect(Collectors.toList());
     List<Result> results = table.getAll(gets).join();
     for (int i = 0; i < COUNT; i++) {
       byte[] value = results.get(i).getValue(FAMILY, QUAL);

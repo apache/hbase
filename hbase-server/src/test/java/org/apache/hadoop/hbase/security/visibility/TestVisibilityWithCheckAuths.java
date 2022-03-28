@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 /**
  * Test visibility by setting 'hbase.security.visibility.mutations.checkauths' to true
  */
@@ -74,6 +74,7 @@ public class TestVisibilityWithCheckAuths {
   public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER;
   public static User USER;
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
@@ -81,11 +82,11 @@ public class TestVisibilityWithCheckAuths {
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, true);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    USER = User.createUserForTesting(conf, "user", new String[]{});
+    USER = User.createUserForTesting(conf, "user", new String[] {});
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     addLabels();
@@ -99,17 +100,17 @@ public class TestVisibilityWithCheckAuths {
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { TOPSECRET };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
-        }
-        return null;
-      }
-    };
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            String[] labels = { TOPSECRET };
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              VisibilityClient.addLabels(conn, labels);
+            } catch (Throwable t) {
+              throw new IOException(t);
+            }
+            return null;
+          }
+        };
     SUPERUSER.runAs(action);
   }
 
@@ -117,22 +118,22 @@ public class TestVisibilityWithCheckAuths {
   public void testVerifyAccessDeniedForInvalidUserAuths() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
-              USER.getShortName());
-        } catch (Throwable e) {
-        }
-        return null;
-      }
-    };
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
+                USER.getShortName());
+            } catch (Throwable e) {
+            }
+            return null;
+          }
+        };
     SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     Admin hBaseAdmin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam).setMaxVersions(5).build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam).setMaxVersions(5).build())
+        .build();
     hBaseAdmin.createTable(tableDescriptor);
     try {
       TEST_UTIL.getAdmin().flush(tableName);
@@ -140,7 +141,7 @@ public class TestVisibilityWithCheckAuths {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-               Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.addColumn(fam, qual, 125L, value);
@@ -162,16 +163,16 @@ public class TestVisibilityWithCheckAuths {
   public void testLabelsWithAppend() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
-              USER.getShortName());
-        } catch (Throwable e) {
-        }
-        return null;
-      }
-    };
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
+                USER.getShortName());
+            } catch (Throwable e) {
+            }
+            return null;
+          }
+        };
     SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
@@ -181,7 +182,7 @@ public class TestVisibilityWithCheckAuths {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-               Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Put put = new Put(row1);
             put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, val);
             put.setCellVisibility(new CellVisibility(TOPSECRET));
@@ -195,7 +196,7 @@ public class TestVisibilityWithCheckAuths {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-               Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
             append.addColumn(fam, qual, Bytes.toBytes("b"));
             table.append(append);
@@ -208,7 +209,7 @@ public class TestVisibilityWithCheckAuths {
         @Override
         public Void run() throws Exception {
           try (Connection connection = ConnectionFactory.createConnection(conf);
-               Table table = connection.getTable(tableName)) {
+              Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
             append.addColumn(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));

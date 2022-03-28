@@ -45,12 +45,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSplitRegionWhileRSCrash {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitRegionWhileRSCrash.class);
+      HBaseClassTestRule.forClass(TestSplitRegionWhileRSCrash.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitRegionWhileRSCrash.class);
 
@@ -59,7 +59,6 @@ public class TestSplitRegionWhileRSCrash {
   private static Admin ADMIN;
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
-
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -78,14 +77,14 @@ public class TestSplitRegionWhileRSCrash {
   @Test
   public void test() throws Exception {
     MasterProcedureEnv env =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     final ProcedureExecutor<MasterProcedureEnv> executor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regionInfos = ADMIN.getRegions(TABLE_NAME);
     // Since a flush request will be sent while initializing SplitTableRegionProcedure
     // Create SplitTableRegionProcedure first before put data
     SplitTableRegionProcedure splitProcedure =
-      new SplitTableRegionProcedure(env, regionInfos.get(0), Bytes.toBytes("row5"));
+        new SplitTableRegionProcedure(env, regionInfos.get(0), Bytes.toBytes("row5"));
     // write some rows to the table
     LOG.info("Begin to put data");
     for (int i = 0; i < 10; i++) {
@@ -98,10 +97,10 @@ public class TestSplitRegionWhileRSCrash {
     LOG.info("SplitProcedure submitted");
     UTIL.waitFor(30000,
       () -> executor.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
-        .map(p -> (TransitRegionStateProcedure) p)
-        .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
+          .map(p -> (TransitRegionStateProcedure) p)
+          .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
     UTIL.getMiniHBaseCluster()
-      .killRegionServer(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName());
+        .killRegionServer(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName());
     UTIL.getMiniHBaseCluster().startRegionServer();
     UTIL.waitUntilNoRegionsInTransition();
     Scan scan = new Scan();

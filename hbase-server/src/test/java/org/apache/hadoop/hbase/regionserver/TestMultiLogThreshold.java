@@ -68,7 +68,7 @@ public class TestMultiLogThreshold {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiLogThreshold.class);
+      HBaseClassTestRule.forClass(TestMultiLogThreshold.class);
 
   private static final TableName NAME = TableName.valueOf("tableName");
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
@@ -109,7 +109,7 @@ public class TestMultiLogThreshold {
     util = new HBaseTestingUtil();
     conf = util.getConfiguration();
     threshold =
-      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+        conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     conf.setBoolean("hbase.rpc.rows.size.threshold.reject", rejectLargeBatchOp);
     util.startMiniCluster();
     util.createTable(NAME, TEST_FAM);
@@ -122,20 +122,20 @@ public class TestMultiLogThreshold {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         org.apache.logging.log4j.core.LogEvent logEvent =
-          invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
+            invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
         logs.add(
           new LevelAndMessage(logEvent.getLevel(), logEvent.getMessage().getFormattedMessage()));
         return null;
       }
     }).when(appender).append(any(org.apache.logging.log4j.core.LogEvent.class));
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).addAppender(appender);
+        .getLogger(RSRpcServices.class)).addAppender(appender);
   }
 
   @After
   public void tearDown() throws Exception {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).removeAppender(appender);
+        .getLogger(RSRpcServices.class)).removeAppender(appender);
     util.shutdownMiniCluster();
   }
 
@@ -149,7 +149,7 @@ public class TestMultiLogThreshold {
    * Actions
    */
   private void sendMultiRequest(int rows, ActionType actionType)
-    throws ServiceException, IOException {
+      throws ServiceException, IOException {
     RpcController rpcc = Mockito.mock(HBaseRpcController.class);
     MultiRequest.Builder builder = MultiRequest.newBuilder();
     int numRAs = 1;
@@ -180,8 +180,8 @@ public class TestMultiLogThreshold {
   private void assertLogBatchWarnings(boolean expected) {
     boolean actual = false;
     for (LevelAndMessage event : logs) {
-      if (event.level == org.apache.logging.log4j.Level.WARN &&
-        event.msg.contains("Large batch operation detected")) {
+      if (event.level == org.apache.logging.log4j.Level.WARN
+          && event.msg.contains("Large batch operation detected")) {
         actual = true;
         break;
       }

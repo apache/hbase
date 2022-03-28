@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,11 +79,11 @@ public class TestCompactedHFilesDischarger {
   public void setUp() throws Exception {
     TableName tableName = TableName.valueOf(getClass().getSimpleName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtil.createRegionAndWAL(info, path,
-      testUtil.getConfiguration(), tableDescriptor);
+    region = HBaseTestingUtil.createRegionAndWAL(info, path, testUtil.getConfiguration(),
+      tableDescriptor);
     rss = mock(RegionServerServices.class);
     List<HRegion> regions = new ArrayList<>(1);
     regions.add(region);
@@ -216,7 +216,7 @@ public class TestCompactedHFilesDischarger {
       }
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
-    for(HStoreFile file : compactedfiles) {
+    for (HStoreFile file : compactedfiles) {
       assertEquals("Refcount should be 3", 0, ((HStoreFile) file).getRefCount());
       unusedReaderCount++;
     }
@@ -287,7 +287,7 @@ public class TestCompactedHFilesDischarger {
       }
     }
     compactedfiles = store.getStoreEngine().getStoreFileManager().getCompactedfiles();
-    for(HStoreFile file : compactedfiles) {
+    for (HStoreFile file : compactedfiles) {
       assertEquals("Refcount should be 3", 3, ((HStoreFile) file).getRefCount());
       usedReaderCount++;
     }

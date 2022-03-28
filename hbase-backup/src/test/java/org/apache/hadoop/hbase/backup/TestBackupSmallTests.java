@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,13 +40,15 @@ public class TestBackupSmallTests extends TestBackupBase {
       UserGroupInformation.createUserForTesting("diana", new String[] {});
   private static final String PERMISSION_TEST_PATH = Path.SEPARATOR + "permissionUT";
 
-  @Test public void testBackupPathIsAccessible() throws Exception {
+  @Test
+  public void testBackupPathIsAccessible() throws Exception {
     Path path = new Path(PERMISSION_TEST_PATH);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConnection().getConfiguration());
     fs.mkdirs(path);
   }
 
-  @Test(expected = IOException.class) public void testBackupPathIsNotAccessible() throws Exception {
+  @Test(expected = IOException.class)
+  public void testBackupPathIsNotAccessible() throws Exception {
     Path path = new Path(PERMISSION_TEST_PATH);
     FileSystem rootFs = FileSystem.get(TEST_UTIL.getConnection().getConfiguration());
     rootFs.mkdirs(path.getParent());

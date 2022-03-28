@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *  Used by a {@link RecoveredReplicationSource}.
+ * Used by a {@link RecoveredReplicationSource}.
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {

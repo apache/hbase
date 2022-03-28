@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,27 +19,27 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * This filter is used to filter based on column value. It takes an
- * operator (equal, greater, not equal, etc) and a byte [] comparator for the
- * cell value.
+ * This filter is used to filter based on column value. It takes an operator (equal, greater, not
+ * equal, etc) and a byte [] comparator for the cell value.
  * <p>
- * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter}
- * to add more control.
+ * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter} to add more
+ * control.
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * To test the value of a single qualifier when scanning multiple qualifiers,
- * use {@link SingleColumnValueFilter}.
+ * To test the value of a single qualifier when scanning multiple qualifiers, use
+ * {@link SingleColumnValueFilter}.
  */
 @InterfaceAudience.Public
 public class ValueFilter extends CompareFilter {
@@ -50,7 +49,7 @@ public class ValueFilter extends CompareFilter {
    * @param valueComparator the comparator for value matching
    */
   public ValueFilter(final CompareOperator valueCompareOp,
-                     final ByteArrayComparable valueComparator) {
+      final ByteArrayComparable valueComparator) {
     super(valueCompareOp, valueComparator);
   }
 
@@ -62,11 +61,11 @@ public class ValueFilter extends CompareFilter {
     return ReturnCode.INCLUDE;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    @SuppressWarnings("rawtypes")  // for arguments
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    @SuppressWarnings("rawtypes") // for arguments
     ArrayList arguments = CompareFilter.extractArguments(filterArguments);
-    CompareOperator compareOp = (CompareOperator)arguments.get(0);
-    ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
+    CompareOperator compareOp = (CompareOperator) arguments.get(0);
+    ByteArrayComparable comparator = (ByteArrayComparable) arguments.get(1);
     return new ValueFilter(compareOp, comparator);
   }
 
@@ -74,9 +73,8 @@ public class ValueFilter extends CompareFilter {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.ValueFilter.Builder builder =
-      FilterProtos.ValueFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.ValueFilter.Builder builder = FilterProtos.ValueFilter.newBuilder();
     builder.setCompareFilter(super.convert());
     return builder.build().toByteArray();
   }
@@ -87,8 +85,7 @@ public class ValueFilter extends CompareFilter {
    * @throws DeserializationException
    * @see #toByteArray
    */
-  public static ValueFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static ValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ValueFilter proto;
     try {
       proto = FilterProtos.ValueFilter.parseFrom(pbBytes);
@@ -96,7 +93,7 @@ public class ValueFilter extends CompareFilter {
       throw new DeserializationException(e);
     }
     final CompareOperator valueCompareOp =
-      CompareOperator.valueOf(proto.getCompareFilter().getCompareOp().name());
+        CompareOperator.valueOf(proto.getCompareFilter().getCompareOp().name());
     ByteArrayComparable valueComparator = null;
     try {
       if (proto.getCompareFilter().hasComparator()) {
@@ -105,12 +102,12 @@ public class ValueFilter extends CompareFilter {
     } catch (IOException ioe) {
       throw new DeserializationException(ioe);
     }
-    return new ValueFilter(valueCompareOp,valueComparator);
+    return new ValueFilter(valueCompareOp, valueComparator);
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {

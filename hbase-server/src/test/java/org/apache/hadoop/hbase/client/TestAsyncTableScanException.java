@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestAsyncTableScanException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScanException.class);
+      HBaseClassTestRule.forClass(TestAsyncTableScanException.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -103,9 +103,9 @@ public class TestAsyncTableScanException {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
-      .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setCoprocessor(ErrorCP.class.getName()).build());
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setCoprocessor(ErrorCP.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
       for (int i = 0; i < ROW_COUNT; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)));
@@ -141,7 +141,7 @@ public class TestAsyncTableScanException {
   public void testIOException() throws IOException {
     ERROR = true;
     try (ResultScanner scanner =
-      CONN.getTableBuilder(TABLE_NAME).setMaxAttempts(3).build().getScanner(FAMILY)) {
+        CONN.getTableBuilder(TABLE_NAME).setMaxAttempts(3).build().getScanner(FAMILY)) {
       scanner.next();
       fail();
     } catch (RetriesExhaustedException e) {

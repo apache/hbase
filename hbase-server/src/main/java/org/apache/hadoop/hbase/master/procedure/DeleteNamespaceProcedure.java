@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -98,8 +98,9 @@ public class DeleteNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-delete-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to delete namespace " + namespaceName + " (in state=" +
-          state + ")", e);
+        LOG.warn("Retriable error trying to delete namespace " + namespaceName + " (in state="
+            + state + ")",
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -150,10 +151,10 @@ public class DeleteNamespaceProcedure
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData.Builder deleteNamespaceMsg =
-      MasterProcedureProtos.DeleteNamespaceStateData.newBuilder().setNamespaceName(namespaceName);
+        MasterProcedureProtos.DeleteNamespaceStateData.newBuilder().setNamespaceName(namespaceName);
     if (this.nsDescriptor != null) {
       deleteNamespaceMsg
-        .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
+          .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
     }
     serializer.serialize(deleteNamespaceMsg.build());
   }
@@ -163,11 +164,11 @@ public class DeleteNamespaceProcedure
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData deleteNamespaceMsg =
-      serializer.deserialize(MasterProcedureProtos.DeleteNamespaceStateData.class);
+        serializer.deserialize(MasterProcedureProtos.DeleteNamespaceStateData.class);
     namespaceName = deleteNamespaceMsg.getNamespaceName();
     if (deleteNamespaceMsg.hasNamespaceDescriptor()) {
       nsDescriptor =
-        ProtobufUtil.toNamespaceDescriptor(deleteNamespaceMsg.getNamespaceDescriptor());
+          ProtobufUtil.toNamespaceDescriptor(deleteNamespaceMsg.getNamespaceDescriptor());
     }
   }
 
@@ -205,8 +206,8 @@ public class DeleteNamespaceProcedure
     }
     if (tableCount > 0) {
       setFailure("master-delete-namespace",
-        new ConstraintException("Only empty namespaces can be removed. Namespace " + namespaceName +
-          " has " + tableCount + " tables"));
+        new ConstraintException("Only empty namespaces can be removed. Namespace " + namespaceName
+            + " has " + tableCount + " tables"));
       return false;
     }
 

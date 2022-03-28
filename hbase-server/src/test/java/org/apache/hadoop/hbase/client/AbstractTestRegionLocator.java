@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,8 +50,8 @@ public abstract class AbstractTestRegionLocator {
     UTIL.startMiniCluster(3);
     HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, REGION_REPLICATION);
     TableDescriptor td =
-      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     SPLIT_KEYS = new byte[9][];
     for (int i = 0; i < 9; i++) {
       SPLIT_KEYS[i] = Bytes.toBytes(Integer.toString(i + 1));
@@ -59,7 +59,7 @@ public abstract class AbstractTestRegionLocator {
     UTIL.getAdmin().createTable(td, SPLIT_KEYS);
     UTIL.waitTableAvailable(TABLE_NAME);
     try (ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
+        ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
     }
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -114,10 +114,10 @@ public abstract class AbstractTestRegionLocator {
 
   private ServerName findRegionLocation(TableName tableName, byte[] startKey, int replicaId) {
     return UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(tableName).stream().map(Region::getRegionInfo)
-        .anyMatch(r -> r.containsRow(startKey) && r.getReplicaId() == replicaId))
-      .findFirst().get().getServerName();
+        .map(t -> t.getRegionServer())
+        .filter(rs -> rs.getRegions(tableName).stream().map(Region::getRegionInfo)
+            .anyMatch(r -> r.containsRow(startKey) && r.getReplicaId() == replicaId))
+        .findFirst().get().getServerName();
   }
 
   @Test
@@ -170,7 +170,7 @@ public abstract class AbstractTestRegionLocator {
     assertArrayEquals(HConstants.EMPTY_END_ROW, region.getEndKey());
     assertEquals(replicaId, region.getReplicaId());
     ServerName expected =
-      findRegionLocation(TableName.META_TABLE_NAME, region.getStartKey(), replicaId);
+        findRegionLocation(TableName.META_TABLE_NAME, region.getStartKey(), replicaId);
     assertEquals(expected, loc.getServerName());
   }
 

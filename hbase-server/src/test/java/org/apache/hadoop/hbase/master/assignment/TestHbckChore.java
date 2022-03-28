@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -170,8 +170,8 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     // Set table state to disabled, then not in inconsistent regions.
     TableStateManager tableStateManager = master.getTableStateManager();
-    Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED)).
-        thenReturn(true);
+    Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED))
+        .thenReturn(true);
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));

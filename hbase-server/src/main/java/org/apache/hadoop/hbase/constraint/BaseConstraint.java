@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class to use when actually implementing a {@link Constraint}. It takes
- * care of getting and setting of configuration for the constraint.
+ * Base class to use when actually implementing a {@link Constraint}. It takes care of getting and
+ * setting of configuration for the constraint.
  */
 @InterfaceAudience.Private
 public abstract class BaseConstraint extends Configured implements Constraint {

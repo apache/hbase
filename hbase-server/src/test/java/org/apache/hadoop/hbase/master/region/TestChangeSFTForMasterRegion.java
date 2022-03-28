@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestChangeSFTForMasterRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChangeSFTForMasterRegion.class);
+      HBaseClassTestRule.forClass(TestChangeSFTForMasterRegion.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -79,7 +79,7 @@ public class TestChangeSFTForMasterRegion {
     UTIL.waitTableAvailable(NAME);
     // confirm that we have changed the SFT to FILE
     TableDescriptor td =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterRegion().region.getTableDescriptor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterRegion().region.getTableDescriptor();
     assertEquals(StoreFileTrackerFactory.Trackers.FILE.name(),
       td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
   }

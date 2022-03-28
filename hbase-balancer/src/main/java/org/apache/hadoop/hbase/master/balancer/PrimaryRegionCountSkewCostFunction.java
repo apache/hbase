@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class PrimaryRegionCountSkewCostFunction extends CostFunction {
 
   private static final String PRIMARY_REGION_COUNT_SKEW_COST_KEY =
-    "hbase.master.balancer.stochastic.primaryRegionCountCost";
+      "hbase.master.balancer.stochastic.primaryRegionCountCost";
   private static final float DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST = 500;
 
   private final DoubleArrayCost cost = new DoubleArrayCost();

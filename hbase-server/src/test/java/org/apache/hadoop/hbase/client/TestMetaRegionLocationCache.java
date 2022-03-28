@@ -50,7 +50,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({SmallTests.class, MasterTests.class })
+@Category({ SmallTests.class, MasterTests.class })
 public class TestMetaRegionLocationCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -76,7 +76,7 @@ public class TestMetaRegionLocationCache {
 
   private List<HRegionLocation> getCurrentMetaLocations(ZKWatcher zk) throws Exception {
     List<HRegionLocation> result = new ArrayList<>();
-    for (String znode: zk.getMetaReplicaNodes()) {
+    for (String znode : zk.getMetaReplicaNodes()) {
       String path = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode, znode);
       int replicaId = zk.getZNodePaths().getMetaReplicaIdFromPath(path);
       RegionState state = MetaTableLocator.getMetaRegionState(zk, replicaId);
@@ -100,7 +100,7 @@ public class TestMetaRegionLocationCache {
     // Wait till all replicas available.
     retries = 0;
     while (master.getMetaRegionLocationCache().getMetaRegionLocations().size() != metaZnodes
-      .size()) {
+        .size()) {
       Thread.sleep(1000);
       if (++retries == 10) {
         break;
@@ -129,16 +129,17 @@ public class TestMetaRegionLocationCache {
   /*
    * Shuffles the meta region replicas around the cluster and makes sure the cache is not stale.
    */
-  @Test public void testMetaLocationsChange() throws Exception {
+  @Test
+  public void testMetaLocationsChange() throws Exception {
     List<HRegionLocation> currentMetaLocs =
         getCurrentMetaLocations(TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper());
     // Move these replicas to random servers.
-    for (HRegionLocation location: currentMetaLocs) {
+    for (HRegionLocation location : currentMetaLocs) {
       RegionReplicaTestHelper.moveRegion(TEST_UTIL, location);
     }
     RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
-    for (JVMClusterUtil.MasterThread masterThread:
-        TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
+    for (JVMClusterUtil.MasterThread masterThread : TEST_UTIL.getMiniHBaseCluster()
+        .getMasterThreads()) {
       verifyCachedMetaLocations(masterThread.getMaster());
     }
   }
@@ -147,7 +148,8 @@ public class TestMetaRegionLocationCache {
    * Tests MetaRegionLocationCache's init procedure to make sure that it correctly watches the base
    * znode for notifications.
    */
-  @Test public void testMetaRegionLocationCache() throws Exception {
+  @Test
+  public void testMetaRegionLocationCache() throws Exception {
     final String parentZnodeName = "/randomznodename";
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parentZnodeName);
@@ -157,7 +159,8 @@ public class TestMetaRegionLocationCache {
       // some ZK activity in the background.
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
       ctx.addThread(new MultithreadedTestUtil.RepeatingTestThread(ctx) {
-        @Override public void doAnAction() throws Exception {
+        @Override
+        public void doAnAction() throws Exception {
           final String testZnode = parentZnodeName + "/child";
           ZKUtil.createNodeIfNotExistsAndWatch(zkWatcher, testZnode, testZnode.getBytes());
           ZKUtil.deleteNode(zkWatcher, testZnode);

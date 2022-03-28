@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests {@link RemoteAdmin} retries.
  */
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestRemoteAdminRetries {
 
   @ClassRule
@@ -78,7 +78,7 @@ public class TestRemoteAdminRetries {
   }
 
   @Test
-  public void testFailingGetRestVersion() throws Exception  {
+  public void testFailingGetRestVersion() throws Exception {
     testTimedOutGetCall(new CallExecutor() {
       @Override
       public void run() throws Exception {
@@ -88,7 +88,7 @@ public class TestRemoteAdminRetries {
   }
 
   @Test
-  public void testFailingGetClusterStatus() throws Exception  {
+  public void testFailingGetClusterStatus() throws Exception {
     testTimedOutGetCall(new CallExecutor() {
       @Override
       public void run() throws Exception {
@@ -123,7 +123,7 @@ public class TestRemoteAdminRetries {
       @Override
       public void run() throws Exception {
         remoteAdmin
-          .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("TestTable")).build());
+            .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("TestTable")).build());
       }
     });
     verify(client, times(RETRIES)).put(anyString(), anyString(), any());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Verify the behaviour of the Rate Limiter.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestRateLimiter {
 
   @ClassRule
@@ -95,7 +95,7 @@ public class TestRateLimiter {
       long temp = nowTs + 500;
       limiter.setNextRefillTime(limiter.getNextRefillTime() + temp);
       assertFalse(limiter.canExecute());
-      //Roll back the nextRefillTime set to continue further testing
+      // Roll back the nextRefillTime set to continue further testing
       limiter.setNextRefillTime(limiter.getNextRefillTime() - temp);
     }
   }
@@ -193,7 +193,8 @@ public class TestRateLimiter {
   @Test
   public void testCanExecuteOfAverageIntervalRateLimiter() throws InterruptedException {
     RateLimiter limiter = new AverageIntervalRateLimiter();
-    // when set limit is 100 per sec, this AverageIntervalRateLimiter will support at max 200 per sec
+    // when set limit is 100 per sec, this AverageIntervalRateLimiter will support at max 200 per
+    // sec
     limiter.set(100, TimeUnit.SECONDS);
     limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
     assertEquals(50, testCanExecuteByRate(limiter, 50));
@@ -397,12 +398,9 @@ public class TestRateLimiter {
   }
 
   /*
-   * This test case is tricky. Basically, it simulates the following events:
-   *           Thread-1                             Thread-2
-   * t0:  canExecute(100) and consume(100)
-   * t1:                                         canExecute(100), avail may be increased by 80
-   * t2:  consume(-80) as actual size is 20
-   * It will check if consume(-80) can handle overflow correctly.
+   * This test case is tricky. Basically, it simulates the following events: Thread-1 Thread-2 t0:
+   * canExecute(100) and consume(100) t1: canExecute(100), avail may be increased by 80 t2:
+   * consume(-80) as actual size is 20 It will check if consume(-80) can handle overflow correctly.
    */
   @Test
   public void testLimiterCompensationOverflow() throws InterruptedException {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -30,8 +27,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Tool for reading ZooKeeper servers from HBase XML configuration and producing
- * a line-by-line list for use by bash scripts.
+ * Tool for reading ZooKeeper servers from HBase XML configuration and producing a line-by-line list
+ * for use by bash scripts.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public final class ZKServerTool {
@@ -60,7 +57,7 @@ public final class ZKServerTool {
    * @param args Command line arguments.
    */
   public static void main(String[] args) {
-    for(ServerName server: readZKNodes(HBaseConfiguration.create())) {
+    for (ServerName server : readZKNodes(HBaseConfiguration.create())) {
       // bin/zookeeper.sh relies on the "ZK host" string for grepping which is case sensitive.
       System.out.println("ZK host: " + server.getHostname());
     }

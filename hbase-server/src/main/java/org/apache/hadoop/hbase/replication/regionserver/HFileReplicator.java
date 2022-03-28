@@ -95,10 +95,10 @@ public class HFileReplicator implements Closeable {
   private int copiesPerThread;
   private List<String> sourceClusterIds;
 
-  public HFileReplicator(Configuration sourceClusterConf,
-      String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath,
-      Map<String, List<Pair<byte[], List<String>>>> tableQueueMap, Configuration conf,
-      AsyncClusterConnection connection, List<String> sourceClusterIds) throws IOException {
+  public HFileReplicator(Configuration sourceClusterConf, String sourceBaseNamespaceDirPath,
+      String sourceHFileArchiveDirPath, Map<String, List<Pair<byte[], List<String>>>> tableQueueMap,
+      Configuration conf, AsyncClusterConnection connection, List<String> sourceClusterIds)
+      throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
@@ -110,17 +110,14 @@ public class HFileReplicator implements Closeable {
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     this.hbaseStagingDir =
-      new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
-    this.maxCopyThreads =
-        this.conf.getInt(REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY,
-          REPLICATION_BULKLOAD_COPY_MAXTHREADS_DEFAULT);
+        new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+    this.maxCopyThreads = this.conf.getInt(REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY,
+      REPLICATION_BULKLOAD_COPY_MAXTHREADS_DEFAULT);
     this.exec = Threads.getBoundedCachedThreadPool(maxCopyThreads, 60, TimeUnit.SECONDS,
-        new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("HFileReplicationCopier-%1$d-" + this.sourceBaseNamespaceDirPath).
-          build());
-    this.copiesPerThread =
-        conf.getInt(REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY,
-          REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT);
+      new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat("HFileReplicationCopier-%1$d-" + this.sourceBaseNamespaceDirPath).build());
+    this.copiesPerThread = conf.getInt(REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY,
+      REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT);
 
     sinkFs = FileSystem.get(conf);
   }
@@ -167,7 +164,7 @@ public class HFileReplicator implements Closeable {
     BulkLoadHFilesTool loader = new BulkLoadHFilesTool(conf);
     // Set the staging directory which will be used by BulkLoadHFilesTool for loading the data
     loader.setBulkToken(stagingDir.toString());
-    //updating list of cluster ids where this bulkload event has already been processed
+    // updating list of cluster ids where this bulkload event has already been processed
     loader.setClusterIds(sourceClusterIds);
     for (int count = 0; !queue.isEmpty(); count++) {
       if (count != 0) {
@@ -230,8 +227,7 @@ public class HFileReplicator implements Closeable {
         String tableName = tableEntry.getKey();
 
         // Create staging directory for each table
-        Path stagingDir =
-            createStagingDir(hbaseStagingDir, user, TableName.valueOf(tableName));
+        Path stagingDir = createStagingDir(hbaseStagingDir, user, TableName.valueOf(tableName));
 
         familyHFilePathsPairsList = tableEntry.getValue();
         familyHFilePathsPairsListSize = familyHFilePathsPairsList.size();
@@ -253,9 +249,8 @@ public class HFileReplicator implements Closeable {
           int currentCopied = 0;
           // Copy the hfiles parallely
           while (totalNoOfHFiles > currentCopied + this.copiesPerThread) {
-            c =
-                new Copier(sourceFs, familyStagingDir, hfilePaths.subList(currentCopied,
-                  currentCopied + this.copiesPerThread));
+            c = new Copier(sourceFs, familyStagingDir,
+                hfilePaths.subList(currentCopied, currentCopied + this.copiesPerThread));
             future = exec.submit(c);
             futures.add(future);
             currentCopied += this.copiesPerThread;
@@ -263,9 +258,8 @@ public class HFileReplicator implements Closeable {
 
           int remaining = totalNoOfHFiles - currentCopied;
           if (remaining > 0) {
-            c =
-                new Copier(sourceFs, familyStagingDir, hfilePaths.subList(currentCopied,
-                  currentCopied + remaining));
+            c = new Copier(sourceFs, familyStagingDir,
+                hfilePaths.subList(currentCopied, currentCopied + remaining));
             future = exec.submit(c);
             futures.add(future);
           }
@@ -274,10 +268,9 @@ public class HFileReplicator implements Closeable {
             try {
               f.get();
             } catch (InterruptedException e) {
-              InterruptedIOException iioe =
-                  new InterruptedIOException(
-                      "Failed to copy HFiles to local file system. This will be retried again "
-                          + "by the source cluster.");
+              InterruptedIOException iioe = new InterruptedIOException(
+                  "Failed to copy HFiles to local file system. This will be retried again "
+                      + "by the source cluster.");
               iioe.initCause(e);
               throw iioe;
             } catch (ExecutionException e) {
@@ -295,7 +288,7 @@ public class HFileReplicator implements Closeable {
       if (sourceFs != null) {
         sourceFs.close();
       }
-      if(exec != null) {
+      if (exec != null) {
         exec.shutdown();
       }
     }

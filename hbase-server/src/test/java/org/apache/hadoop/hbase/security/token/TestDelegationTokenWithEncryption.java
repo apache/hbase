@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,8 +76,7 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
   public static Collection<Object> parameters() {
     // Client connection supports only non-blocking RPCs (due to master registry restriction), hence
     // we only test NettyRpcClient.
-    return Arrays.asList(
-      new Object[] { NettyRpcClient.class.getName() });
+    return Arrays.asList(new Object[] { NettyRpcClient.class.getName() });
   }
 
   @Parameter
@@ -106,7 +105,7 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Admin admin = conn.getAdmin();
       TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(tableDescriptor);
       try (Table table = conn.getTable(tableName)) {
         table.put(new Put(row).addColumn(family, qualifier, value));

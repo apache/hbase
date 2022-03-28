@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,16 +48,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 class RSAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction<RSRpcServices> {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(RSAnnotationReadingPriorityFunction.class);
+      LoggerFactory.getLogger(RSAnnotationReadingPriorityFunction.class);
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
 
   @SuppressWarnings("unchecked")
   private final Class<? extends Message>[] knownArgumentClasses =
-    new Class[] { GetRegionInfoRequest.class, GetStoreFileRequest.class, CloseRegionRequest.class,
-      FlushRegionRequest.class, CompactRegionRequest.class, GetRequest.class, MutateRequest.class,
-      ScanRequest.class };
+      new Class[] { GetRegionInfoRequest.class, GetStoreFileRequest.class, CloseRegionRequest.class,
+          FlushRegionRequest.class, CompactRegionRequest.class, GetRequest.class,
+          MutateRequest.class, ScanRequest.class };
 
   // Some caches for helping performance
   private final Map<String, Class<? extends Message>> argumentToClassMap = new HashMap<>();

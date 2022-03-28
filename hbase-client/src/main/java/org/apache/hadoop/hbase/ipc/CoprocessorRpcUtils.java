@@ -14,9 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
@@ -55,14 +53,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 public final class CoprocessorRpcUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorRpcUtils.class);
   /**
-   * We assume that all HBase protobuf services share a common package name
-   * (defined in the .proto files).
+   * We assume that all HBase protobuf services share a common package name (defined in the .proto
+   * files).
    */
   private static final String hbaseServicePackage;
   static {
     Descriptors.ServiceDescriptor clientService = ClientProtos.ClientService.getDescriptor();
-    hbaseServicePackage = clientService.getFullName()
-        .substring(0, clientService.getFullName().lastIndexOf(clientService.getName()));
+    hbaseServicePackage = clientService.getFullName().substring(0,
+      clientService.getFullName().lastIndexOf(clientService.getName()));
   }
 
   private CoprocessorRpcUtils() {
@@ -70,10 +68,10 @@ public final class CoprocessorRpcUtils {
   }
 
   /**
-   * Returns the name to use for coprocessor service calls.  For core HBase services
-   * (in the hbase.pb protobuf package), this returns the unqualified name in order to provide
-   * backward compatibility across the package name change.  For all other services,
-   * the fully-qualified service name is used.
+   * Returns the name to use for coprocessor service calls. For core HBase services (in the hbase.pb
+   * protobuf package), this returns the unqualified name in order to provide backward compatibility
+   * across the package name change. For all other services, the fully-qualified service name is
+   * used.
    */
   public static String getServiceName(Descriptors.ServiceDescriptor service) {
     if (service.getFullName().startsWith(hbaseServicePackage)) {
@@ -85,42 +83,43 @@ public final class CoprocessorRpcUtils {
   public static CoprocessorServiceRequest getCoprocessorServiceRequest(
       final Descriptors.MethodDescriptor method, final Message request) {
     return getCoprocessorServiceRequest(method, request, HConstants.EMPTY_BYTE_ARRAY,
-        HConstants.EMPTY_BYTE_ARRAY);
+      HConstants.EMPTY_BYTE_ARRAY);
   }
 
   public static CoprocessorServiceRequest getCoprocessorServiceRequest(
-    final Descriptors.MethodDescriptor method, final Message request, final byte[] row,
-    final byte[] regionName) {
+      final Descriptors.MethodDescriptor method, final Message request, final byte[] row,
+      final byte[] regionName) {
     return CoprocessorServiceRequest.newBuilder()
-      .setCall(getCoprocessorServiceCall(method, request, row))
-      .setRegion(RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
+        .setCall(getCoprocessorServiceCall(method, request, row))
+        .setRegion(RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
   }
 
   private static CoprocessorServiceCall getCoprocessorServiceCall(final MethodDescriptor method,
-    final Message request, final byte[] row) {
+      final Message request, final byte[] row) {
     return CoprocessorServiceCall.newBuilder()
-      .setRow(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
-      .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
-      .setMethodName(method.getName())
-      // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
-      // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
-      .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations
-        .unsafeWrap(request.toByteArray()))
-      .build();
+        .setRow(
+          org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
+        .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
+        .setMethodName(method.getName())
+        // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
+        // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
+        .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations
+            .unsafeWrap(request.toByteArray()))
+        .build();
   }
 
   public static MethodDescriptor getMethodDescriptor(final String methodName,
-    final ServiceDescriptor serviceDesc) throws UnknownProtocolException {
+      final ServiceDescriptor serviceDesc) throws UnknownProtocolException {
     MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
     if (methodDesc == null) {
       throw new UnknownProtocolException(
-        "Unknown method " + methodName + " called on service " + serviceDesc.getFullName());
+          "Unknown method " + methodName + " called on service " + serviceDesc.getFullName());
     }
     return methodDesc;
   }
 
   public static Message getRequest(Service service, MethodDescriptor methodDesc,
-    ByteString shadedRequest) throws IOException {
+      ByteString shadedRequest) throws IOException {
     Message.Builder builderForType = service.getRequestPrototype(methodDesc).newBuilderForType();
     ProtobufUtil.mergeFrom(builderForType,
       // TODO: COPY FROM SHADED TO NON_SHADED. DO I HAVE TOO?
@@ -129,7 +128,7 @@ public final class CoprocessorRpcUtils {
   }
 
   public static Message getResponse(ClientProtos.CoprocessorServiceResponse result,
-    Message responsePrototype) throws IOException {
+      Message responsePrototype) throws IOException {
     Message response;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();
@@ -145,9 +144,9 @@ public final class CoprocessorRpcUtils {
   }
 
   public static ClientProtos.CoprocessorServiceResponse getResponse(final Message result,
-    final byte[] regionName) {
+      final byte[] regionName) {
     ClientProtos.CoprocessorServiceResponse.Builder builder =
-      ClientProtos.CoprocessorServiceResponse.newBuilder();
+        ClientProtos.CoprocessorServiceResponse.newBuilder();
     builder.setRegion(
       RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName));
     // TODO: UGLY COPY IN HERE!!!!
@@ -157,10 +156,10 @@ public final class CoprocessorRpcUtils {
   }
 
   /**
-   * Simple {@link RpcCallback} implementation providing a
-   * {@link java.util.concurrent.Future}-like {@link BlockingRpcCallback#get()} method, which
-   * will block util the instance's {@link BlockingRpcCallback#run(Object)} method has been called.
-   * {@code R} is the RPC response type that will be passed to the {@link #run(Object)} method.
+   * Simple {@link RpcCallback} implementation providing a {@link java.util.concurrent.Future}-like
+   * {@link BlockingRpcCallback#get()} method, which will block util the instance's
+   * {@link BlockingRpcCallback#run(Object)} method has been called. {@code R} is the RPC response
+   * type that will be passed to the {@link #run(Object)} method.
    */
   @InterfaceAudience.Private
   // Copy of BlockingRpcCallback but deriving from RpcCallback non-shaded.
@@ -184,7 +183,7 @@ public final class CoprocessorRpcUtils {
 
     /**
      * Returns the parameter passed to {@link #run(Object)} or {@code null} if a null value was
-     * passed.  When used asynchronously, this method will block until the {@link #run(Object)}
+     * passed. When used asynchronously, this method will block until the {@link #run(Object)}
      * method has been called.
      * @return the response object or {@code null} if no response was passed
      */
@@ -203,8 +202,8 @@ public final class CoprocessorRpcUtils {
   }
 
   /**
-   * Stores an exception encountered during RPC invocation so it can be passed back
-   * through to the client.
+   * Stores an exception encountered during RPC invocation so it can be passed back through to the
+   * client.
    * @param controller the controller instance provided by the client when calling the service
    * @param ioe the exception encountered
    */
@@ -213,7 +212,7 @@ public final class CoprocessorRpcUtils {
       return;
     }
     if (controller instanceof org.apache.hadoop.hbase.ipc.ServerRpcController) {
-      ((ServerRpcController)controller).setFailedOn(ioe);
+      ((ServerRpcController) controller).setFailedOn(ioe);
     } else {
       controller.setFailed(StringUtils.stringifyException(ioe));
     }
@@ -223,7 +222,7 @@ public final class CoprocessorRpcUtils {
    * Retreivies exception stored during RPC invocation.
    * @param controller the controller instance provided by the client when calling the service
    * @return exception if any, or null; Will return DoNotRetryIOException for string represented
-   * failure causes in controller.
+   *         failure causes in controller.
    */
   @Nullable
   public static IOException getControllerException(RpcController controller) throws IOException {
@@ -231,7 +230,7 @@ public final class CoprocessorRpcUtils {
       return null;
     }
     if (controller instanceof ServerRpcController) {
-      return ((ServerRpcController)controller).getFailedOn();
+      return ((ServerRpcController) controller).getFailedOn();
     }
     return new DoNotRetryIOException(controller.errorText());
   }

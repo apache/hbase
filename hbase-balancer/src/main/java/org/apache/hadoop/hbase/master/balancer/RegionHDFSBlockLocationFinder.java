@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -61,7 +62,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
   private static final long CACHE_TIME = 240 * 60 * 1000;
   private static final float EPSILON = 0.0001f;
   private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION =
-    new HDFSBlocksDistribution();
+      new HDFSBlocksDistribution();
   private volatile ClusterMetrics status;
   private volatile ClusterInfoProvider provider;
   private final ListeningExecutorService executor;
@@ -69,24 +70,24 @@ class RegionHDFSBlockLocationFinder extends Configured {
   private long lastFullRefresh = EnvironmentEdgeManager.currentTime();
 
   private CacheLoader<RegionInfo, HDFSBlocksDistribution> loader =
-    new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
+      new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
 
-      @Override
-      public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
-        HDFSBlocksDistribution oldValue) throws Exception {
-        return executor.submit(new Callable<HDFSBlocksDistribution>() {
-          @Override
-          public HDFSBlocksDistribution call() throws Exception {
-            return internalGetTopBlockLocation(hri);
-          }
-        });
-      }
+        @Override
+        public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
+            HDFSBlocksDistribution oldValue) throws Exception {
+          return executor.submit(new Callable<HDFSBlocksDistribution>() {
+            @Override
+            public HDFSBlocksDistribution call() throws Exception {
+              return internalGetTopBlockLocation(hri);
+            }
+          });
+        }
 
-      @Override
-      public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
-        return internalGetTopBlockLocation(key);
-      }
-    };
+        @Override
+        public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
+          return internalGetTopBlockLocation(key);
+        }
+      };
 
   // The cache for where regions are located.
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> cache = null;
@@ -103,7 +104,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
    */
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> createCache() {
     return CacheBuilder.newBuilder().expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
-      .build(loader);
+        .build(loader);
   }
 
   void setClusterInfoProvider(ClusterInfoProvider provider) {
@@ -129,8 +130,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
    */
   private void refreshLocalityChangedRegions(ClusterMetrics oldStatus, ClusterMetrics newStatus) {
     if (oldStatus == null || newStatus == null) {
-      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}",
-        oldStatus, newStatus);
+      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}", oldStatus,
+        newStatus);
       return;
     }
 
@@ -165,7 +166,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
   }
 
   private float getOldLocality(ServerName newServer, byte[] regionName,
-    Map<ServerName, ServerMetrics> oldServers) {
+      Map<ServerName, ServerMetrics> oldServers) {
     ServerMetrics serverMetrics = oldServers.get(newServer);
     if (serverMetrics == null) {
       return -1f;
@@ -215,7 +216,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
       TableDescriptor tableDescriptor = getDescriptor(region.getTable());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
-          provider.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
+            provider.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
         return blocksDistribution;
       }
     } catch (IOException ioe) {
@@ -244,7 +245,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
    * @return ServerName list
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*|.*/RegionHDFSBlockLocationFinder.java")
+      allowedOnPath = ".*/src/test/.*|.*/RegionHDFSBlockLocationFinder.java")
   List<ServerName> mapHostNameToServerName(List<String> hosts) {
     if (hosts == null || status == null) {
       if (hosts == null) {
@@ -311,7 +312,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
 
   void refreshAndWait(Collection<RegionInfo> hris) {
     ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
-      new ArrayList<>(hris.size());
+        new ArrayList<>(hris.size());
     for (RegionInfo hregionInfo : hris) {
       regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
     }
@@ -331,7 +332,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   LoadingCache<RegionInfo, HDFSBlocksDistribution> getCache() {
     return cache;
   }

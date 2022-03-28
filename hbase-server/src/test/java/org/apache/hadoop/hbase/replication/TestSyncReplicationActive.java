@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
 
   @Test
   public void testActive() throws Exception {
@@ -82,10 +82,10 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     verify(UTIL2, 0, 100);
 
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
       AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setMaxAttempts(1).build();
       CompletableFuture<Void> future =
-        table.put(new Put(Bytes.toBytes(1000)).addColumn(CF, CQ, Bytes.toBytes(1000)));
+          table.put(new Put(Bytes.toBytes(1000)).addColumn(CF, CQ, Bytes.toBytes(1000)));
       Thread.sleep(2000);
       // should hang on rolling
       assertFalse(future.isDone());
@@ -117,14 +117,14 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     write(UTIL2, 200, 300);
   }
 
-  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtil utility, Path remoteDir,
-      String peerId) throws Exception {
+  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtil utility, Path remoteDir, String peerId)
+      throws Exception {
     FileSystem fs2 = utility.getTestFileSystem();
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));
     Assert.assertTrue(files.length > 0);
     for (FileStatus file : files) {
-      try (
-        Reader reader = WALFactory.createReader(fs2, file.getPath(), utility.getConfiguration())) {
+      try (Reader reader =
+          WALFactory.createReader(fs2, file.getPath(), utility.getConfiguration())) {
         Entry entry = reader.next();
         Assert.assertTrue(entry != null);
         while (entry != null) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -226,7 +225,6 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
   }
 
-
   /**
    * Determines if the caller should do one of several things:
    * <ul>
@@ -301,7 +299,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
       if (nextKey != cell) {
         return nextKey;
       }
-      // The cell is at the end of row/family/qualifier, so it is impossible to find any DeleteFamily cells.
+      // The cell is at the end of row/family/qualifier, so it is impossible to find any
+      // DeleteFamily cells.
       // Let us seek to next column.
     }
     ColumnCount nextColumn = columns.getColumnHint();
@@ -319,8 +318,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
-    return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
-      0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0,
+      null, 0, 0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
@@ -331,8 +330,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
-        0, 0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0,
+        null, 0, 0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
       return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
@@ -406,7 +405,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
           oldestUnexpiredTS, scanInfo.getComparator());
     } else {
       columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(),
-        maxVersionToCheck, oldestUnexpiredTS);
+          maxVersionToCheck, oldestUnexpiredTS);
     }
     return new Pair<>(deleteTracker, columnTracker);
   }

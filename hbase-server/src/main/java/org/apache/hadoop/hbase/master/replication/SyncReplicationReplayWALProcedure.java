@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class SyncReplicationReplayWALProcedure
     extends AbstractPeerNoLockProcedure<SyncReplicationReplayWALState> {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
+      LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
 
   private ServerName worker = null;
 
@@ -59,7 +59,7 @@ public class SyncReplicationReplayWALProcedure
   protected Flow executeFromState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
       throws ProcedureSuspendedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
-      env.getMasterServices().getSyncReplicationReplayWALManager();
+        env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
       case ASSIGN_WORKER:
         worker = syncReplicationReplayWALManager.acquirePeerWorker(peerId, this);
@@ -75,8 +75,9 @@ public class SyncReplicationReplayWALProcedure
           finished = syncReplicationReplayWALManager.isReplayWALFinished(wals.get(0));
         } catch (IOException e) {
           throw suspend(env.getMasterConfiguration(),
-            backoff -> LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
-              ", sleep {} secs and retry", wals, peerId, backoff / 1000, e));
+            backoff -> LOG.warn("Failed to check whether replay wals {} finished for peer id={}"
+                + ", sleep {} secs and retry",
+              wals, peerId, backoff / 1000, e));
         }
         syncReplicationReplayWALManager.releasePeerWorker(peerId, worker,
           env.getProcedureScheduler());
@@ -119,7 +120,7 @@ public class SyncReplicationReplayWALProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     SyncReplicationReplayWALStateData.Builder builder =
-      SyncReplicationReplayWALStateData.newBuilder().setPeerId(peerId).addAllWal(wals);
+        SyncReplicationReplayWALStateData.newBuilder().setPeerId(peerId).addAllWal(wals);
     if (worker != null) {
       builder.setWorker(ProtobufUtil.toServerName(worker));
     }
@@ -130,7 +131,7 @@ public class SyncReplicationReplayWALProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     SyncReplicationReplayWALStateData data =
-      serializer.deserialize(SyncReplicationReplayWALStateData.class);
+        serializer.deserialize(SyncReplicationReplayWALStateData.class);
     peerId = data.getPeerId();
     wals = data.getWalList();
     if (data.hasWorker()) {

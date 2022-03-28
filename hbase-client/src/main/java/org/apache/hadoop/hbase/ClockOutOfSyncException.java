@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +18,10 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This exception is thrown by the master when a region server clock skew is
- * too high.
+ * This exception is thrown by the master when a region server clock skew is too high.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,10 +55,10 @@ public class TestSyncReplicationMoreLogsInLocalGiveUpSplitting extends SyncRepli
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationMoreLogsInLocalGiveUpSplitting.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationMoreLogsInLocalGiveUpSplitting.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestSyncReplicationMoreLogsInLocalGiveUpSplitting.class);
+      LoggerFactory.getLogger(TestSyncReplicationMoreLogsInLocalGiveUpSplitting.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -82,13 +82,13 @@ public class TestSyncReplicationMoreLogsInLocalGiveUpSplitting extends SyncRepli
     }
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
     DualAsyncFSWALForTest wal =
-      (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+        (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     wal.setRemoteBroken();
     wal.suspendLogRoll();
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
       AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setMaxAttempts(1)
-        .setWriteRpcTimeout(5, TimeUnit.SECONDS).build();
+          .setWriteRpcTimeout(5, TimeUnit.SECONDS).build();
       try {
         table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(1))).get();
         fail("Should fail since the rs will hang and we will get a rpc timeout");

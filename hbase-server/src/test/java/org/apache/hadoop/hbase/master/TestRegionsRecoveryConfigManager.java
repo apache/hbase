@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
@@ -43,7 +42,7 @@ public class TestRegionsRecoveryConfigManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionsRecoveryConfigManager.class);
+      HBaseClassTestRule.forClass(TestRegionsRecoveryConfigManager.class);
 
   private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
@@ -61,7 +60,7 @@ public class TestRegionsRecoveryConfigManager {
     conf.unset("hbase.regions.recovery.store.file.ref.count");
     conf.unset("hbase.master.regions.recovery.check.interval");
     StartTestingClusterOption option = StartTestingClusterOption.builder()
-      .masterClass(TestHMaster.class).numRegionServers(1).numDataNodes(1).build();
+        .masterClass(TestHMaster.class).numRegionServers(1).numDataNodes(1).build();
     HBASE_TESTING_UTILITY.startMiniCluster(option);
     cluster = HBASE_TESTING_UTILITY.getMiniHBaseCluster();
   }

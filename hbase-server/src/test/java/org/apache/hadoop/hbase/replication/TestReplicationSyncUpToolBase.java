@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,22 +78,22 @@ public abstract class TestReplicationSyncUpToolBase {
     UTIL2.startMiniCluster(4);
 
     t1SyncupSource = TableDescriptorBuilder.newBuilder(TN1)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setScope(REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+            .setScope(REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
 
     t1SyncupTarget = TableDescriptorBuilder.newBuilder(TN1)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
 
     t2SyncupSource = TableDescriptorBuilder.newBuilder(TN2)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setScope(REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+            .setScope(REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
 
     t2SyncupTarget = TableDescriptorBuilder.newBuilder(TN2)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
   }
 
   @After
@@ -131,7 +131,7 @@ public abstract class TestReplicationSyncUpToolBase {
      * set M-S : Master: utility1 Slave1: utility2
      */
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
+        ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
     admin1.addReplicationPeer("1", rpc);
   }
 

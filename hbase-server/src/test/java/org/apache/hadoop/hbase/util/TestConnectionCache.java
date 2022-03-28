@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestConnectionCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionCache.class);
+      HBaseClassTestRule.forClass(TestConnectionCache.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -57,7 +57,7 @@ public class TestConnectionCache {
   public void testConnectionChore() throws Exception {
     // 1s for clean interval & 5s for maxIdleTime
     ConnectionCache cache = new ConnectionCache(UTIL.getConfiguration(),
-      UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
+        UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
     ConnectionCache.ConnectionInfo info = cache.getCurrentConnection();
 
     assertEquals(false, info.connection.isClosed());

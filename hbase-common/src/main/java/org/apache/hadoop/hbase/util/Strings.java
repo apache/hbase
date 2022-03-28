@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,22 +32,19 @@ public final class Strings {
   }
 
   /**
-   * Append to a StringBuilder a key/value.
-   * Uses default separators.
+   * Append to a StringBuilder a key/value. Uses default separators.
    * @param sb StringBuilder to use
    * @param key Key to append.
    * @param value Value to append.
    * @return Passed <code>sb</code> populated with key/value.
    */
-  public static StringBuilder appendKeyValue(final StringBuilder sb,
-      final String key, final Object value) {
-    return appendKeyValue(sb, key, value, DEFAULT_SEPARATOR,
-      DEFAULT_KEYVALUE_SEPARATOR);
+  public static StringBuilder appendKeyValue(final StringBuilder sb, final String key,
+      final Object value) {
+    return appendKeyValue(sb, key, value, DEFAULT_SEPARATOR, DEFAULT_KEYVALUE_SEPARATOR);
   }
 
   /**
-   * Append to a StringBuilder a key/value.
-   * Uses default separators.
+   * Append to a StringBuilder a key/value. Uses default separators.
    * @param sb StringBuilder to use
    * @param key Key to append.
    * @param value Value to append.
@@ -56,9 +52,8 @@ public final class Strings {
    * @param keyValueSeparator Value to use between key/value sets.
    * @return Passed <code>sb</code> populated with key/value.
    */
-  public static StringBuilder appendKeyValue(final StringBuilder sb,
-      final String key, final Object value, final String separator,
-      final String keyValueSeparator) {
+  public static StringBuilder appendKeyValue(final StringBuilder sb, final String key,
+      final Object value, final String separator, final String keyValueSeparator) {
     if (sb.length() > 0) {
       sb.append(keyValueSeparator);
     }
@@ -66,9 +61,8 @@ public final class Strings {
   }
 
   /**
-   * Given a PTR string generated via reverse DNS lookup, return everything
-   * except the trailing period. Example for host.example.com., return
-   * host.example.com
+   * Given a PTR string generated via reverse DNS lookup, return everything except the trailing
+   * period. Example for host.example.com., return host.example.com
    * @param dnPtr a domain name pointer (PTR) string.
    * @return Sanitized hostname with last period stripped off.
    */
@@ -77,7 +71,7 @@ public final class Strings {
       return null;
     }
 
-    return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length()-1) : dnPtr;
+    return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length() - 1) : dnPtr;
   }
 
   /**

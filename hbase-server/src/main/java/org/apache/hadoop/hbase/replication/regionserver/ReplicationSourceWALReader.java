@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,6 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -72,7 +72,7 @@ class ReplicationSourceWALReader extends Thread {
   private final int maxRetriesMultiplier;
   private final boolean eofAutoRecovery;
 
-  //Indicates whether this particular worker is running
+  // Indicates whether this particular worker is running
   private boolean isReaderRunning = true;
 
   private AtomicLong totalBufferUsed;
@@ -106,18 +106,21 @@ class ReplicationSourceWALReader extends Thread {
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
     this.totalBufferUsed = source.getSourceManager().getTotalBufferUsed();
     this.totalBufferQuota = source.getSourceManager().getTotalBufferLimit();
-    this.sleepForRetries =
-        this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
-    this.maxRetriesMultiplier =
-        this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000); // 1
+                                                                                          // second
+    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5
+                                                                                                  // minutes
+                                                                                                  // @
+                                                                                                  // 1
+                                                                                                  // sec
+                                                                                                  // per
     this.eofAutoRecovery = conf.getBoolean("replication.source.eof.autorecovery", false);
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
     this.walGroupId = walGroupId;
-    LOG.info("peerClusterZnode=" + source.getQueueId()
-        + ", ReplicationSourceWALReaderThread : " + source.getPeerId()
-        + " inited, replicationBatchSizeCapacity=" + replicationBatchSizeCapacity
-        + ", replicationBatchCountCapacity=" + replicationBatchCountCapacity
-        + ", replicationBatchQueueCapacity=" + batchCount);
+    LOG.info("peerClusterZnode=" + source.getQueueId() + ", ReplicationSourceWALReaderThread : "
+        + source.getPeerId() + " inited, replicationBatchSizeCapacity="
+        + replicationBatchSizeCapacity + ", replicationBatchCountCapacity="
+        + replicationBatchCountCapacity + ", replicationBatchQueueCapacity=" + batchCount);
   }
 
   @Override
@@ -126,9 +129,8 @@ class ReplicationSourceWALReader extends Thread {
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       WALEntryBatch batch = null;
       try (WALEntryStream entryStream =
-          new WALEntryStream(logQueue, conf, currentPosition,
-              source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
-              source.getSourceMetrics(), walGroupId)) {
+          new WALEntryStream(logQueue, conf, currentPosition, source.getWALFileLengthProvider(),
+              source.getServerWALsBelongTo(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
           if (!source.isPeerEnabled()) {
@@ -179,7 +181,7 @@ class ReplicationSourceWALReader extends Thread {
       return false;
     }
     LOG.debug("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
-        entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
+      entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
@@ -187,8 +189,8 @@ class ReplicationSourceWALReader extends Thread {
     boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
 
     // Stop if too many entries or too big
-    return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity ||
-      batch.getNbEntries() >= replicationBatchCountCapacity;
+    return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
+        || batch.getNbEntries() >= replicationBatchCountCapacity;
   }
 
   protected static final boolean switched(WALEntryStream entryStream, Path path) {
@@ -200,7 +202,7 @@ class ReplicationSourceWALReader extends Thread {
   // This is required in case there is any exception in while reading entries
   // we do not want to loss the existing entries in the batch
   protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     Path currentPath = entryStream.getCurrentPath();
     for (;;) {
       Entry entry = entryStream.next();
@@ -238,7 +240,7 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   private WALEntryBatch tryAdvanceStreamAndCreateWALBatch(WALEntryStream entryStream)
-    throws IOException {
+      throws IOException {
     Path currentPath = entryStream.getCurrentPath();
     if (!entryStream.hasNext()) {
       // check whether we have switched a file
@@ -257,24 +259,23 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   /**
-   * This is to handle the EOFException from the WAL entry stream. EOFException should
-   * be handled carefully because there are chances of data loss because of never replicating
-   * the data. Thus we should always try to ship existing batch of entries here.
-   * If there was only one log in the queue before EOF, we ship the empty batch here
-   * and since reader is still active, in the next iteration of reader we will
-   * stop the reader.
+   * This is to handle the EOFException from the WAL entry stream. EOFException should be handled
+   * carefully because there are chances of data loss because of never replicating the data. Thus we
+   * should always try to ship existing batch of entries here. If there was only one log in the
+   * queue before EOF, we ship the empty batch here and since reader is still active, in the next
+   * iteration of reader we will stop the reader.
    * <p/>
-   * If there was more than one log in the queue before EOF, we ship the existing batch
-   * and reset the wal patch and position to the log with EOF, so shipper can remove
-   * logs from replication queue
+   * If there was more than one log in the queue before EOF, we ship the existing batch and reset
+   * the wal patch and position to the log with EOF, so shipper can remove logs from replication
+   * queue
    * @return true only the IOE can be handled
    */
   private boolean handleEofException(Exception e, WALEntryBatch batch) {
     PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
     // since we don't add current log to recovered source queue so it is safe to remove.
-    if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
-      (source.isRecovered() || queue.size() > 1) && this.eofAutoRecovery) {
+    if ((e instanceof EOFException || e.getCause() instanceof EOFException)
+        && (source.isRecovered() || queue.size() > 1) && this.eofAutoRecovery) {
       Path path = queue.peek();
       try {
         if (!fs.exists(path)) {
@@ -325,12 +326,12 @@ class ReplicationSourceWALReader extends Thread {
     return logQueue.getQueue(walGroupId).peek();
   }
 
-  //returns false if we've already exceeded the global quota
+  // returns false if we've already exceeded the global quota
   private boolean checkQuota() {
     // try not to go over total quota
     if (totalBufferUsed.get() > totalBufferQuota) {
       LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
-          this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
+        this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
       Threads.sleep(sleepForRetries);
       return false;
     }
@@ -366,7 +367,7 @@ class ReplicationSourceWALReader extends Thread {
 
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
-    return  getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
+    return getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
   }
 
   public static long getEntrySizeExcludeBulkLoad(Entry entry) {
@@ -374,7 +375,6 @@ class ReplicationSourceWALReader extends Thread {
     WALKey key = entry.getKey();
     return edit.heapSize() + key.estimatedSerializedSizeOf();
   }
-
 
   private void updateBatchStats(WALEntryBatch batch, Entry entry, long entrySize) {
     WALEdit edit = entry.getEdit();
@@ -409,7 +409,8 @@ class ReplicationSourceWALReader extends Thread {
           }
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
-              + "Then its hfiles count will not be added into metric.", e);
+              + "Then its hfiles count will not be added into metric.",
+            e);
         }
       }
 
@@ -446,7 +447,8 @@ class ReplicationSourceWALReader extends Thread {
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
               + "Size of HFiles part of cell will not be considered in replication "
-              + "request size calculation.", e);
+              + "request size calculation.",
+            e);
         }
       }
     }

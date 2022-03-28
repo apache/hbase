@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,14 +81,14 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     int countGlobalBypass = 0;
     for (QuotaSettings settings : admin.getQuota(null).get()) {
       switch (settings.getQuotaType()) {
-      case THROTTLE:
-        countThrottle++;
-        break;
-      case GLOBAL_BYPASS:
-        countGlobalBypass++;
-        break;
-      default:
-        fail("unexpected settings type: " + settings.getQuotaType());
+        case THROTTLE:
+          countThrottle++;
+          break;
+        case GLOBAL_BYPASS:
+          countGlobalBypass++;
+          break;
+        default:
+          fail("unexpected settings type: " + settings.getQuotaType());
       }
     }
     assertEquals(2, countThrottle);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestRandomRowFilter {
 
   @ClassRule
@@ -45,7 +45,6 @@ public class TestRandomRowFilter {
 
   /**
    * Tests basics
-   *
    * @throws Exception
    */
   @Test
@@ -61,25 +60,22 @@ public class TestRandomRowFilter {
     // since we're dealing with randomness, we must have a include an epsilon
     // tolerance.
     int epsilon = max / 100;
-    assertTrue("Roughly 25% should pass the filter", Math.abs(included - max
-        / 4) < epsilon);
+    assertTrue("Roughly 25% should pass the filter", Math.abs(included - max / 4) < epsilon);
   }
 
   /**
    * Tests serialization
-   *
    * @throws Exception
    */
   @Test
   public void testSerialization() throws Exception {
     RandomRowFilter newFilter = serializationTest(quarterChanceFilter);
     // use epsilon float comparison
-    assertTrue("float should be equal", Math.abs(newFilter.getChance()
-        - quarterChanceFilter.getChance()) < 0.000001f);
+    assertTrue("float should be equal",
+      Math.abs(newFilter.getChance() - quarterChanceFilter.getChance()) < 0.000001f);
   }
 
-  private RandomRowFilter serializationTest(RandomRowFilter filter)
-      throws Exception {
+  private RandomRowFilter serializationTest(RandomRowFilter filter) throws Exception {
     // Decompose filter to bytes.
     byte[] buffer = filter.toByteArray();
 
@@ -90,4 +86,3 @@ public class TestRandomRowFilter {
   }
 
 }
-

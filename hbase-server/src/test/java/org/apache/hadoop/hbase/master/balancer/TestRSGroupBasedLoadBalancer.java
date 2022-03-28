@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,10 +76,8 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
   }
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers of the group should be hosting either floor(average) or
-   * ceiling(average)
+   * Test the load balancing algorithm. Invariant is that all servers of the group should be hosting
+   * either floor(average) or ceiling(average)
    */
   @Test
   public void testBalanceCluster() throws Exception {
@@ -145,10 +143,10 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         inputForTest.put(region, sn);
       }
     }
-    //verify region->null server assignment is handled
+    // verify region->null server assignment is handled
     inputForTest.put(randomRegions(1).get(0), null);
-    Map<ServerName, List<RegionInfo>> newAssignment = loadBalancer
-        .retainAssignment(inputForTest, servers);
+    Map<ServerName, List<RegionInfo>> newAssignment =
+        loadBalancer.retainAssignment(inputForTest, servers);
     assertRetainedAssignment(inputForTest, servers, newAssignment);
   }
 

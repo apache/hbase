@@ -64,13 +64,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-
 @Category({ MasterTests.class, MediumTests.class })
 public class TestRegionStateStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionStateStore.class);
+      HBaseClassTestRule.forClass(TestRegionStateStore.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -93,13 +92,13 @@ public class TestRegionStateStore {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
-        ServerName regionLocation, ServerName lastHost, long openSeqNum) {
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
         visitorCalled.set(true);
       }
@@ -113,14 +112,14 @@ public class TestRegionStateStore {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-        getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
     // add the BAD_STATE which does not exist in enum RegionState.State
     Put put = new Put(regions.get(0).getRegionInfo().getRegionName(),
         EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
-        Bytes.toBytes("BAD_STATE"));
+      Bytes.toBytes("BAD_STATE"));
 
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
@@ -129,9 +128,8 @@ public class TestRegionStateStore {
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(Result result, RegionInfo regionInfo,
-                                   RegionState.State state, ServerName regionLocation,
-                                   ServerName lastHost, long openSeqNum) {
+      public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
         assertNull(state);
         visitorCalled.set(true);
@@ -143,13 +141,13 @@ public class TestRegionStateStore {
   @Test
   public void testVisitMetaForRegionNonExistingRegion() throws Exception {
     final String encodedName = "fakeencodedregionname";
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
-        ServerName regionLocation, ServerName lastHost, long openSeqNum) {
+          ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         visitorCalled.set(true);
       }
     });
@@ -160,22 +158,22 @@ public class TestRegionStateStore {
   public void testMetaLocationForRegionReplicasIsAddedAtRegionSplit() throws IOException {
     long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
-      ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
+        ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     TableName tableName = name.getTableName();
     RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     RegionInfo splitA = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+        .setRegionId(regionId + 1).setReplicaId(0).build();
     RegionInfo splitB = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("a"))
-      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId + 1).setReplicaId(0)
-      .build();
+        .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId + 1)
+        .setReplicaId(0).build();
     List<RegionInfo> regionInfos = Lists.newArrayList(parent);
     MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
     final RegionStateStore regionStateStore =
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     regionStateStore.splitRegion(parent, splitA, splitB, serverName0,
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3).build());
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
@@ -191,20 +189,20 @@ public class TestRegionStateStore {
     TableName tableName = name.getTableName();
     long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
-      ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
+        ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo splitA = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+        .setRegionId(regionId + 1).setReplicaId(0).build();
     RegionInfo splitB = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("a"))
-      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId + 1).setReplicaId(0)
-      .build();
+        .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId + 1)
+        .setReplicaId(0).build();
     List<RegionInfo> regionInfos = Lists.newArrayList(parent);
     MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
     final RegionStateStore regionStateStore =
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     regionStateStore.splitRegion(parent, splitA, splitB, serverName0,
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3).build());
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
@@ -232,22 +230,22 @@ public class TestRegionStateStore {
   public void testMetaLocationForRegionReplicasIsAddedAtRegionMerge() throws IOException {
     long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
-      ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
+        ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
 
     TableName tableName = name.getTableName();
     RegionInfo parentA = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("a"))
-      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId).setReplicaId(0)
-      .build();
+        .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId).setReplicaId(0)
+        .build();
 
     RegionInfo parentB = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo merged = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId + 1).setReplicaId(0).build();
 
     final RegionStateStore regionStateStore =
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parentA, parentB);
@@ -265,15 +263,15 @@ public class TestRegionStateStore {
     TableName tableName = name.getTableName();
 
     RegionInfo regionInfoA = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(new byte[] { 'a' }).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(new byte[] { 'a' }).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     RegionInfo regionInfoB = RegionInfoBuilder.newBuilder(tableName).setStartKey(new byte[] { 'a' })
-      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId).setReplicaId(0)
-      .build();
+        .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId).setReplicaId(0)
+        .build();
     RegionInfo mergedRegionInfo = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
@@ -299,7 +297,7 @@ public class TestRegionStateStore {
       assertEquals(serverNameTime, serverCell.getTimestamp());
 
       final RegionStateStore regionStateStore =
-        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+          UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
       ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
       edge.setValue(masterSystemTime);
@@ -338,13 +336,13 @@ public class TestRegionStateStore {
     List<RegionInfo> regions = admin.getRegions(tn);
     assertEquals(4, regions.size());
     admin
-      .mergeRegionsAsync(
-        new byte[][] { regions.get(0).getRegionName(), regions.get(1).getRegionName() }, false)
-      .get(60, TimeUnit.SECONDS);
+        .mergeRegionsAsync(
+          new byte[][] { regions.get(0).getRegionName(), regions.get(1).getRegionName() }, false)
+        .get(60, TimeUnit.SECONDS);
     admin
-      .mergeRegionsAsync(
-        new byte[][] { regions.get(2).getRegionName(), regions.get(3).getRegionName() }, false)
-      .get(60, TimeUnit.SECONDS);
+        .mergeRegionsAsync(
+          new byte[][] { regions.get(2).getRegionName(), regions.get(3).getRegionName() }, false)
+        .get(60, TimeUnit.SECONDS);
 
     List<RegionInfo> mergedRegions = admin.getRegions(tn);
     assertEquals(2, mergedRegions.size());
@@ -352,7 +350,7 @@ public class TestRegionStateStore {
     RegionInfo mergedRegion1 = mergedRegions.get(1);
 
     final RegionStateStore regionStateStore =
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
     List<RegionInfo> mergeParents = regionStateStore.getMergeRegions(mergedRegion0);
     assertTrue(mergeParents.contains(regions.get(0)));
@@ -379,8 +377,8 @@ public class TestRegionStateStore {
     int limit = 10;
     byte[] previous = HConstants.EMPTY_START_ROW;
     for (int i = 0; i < limit; i++) {
-      RegionInfo ri =
-        RegionInfoBuilder.newBuilder(tn).setStartKey(previous).setEndKey(Bytes.toBytes(i)).build();
+      RegionInfo ri = RegionInfoBuilder.newBuilder(tn).setStartKey(previous)
+          .setEndKey(Bytes.toBytes(i)).build();
       ris.add(ri);
     }
     put = RegionStateStore.addMergeRegions(put, ris);
@@ -400,14 +398,14 @@ public class TestRegionStateStore {
     long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
     RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
       List<RegionInfo> regionInfos = Lists.newArrayList(primary);
       MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
       final RegionStateStore regionStateStore =
-        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+          UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
       regionStateStore.removeRegionReplicas(tableName, 3, 1);
       Get get = new Get(primary.getRegionName());
       Result result = meta.get(get);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,12 +49,12 @@ public class TestAsyncConnectionTracing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncConnectionTracing.class);
+      HBaseClassTestRule.forClass(TestAsyncConnectionTracing.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
   private ServerName masterServer =
-    ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime());
+      ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime());
 
   private AsyncConnection conn;
 
@@ -71,7 +71,7 @@ public class TestAsyncConnectionTracing {
       }
     };
     conn = new AsyncConnectionImpl(CONF, registry, "test", null,
-      UserProvider.instantiate(CONF).getCurrent());
+        UserProvider.instantiate(CONF).getCurrent());
   }
 
   @After
@@ -82,10 +82,10 @@ public class TestAsyncConnectionTracing {
   private void assertTrace(String methodName, ServerName serverName) {
     Waiter.waitFor(CONF, 1000,
       () -> traceRule.getSpans().stream()
-        .anyMatch(span -> span.getName().equals("AsyncConnection." + methodName) &&
-          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
+          .anyMatch(span -> span.getName().equals("AsyncConnection." + methodName)
+              && span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
     SpanData data = traceRule.getSpans().stream()
-      .filter(s -> s.getName().equals("AsyncConnection." + methodName)).findFirst().get();
+        .filter(s -> s.getName().equals("AsyncConnection." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     if (serverName != null) {
       assertEquals(serverName.getServerName(),
@@ -101,8 +101,8 @@ public class TestAsyncConnectionTracing {
 
   @Test
   public void testHbckWithServerName() throws IOException {
-    ServerName serverName = ServerName.valueOf("localhost", 23456,
-      EnvironmentEdgeManager.currentTime());
+    ServerName serverName =
+        ServerName.valueOf("localhost", 23456, EnvironmentEdgeManager.currentTime());
     conn.getHbck(serverName);
     assertTrace("getHbck", serverName);
   }

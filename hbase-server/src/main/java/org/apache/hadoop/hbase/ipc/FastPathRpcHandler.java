@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class FastPathRpcHandler extends RpcHandler {
       AtomicInteger failedHandlerCount, final Abortable abortable,
       final Deque<FastPathRpcHandler> fastPathHandlerStack) {
     super(name, handlerFailureThreshhold, handlerCount, q, activeHandlerCount, failedHandlerCount,
-      abortable);
+        abortable);
     this.fastPathHandlerStack = fastPathHandlerStack;
   }
 

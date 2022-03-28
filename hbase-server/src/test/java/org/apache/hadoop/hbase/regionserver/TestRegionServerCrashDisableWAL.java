@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestRegionServerCrashDisableWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerCrashDisableWAL.class);
+      HBaseClassTestRule.forClass(TestRegionServerCrashDisableWAL.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -99,7 +99,7 @@ public class TestRegionServerCrashDisableWAL {
     // make sure that we can schedule a SCP for the crashed server which WAL is disabled and bring
     // the region online.
     try (Table table =
-      UTIL.getConnection().getTableBuilder(TABLE_NAME, null).setOperationTimeout(30000).build()) {
+        UTIL.getConnection().getTableBuilder(TABLE_NAME, null).setOperationTimeout(30000).build()) {
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(1)));
       assertEquals(1, Bytes.toInt(table.get(new Get(Bytes.toBytes(1))).getValue(CF, CQ)));
     }

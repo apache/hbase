@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,7 +40,6 @@ public interface Snapshot {
 
   /**
    * Returns the number of values in the snapshot.
-   *
    * @return the number of values
    */
   long getCount();
@@ -57,77 +53,66 @@ public interface Snapshot {
 
   /**
    * Returns the value at the 25th percentile in the distribution.
-   *
    * @return the value at the 25th percentile
    */
   long get25thPercentile();
 
   /**
    * Returns the value at the 75th percentile in the distribution.
-   *
    * @return the value at the 75th percentile
    */
   long get75thPercentile();
 
   /**
    * Returns the value at the 90th percentile in the distribution.
-   *
    * @return the value at the 90th percentile
    */
   long get90thPercentile();
 
   /**
    * Returns the value at the 95th percentile in the distribution.
-   *
    * @return the value at the 95th percentile
    */
   long get95thPercentile();
 
   /**
    * Returns the value at the 98th percentile in the distribution.
-   *
    * @return the value at the 98th percentile
    */
   long get98thPercentile();
 
   /**
    * Returns the value at the 99th percentile in the distribution.
-   *
    * @return the value at the 99th percentile
    */
   long get99thPercentile();
 
   /**
    * Returns the value at the 99.9th percentile in the distribution.
-   *
    * @return the value at the 99.9th percentile
    */
   long get999thPercentile();
 
   /**
    * Returns the median value in the distribution.
-   *
    * @return the median value
    */
   long getMedian();
 
   /**
    * Returns the highest value in the snapshot.
-   *
    * @return the highest value
    */
   long getMax();
 
   /**
    * Returns the arithmetic mean of the values in the snapshot.
-   *
    * @return the arithmetic mean
    */
   long getMean();
 
   /**
    * Returns the lowest value in the snapshot.
-   *
    * @return the lowest value
    */
   long getMin();

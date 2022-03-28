@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -121,8 +121,8 @@ public class TestReplicator extends TestReplicationBase {
     // Replace the peer set up for us by the base class with a wrapper for this test
     hbaseAdmin.addReplicationPeer("testReplicatorWithErrors",
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
-        .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName())
-        .build());
+          .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName())
+          .build());
 
     FailureInjectingReplicationEndpointForTest.setBatchCount(0);
     FailureInjectingReplicationEndpointForTest.setEntriesCount(0);

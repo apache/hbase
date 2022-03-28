@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ public class TestReplicationSmallTestsSync extends TestReplicationSmallTests {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSmallTestsSync.class);
+      HBaseClassTestRule.forClass(TestReplicationSmallTestsSync.class);
 
   @Override
   protected boolean isSyncPeer() {

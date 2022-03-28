@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -131,8 +131,8 @@ public class TestZKReplicationPeerStorage {
       } else {
         assertNotNull(actualCFs);
         assertEquals(expectedCFs.size(), actualCFs.size());
-        for (Iterator<String> expectedIt = expectedCFs.iterator(), actualIt = actualCFs.iterator();
-          expectedIt.hasNext();) {
+        for (Iterator<String> expectedIt = expectedCFs.iterator(),
+            actualIt = actualCFs.iterator(); expectedIt.hasNext();) {
           assertEquals(expectedIt.next(), actualIt.next());
         }
       }
@@ -244,31 +244,32 @@ public class TestZKReplicationPeerStorage {
 
     Configuration conf = UTIL.getConfiguration();
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigValue).concat(";").
-        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondValue));
+      customPeerConfigKey.concat("=").concat(customPeerConfigValue).concat(";")
+          .concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondValue));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil
+        .updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
 
     // validates base configs are present in replicationPeerConfig
-    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
-      get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondValue, updatedReplicationPeerConfig.getConfiguration().
-      get(customPeerConfigSecondKey));
+    assertEquals(customPeerConfigValue,
+      updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
+    assertEquals(customPeerConfigSecondValue,
+      updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigSecondKey));
 
     // validates base configs get updated values even if config already present
     conf.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";").
-        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondUpdatedValue));
+      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";")
+          .concat(customPeerConfigSecondKey).concat("=")
+          .concat(customPeerConfigSecondUpdatedValue));
 
-    ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil.
-      updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
+    ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil
+        .updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
 
-    assertEquals(customPeerConfigUpdatedValue, replicationPeerConfigAfterValueUpdate.
-      getConfiguration().get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondUpdatedValue, replicationPeerConfigAfterValueUpdate.
-      getConfiguration().get(customPeerConfigSecondKey));
+    assertEquals(customPeerConfigUpdatedValue,
+      replicationPeerConfigAfterValueUpdate.getConfiguration().get(customPeerConfigKey));
+    assertEquals(customPeerConfigSecondUpdatedValue,
+      replicationPeerConfigAfterValueUpdate.getConfiguration().get(customPeerConfigSecondKey));
   }
 
   @Test
@@ -284,26 +285,26 @@ public class TestZKReplicationPeerStorage {
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigValue));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil
+        .updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
 
     // validates base configs are present in replicationPeerConfig
-    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
-      get(customPeerConfigKey));
+    assertEquals(customPeerConfigValue,
+      updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
 
     conf.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(""));
 
-    ReplicationPeerConfig replicationPeerConfigRemoved = ReplicationPeerConfigUtil.
-      updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
+    ReplicationPeerConfig replicationPeerConfigRemoved = ReplicationPeerConfigUtil
+        .updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
 
     assertNull(replicationPeerConfigRemoved.getConfiguration().get(customPeerConfigKey));
   }
 
   @Test
   public void testBaseReplicationRemovePeerConfigWithNoExistingConfig()
-    throws ReplicationException {
+      throws ReplicationException {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
 
@@ -313,8 +314,8 @@ public class TestZKReplicationPeerStorage {
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(""));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil
+        .updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
     assertNull(updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
   }
 

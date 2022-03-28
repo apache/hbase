@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
@@ -46,7 +45,7 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
     implements PeerProcedureInterface {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
+      LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
 
   private String peerId;
 
@@ -68,9 +67,8 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
         ReplaySyncReplicationWALParameter.newBuilder();
     builder.setPeerId(peerId);
     wals.stream().forEach(builder::addWal);
-    return Optional
-        .of(new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
-            builder.build().toByteArray()));
+    return Optional.of(new ServerOperation(this, getProcId(),
+        ReplaySyncReplicationWALCallable.class, builder.build().toByteArray()));
   }
 
   protected void complete(MasterProcedureEnv env, Throwable error) {
@@ -126,8 +124,8 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SyncReplicationReplayWALRemoteStateData.Builder builder =
-      SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
-        .setTargetServer(ProtobufUtil.toServerName(targetServer));
+        SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
+            .setTargetServer(ProtobufUtil.toServerName(targetServer));
     wals.stream().forEach(builder::addWal);
     serializer.serialize(builder.build());
   }
@@ -135,7 +133,7 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SyncReplicationReplayWALRemoteStateData data =
-      serializer.deserialize(SyncReplicationReplayWALRemoteStateData.class);
+        serializer.deserialize(SyncReplicationReplayWALRemoteStateData.class);
     peerId = data.getPeerId();
     wals = new ArrayList<>();
     data.getWalList().forEach(wals::add);

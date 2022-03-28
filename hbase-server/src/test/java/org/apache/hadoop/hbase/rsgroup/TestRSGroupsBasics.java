@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
+      HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBasics.class);
 
@@ -85,8 +85,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
     // Assignment of meta and rsgroup regions.
     int count = MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    LOG.info("regions assignments are" +
-      MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
+    LOG.info("regions assignments are"
+        + MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
     // 2 (meta and rsgroup)
     assertEquals(2, count);
   }
@@ -119,9 +119,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     final TableName tableName = TableName.valueOf(nsName, TABLE_PREFIX + "_testCreateAndAssign");
     RSGroupInfo appInfo = addGroup("appInfo", 1);
     ADMIN.createNamespace(NamespaceDescriptor.create(nsName)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     ADMIN.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -140,9 +140,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     LOG.info("testDefaultNamespaceCreateAndAssign");
     String tableName = TABLE_PREFIX + "_testCreateAndAssign";
     ADMIN.modifyNamespace(NamespaceDescriptor.create("default")
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     ADMIN.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -177,7 +177,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     // move region servers from default group to new group
     final int serverCountToMoveToNewGroup = 3;
     final RSGroupInfo newGroup =
-      addGroup(getGroupName(name.getMethodName()), serverCountToMoveToNewGroup);
+        addGroup(getGroupName(name.getMethodName()), serverCountToMoveToNewGroup);
 
     // get the existing dead servers
     NUM_DEAD_SERVERS = CLUSTER.getClusterMetrics().getDeadServerNames().size();
@@ -196,8 +196,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return CLUSTER.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS &&
-          !MASTER.getServerManager().areDeadServersInProgress();
+        return CLUSTER.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS
+            && !MASTER.getServerManager().areDeadServersInProgress();
       }
     });
     assertFalse(CLUSTER.getClusterMetrics().getLiveServerMetrics().containsKey(serverToStop));
@@ -242,7 +242,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     });
 
     Set<Address> ServersInDeadServerGroup =
-      ADMIN.getRSGroup(deadServerGroup.getName()).getServers();
+        ADMIN.getRSGroup(deadServerGroup.getName()).getServers();
     assertEquals(serverCountToMoveToDeadServerGroup, ServersInDeadServerGroup.size());
     assertTrue(ServersInDeadServerGroup.contains(serverToStop.getAddress()));
   }

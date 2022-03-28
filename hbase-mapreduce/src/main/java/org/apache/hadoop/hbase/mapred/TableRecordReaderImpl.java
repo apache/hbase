@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +18,7 @@
 package org.apache.hadoop.hbase.mapred;
 
 import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -44,13 +44,13 @@ import org.slf4j.LoggerFactory;
 public class TableRecordReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(TableRecordReaderImpl.class);
 
-  private byte [] startRow;
-  private byte [] endRow;
-  private byte [] lastSuccessfulRow;
+  private byte[] startRow;
+  private byte[] endRow;
+  private byte[] lastSuccessfulRow;
   private Filter trrRowFilter;
   private ResultScanner scanner;
   private Table htable;
-  private byte [][] trrInputColumns;
+  private byte[][] trrInputColumns;
   private long timestamp;
   private int rowcount;
   private boolean logScannerActivity = false;
@@ -70,17 +70,15 @@ public class TableRecordReaderImpl {
         this.scanner = this.htable.getScanner(scan);
         currentScan = scan;
       } else {
-        LOG.debug("TIFB.restart, firstRow: " +
-            Bytes.toStringBinary(firstRow) + ", endRow: " +
-            Bytes.toStringBinary(endRow));
+        LOG.debug("TIFB.restart, firstRow: " + Bytes.toStringBinary(firstRow) + ", endRow: "
+            + Bytes.toStringBinary(endRow));
         Scan scan = new Scan().withStartRow(firstRow).withStopRow(endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
         currentScan = scan;
       }
     } else {
-      LOG.debug("TIFB.restart, firstRow: " +
-          Bytes.toStringBinary(firstRow) + ", no endRow");
+      LOG.debug("TIFB.restart, firstRow: " + Bytes.toStringBinary(firstRow) + ", no endRow");
 
       Scan scan = new Scan().withStartRow(firstRow);
       TableInputFormat.addColumns(scan, trrInputColumns);
@@ -119,22 +117,21 @@ public class TableRecordReaderImpl {
   /**
    * @param inputColumns the columns to be placed in {@link Result}.
    */
-  public void setInputColumns(final byte [][] inputColumns) {
+  public void setInputColumns(final byte[][] inputColumns) {
     this.trrInputColumns = inputColumns;
   }
 
   /**
    * @param startRow the first row in the split
    */
-  public void setStartRow(final byte [] startRow) {
+  public void setStartRow(final byte[] startRow) {
     this.startRow = startRow;
   }
 
   /**
-   *
    * @param endRow the last row in the split
    */
-  public void setEndRow(final byte [] endRow) {
+  public void setEndRow(final byte[] endRow) {
     this.endRow = endRow;
   }
 
@@ -158,7 +155,6 @@ public class TableRecordReaderImpl {
 
   /**
    * @return ImmutableBytesWritable
-   *
    * @see org.apache.hadoop.mapred.RecordReader#createKey()
    */
   public ImmutableBytesWritable createKey() {
@@ -167,7 +163,6 @@ public class TableRecordReaderImpl {
 
   /**
    * @return RowResult
-   *
    * @see org.apache.hadoop.mapred.RecordReader#createValue()
    */
   public Result createValue() {
@@ -196,11 +191,10 @@ public class TableRecordReaderImpl {
       try {
         result = this.scanner.next();
         if (logScannerActivity) {
-          rowcount ++;
+          rowcount++;
           if (rowcount >= logPerRowCount) {
             long now = EnvironmentEdgeManager.currentTime();
-            LOG.info("Mapper took " + (now-timestamp)
-              + "ms to process " + rowcount + " rows");
+            LOG.info("Mapper took " + (now - timestamp) + "ms to process " + rowcount + " rows");
             timestamp = now;
             rowcount = 0;
           }
@@ -214,16 +208,16 @@ public class TableRecordReaderImpl {
         // the scanner, if the second call fails, it will be rethrown
         LOG.debug("recovered from " + StringUtils.stringifyException(e));
         if (lastSuccessfulRow == null) {
-          LOG.warn("We are restarting the first next() invocation," +
-              " if your mapper has restarted a few other times like this" +
-              " then you should consider killing this job and investigate" +
-              " why it's taking so long.");
+          LOG.warn("We are restarting the first next() invocation,"
+              + " if your mapper has restarted a few other times like this"
+              + " then you should consider killing this job and investigate"
+              + " why it's taking so long.");
         }
         if (lastSuccessfulRow == null) {
           restart(startRow);
         } else {
           restart(lastSuccessfulRow);
-          this.scanner.next();    // skip presumed already mapped row
+          this.scanner.next(); // skip presumed already mapped row
         }
         result = this.scanner.next();
       }
@@ -238,11 +232,10 @@ public class TableRecordReaderImpl {
     } catch (IOException ioe) {
       if (logScannerActivity) {
         long now = EnvironmentEdgeManager.currentTime();
-        LOG.info("Mapper took " + (now-timestamp)
-          + "ms to process " + rowcount + " rows");
+        LOG.info("Mapper took " + (now - timestamp) + "ms to process " + rowcount + " rows");
         LOG.info(ioe.toString(), ioe);
-        String lastRow = lastSuccessfulRow == null ?
-          "null" : Bytes.toStringBinary(lastSuccessfulRow);
+        String lastRow =
+            lastSuccessfulRow == null ? "null" : Bytes.toStringBinary(lastSuccessfulRow);
         LOG.info("lastSuccessfulRow=" + lastRow);
       }
       throw ioe;

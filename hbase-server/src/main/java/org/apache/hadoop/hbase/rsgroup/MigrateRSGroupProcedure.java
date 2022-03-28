@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class MigrateRSGroupProcedure extends ModifyTableDescriptorProcedure {
 
   @Override
   protected Optional<TableDescriptor> modify(MasterProcedureEnv env, TableDescriptor current)
-    throws IOException {
+      throws IOException {
     if (current.getRegionServerGroup().isPresent()) {
       // usually this means user has set the rs group using the new code which will set the group
       // directly on table descriptor, skip.
@@ -54,13 +54,14 @@ public class MigrateRSGroupProcedure extends ModifyTableDescriptorProcedure {
       return Optional.empty();
     }
     RSGroupInfo group =
-      env.getMasterServices().getRSGroupInfoManager().getRSGroupForTable(current.getTableName());
+        env.getMasterServices().getRSGroupInfoManager().getRSGroupForTable(current.getTableName());
     if (group == null) {
-      LOG.debug("RSGroup for table {} is empty when migrating, usually this should not happen" +
-        " unless we have removed the RSGroup, ignore...", current.getTableName());
+      LOG.debug("RSGroup for table {} is empty when migrating, usually this should not happen"
+          + " unless we have removed the RSGroup, ignore...",
+        current.getTableName());
       return Optional.empty();
     }
-    return Optional
-      .of(TableDescriptorBuilder.newBuilder(current).setRegionServerGroup(group.getName()).build());
+    return Optional.of(
+      TableDescriptorBuilder.newBuilder(current).setRegionServerGroup(group.getName()).build());
   }
 }

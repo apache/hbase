@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class RecoverStandbyProcedure extends AbstractPeerNoLockProcedure<Recover
   protected Flow executeFromState(MasterProcedureEnv env, RecoverStandbyState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
-      env.getMasterServices().getSyncReplicationReplayWALManager();
+        env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
       case RENAME_SYNC_REPLICATION_WALS_DIR:
         try {
@@ -98,9 +98,9 @@ public class RecoverStandbyProcedure extends AbstractPeerNoLockProcedure<Recover
     try {
       List<Path> wals = syncReplicationReplayWALManager.getReplayWALsAndCleanUpUnusedFiles(peerId);
       addChildProcedure(wals.stream()
-        .map(wal -> new SyncReplicationReplayWALProcedure(peerId,
-          Arrays.asList(syncReplicationReplayWALManager.removeWALRootPath(wal))))
-        .toArray(SyncReplicationReplayWALProcedure[]::new));
+          .map(wal -> new SyncReplicationReplayWALProcedure(peerId,
+              Arrays.asList(syncReplicationReplayWALManager.removeWALRootPath(wal))))
+          .toArray(SyncReplicationReplayWALProcedure[]::new));
     } catch (IOException e) {
       LOG.warn("Failed to get replay wals for peer id={}, , retry", peerId, e);
       throw new ProcedureYieldException();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -110,8 +110,8 @@ public class TestRegionServerReadRequestMetrics {
   public static void setUpOnce() throws Exception {
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
-    serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .getLiveServerMetrics().keySet();
+    serverNames =
+        admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
     table = createTable();
     putData();
     List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
@@ -127,26 +127,23 @@ public class TestRegionServerReadRequestMetrics {
   private static Table createTable() throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL)
-        .build());
+    builder
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL).build());
     admin.createTable(builder.build());
     return TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
-  private static void testReadRequests(long resultCount,
-    long expectedReadRequests, long expectedFilteredReadRequests)
-    throws IOException, InterruptedException {
+  private static void testReadRequests(long resultCount, long expectedReadRequests,
+      long expectedFilteredReadRequests) throws IOException, InterruptedException {
     updateMetricsMap();
     System.out.println("requestsMapPrev = " + requestsMapPrev);
     System.out.println("requestsMap = " + requestsMap);
 
     assertEquals(expectedReadRequests,
       requestsMap.get(Metric.REGION_READ) - requestsMapPrev.get(Metric.REGION_READ));
-    assertEquals(expectedFilteredReadRequests,
-      requestsMap.get(Metric.FILTERED_REGION_READ)
+    assertEquals(expectedFilteredReadRequests, requestsMap.get(Metric.FILTERED_REGION_READ)
         - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
-    assertEquals(expectedFilteredReadRequests,
-      requestsMap.get(Metric.FILTERED_SERVER_READ)
+    assertEquals(expectedFilteredReadRequests, requestsMap.get(Metric.FILTERED_SERVER_READ)
         - requestsMapPrev.get(Metric.FILTERED_SERVER_READ));
     assertEquals(expectedReadRequests, resultCount);
   }
@@ -162,7 +159,7 @@ public class TestRegionServerReadRequestMetrics {
     for (int i = 0; i < MAX_TRY; i++) {
       for (ServerName serverName : serverNames) {
         serverMetrics = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-          .getLiveServerMetrics().get(serverName);
+            .getLiveServerMetrics().get(serverName);
 
         Map<byte[], RegionMetrics> regionMetrics = serverMetrics.getRegionMetrics();
         RegionMetrics regionMetric = regionMetrics.get(regionInfo.getRegionName());
@@ -171,8 +168,8 @@ public class TestRegionServerReadRequestMetrics {
           for (Metric metric : Metric.values()) {
             if (getReadRequest(serverMetrics, regionMetric, metric) > requestsMapPrev.get(metric)) {
               for (Metric metricInner : Metric.values()) {
-                requestsMap.put(metricInner, getReadRequest(serverMetrics, regionMetric,
-                    metricInner));
+                requestsMap.put(metricInner,
+                  getReadRequest(serverMetrics, regionMetric, metricInner));
               }
               metricsUpdated = true;
               break;
@@ -219,7 +216,7 @@ public class TestRegionServerReadRequestMetrics {
     put.addColumn(CF1, COL3, VAL3);
     table.put(put);
     put = new Put(ROW2);
-    put.addColumn(CF1, COL1, VAL2);  // put val2 instead of val1
+    put.addColumn(CF1, COL1, VAL2); // put val2 instead of val1
     put.addColumn(CF1, COL2, VAL2);
     table.put(put);
     put = new Put(ROW3);
@@ -362,11 +359,11 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // fixme filtered get should not increase readRequestsCount
-//    Get get = new Get(ROW2);
-//    get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
-//    Result result = table.get(get);
-//    resultCount = result.isEmpty() ? 0 : 1;
-//    testReadRequests(resultCount, 0, 1);
+    // Get get = new Get(ROW2);
+    // get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
+    // Result result = table.get(get);
+    // resultCount = result.isEmpty() ? 0 : 1;
+    // testReadRequests(resultCount, 0, 1);
   }
 
   @Ignore // HBASE-19785
@@ -445,8 +442,8 @@ public class TestRegionServerReadRequestMetrics {
 
   private void testReadRequests(byte[] regionName, int expectedReadRequests) throws Exception {
     for (ServerName serverName : serverNames) {
-      ServerMetrics serverMetrics = admin.getClusterMetrics(
-        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName);
+      ServerMetrics serverMetrics = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().get(serverName);
       Map<byte[], RegionMetrics> regionMetrics = serverMetrics.getRegionMetrics();
       RegionMetrics regionMetric = regionMetrics.get(regionName);
       if (regionMetric != null) {
@@ -494,5 +491,7 @@ public class TestRegionServerReadRequestMetrics {
     }
   }
 
-  private enum Metric {REGION_READ, SERVER_READ, FILTERED_REGION_READ, FILTERED_SERVER_READ}
+  private enum Metric {
+    REGION_READ, SERVER_READ, FILTERED_REGION_READ, FILTERED_SERVER_READ
+  }
 }

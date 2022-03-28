@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -156,8 +156,7 @@ public class TestCompactionArchiveIOException {
     out.close();
 
     HStoreFile errStoreFile = new MockHStoreFile(testUtil, errFile, 1, 0, false, 1);
-    fileManager.addCompactionResults(
-        ImmutableList.of(errStoreFile), ImmutableList.of());
+    fileManager.addCompactionResults(ImmutableList.of(errStoreFile), ImmutableList.of());
 
     // cleanup compacted files
     cleaner.chore();
@@ -181,8 +180,8 @@ public class TestCompactionArchiveIOException {
 
   private HRegion initHRegion(TableDescriptor htd, RegionInfo info) throws IOException {
     Configuration conf = testUtil.getConfiguration();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
     Path regionDir = new Path(tableDir, info.getEncodedName());
     Path storeDir = new Path(regionDir, htd.getColumnFamilies()[0].getNameAsString());

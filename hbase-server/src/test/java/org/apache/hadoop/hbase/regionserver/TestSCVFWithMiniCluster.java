@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,10 +52,10 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 /*
- * This test verifies that the scenarios illustrated by HBASE-10850 work
- * w.r.t. essential column family optimization
+ * This test verifies that the scenarios illustrated by HBASE-10850 work w.r.t. essential column
+ * family optimization
  */
 public class TestSCVFWithMiniCluster {
 
@@ -124,7 +124,7 @@ public class TestSCVFWithMiniCluster {
      * 'false'. Only row with key '1' should be returned in the scan.
      */
     scanFilter = new SingleColumnValueFilter(FAMILY_A, QUALIFIER_FOO, CompareOperator.EQUAL,
-      new BinaryComparator(Bytes.toBytes("false")));
+        new BinaryComparator(Bytes.toBytes("false")));
     ((SingleColumnValueFilter) scanFilter).setFilterIfMissing(true);
   }
 
@@ -149,6 +149,7 @@ public class TestSCVFWithMiniCluster {
     }
     assertEquals(expected, count);
   }
+
   /**
    * Test the filter by adding all columns of family A in the scan. (OK)
    */
@@ -222,11 +223,11 @@ public class TestSCVFWithMiniCluster {
   }
 
   private static void create(Admin admin, TableName tableName, byte[]... families)
-    throws IOException {
+      throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setMaxVersions(1).setCompressionType(Algorithm.GZ).build();
+          .setMaxVersions(1).setCompressionType(Algorithm.GZ).build();
       builder.setColumnFamily(familyDescriptor);
     }
     try {

@@ -254,7 +254,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * description.
    */
   private static final Pattern WAL_FILE_NAME_PATTERN =
-    Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
+      Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
 
   /**
    * Define for when no timestamp found.
@@ -296,16 +296,16 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * with as part of their name, usually the suffix. Sometimes there will be an extra suffix as when
    * it is a WAL for the meta table. For example, WALs might look like this
    * <code>10.20.20.171%3A60020.1277499063250</code> where <code>1277499063250</code> is the
-   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a
-   * synchronous replication WAL which adds a '.syncrep' suffix. Check for these. File also may have
-   * no timestamp on it. For example the recovered.edits files are WALs but are named in ascending
-   * order. Here is an example: 0000000000000016310. Allow for this.
+   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication
+   * WAL which adds a '.syncrep' suffix. Check for these. File also may have no timestamp on it. For
+   * example the recovered.edits files are WALs but are named in ascending order. Here is an
+   * example: 0000000000000016310. Allow for this.
    * @param name Name of the WAL file.
    * @return Timestamp or {@link #NO_TIMESTAMP}.
    */
   public static long getTimestamp(String name) {
     Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(name);
-    return matcher.matches() ? Long.parseLong(matcher.group(2)): NO_TIMESTAMP;
+    return matcher.matches() ? Long.parseLong(matcher.group(2)) : NO_TIMESTAMP;
   }
 
   /**
@@ -439,8 +439,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Comparator used to compare WAL files together based on their start time.
-   * Just compares start times and nothing else.
+   * Comparator used to compare WAL files together based on their start time. Just compares start
+   * times and nothing else.
    */
   public static class WALStartTimeComparator implements Comparator<Path> {
     @Override
@@ -449,10 +449,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     /**
-     * Split a path to get the start time
-     * For example: 10.20.20.171%3A60020.1277499063250
-     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
-     * which adds a '.syncrep' suffix. Check.
+     * Split a path to get the start time For example: 10.20.20.171%3A60020.1277499063250 Could also
+     * be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL which adds a
+     * '.syncrep' suffix. Check.
      * @param p path to split
      * @return start time
      */
@@ -460,8 +459,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       return getTimestamp(p.getName());
     }
   }
-
-
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
@@ -492,8 +489,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
     // Try finding the log in separate old log dir
-    oldLogDir =
-      new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+    oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
         .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
     archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {
@@ -586,6 +582,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       throw new IllegalArgumentException(name + " is not a valid wal file name");
     }
   }
+
   /**
    * Get prefix of the log from its name, assuming WAL name in format of
    * log_prefix.filenumber.log_suffix

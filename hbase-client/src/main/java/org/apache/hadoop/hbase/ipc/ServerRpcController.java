@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
@@ -51,8 +50,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within
-   * {@link com.google.protobuf.Service#callMethod(com.google.protobuf.Descriptors.MethodDescriptor, RpcController,
-   * com.google.protobuf.Message, RpcCallback)}
+   * {@link com.google.protobuf.Service#callMethod(com.google.protobuf.Descriptors.MethodDescriptor, RpcController, com.google.protobuf.Message, RpcCallback)}
    * if any.
    */
   // TODO: it would be good widen this to just Throwable, but IOException is what we allow now

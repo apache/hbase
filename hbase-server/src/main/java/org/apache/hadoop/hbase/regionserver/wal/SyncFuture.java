@@ -93,7 +93,6 @@ class SyncFuture {
 
   /**
    * Call this method to clear old usage and get it ready for new deploy.
-   *
    * @param txid the new transaction id
    * @return this
    */
@@ -114,8 +113,8 @@ class SyncFuture {
 
   @Override
   public String toString() {
-    return "done=" + isDone() + ", txid=" + this.txid + " threadID=" + t.getId() +
-        " threadName=" + t.getName();
+    return "done=" + isDone() + ", txid=" + this.txid + " threadID=" + t.getId() + " threadName="
+        + t.getName();
   }
 
   long getTxid() {
@@ -164,15 +163,14 @@ class SyncFuture {
     }
   }
 
-  long get(long timeoutNs) throws InterruptedException,
-      ExecutionException, TimeoutIOException {
+  long get(long timeoutNs) throws InterruptedException, ExecutionException, TimeoutIOException {
     doneLock.lock();
     try {
       while (doneTxid == NOT_DONE) {
         if (!doneCondition.await(timeoutNs, TimeUnit.NANOSECONDS)) {
-          throw new TimeoutIOException("Failed to get sync result after "
-              + TimeUnit.NANOSECONDS.toMillis(timeoutNs) + " ms for txid=" + this.txid
-              + ", WAL system stuck?");
+          throw new TimeoutIOException(
+              "Failed to get sync result after " + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+                  + " ms for txid=" + this.txid + ", WAL system stuck?");
         }
       }
       if (this.throwable != null) {

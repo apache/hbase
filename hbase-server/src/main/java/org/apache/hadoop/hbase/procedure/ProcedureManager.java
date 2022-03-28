@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,9 +25,9 @@ import org.apache.yetus.audience.InterfaceStability;
 public abstract class ProcedureManager {
 
   /**
-   * Return the unique signature of the procedure. This signature uniquely
-   * identifies the procedure. By default, this signature is the string used in
-   * the procedure controller (i.e., the root ZK node name for the procedure)
+   * Return the unique signature of the procedure. This signature uniquely identifies the procedure.
+   * By default, this signature is the string used in the procedure controller (i.e., the root ZK
+   * node name for the procedure)
    */
   public abstract String getProcedureSignature();
 
@@ -36,7 +36,7 @@ public abstract class ProcedureManager {
     if (!(obj instanceof ProcedureManager)) {
       return false;
     }
-    ProcedureManager other = (ProcedureManager)obj;
+    ProcedureManager other = (ProcedureManager) obj;
     return this.getProcedureSignature().equals(other.getProcedureSignature());
   }
 

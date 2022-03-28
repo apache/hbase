@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,9 +62,9 @@ public class MasterRegionTestBase {
   protected static String REGION_DIR_NAME = "local";
 
   protected static TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2)).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2)).build();
 
   protected void configure(Configuration conf) throws IOException {
   }
@@ -97,21 +97,21 @@ public class MasterRegionTestBase {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
-      .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
+        .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     when(server.getChoreService()).thenReturn(choreService);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(conf, testDir);
     MasterRegionParams params = new MasterRegionParams();
-    TableDescriptor td = TableDescriptorBuilder
-      .newBuilder(TD).setValue(StoreFileTrackerFactory.TRACKER_IMPL, conf
-        .get(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()))
-      .build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TD)
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL, conf.get(
+          StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()))
+        .build();
     params.server(server).regionDirName(REGION_DIR_NAME).tableDescriptor(td)
-      .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
-      .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(4).maxWals(32).useHsync(false)
-      .ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
-      .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
+        .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
+        .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(4).maxWals(32).useHsync(false)
+        .ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
+        .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+        .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
     configure(params);
     region = MasterRegion.create(params);
     postSetUp();

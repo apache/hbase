@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public interface BulkLoadHFiles {
 
   static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
   static final String MAX_FILES_PER_REGION_PER_FAMILY =
-    "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
+      "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   static final String CREATE_TABLE_CONF_KEY = "create.table";
   static final String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
@@ -85,13 +85,12 @@ public interface BulkLoadHFiles {
       throws TableNotFoundException, IOException;
 
   /**
-   * Disables replication for all bulkloads done via this instance,
-   * when bulkload replication is configured.
+   * Disables replication for all bulkloads done via this instance, when bulkload replication is
+   * configured.
    */
   void disableReplication();
 
   /**
-   *
    * @return true if replication has been disabled.
    */
   boolean isReplicationDisabled();
@@ -109,6 +108,5 @@ public interface BulkLoadHFiles {
   static BulkLoadHFiles create(Configuration conf) {
     return new BulkLoadHFilesTool(conf);
   }
-
 
 }

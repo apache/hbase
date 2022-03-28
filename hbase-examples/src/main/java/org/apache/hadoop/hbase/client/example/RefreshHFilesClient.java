@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,8 +39,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RefreshHFilesProtos;
 
 /**
- * This client class is for invoking the refresh HFile function deployed on the
- * Region Server side via the RefreshHFilesService.
+ * This client class is for invoking the refresh HFile function deployed on the Region Server side
+ * via the RefreshHFilesService.
  */
 @InterfaceAudience.Private
 public class RefreshHFilesClient extends Configured implements Tool, Closeable {
@@ -50,7 +49,6 @@ public class RefreshHFilesClient extends Configured implements Tool, Closeable {
 
   /**
    * Constructor with Conf object
-   *
    * @param cfg the {@link Configuration} object to use
    */
   public RefreshHFilesClient(Configuration cfg) {
@@ -76,18 +74,16 @@ public class RefreshHFilesClient extends Configured implements Tool, Closeable {
 
   public void refreshHFiles(final Table table) throws Throwable {
     final RefreshHFilesProtos.RefreshHFilesRequest request =
-            RefreshHFilesProtos.RefreshHFilesRequest.getDefaultInstance();
+        RefreshHFilesProtos.RefreshHFilesRequest.getDefaultInstance();
     table.coprocessorService(RefreshHFilesProtos.RefreshHFilesService.class,
-            HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-            new Batch.Call<RefreshHFilesProtos.RefreshHFilesService,
-                    RefreshHFilesProtos.RefreshHFilesResponse>() {
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      new Batch.Call<RefreshHFilesProtos.RefreshHFilesService, RefreshHFilesProtos.RefreshHFilesResponse>() {
         @Override
-        public RefreshHFilesProtos.RefreshHFilesResponse call(
-              RefreshHFilesProtos.RefreshHFilesService refreshHFilesService)
-              throws IOException {
+        public RefreshHFilesProtos.RefreshHFilesResponse
+            call(RefreshHFilesProtos.RefreshHFilesService refreshHFilesService) throws IOException {
           ServerRpcController controller = new ServerRpcController();
           BlockingRpcCallback<RefreshHFilesProtos.RefreshHFilesResponse> rpcCallback =
-                new BlockingRpcCallback<>();
+              new BlockingRpcCallback<>();
           refreshHFilesService.refreshHFiles(controller, request, rpcCallback);
 
           if (controller.failedOnException()) {

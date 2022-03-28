@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
@@ -33,60 +35,55 @@ public class TableState {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static enum State {
-    ENABLED,
-    DISABLED,
-    DISABLING,
-    ENABLING;
+    ENABLED, DISABLED, DISABLING, ENABLING;
 
     /**
      * Covert from PB version of State
-     *
      * @param state convert from
      * @return POJO
      */
     public static State convert(HBaseProtos.TableState.State state) {
       State ret;
       switch (state) {
-      case ENABLED:
-        ret = State.ENABLED;
-        break;
-      case DISABLED:
-        ret = State.DISABLED;
-        break;
-      case DISABLING:
-        ret = State.DISABLING;
-        break;
-      case ENABLING:
-        ret = State.ENABLING;
-        break;
-      default:
-        throw new IllegalStateException(state.toString());
+        case ENABLED:
+          ret = State.ENABLED;
+          break;
+        case DISABLED:
+          ret = State.DISABLED;
+          break;
+        case DISABLING:
+          ret = State.DISABLING;
+          break;
+        case ENABLING:
+          ret = State.ENABLING;
+          break;
+        default:
+          throw new IllegalStateException(state.toString());
       }
       return ret;
     }
 
     /**
      * Covert to PB version of State
-     *
      * @return PB
      */
     public HBaseProtos.TableState.State convert() {
       HBaseProtos.TableState.State state;
       switch (this) {
-      case ENABLED:
-        state = HBaseProtos.TableState.State.ENABLED;
-        break;
-      case DISABLED:
-        state = HBaseProtos.TableState.State.DISABLED;
-        break;
-      case DISABLING:
-        state = HBaseProtos.TableState.State.DISABLING;
-        break;
-      case ENABLING:
-        state = HBaseProtos.TableState.State.ENABLING;
-        break;
-      default:
-        throw new IllegalStateException(this.toString());
+        case ENABLED:
+          state = HBaseProtos.TableState.State.ENABLED;
+          break;
+        case DISABLED:
+          state = HBaseProtos.TableState.State.DISABLED;
+          break;
+        case DISABLING:
+          state = HBaseProtos.TableState.State.DISABLING;
+          break;
+        case ENABLING:
+          state = HBaseProtos.TableState.State.ENABLING;
+          break;
+        default:
+          throw new IllegalStateException(this.toString());
       }
       return state;
     }
@@ -157,7 +154,6 @@ public class TableState {
 
   /**
    * Table name for state
-   *
    * @return milliseconds
    */
   public TableName getTableName() {
@@ -180,25 +176,21 @@ public class TableState {
    */
   public boolean inStates(State... states) {
     for (State s : states) {
-      if (s.equals(this.state))
-        return true;
+      if (s.equals(this.state)) return true;
     }
     return false;
   }
-
 
   /**
    * Covert to PB version of TableState
    * @return PB
    */
   public HBaseProtos.TableState convert() {
-    return HBaseProtos.TableState.newBuilder()
-        .setState(this.state.convert()).build();
+    return HBaseProtos.TableState.newBuilder().setState(this.state.convert()).build();
   }
 
   /**
    * Covert from PB version of TableState
-   *
    * @param tableName table this state of
    * @param tableState convert from
    * @return POJO

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,7 +73,7 @@ public class RegionReplicationSink {
   public static final long RPC_TIMEOUT_MS_DEFAULT = 1000;
 
   public static final String OPERATION_TIMEOUT_MS =
-    "hbase.region.read-replica.sink.operation.timeout.ms";
+      "hbase.region.read-replica.sink.operation.timeout.ms";
 
   public static final long OPERATION_TIMEOUT_MS_DEFAULT = 5000;
 
@@ -81,12 +81,12 @@ public class RegionReplicationSink {
   // refreshStoreFiles call at remote side so it will likely to spend more time. And also a meta
   // edit is more important for fixing inconsistent state so it worth to wait for more time.
   public static final String META_EDIT_RPC_TIMEOUT_MS =
-    "hbase.region.read-replica.sink.meta-edit.rpc.timeout.ms";
+      "hbase.region.read-replica.sink.meta-edit.rpc.timeout.ms";
 
   public static final long META_EDIT_RPC_TIMEOUT_MS_DEFAULT = 15000;
 
   public static final String META_EDIT_OPERATION_TIMEOUT_MS =
-    "hbase.region.read-replica.sink.meta-edit.operation.timeout.ms";
+      "hbase.region.read-replica.sink.meta-edit.operation.timeout.ms";
 
   public static final long META_EDIT_OPERATION_TIMEOUT_MS_DEFAULT = 60000;
 
@@ -179,7 +179,8 @@ public class RegionReplicationSink {
   private boolean stopped;
 
   public RegionReplicationSink(Configuration conf, RegionInfo primary, TableDescriptor td,
-    RegionReplicationBufferManager manager, Runnable flushRequester, AsyncClusterConnection conn) {
+      RegionReplicationBufferManager manager, Runnable flushRequester,
+      AsyncClusterConnection conn) {
     Preconditions.checkArgument(RegionReplicaUtil.isDefaultReplica(primary), "%s is not primary",
       primary);
     this.regionReplication = td.getRegionReplication();
@@ -192,11 +193,11 @@ public class RegionReplicationSink {
     this.conn = conn;
     this.retries = conf.getInt(RETRIES_NUMBER, RETRIES_NUMBER_DEFAULT);
     this.rpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(RPC_TIMEOUT_MS, RPC_TIMEOUT_MS_DEFAULT));
+        TimeUnit.MILLISECONDS.toNanos(conf.getLong(RPC_TIMEOUT_MS, RPC_TIMEOUT_MS_DEFAULT));
     this.operationTimeoutNs = TimeUnit.MILLISECONDS
-      .toNanos(conf.getLong(OPERATION_TIMEOUT_MS, OPERATION_TIMEOUT_MS_DEFAULT));
+        .toNanos(conf.getLong(OPERATION_TIMEOUT_MS, OPERATION_TIMEOUT_MS_DEFAULT));
     this.metaEditRpcTimeoutNs = TimeUnit.MILLISECONDS
-      .toNanos(conf.getLong(META_EDIT_RPC_TIMEOUT_MS, META_EDIT_RPC_TIMEOUT_MS_DEFAULT));
+        .toNanos(conf.getLong(META_EDIT_RPC_TIMEOUT_MS, META_EDIT_RPC_TIMEOUT_MS_DEFAULT));
     this.metaEditOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
       conf.getLong(META_EDIT_OPERATION_TIMEOUT_MS, META_EDIT_OPERATION_TIMEOUT_MS_DEFAULT));
     this.batchSizeCapacity = conf.getLong(BATCH_SIZE_CAPACITY, BATCH_SIZE_CAPACITY_DEFAULT);
@@ -204,8 +205,7 @@ public class RegionReplicationSink {
     this.failedReplicas = new IntHashSet(regionReplication - 1);
   }
 
-  void onComplete(List<SinkEntry> sent,
-    Map<Integer, MutableObject<Throwable>> replica2Error) {
+  void onComplete(List<SinkEntry> sent, Map<Integer, MutableObject<Throwable>> replica2Error) {
     long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
     for (SinkEntry entry : sent) {
@@ -285,7 +285,7 @@ public class RegionReplicationSink {
     }
     sending = true;
     List<WAL.Entry> walEntries =
-      toSend.stream().map(e -> new WAL.Entry(e.key, e.edit)).collect(Collectors.toList());
+        toSend.stream().map(e -> new WAL.Entry(e.key, e.edit)).collect(Collectors.toList());
     AtomicInteger remaining = new AtomicInteger(toSendReplicaCount);
     Map<Integer, MutableObject<Throwable>> replica2Error = new HashMap<>();
     for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
@@ -316,8 +316,8 @@ public class RegionReplicationSink {
       return false;
     }
     Set<byte[]> storesFlushed =
-      flushDesc.getStoreFlushesList().stream().map(sfd -> sfd.getFamilyName().toByteArray())
-        .collect(Collectors.toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));
+        flushDesc.getStoreFlushesList().stream().map(sfd -> sfd.getFamilyName().toByteArray())
+            .collect(Collectors.toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));
     if (storesFlushed.size() != tableDesc.getColumnFamilyCount()) {
       return false;
     }
@@ -380,8 +380,8 @@ public class RegionReplicationSink {
             long clearedSize = clearAllEntries();
             if (LOG.isDebugEnabled()) {
               LOG.debug(
-                "Got a flush all request with sequence id {}, clear {} pending" +
-                  " entries with size {}, clear failed replicas {}",
+                "Got a flush all request with sequence id {}, clear {} pending"
+                    + " entries with size {}, clear failed replicas {}",
                 flushSequenceNumber, clearedCount,
                 StringUtils.TraditionalBinaryPrefix.long2String(clearedSize, "", 1),
                 failedReplicas);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestFailedServersLog {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFailedServersLog.class);
+      HBaseClassTestRule.forClass(TestFailedServersLog.class);
 
   static final int TEST_PORT = 9999;
 
@@ -58,14 +58,14 @@ public class TestFailedServersLog {
     when(mockAppender.getName()).thenReturn("mockAppender");
     when(mockAppender.isStarted()).thenReturn(true);
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(FailedServers.class)).addAppender(mockAppender);
+        .getLogger(FailedServers.class)).addAppender(mockAppender);
 
   }
 
   @After
   public void teardown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(FailedServers.class)).removeAppender(mockAppender);
+        .getLogger(FailedServers.class)).removeAppender(mockAppender);
   }
 
   @Test
@@ -77,7 +77,7 @@ public class TestFailedServersLog {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         org.apache.logging.log4j.core.LogEvent logEvent =
-          invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
+            invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
         level.set(logEvent.getLevel());
         msg.set(logEvent.getMessage().getFormattedMessage());
         return null;
@@ -92,7 +92,8 @@ public class TestFailedServersLog {
 
     verify(mockAppender, times(1)).append(any(org.apache.logging.log4j.core.LogEvent.class));
     assertEquals(org.apache.logging.log4j.Level.DEBUG, level.get());
-    assertEquals("Added failed server with address " + addr.toString() + " to list caused by " +
-      nullException.toString(), msg.get());
+    assertEquals("Added failed server with address " + addr.toString() + " to list caused by "
+        + nullException.toString(),
+      msg.get());
   }
 }

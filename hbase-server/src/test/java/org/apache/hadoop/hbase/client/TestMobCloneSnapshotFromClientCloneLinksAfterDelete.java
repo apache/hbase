@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientCloneLinksAfterDelete.class);
+      HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientCloneLinksAfterDelete.class);
 
   private static boolean delayFlush = false;
 
@@ -118,7 +118,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     long tid = EnvironmentEdgeManager.currentTime();
     String snapshotName3 = "snaptb3-" + tid;
     TableName clonedTableName3 =
-      TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
+        TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
     admin.snapshot(snapshotName3, tableName);
     delayFlush = false;
     int snapshot3Rows = -1;

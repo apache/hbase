@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -143,14 +143,14 @@ public class ReplicationPeerConfig {
   public static ReplicationPeerConfigBuilder newBuilder(ReplicationPeerConfig peerConfig) {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
-      .setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl())
-      .putAllPeerData(peerConfig.getPeerData()).putAllConfiguration(peerConfig.getConfiguration())
-      .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
-      .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
-      .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
-      .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
-      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
-      .setRemoteWALDir(peerConfig.getRemoteWALDir());
+        .setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl())
+        .putAllPeerData(peerConfig.getPeerData()).putAllConfiguration(peerConfig.getConfiguration())
+        .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
+        .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
+        .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
+        .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
+        .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
+        .setRemoteWALDir(peerConfig.getRemoteWALDir());
     return builder;
   }
 
@@ -212,8 +212,7 @@ public class ReplicationPeerConfig {
     }
 
     @Override
-    public ReplicationPeerConfigBuilder
-        setTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
+    public ReplicationPeerConfigBuilder setTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
       this.tableCFsMap = tableCFsMap;
       return this;
     }
@@ -311,9 +310,9 @@ public class ReplicationPeerConfig {
    * this peer config.
    * @param table name of the table
    * @param family family name
-   * @return true if (the family of) the table need replicate to the peer cluster.
-   *         If passed family is null, return true if any CFs of the table need replicate;
-   *         If passed family is not null, return true if the passed family need replicate.
+   * @return true if (the family of) the table need replicate to the peer cluster. If passed family
+   *         is null, return true if any CFs of the table need replicate; If passed family is not
+   *         null, return true if the passed family need replicate.
    */
   public boolean needToReplicate(TableName table, byte[] family) {
     String namespace = table.getNamespaceAsString();
@@ -330,9 +329,9 @@ public class ReplicationPeerConfig {
       // If cfs is null or empty then we can make sure that we do not need to replicate this table,
       // otherwise, we may still need to replicate the table but filter out some families.
       return cfs != null && !cfs.isEmpty()
-        // If exclude-table-cfs contains passed family then we make sure that we do not need to
-        // replicate this family.
-        && (family == null || !cfs.contains(Bytes.toString(family)));
+      // If exclude-table-cfs contains passed family then we make sure that we do not need to
+      // replicate this family.
+          && (family == null || !cfs.contains(Bytes.toString(family)));
     } else {
       // Not replicate all user tables, so filter by namespaces and table-cfs config
       if (namespaces == null && tableCFsMap == null) {
@@ -346,9 +345,9 @@ public class ReplicationPeerConfig {
       // If table-cfs contains this table then we can make sure that we need replicate some CFs of
       // this table. Further we need all CFs if tableCFsMap.get(table) is null or empty.
       return tableCFsMap != null && tableCFsMap.containsKey(table)
-        && (family == null || CollectionUtils.isEmpty(tableCFsMap.get(table))
-        // If table-cfs must contain passed family then we need to replicate this family.
-        || tableCFsMap.get(table).contains(Bytes.toString(family)));
+          && (family == null || CollectionUtils.isEmpty(tableCFsMap.get(table))
+          // If table-cfs must contain passed family then we need to replicate this family.
+              || tableCFsMap.get(table).contains(Bytes.toString(family)));
     }
   }
 }

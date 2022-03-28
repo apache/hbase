@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface is used for the tracking and enforcement of Deletes during the course of a Get or
@@ -80,9 +80,9 @@ public interface DeleteTracker extends ShipperListener {
     FAMILY_VERSION_DELETED, // The Cell is deleted by a delete family version.
     COLUMN_DELETED, // The Cell is deleted by a delete column.
     VERSION_DELETED, // The Cell is deleted by a version delete.
-    NOT_DELETED,
-    VERSION_MASKED  // The Cell is masked by max number of versions which is considered as
-                    // deleted in strong semantics of versions(See MvccTracker)
+    NOT_DELETED, VERSION_MASKED // The Cell is masked by max number of versions which is considered
+                                // as
+                                // deleted in strong semantics of versions(See MvccTracker)
   }
 
   /**

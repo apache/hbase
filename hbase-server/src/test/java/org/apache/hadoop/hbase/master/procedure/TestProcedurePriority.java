@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestProcedurePriority {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedurePriority.class);
+      HBaseClassTestRule.forClass(TestProcedurePriority.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -112,7 +112,7 @@ public class TestProcedurePriority {
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MyCP.class.getName());
     UTIL.startMiniCluster(3);
     CORE_POOL_SIZE =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
     TABLE_COUNT = 50 * CORE_POOL_SIZE;
     List<Future<?>> futures = new ArrayList<>();
     AsyncAdmin admin = UTIL.getAsyncConnection().getAdmin();
@@ -120,9 +120,9 @@ public class TestProcedurePriority {
     for (int i = 0; i < TABLE_COUNT; i++) {
       concurrency.acquire();
       futures.add(admin
-        .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build())
-        .whenComplete((r, e) -> concurrency.release()));
+          .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build())
+          .whenComplete((r, e) -> concurrency.release()));
     }
     for (Future<?> future : futures) {
       future.get(3, TimeUnit.MINUTES);
@@ -139,15 +139,15 @@ public class TestProcedurePriority {
   @Test
   public void test() throws Exception {
     RegionServerThread rsWithMetaThread = UTIL.getMiniHBaseCluster().getRegionServerThreads()
-      .stream().filter(t -> !t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty())
-      .findAny().get();
+        .stream().filter(t -> !t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty())
+        .findAny().get();
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
     FAIL = true;
     UTIL.getMiniHBaseCluster().killRegionServer(rsNoMeta.getServerName());
     // wait until all the worker thread are stuck, which means that the stuck checker will start to
     // add new worker thread.
     ProcedureExecutor<?> executor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.waitFor(60000, new ExplainingPredicate<Exception>() {
 
       @Override

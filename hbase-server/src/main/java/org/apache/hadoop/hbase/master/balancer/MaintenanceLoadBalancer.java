@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,17 +60,17 @@ public class MaintenanceLoadBalancer implements LoadBalancer {
 
   @Override
   public List<RegionPlan> balanceCluster(
-    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
+      Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     // do not need to balance in maintenance mode
     return Collections.emptyList();
   }
 
   private Map<ServerName, List<RegionInfo>> assign(Collection<RegionInfo> regions,
-    List<ServerName> servers) {
+      List<ServerName> servers) {
     // should only have 1 region server in maintenance mode
     assert servers.size() == 1;
     List<RegionInfo> systemRegions =
-      regions.stream().filter(r -> r.getTable().isSystemTable()).collect(Collectors.toList());
+        regions.stream().filter(r -> r.getTable().isSystemTable()).collect(Collectors.toList());
     if (!systemRegions.isEmpty()) {
       return Collections.singletonMap(servers.get(0), systemRegions);
     } else {
@@ -80,19 +80,19 @@ public class MaintenanceLoadBalancer implements LoadBalancer {
 
   @Override
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-    List<ServerName> servers) throws IOException {
+      List<ServerName> servers) throws IOException {
     return assign(regions, servers);
   }
 
   @Override
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers) throws IOException {
+      List<ServerName> servers) throws IOException {
     return assign(regions.keySet(), servers);
   }
 
   @Override
   public ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
-    throws IOException {
+      throws IOException {
     // should only have 1 region server in maintenance mode
     assert servers.size() == 1;
     return regionInfo.getTable().isSystemTable() ? servers.get(0) : null;

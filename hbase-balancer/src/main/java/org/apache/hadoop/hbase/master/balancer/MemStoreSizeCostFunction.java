@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class MemStoreSizeCostFunction extends CostFromRegionLoadAsRateFunction {
 
   private static final String MEMSTORE_SIZE_COST_KEY =
-    "hbase.master.balancer.stochastic.memstoreSizeCost";
+      "hbase.master.balancer.stochastic.memstoreSizeCost";
   private static final float DEFAULT_MEMSTORE_SIZE_COST = 5;
 
   MemStoreSizeCostFunction(Configuration conf) {

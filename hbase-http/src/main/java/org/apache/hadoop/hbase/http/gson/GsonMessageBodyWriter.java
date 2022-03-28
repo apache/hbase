@@ -32,6 +32,7 @@ import javax.inject.Inject;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
 import org.apache.hbase.thirdparty.javax.ws.rs.WebApplicationException;
@@ -56,20 +57,14 @@ public final class GsonMessageBodyWriter<T> implements MessageBodyWriter<T> {
 
   @Override
   public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations,
-    MediaType mediaType) {
+      MediaType mediaType) {
     return mediaType == null || MediaType.APPLICATION_JSON_TYPE.isCompatible(mediaType);
   }
 
   @Override
-  public void writeTo(
-    T t,
-    Class<?> type,
-    Type genericType,
-    Annotation[] annotations,
-    MediaType mediaType,
-    MultivaluedMap<String, Object> httpHeaders,
-    OutputStream entityStream
-  ) throws IOException, WebApplicationException {
+  public void writeTo(T t, Class<?> type, Type genericType, Annotation[] annotations,
+      MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
+      throws IOException, WebApplicationException {
     final Charset outputCharset = requestedCharset(mediaType);
     try (Writer writer = new OutputStreamWriter(entityStream, outputCharset)) {
       gson.toJson(t, writer);
@@ -77,23 +72,20 @@ public final class GsonMessageBodyWriter<T> implements MessageBodyWriter<T> {
   }
 
   private static Charset requestedCharset(MediaType mediaType) {
-    return Optional.ofNullable(mediaType)
-      .map(MediaType::getParameters)
-      .map(params -> params.get("charset"))
-      .map(c -> {
-        try {
-          return Charset.forName(c);
-        } catch (IllegalCharsetNameException e) {
-          logger.debug("Client requested illegal Charset '{}'", c);
-          return null;
-        } catch (UnsupportedCharsetException e) {
-          logger.debug("Client requested unsupported Charset '{}'", c);
-          return null;
-        } catch (Exception e) {
-          logger.debug("Error while resolving Charset '{}'", c, e);
-          return null;
-        }
-      })
-      .orElse(StandardCharsets.UTF_8);
+    return Optional.ofNullable(mediaType).map(MediaType::getParameters)
+        .map(params -> params.get("charset")).map(c -> {
+          try {
+            return Charset.forName(c);
+          } catch (IllegalCharsetNameException e) {
+            logger.debug("Client requested illegal Charset '{}'", c);
+            return null;
+          } catch (UnsupportedCharsetException e) {
+            logger.debug("Client requested unsupported Charset '{}'", c);
+            return null;
+          } catch (Exception e) {
+            logger.debug("Error while resolving Charset '{}'", c, e);
+            return null;
+          }
+        }).orElse(StandardCharsets.UTF_8);
   }
 }

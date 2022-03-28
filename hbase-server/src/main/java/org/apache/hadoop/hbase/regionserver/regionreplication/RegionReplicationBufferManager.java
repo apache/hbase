@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class RegionReplicationBufferManager {
   public static final long MAX_PENDING_SIZE_DEFAULT = 100L * 1024 * 1024;
 
   public static final String SOFT_LIMIT_PERCENTAGE =
-    "hbase.region.read-replica.sink.max-pending-size.soft-limit-percentage";
+      "hbase.region.read-replica.sink.max-pending-size.soft-limit-percentage";
 
   public static final float SOFT_LIMIT_PERCENTAGE_DEFAULT = 0.8f;
 
@@ -76,11 +76,12 @@ public class RegionReplicationBufferManager {
     Configuration conf = rsServices.getConfiguration();
     this.maxPendingSize = conf.getLong(MAX_PENDING_SIZE, MAX_PENDING_SIZE_DEFAULT);
     this.softMaxPendingSize =
-      (long) (conf.getFloat(SOFT_LIMIT_PERCENTAGE, SOFT_LIMIT_PERCENTAGE_DEFAULT) * maxPendingSize);
+        (long) (conf.getFloat(SOFT_LIMIT_PERCENTAGE, SOFT_LIMIT_PERCENTAGE_DEFAULT)
+            * maxPendingSize);
     this.executor = new ThreadPoolExecutor(
-      1, 1, 1, TimeUnit.SECONDS, new SynchronousQueue<>(), new ThreadFactoryBuilder()
-        .setDaemon(true).setNameFormat("Region-Replication-Flusher-%d").build(),
-      (r, e) -> LOG.debug("A flush task is ongoing, drop the new scheduled one"));
+        1, 1, 1, TimeUnit.SECONDS, new SynchronousQueue<>(), new ThreadFactoryBuilder()
+            .setDaemon(true).setNameFormat("Region-Replication-Flusher-%d").build(),
+        (r, e) -> LOG.debug("A flush task is ongoing, drop the new scheduled one"));
     executor.allowCoreThreadTimeOut(true);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,11 +39,13 @@ public class TestCounterImpl {
 
   private Counter counter;
 
-  @Before public void setup() {
+  @Before
+  public void setup() {
     this.counter = new CounterImpl();
   }
 
-  @Test public void testCounting() {
+  @Test
+  public void testCounting() {
     counter.increment();
     assertEquals(1L, counter.getCount());
     counter.increment();

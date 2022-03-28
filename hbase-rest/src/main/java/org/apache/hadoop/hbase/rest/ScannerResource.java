@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -48,8 +46,8 @@ public class ScannerResource extends ResourceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(ScannerResource.class);
 
-  static final Map<String,ScannerInstanceResource> scanners =
-   Collections.synchronizedMap(new HashMap<String,ScannerInstanceResource>());
+  static final Map<String, ScannerInstanceResource> scanners =
+      Collections.synchronizedMap(new HashMap<String, ScannerInstanceResource>());
 
   TableResource tableResource;
 
@@ -58,7 +56,7 @@ public class ScannerResource extends ResourceBase {
    * @param tableResource
    * @throws IOException
    */
-  public ScannerResource(TableResource tableResource)throws IOException {
+  public ScannerResource(TableResource tableResource) throws IOException {
     super();
     this.tableResource = tableResource;
   }
@@ -73,13 +71,11 @@ public class ScannerResource extends ResourceBase {
     }
   }
 
-  Response update(final ScannerModel model, final boolean replace,
-      final UriInfo uriInfo) {
+  Response update(final ScannerModel model, final boolean replace, final UriInfo uriInfo) {
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
-      return Response.status(Response.Status.FORBIDDEN)
-        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
-        .build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+          .entity("Forbidden" + CRLF).build();
     }
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
     RowSpec spec = null;
@@ -94,12 +90,11 @@ public class ScannerResource extends ResourceBase {
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
       String tableName = tableResource.getName();
-      ScannerResultGenerator gen =
-        new ScannerResultGenerator(tableName, spec, filter, model.getCaching(),
-          model.getCacheBlocks(), model.getLimit());
+      ScannerResultGenerator gen = new ScannerResultGenerator(tableName, spec, filter,
+          model.getCaching(), model.getCacheBlocks(), model.getLimit());
       String id = gen.getID();
       ScannerInstanceResource instance =
-        new ScannerInstanceResource(tableName, id, gen, model.getBatch());
+          new ScannerInstanceResource(tableName, id, gen, model.getBatch());
       scanners.put(id, instance);
       if (LOG.isTraceEnabled()) {
         LOG.trace("new scanner: " + id);
@@ -112,26 +107,21 @@ public class ScannerResource extends ResourceBase {
       LOG.error("Exception occurred while processing " + uriInfo.getAbsolutePath() + " : ", e);
       servlet.getMetrics().incrementFailedPutRequests(1);
       if (e instanceof TableNotFoundException) {
-        return Response.status(Response.Status.NOT_FOUND)
-          .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-          .build();
+        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+            .entity("Not found" + CRLF).build();
       } else if (e instanceof RuntimeException
           || e instanceof JsonMappingException | e instanceof JsonParseException) {
-        return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-          .build();
-      }
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+            return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
+                .entity("Bad request" + CRLF).build();
+          }
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
+          .entity("Unavailable" + CRLF).build();
     }
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response put(final ScannerModel model,
-      final @Context UriInfo uriInfo) {
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response put(final ScannerModel model, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
@@ -139,10 +129,8 @@ public class ScannerResource extends ResourceBase {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response post(final ScannerModel model,
-      final @Context UriInfo uriInfo) {
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response post(final ScannerModel model, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("POST " + uriInfo.getAbsolutePath());
     }
@@ -150,8 +138,8 @@ public class ScannerResource extends ResourceBase {
   }
 
   @Path("{scanner: .+}")
-  public ScannerInstanceResource getScannerInstanceResource(
-      final @PathParam("scanner") String id) throws IOException {
+  public ScannerInstanceResource getScannerInstanceResource(final @PathParam("scanner") String id)
+      throws IOException {
     ScannerInstanceResource instance = scanners.get(id);
     if (instance == null) {
       servlet.getMetrics().incrementFailedGetRequests(1);

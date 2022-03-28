@@ -49,7 +49,7 @@ public class TestConstraint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConstraint.class);
+      HBaseClassTestRule.forClass(TestConstraint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 

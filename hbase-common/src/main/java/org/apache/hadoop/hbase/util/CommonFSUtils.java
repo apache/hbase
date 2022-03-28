@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +58,7 @@ public final class CommonFSUtils {
 
   /** Parameter to disable stream capability enforcement checks */
   public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE =
-    "hbase.unsafe.stream.capability.enforce";
+      "hbase.unsafe.stream.capability.enforce";
 
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
@@ -68,9 +67,8 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Compare of path component. Does not consider schema; i.e. if schemas
-   * different but <code>path</code> starts with <code>rootPath</code>,
-   * then the function returns true
+   * Compare of path component. Does not consider schema; i.e. if schemas different but
+   * <code>path</code> starts with <code>rootPath</code>, then the function returns true
    * @param rootPath value to check for
    * @param path subject to check
    * @return True if <code>path</code> starts with <code>rootPath</code>
@@ -95,7 +93,7 @@ public final class CommonFSUtils {
 
   /**
    * Compare path component of the Path URI; e.g. if hdfs://a/b/c and /a/b/c, it will compare the
-   * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true.  Does not consider
+   * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true. Does not consider
    * schema; i.e. if schemas different but path or subpath matches, the two will equate.
    * @param pathToSearch Path we will be trying to match agains against
    * @param pathTail what to match
@@ -120,10 +118,10 @@ public final class CommonFSUtils {
       if (toSearchName == null || toSearchName.length() <= 0) {
         break;
       }
-      // Move up a parent on each path for next go around.  Path doesn't let us go off the end.
+      // Move up a parent on each path for next go around. Path doesn't let us go off the end.
       tailPath = tailPath.getParent();
       toSearch = toSearch.getParent();
-    } while(tailName.equals(toSearchName));
+    } while (tailName.equals(toSearchName));
     return result;
   }
 
@@ -139,9 +137,8 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Return the number of bytes that large input files should be optimally
-   * be split into to minimize i/o time.
-   *
+   * Return the number of bytes that large input files should be optimally be split into to minimize
+   * i/o time.
    * @param fs filesystem object
    * @return the default block size for the path's filesystem
    */
@@ -151,7 +148,6 @@ public final class CommonFSUtils {
 
   /*
    * Get the default replication.
-   *
    * @param fs filesystem object
    * @param f path of file
    * @return default replication for the path's filesystem
@@ -161,12 +157,9 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Returns the default buffer size to use during writes.
-   *
-   * The size of the buffer should probably be a multiple of hardware
-   * page size (4096 on Intel x86), and it determines how much data is
+   * Returns the default buffer size to use during writes. The size of the buffer should probably be
+   * a multiple of hardware page size (4096 on Intel x86), and it determines how much data is
    * buffered during read and write operations.
-   *
    * @param fs filesystem object
    * @return default buffer size to use during writes
    */
@@ -183,7 +176,6 @@ public final class CommonFSUtils {
    * <li>use the default block size</li>
    * <li>not track progress</li>
    * </ol>
-   *
    * @param fs {@link FileSystem} on which to write the file
    * @param path {@link Path} to the file to write
    * @param perm intial permissions
@@ -191,32 +183,27 @@ public final class CommonFSUtils {
    * @return output stream to the created file
    * @throws IOException if the file cannot be created
    */
-  public static FSDataOutputStream create(FileSystem fs, Path path,
-      FsPermission perm, boolean overwrite) throws IOException {
+  public static FSDataOutputStream create(FileSystem fs, Path path, FsPermission perm,
+      boolean overwrite) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
     }
     return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
-        getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
+      getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
   }
 
   /**
-   * Get the file permissions specified in the configuration, if they are
-   * enabled.
-   *
+   * Get the file permissions specified in the configuration, if they are enabled.
    * @param fs filesystem that the file will be created on.
-   * @param conf configuration to read for determining if permissions are
-   *          enabled and which to use
-   * @param permssionConfKey property key in the configuration to use when
-   *          finding the permission
-   * @return the permission to use when creating a new file on the fs. If
-   *         special permissions are not specified in the configuration, then
-   *         the default permissions on the the fs will be returned.
+   * @param conf configuration to read for determining if permissions are enabled and which to use
+   * @param permssionConfKey property key in the configuration to use when finding the permission
+   * @return the permission to use when creating a new file on the fs. If special permissions are
+   *         not specified in the configuration, then the default permissions on the the fs will be
+   *         returned.
    */
-  public static FsPermission getFilePermissions(final FileSystem fs,
-      final Configuration conf, final String permssionConfKey) {
-    boolean enablePermissions = conf.getBoolean(
-        HConstants.ENABLE_DATA_FILE_UMASK, false);
+  public static FsPermission getFilePermissions(final FileSystem fs, final Configuration conf,
+      final String permssionConfKey) {
+    boolean enablePermissions = conf.getBoolean(HConstants.ENABLE_DATA_FILE_UMASK, false);
 
     if (enablePermissions) {
       try {
@@ -230,10 +217,9 @@ public final class CommonFSUtils {
         FsPermission umask = new FsPermission(mask);
         return perm.applyUMask(umask);
       } catch (IllegalArgumentException e) {
-        LOG.warn(
-            "Incorrect umask attempted to be created: "
-                + conf.get(permssionConfKey)
-                + ", using default file permissions.", e);
+        LOG.warn("Incorrect umask attempted to be created: " + conf.get(permssionConfKey)
+            + ", using default file permissions.",
+          e);
         return FsPermission.getFileDefault();
       }
     }
@@ -242,7 +228,6 @@ public final class CommonFSUtils {
 
   /**
    * Verifies root directory path is a valid URI with a scheme
-   *
    * @param root root directory path
    * @return Passed <code>root</code> argument.
    * @throws IOException if not a valid URI with a scheme
@@ -256,8 +241,8 @@ public final class CommonFSUtils {
       }
       return root;
     } catch (URISyntaxException e) {
-      throw new IOException("Root directory path is not a valid " +
-        "URI -- check your " + HConstants.HBASE_DIR + " configuration", e);
+      throw new IOException("Root directory path is not a valid " + "URI -- check your "
+          + HConstants.HBASE_DIR + " configuration", e);
     }
   }
 
@@ -282,12 +267,11 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Return the 'path' component of a Path.  In Hadoop, Path is a URI.  This
-   * method returns the 'path' component of a Path's URI: e.g. If a Path is
-   * <code>hdfs://example.org:9000/hbase_trunk/TestTable/compaction.dir</code>,
-   * this method returns <code>/hbase_trunk/TestTable/compaction.dir</code>.
-   * This method is useful if you want to print out a Path without qualifying
-   * Filesystem instance.
+   * Return the 'path' component of a Path. In Hadoop, Path is a URI. This method returns the 'path'
+   * component of a Path's URI: e.g. If a Path is
+   * <code>hdfs://example.org:9000/hbase_trunk/TestTable/compaction.dir</code>, this method returns
+   * <code>/hbase_trunk/TestTable/compaction.dir</code>. This method is useful if you want to print
+   * out a Path without qualifying Filesystem instance.
    * @param p Filesystem Path whose 'path' component we are to return.
    * @return Path portion of the Filesystem
    */
@@ -297,8 +281,7 @@ public final class CommonFSUtils {
 
   /**
    * @param c configuration
-   * @return {@link Path} to hbase root directory from
-   *     configuration as a qualified Path.
+   * @return {@link Path} to hbase root directory from configuration as a qualified Path.
    * @throws IOException e
    */
   public static Path getRootDir(final Configuration c) throws IOException {
@@ -312,7 +295,7 @@ public final class CommonFSUtils {
   }
 
   public static void setFsDefault(final Configuration c, final Path root) {
-    c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
+    c.set("fs.defaultFS", root.toString()); // for hadoop 0.21+
   }
 
   public static void setFsDefault(final Configuration c, final String uri) {
@@ -327,7 +310,7 @@ public final class CommonFSUtils {
   /**
    * @param c configuration
    * @return {@link Path} to hbase log root directory: e.g. {@value HBASE_WAL_DIR} from
-   *     configuration as a qualified Path. Defaults to HBase root dir.
+   *         configuration as a qualified Path. Defaults to HBase root dir.
    * @throws IOException e
    */
   public static Path getWALRootDir(final Configuration c) throws IOException {
@@ -374,9 +357,9 @@ public final class CommonFSUtils {
     Path qualifiedWalDir = walDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     if (!qualifiedWalDir.equals(rootDir)) {
       if (qualifiedWalDir.toString().startsWith(rootDir.toString() + "/")) {
-        throw new IllegalStateException("Illegal WAL directory specified. " +
-          "WAL directories are not permitted to be under root directory: rootDir=" +
-          rootDir.toString() + ", qualifiedWALDir=" + qualifiedWalDir);
+        throw new IllegalStateException("Illegal WAL directory specified. "
+            + "WAL directories are not permitted to be under root directory: rootDir="
+            + rootDir.toString() + ", qualifiedWALDir=" + qualifiedWalDir);
       }
     }
     return true;
@@ -406,7 +389,7 @@ public final class CommonFSUtils {
       throws IOException {
     Path baseDir = new Path(getWALRootDir(conf), HConstants.BASE_NAMESPACE_DIR);
     return new Path(new Path(baseDir, tableName.getNamespaceAsString()),
-      tableName.getQualifierAsString());
+        tableName.getQualifierAsString());
   }
 
   /**
@@ -418,14 +401,13 @@ public final class CommonFSUtils {
   public static Path getWrongWALRegionDir(final Configuration conf, final TableName tableName,
       final String encodedRegionName) throws IOException {
     Path wrongTableDir = new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
-      tableName.getQualifierAsString());
+        tableName.getQualifierAsString());
     return new Path(wrongTableDir, encodedRegionName);
   }
 
   /**
    * Returns the {@link org.apache.hadoop.fs.Path} object representing the table directory under
    * path rootdir
-   *
    * @param rootdir qualified path of HBase root directory
    * @param tableName name of table
    * @return {@link org.apache.hadoop.fs.Path} for table
@@ -438,7 +420,6 @@ public final class CommonFSUtils {
   /**
    * Returns the {@link org.apache.hadoop.fs.Path} object representing the region directory under
    * path rootdir
-   *
    * @param rootdir qualified path of HBase root directory
    * @param tableName name of table
    * @param regionName The encoded region name
@@ -449,10 +430,8 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Returns the {@link org.apache.hadoop.hbase.TableName} object representing
-   * the table directory under
-   * path rootdir
-   *
+   * Returns the {@link org.apache.hadoop.hbase.TableName} object representing the table directory
+   * under path rootdir
    * @param tablePath path of table
    * @return {@link org.apache.hadoop.fs.Path} for table
    */
@@ -461,16 +440,14 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Returns the {@link org.apache.hadoop.fs.Path} object representing
-   * the namespace directory under path rootdir
-   *
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing the namespace directory under
+   * path rootdir
    * @param rootdir qualified path of HBase root directory
    * @param namespace namespace name
    * @return {@link org.apache.hadoop.fs.Path} for table
    */
   public static Path getNamespaceDir(Path rootdir, final String namespace) {
-    return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
-        new Path(namespace)));
+    return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR, new Path(namespace)));
   }
 
   // this mapping means that under a federated FileSystem implementation, we'll
@@ -479,20 +456,17 @@ public final class CommonFSUtils {
   private static final Map<FileSystem, Boolean> warningMap = new ConcurrentHashMap<>();
 
   /**
-   * Sets storage policy for given path.
-   * If the passed path is a directory, we'll set the storage policy for all files
-   * created in the future in said directory. Note that this change in storage
-   * policy takes place at the FileSystem level; it will persist beyond this RS's lifecycle.
-   * If we're running on a version of FileSystem that doesn't support the given storage policy
-   * (or storage policies at all), then we'll issue a log message and continue.
-   *
-   * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html
-   *
+   * Sets storage policy for given path. If the passed path is a directory, we'll set the storage
+   * policy for all files created in the future in said directory. Note that this change in storage
+   * policy takes place at the FileSystem level; it will persist beyond this RS's lifecycle. If
+   * we're running on a version of FileSystem that doesn't support the given storage policy (or
+   * storage policies at all), then we'll issue a log message and continue. See
+   * http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html
    * @param fs We only do anything it implements a setStoragePolicy method
    * @param path the Path whose storage policy is to be set
    * @param storagePolicy Policy to set on <code>path</code>; see hadoop 2.6+
-   *   org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g
-   *   'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
+   *          org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g 'COLD', 'WARM',
+   *          'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public static void setStoragePolicy(final FileSystem fs, final Path path,
       final String storagePolicy) {
@@ -549,8 +523,9 @@ public final class CommonFSUtils {
       // misuse than a runtime problem with HDFS.
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
-        LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path + ". " +
-            "DEBUG log level might have more details.", e);
+        LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path + ". "
+            + "DEBUG log level might have more details.",
+          e);
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
       }
@@ -559,14 +534,15 @@ public final class CommonFSUtils {
       // that throws UnsupportedOperationException
       if (e instanceof UnsupportedOperationException) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The underlying FileSystem implementation doesn't support " +
-              "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
-              "appears to be present in your version of Hadoop. For more information check " +
-              "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem " +
-              "specification docs from HADOOP-11981, and/or related documentation from the " +
-              "provider of the underlying FileSystem (its name should appear in the " +
-              "stacktrace that accompanies this message). Note in particular that Hadoop's " +
-              "local filesystem implementation doesn't support storage policies.", e);
+          LOG.debug("The underlying FileSystem implementation doesn't support "
+              + "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 "
+              + "appears to be present in your version of Hadoop. For more information check "
+              + "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem "
+              + "specification docs from HADOOP-11981, and/or related documentation from the "
+              + "provider of the underlying FileSystem (its name should appear in the "
+              + "stacktrace that accompanies this message). Note in particular that Hadoop's "
+              + "local filesystem implementation doesn't support storage policies.",
+            e);
         }
       }
     }
@@ -606,22 +582,18 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This accommodates differences between hadoop versions, where hadoop 1
-   * does not throw a FileNotFoundException, and return an empty FileStatus[]
-   * while Hadoop 2 will throw FileNotFoundException.
-   *
-   * Where possible, prefer FSUtils#listStatusWithStatusFilter(FileSystem,
-   * Path, FileStatusFilter) instead.
-   *
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This accommodates
+   * differences between hadoop versions, where hadoop 1 does not throw a FileNotFoundException, and
+   * return an empty FileStatus[] while Hadoop 2 will throw FileNotFoundException. Where possible,
+   * prefer FSUtils#listStatusWithStatusFilter(FileSystem, Path, FileStatusFilter) instead.
    * @param fs file system
    * @param dir directory
    * @param filter path filter
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
-  public static FileStatus[] listStatus(final FileSystem fs,
-      final Path dir, final PathFilter filter) throws IOException {
-    FileStatus [] status = null;
+  public static FileStatus[] listStatus(final FileSystem fs, final Path dir,
+      final PathFilter filter) throws IOException {
+    FileStatus[] status = null;
     try {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
@@ -637,9 +609,8 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This would accommodates differences between hadoop versions
-   *
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This would accommodates
+   * differences between hadoop versions
    * @param fs file system
    * @param dir directory
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
@@ -650,17 +621,15 @@ public final class CommonFSUtils {
 
   /**
    * Calls fs.listFiles() to get FileStatus and BlockLocations together for reducing rpc call
-   *
    * @param fs file system
    * @param dir directory
    * @return LocatedFileStatus list
    */
-  public static List<LocatedFileStatus> listLocatedStatus(final FileSystem fs,
-      final Path dir) throws IOException {
+  public static List<LocatedFileStatus> listLocatedStatus(final FileSystem fs, final Path dir)
+      throws IOException {
     List<LocatedFileStatus> status = null;
     try {
-      RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = fs
-          .listFiles(dir, false);
+      RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = fs.listFiles(dir, false);
       while (locatedFileStatusRemoteIterator.hasNext()) {
         if (status == null) {
           status = Lists.newArrayList();
@@ -678,7 +647,6 @@ public final class CommonFSUtils {
 
   /**
    * Calls fs.delete() and returns the value returned by the fs.delete()
-   *
    * @param fs must not be null
    * @param path must not be null
    * @param recursive delete tree rooted at path
@@ -692,7 +660,6 @@ public final class CommonFSUtils {
 
   /**
    * Calls fs.exists(). Checks if the specified path exists
-   *
    * @param fs must not be null
    * @param path must not be null
    * @return the value returned by fs.exists()
@@ -717,7 +684,6 @@ public final class CommonFSUtils {
 
   /**
    * Recursive helper to log the state of the FS
-   *
    * @see #logFileSystemState(FileSystem, Path, Logger)
    */
   private static void logFSTree(Logger log, final FileSystem fs, final Path root, String prefix)
@@ -758,19 +724,20 @@ public final class CommonFSUtils {
     if (size != notSet) {
       return;
     }
-    // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
+    // But short circuit buffer size is normally not set. Put in place the hbase wanted size.
     int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
   }
 
   /**
-   * Helper exception for those cases where the place where we need to check a stream capability
-   * is not where we have the needed context to explain the impact and mitigation for a lack.
+   * Helper exception for those cases where the place where we need to check a stream capability is
+   * not where we have the needed context to explain the impact and mitigation for a lack.
    */
   public static class StreamLacksCapabilityException extends Exception {
     public StreamLacksCapabilityException(String message, Throwable cause) {
       super(message, cause);
     }
+
     public StreamLacksCapabilityException(String message) {
       super(message);
     }

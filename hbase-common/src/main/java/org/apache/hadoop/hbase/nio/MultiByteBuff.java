@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,11 +35,10 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Provides a unified view of all the underlying ByteBuffers and will look as if a bigger
- * sequential buffer. This class provides similar APIs as in {@link ByteBuffer} to put/get int,
- * short, long etc and doing operations like mark, reset, slice etc. This has to be used when
- * data is split across multiple byte buffers and we don't want copy them to single buffer
- * for reading from it.
+ * Provides a unified view of all the underlying ByteBuffers and will look as if a bigger sequential
+ * buffer. This class provides similar APIs as in {@link ByteBuffer} to put/get int, short, long etc
+ * and doing operations like mark, reset, slice etc. This has to be used when data is split across
+ * multiple byte buffers and we don't want copy them to single buffer for reading from it.
  */
 @InterfaceAudience.Private
 public class MultiByteBuff extends ByteBuff {
@@ -59,8 +57,8 @@ public class MultiByteBuff extends ByteBuff {
   private Iterator<ByteBuffer> buffsIterator = new Iterator<ByteBuffer>() {
     @Override
     public boolean hasNext() {
-      return curItemIndex < limitedItemIndex ||
-          (curItemIndex == limitedItemIndex && items[curItemIndex].hasRemaining());
+      return curItemIndex < limitedItemIndex
+          || (curItemIndex == limitedItemIndex && items[curItemIndex].hasRemaining());
     }
 
     @Override
@@ -118,8 +116,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * @throws UnsupportedOperationException MBB does not support
-   * array based operations
+   * @throws UnsupportedOperationException MBB does not support array based operations
    */
   @Override
   public byte[] array() {
@@ -127,8 +124,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * @throws UnsupportedOperationException MBB does not
-   * support array based operations
+   * @throws UnsupportedOperationException MBB does not support array based operations
    */
   @Override
   public int arrayOffset() {
@@ -453,8 +449,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Similar to {@link ByteBuffer}.reset(), ensures that this MBB
-   * is reset back to last marked position.
+   * Similar to {@link ByteBuffer}.reset(), ensures that this MBB is reset back to last marked
+   * position.
    * @return This MBB
    */
   @Override
@@ -475,8 +471,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Returns the number of elements between the current position and the
-   * limit.
+   * Returns the number of elements between the current position and the limit.
    * @return the remaining elements in this MBB
    */
   @Override
@@ -501,8 +496,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * A relative method that returns byte at the current position.  Increments the
-   * current position by the size of a byte.
+   * A relative method that returns byte at the current position. Increments the current position by
+   * the size of a byte.
    * @return the byte at the current position
    */
   @Override
@@ -520,9 +515,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Returns the short value at the current position. Also advances the position by the size
-   * of short
-   *
+   * Returns the short value at the current position. Also advances the position by the size of
+   * short
    * @return the short value at the current position
    */
   @Override
@@ -541,7 +535,6 @@ public class MultiByteBuff extends ByteBuff {
 
   /**
    * Returns the int value at the current position. Also advances the position by the size of int
-   *
    * @return the int value at the current position
    */
   @Override
@@ -559,10 +552,8 @@ public class MultiByteBuff extends ByteBuff {
     return n;
   }
 
-
   /**
    * Returns the long value at the current position. Also advances the position by the size of long
-   *
    * @return the long value at the current position
    */
   @Override
@@ -671,9 +662,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Returns an MBB which is a sliced version of this MBB. The position, limit and mark
-   * of the new MBB will be independent than that of the original MBB.
-   * The content of the new MBB will start at this MBB's current position
+   * Returns an MBB which is a sliced version of this MBB. The position, limit and mark of the new
+   * MBB will be independent than that of the original MBB. The content of the new MBB will start at
+   * this MBB's current position
    * @return a sliced MBB
    */
   @Override
@@ -819,9 +810,8 @@ public class MultiByteBuff extends ByteBuff {
     }
     MultiByteBuff multiByteBuff = (MultiByteBuff) buf;
     if (byteBufferIndex < 0 || byteBufferIndex >= multiByteBuff.items.length) {
-      throw new IndexOutOfBoundsException(
-          "index:[" + byteBufferIndex + "],but only index [0-" + multiByteBuff.items.length
-              + ") is valid.");
+      throw new IndexOutOfBoundsException("index:[" + byteBufferIndex + "],but only index [0-"
+          + multiByteBuff.items.length + ") is valid.");
     }
     return multiByteBuff.items[byteBufferIndex];
   }
@@ -931,7 +921,6 @@ public class MultiByteBuff extends ByteBuff {
     return this;
   }
 
-
   /**
    * Writes a long to this MBB at its current position. Also advances the position by size of long
    * @param val Long value to write
@@ -1035,14 +1024,13 @@ public class MultiByteBuff extends ByteBuff {
     return this;
   }
 
- /**
+  /**
    * Returns bytes from current position till length specified, as a single ByteBuffer. When all
    * these bytes happen to be in a single ByteBuffer, which this object wraps, that ByteBuffer item
    * as such will be returned. So users are warned not to change the position or limit of this
    * returned ByteBuffer. The position of the returned byte buffer is at the begin of the required
    * bytes. When the required bytes happen to span across multiple ByteBuffers, this API will copy
    * the bytes to a newly created ByteBuffer of required size and return that.
-   *
    * @param length number of bytes required.
    * @return bytes from current position till length specified, as a single ByteButter.
    */
@@ -1076,12 +1064,11 @@ public class MultiByteBuff extends ByteBuff {
    * warned not to change the position or limit of this returned ByteBuffer. When the required bytes
    * happen to span across multiple ByteBuffers, this API will copy the bytes to a newly created
    * ByteBuffer of required size and return that.
-   *
    * @param offset the offset in this MBB from where the subBuffer should be created
    * @param length the length of the subBuffer
    * @param pair a pair that will have the bytes from the current position till length specified, as
-   *        a single ByteBuffer and offset in that Buffer where the bytes starts. The method would
-   *        set the values on the pair that is passed in by the caller
+   *          a single ByteBuffer and offset in that Buffer where the bytes starts. The method would
+   *          set the values on the pair that is passed in by the caller
    */
   @Override
   public void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair) {
@@ -1144,13 +1131,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Copy the content from this MBB to a byte[] based on the given offset and
-   * length
-   *
-   * @param offset
-   *          the position from where the copy should start
-   * @param length
-   *          the length upto which the copy has to be done
+   * Copy the content from this MBB to a byte[] based on the given offset and length
+   * @param offset the position from where the copy should start
+   * @param length the length upto which the copy has to be done
    * @return byte[] with the copied contents from this MBB.
    */
   @Override
@@ -1161,8 +1144,8 @@ public class MultiByteBuff extends ByteBuff {
     return output;
   }
 
-  private int internalRead(ReadableByteChannel channel, long offset,
-      ChannelReader reader) throws IOException {
+  private int internalRead(ReadableByteChannel channel, long offset, ChannelReader reader)
+      throws IOException {
     checkRefCount();
     int total = 0;
     while (buffsIterator.hasNext()) {

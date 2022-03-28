@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,8 +90,9 @@ public class CreateNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-create-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to create namespace=" + nsDescriptor.getName() +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to create namespace=" + nsDescriptor.getName()
+            + " (in state=" + state + ")",
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -140,8 +141,8 @@ public class CreateNamespaceProcedure
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData.Builder createNamespaceMsg =
-      MasterProcedureProtos.CreateNamespaceStateData.newBuilder()
-        .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
+        MasterProcedureProtos.CreateNamespaceStateData.newBuilder()
+            .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
     serializer.serialize(createNamespaceMsg.build());
   }
 
@@ -150,7 +151,7 @@ public class CreateNamespaceProcedure
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData createNamespaceMsg =
-      serializer.deserialize(MasterProcedureProtos.CreateNamespaceStateData.class);
+        serializer.deserialize(MasterProcedureProtos.CreateNamespaceStateData.class);
     nsDescriptor = ProtobufUtil.toNamespaceDescriptor(createNamespaceMsg.getNamespaceDescriptor());
   }
 

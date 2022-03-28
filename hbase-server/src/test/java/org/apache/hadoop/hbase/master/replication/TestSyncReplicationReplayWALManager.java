@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,7 @@ public class TestSyncReplicationReplayWALManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationReplayWALManager.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationReplayWALManager.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -87,11 +87,11 @@ public class TestSyncReplicationReplayWALManager {
     listeners = new ArrayList<>();
     ServerManager serverManager = mock(ServerManager.class);
     doAnswer(inv -> listeners.add(inv.getArgument(0))).when(serverManager)
-      .registerListener(any(ServerListener.class));
+        .registerListener(any(ServerListener.class));
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     doAnswer(inv -> onlineServers.stream()
-      .collect(Collectors.toMap(Function.identity(), k -> serverMetrics))).when(serverManager)
-        .getOnlineServers();
+        .collect(Collectors.toMap(Function.identity(), k -> serverMetrics))).when(serverManager)
+            .getOnlineServers();
 
     MasterFileSystem mfs = mock(MasterFileSystem.class);
     when(mfs.getFileSystem()).thenReturn(UTIL.getTestFileSystem());

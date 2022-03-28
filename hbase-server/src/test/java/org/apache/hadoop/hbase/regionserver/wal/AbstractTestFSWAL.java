@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -165,7 +165,7 @@ public abstract class AbstractTestFSWAL {
     AbstractFSWAL<?> wal = null;
     try {
       wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
       WALCoprocessorHost host = wal.getCoprocessorHost();
       Coprocessor c = host.findCoprocessor(SampleRegionWALCoprocessor.class);
       assertNotNull(c);
@@ -211,7 +211,7 @@ public abstract class AbstractTestFSWAL {
     AbstractFSWAL<?> walMeta = null;
     try {
       wal1 = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
+        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
       LOG.debug("Log obtained is: " + wal1);
       Comparator<Path> comp = wal1.LOG_NAME_COMPARATOR;
       Path p1 = wal1.computeFilename(11);
@@ -221,8 +221,8 @@ public abstract class AbstractTestFSWAL {
       // comparing with different filenum.
       assertTrue(comp.compare(p1, p2) < 0);
       walMeta = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null,
-          AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+        HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null,
+        AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       Comparator<Path> compMeta = walMeta.LOG_NAME_COMPARATOR;
 
       Path p1WithMeta = walMeta.computeFilename(11);
@@ -274,17 +274,17 @@ public abstract class AbstractTestFSWAL {
     String cf2 = "cf2";
     String cf3 = "cf3";
     TableDescriptor t1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t1"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
     TableDescriptor t2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t2"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(t1.getTableName()).build();
     RegionInfo hri2 = RegionInfoBuilder.newBuilder(t2.getTableName()).build();
 
     List<ColumnFamilyDescriptor> cfs = new ArrayList();
     cfs.add(ColumnFamilyDescriptorBuilder.of(cf1));
     cfs.add(ColumnFamilyDescriptorBuilder.of(cf2));
-    TableDescriptor t3 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t3"))
-      .setColumnFamilies(cfs).build();
+    TableDescriptor t3 =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("t3")).setColumnFamilies(cfs).build();
     RegionInfo hri3 = RegionInfoBuilder.newBuilder(t3.getTableName()).build();
 
     // add edits and roll the wal
@@ -314,13 +314,13 @@ public abstract class AbstractTestFSWAL {
       // return only one region.
       Map<byte[], List<byte[]>> regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(1, regionsToFlush.size());
-      assertEquals(hri1.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
+      assertEquals(hri1.getEncodedNameAsBytes(), (byte[]) regionsToFlush.keySet().toArray()[0]);
       // insert edits in second region
       addEdits(wal, hri2, t2, 2, mvcc, scopes2, cf1);
       // get the regions to flush, it should still read region1.
       regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(1, regionsToFlush.size());
-      assertEquals(hri1.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
+      assertEquals(hri1.getEncodedNameAsBytes(), (byte[]) regionsToFlush.keySet().toArray()[0]);
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.
       flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
@@ -375,7 +375,7 @@ public abstract class AbstractTestFSWAL {
       regionsToFlush = wal.findRegionsToForceFlush();
       // then only two family need to be flushed when archive oldest wal
       assertEquals(1, regionsToFlush.size());
-      assertEquals(hri3.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
+      assertEquals(hri3.getEncodedNameAsBytes(), (byte[]) regionsToFlush.keySet().toArray()[0]);
       assertEquals(2, regionsToFlush.get(hri3.getEncodedNameAsBytes()).size());
     } finally {
       if (wal != null) {
@@ -385,8 +385,8 @@ public abstract class AbstractTestFSWAL {
   }
 
   @Test(expected = IOException.class)
-  public void testFailedToCreateWALIfParentRenamed() throws IOException,
-      CommonFSUtils.StreamLacksCapabilityException {
+  public void testFailedToCreateWALIfParentRenamed()
+      throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     final String name = "testFailedToCreateWALIfParentRenamed";
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
@@ -416,7 +416,7 @@ public abstract class AbstractTestFSWAL {
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     final byte[] rowName = tableName.getName();
     final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     HRegion r = HBaseTestingUtil.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
       TEST_UTIL.getConfiguration(), htd);
     HBaseTestingUtil.closeRegionAndWAL(r);
@@ -428,24 +428,23 @@ public abstract class AbstractTestFSWAL {
     }
     // subclass and doctor a method.
     AbstractFSWAL<?> wal = newSlowWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-        testName, CONF, null, true, null, null, new Runnable() {
+      testName, CONF, null, true, null, null, new Runnable() {
 
-          @Override
-          public void run() {
-            if (goslow.get()) {
-              Threads.sleep(100);
-              LOG.debug("Sleeping before appending 100ms");
-            }
+        @Override
+        public void run() {
+          if (goslow.get()) {
+            Threads.sleep(100);
+            LOG.debug("Sleeping before appending 100ms");
           }
-        });
+        }
+      });
     HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
       TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
     try {
       List<Put> puts = null;
       for (byte[] fam : htd.getColumnFamilyNames()) {
-        puts =
-            TestWALReplay.addRegionEdits(rowName, fam, countPerFamily, ee, region, "x");
+        puts = TestWALReplay.addRegionEdits(rowName, fam, countPerFamily, ee, region, "x");
       }
 
       // Now assert edits made it in.
@@ -469,7 +468,7 @@ public abstract class AbstractTestFSWAL {
       for (int i = 0; i < countPerFamily; i++) {
         final RegionInfo info = region.getRegionInfo();
         final WALKeyImpl logkey = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          EnvironmentEdgeManager.currentTime(), clusterIds, -1, -1, region.getMVCC(), scopes);
+            EnvironmentEdgeManager.currentTime(), clusterIds, -1, -1, region.getMVCC(), scopes);
         wal.append(info, logkey, edits, true);
         region.getMVCC().completeAndWait(logkey.getWriteEntry());
       }
@@ -489,7 +488,7 @@ public abstract class AbstractTestFSWAL {
   public void testSyncNoAppend() throws IOException {
     String testName = currentTest.getMethodName();
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
-        CONF, null, true, null, null);
+      CONF, null, true, null, null);
     try {
       wal.sync();
     } finally {
@@ -504,7 +503,7 @@ public abstract class AbstractTestFSWAL {
       CONF, null, true, null, null);
     wal.close();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -517,7 +516,7 @@ public abstract class AbstractTestFSWAL {
     cols.add(new KeyValue(row, row, row, timestamp, row));
     WALKeyImpl key =
         new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
-          timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
+            timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
     try {
       wal.append(ri, key, cols, true);
       fail("Should fail since the wal has already been closed");
@@ -539,7 +538,7 @@ public abstract class AbstractTestFSWAL {
   }
 
   private AbstractFSWAL<?> createHoldingWAL(String testName, AtomicBoolean startHoldingForAppend,
-    CountDownLatch holdAppend) throws IOException {
+      CountDownLatch holdAppend) throws IOException {
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getRootDir(CONF), testName,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     wal.init();
@@ -559,10 +558,10 @@ public abstract class AbstractTestFSWAL {
   }
 
   private HRegion createHoldingHRegion(Configuration conf, TableDescriptor htd, WAL wal)
-    throws IOException {
+      throws IOException {
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     TEST_UTIL.createLocalHRegion(hri, CONF, htd, wal).close();
     RegionServerServices rsServices = mock(RegionServerServices.class);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
@@ -571,9 +570,9 @@ public abstract class AbstractTestFSWAL {
   }
 
   private void doPutWithAsyncWAL(ExecutorService exec, HRegion region, Put put,
-    Runnable flushOrCloseRegion, AtomicBoolean startHoldingForAppend,
-    CountDownLatch flushOrCloseFinished, CountDownLatch holdAppend)
-    throws InterruptedException, IOException {
+      Runnable flushOrCloseRegion, AtomicBoolean startHoldingForAppend,
+      CountDownLatch flushOrCloseFinished, CountDownLatch holdAppend)
+      throws InterruptedException, IOException {
     // do a regular write first because of memstore size calculation.
     region.put(put);
 
@@ -600,7 +599,7 @@ public abstract class AbstractTestFSWAL {
     String testName = currentTest.getMethodName();
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
 
     AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
     CountDownLatch holdAppend = new CountDownLatch(1);
@@ -632,7 +631,7 @@ public abstract class AbstractTestFSWAL {
   }
 
   private static final Set<byte[]> STORES_TO_FLUSH =
-    Collections.newSetFromMap(new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR));
+      Collections.newSetFromMap(new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR));
 
   // Testcase for HBASE-23157
   @Test
@@ -641,8 +640,8 @@ public abstract class AbstractTestFSWAL {
     byte[] a = Bytes.toBytes("a");
     byte[] b = Bytes.toBytes("b");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(a))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(a))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
 
     AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
     CountDownLatch holdAppend = new CountDownLatch(1);
@@ -679,8 +678,8 @@ public abstract class AbstractTestFSWAL {
       long maxFlushedSeqId2 = region.getMaxFlushedSeqId();
       // make sure that the maxFlushedSequenceId does not go backwards
       assertTrue(
-        "maxFlushedSeqId1(" + maxFlushedSeqId1 +
-          ") is not greater than or equal to maxFlushedSeqId2(" + maxFlushedSeqId2 + ")",
+        "maxFlushedSeqId1(" + maxFlushedSeqId1
+            + ") is not greater than or equal to maxFlushedSeqId2(" + maxFlushedSeqId2 + ")",
         maxFlushedSeqId1 <= maxFlushedSeqId2);
     } finally {
       exec.shutdownNow();

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,10 +46,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
- * This class creates a single process HBase cluster.
- * each server.  The master uses the 'default' FileSystem.  The RegionServers,
- * if we are running on DistributedFilesystem, create a FileSystem instance
- * each and will close down their instance on the way out.
+ * This class creates a single process HBase cluster. each server. The master uses the 'default'
+ * FileSystem. The RegionServers, if we are running on DistributedFilesystem, create a FileSystem
+ * instance each and will close down their instance on the way out.
  * @deprecated since 3.0.0, will be removed in 4.0.0. Use
  *             {@link org.apache.hadoop.hbase.testing.TestingHBaseCluster} instead.
  */
@@ -68,7 +66,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     this(conf, 1, numRegionServers);
   }
 
@@ -91,23 +89,23 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param numRegionServers initial number of region servers to start.
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
-         Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     this(conf, numMasters, 0, numRegionServers, null, masterClass, regionserverClass);
   }
 
   /**
    * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
-   *   restart where for sure the regionservers come up on same address+port (but
-   *   just with different startcode); by default mini hbase clusters choose new
-   *   arbitrary ports on each cluster start.
+   *          restart where for sure the regionservers come up on same address+port (but just with
+   *          different startcode); by default mini hbase clusters choose new arbitrary ports on
+   *          each cluster start.
    * @throws IOException
    * @throws InterruptedException
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
-         int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     super(conf);
 
@@ -115,7 +113,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
     init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, masterClass,
-        regionserverClass);
+      regionserverClass);
     this.initialClusterStatus = getClusterMetrics();
   }
 
@@ -124,18 +122,17 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Subclass so can get at protected methods (none at moment).  Also, creates
-   * a FileSystem instance per instantiation.  Adds a shutdown own FileSystem
-   * on the way out. Shuts down own Filesystem only, not All filesystems as
-   * the FileSystem system exit hook does.
+   * Subclass so can get at protected methods (none at moment). Also, creates a FileSystem instance
+   * per instantiation. Adds a shutdown own FileSystem on the way out. Shuts down own Filesystem
+   * only, not All filesystems as the FileSystem system exit hook does.
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
     private Thread shutdownThread = null;
     private User user = null;
     /**
-     * List of RegionServers killed so far. ServerName also comprises startCode of a server,
-     * so any restarted instances of the same server will have different ServerName and will not
-     * coincide with past dead ones. So there's no need to cleanup this list.
+     * List of RegionServers killed so far. ServerName also comprises startCode of a server, so any
+     * restarted instances of the same server will have different ServerName and will not coincide
+     * with past dead ones. So there's no need to cleanup this list.
      */
     static Set<ServerName> killedServers = new HashSet<>();
 
@@ -154,8 +151,8 @@ public class MiniHBaseCluster extends HBaseCluster {
      */
 
     @Override
-    protected void handleReportForDutyResponse(
-        final RegionServerStartupResponse c) throws IOException {
+    protected void handleReportForDutyResponse(final RegionServerStartupResponse c)
+        throws IOException {
       super.handleReportForDutyResponse(c);
       // Run this thread to shutdown our filesystem on way out.
       this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());
@@ -209,15 +206,17 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Alternate shutdown hook.
-   * Just shuts down the passed fs, not all as default filesystem hook does.
+   * Alternate shutdown hook. Just shuts down the passed fs, not all as default filesystem hook
+   * does.
    */
   static class SingleFileSystemShutdownThread extends Thread {
     private final FileSystem fs;
+
     SingleFileSystemShutdownThread(final FileSystem fs) {
       super("Shutdown of " + fs);
       this.fs = fs;
     }
+
     @Override
     public void run() {
       try {
@@ -234,12 +233,12 @@ public class MiniHBaseCluster extends HBaseCluster {
   private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
       final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     try {
-      if (masterClass == null){
-        masterClass =  HMaster.class;
+      if (masterClass == null) {
+        masterClass = HMaster.class;
       }
-      if (regionserverClass == null){
+      if (regionserverClass == null) {
         regionserverClass = MiniHBaseCluster.MiniHBaseClusterRegionServer.class;
       }
 
@@ -253,8 +252,7 @@ public class MiniHBaseCluster extends HBaseCluster {
         if (rsPorts != null) {
           rsConf.setInt(HConstants.REGIONSERVER_PORT, rsPorts.get(i));
         }
-        User user = HBaseTestingUtility.getDifferentUser(rsConf,
-            ".hfs."+index++);
+        User user = HBaseTestingUtility.getDifferentUser(rsConf, ".hfs." + index++);
         hbaseCluster.addRegionServer(rsConf, i, user);
       }
 
@@ -309,7 +307,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public void waitForRegionServerToStop(ServerName serverName, long timeout) throws IOException {
-    //ignore timeout for now
+    // ignore timeout for now
     waitOnRegionServer(getRegionServerIndex(serverName));
   }
 
@@ -405,30 +403,27 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public void waitForMasterToStop(ServerName serverName, long timeout) throws IOException {
-    //ignore timeout for now
+    // ignore timeout for now
     waitOnMaster(getMasterIndex(serverName));
   }
 
   /**
    * Starts a region server thread running
-   *
    * @throws IOException
    * @return New RegionServerThread
    */
-  public JVMClusterUtil.RegionServerThread startRegionServer()
-      throws IOException {
+  public JVMClusterUtil.RegionServerThread startRegionServer() throws IOException {
     final Configuration newConf = HBaseConfiguration.create(conf);
     return startRegionServer(newConf);
   }
 
   private JVMClusterUtil.RegionServerThread startRegionServer(Configuration configuration)
       throws IOException {
-    User rsUser =
-        HBaseTestingUtility.getDifferentUser(configuration, ".hfs."+index++);
-    JVMClusterUtil.RegionServerThread t =  null;
+    User rsUser = HBaseTestingUtility.getDifferentUser(configuration, ".hfs." + index++);
+    JVMClusterUtil.RegionServerThread t = null;
     try {
-      t = hbaseCluster.addRegionServer(
-          configuration, hbaseCluster.getRegionServers().size(), rsUser);
+      t = hbaseCluster.addRegionServer(configuration, hbaseCluster.getRegionServers().size(),
+        rsUser);
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
@@ -438,16 +433,15 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Starts a region server thread and waits until its processed by master. Throws an exception
-   * when it can't start a region server or when the region server is not processed by master
-   * within the timeout.
-   *
+   * Starts a region server thread and waits until its processed by master. Throws an exception when
+   * it can't start a region server or when the region server is not processed by master within the
+   * timeout.
    * @return New RegionServerThread
    */
   public JVMClusterUtil.RegionServerThread startRegionServerAndWait(long timeout)
       throws IOException {
 
-    JVMClusterUtil.RegionServerThread t =  startRegionServer();
+    JVMClusterUtil.RegionServerThread t = startRegionServer();
     ServerName rsServerName = t.getRegionServer().getServerName();
 
     long start = EnvironmentEdgeManager.currentTime();
@@ -467,7 +461,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Cause a region server to exit doing basic clean up only on its way out.
-   * @param serverNumber  Used as index into a list.
+   * @param serverNumber Used as index into a list.
    */
   public String abortRegionServer(int serverNumber) {
     HRegionServer server = getRegionServer(serverNumber);
@@ -478,8 +472,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Shut down the specified region server cleanly
-   *
-   * @param serverNumber  Used as index into a list.
+   * @param serverNumber Used as index into a list.
    * @return the region server that was stopped
    */
   public JVMClusterUtil.RegionServerThread stopRegionServer(int serverNumber) {
@@ -488,18 +481,15 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Shut down the specified region server cleanly
-   *
-   * @param serverNumber  Used as index into a list.
-   * @param shutdownFS True is we are to shutdown the filesystem as part of this
-   * regionserver's shutdown.  Usually we do but you do not want to do this if
-   * you are running multiple regionservers in a test and you shut down one
-   * before end of the test.
+   * @param serverNumber Used as index into a list.
+   * @param shutdownFS True is we are to shutdown the filesystem as part of this regionserver's
+   *          shutdown. Usually we do but you do not want to do this if you are running multiple
+   *          regionservers in a test and you shut down one before end of the test.
    * @return the region server that was stopped
    */
   public JVMClusterUtil.RegionServerThread stopRegionServer(int serverNumber,
       final boolean shutdownFS) {
-    JVMClusterUtil.RegionServerThread server =
-      hbaseCluster.getRegionServers().get(serverNumber);
+    JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
     server.getRegionServer().stop("Stopping rs " + serverNumber);
     return server;
@@ -510,8 +500,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param serverNumber Used as index into a list.
    */
   public JVMClusterUtil.RegionServerThread suspendRegionServer(int serverNumber) {
-    JVMClusterUtil.RegionServerThread server =
-        hbaseCluster.getRegionServers().get(serverNumber);
+    JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Suspending {}", server.toString());
     server.suspend();
     return server;
@@ -522,16 +511,14 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param serverNumber Used as index into a list.
    */
   public JVMClusterUtil.RegionServerThread resumeRegionServer(int serverNumber) {
-    JVMClusterUtil.RegionServerThread server =
-        hbaseCluster.getRegionServers().get(serverNumber);
+    JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Resuming {}", server.toString());
     server.resume();
     return server;
   }
 
   /**
-   * Wait for the specified region server to stop. Removes this thread from list
-   * of running threads.
+   * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @param serverNumber
    * @return Name of region server that just went down.
    */
@@ -539,19 +526,16 @@ public class MiniHBaseCluster extends HBaseCluster {
     return this.hbaseCluster.waitOnRegionServer(serverNumber);
   }
 
-
   /**
    * Starts a master thread running
-   *
    * @return New RegionServerThread
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
-    justification = "Testing only, not a big deal")
+      value = "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
+      justification = "Testing only, not a big deal")
   public JVMClusterUtil.MasterThread startMaster() throws IOException {
     Configuration c = HBaseConfiguration.create(conf);
-    User user =
-        HBaseTestingUtility.getDifferentUser(c, ".hfs."+index++);
+    User user = HBaseTestingUtility.getDifferentUser(c, ".hfs." + index++);
 
     JVMClusterUtil.MasterThread t = null;
     try {
@@ -561,7 +545,7 @@ public class MiniHBaseCluster extends HBaseCluster {
       throw new IOException("Interrupted adding master to cluster", ie);
     }
     conf.set(HConstants.MASTER_ADDRS_KEY,
-        hbaseCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
+      hbaseCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
     return t;
   }
 
@@ -578,7 +562,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @return the active MasterThread, null if none is active.
    */
   public MasterThread getMasterThread() {
-    for (MasterThread mt: hbaseCluster.getLiveMasters()) {
+    for (MasterThread mt : hbaseCluster.getLiveMasters()) {
       if (mt.getMaster().isActiveMaster()) {
         return mt;
       }
@@ -596,7 +580,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Cause a master to exit without shutting down entire cluster.
-   * @param serverNumber  Used as index into a list.
+   * @param serverNumber Used as index into a list.
    */
   public String abortMaster(int serverNumber) {
     HMaster server = getMaster(serverNumber);
@@ -607,8 +591,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Shut down the specified master cleanly
-   *
-   * @param serverNumber  Used as index into a list.
+   * @param serverNumber Used as index into a list.
    * @return the region server that was stopped
    */
   public JVMClusterUtil.MasterThread stopMaster(int serverNumber) {
@@ -617,26 +600,21 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Shut down the specified master cleanly
-   *
-   * @param serverNumber  Used as index into a list.
-   * @param shutdownFS True is we are to shutdown the filesystem as part of this
-   * master's shutdown.  Usually we do but you do not want to do this if
-   * you are running multiple master in a test and you shut down one
-   * before end of the test.
+   * @param serverNumber Used as index into a list.
+   * @param shutdownFS True is we are to shutdown the filesystem as part of this master's shutdown.
+   *          Usually we do but you do not want to do this if you are running multiple master in a
+   *          test and you shut down one before end of the test.
    * @return the master that was stopped
    */
-  public JVMClusterUtil.MasterThread stopMaster(int serverNumber,
-      final boolean shutdownFS) {
-    JVMClusterUtil.MasterThread server =
-      hbaseCluster.getMasters().get(serverNumber);
+  public JVMClusterUtil.MasterThread stopMaster(int serverNumber, final boolean shutdownFS) {
+    JVMClusterUtil.MasterThread server = hbaseCluster.getMasters().get(serverNumber);
     LOG.info("Stopping " + server.toString());
     server.getMaster().stop("Stopping master " + serverNumber);
     return server;
   }
 
   /**
-   * Wait for the specified master to stop. Removes this thread from list
-   * of running threads.
+   * Wait for the specified master to stop. Removes this thread from list of running threads.
    * @param serverNumber
    * @return Name of master that just went down.
    */
@@ -645,11 +623,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Blocks until there is an active master and that master has completed
-   * initialization.
-   *
-   * @return true if an active master becomes available.  false if there are no
-   *         masters left.
+   * Blocks until there is an active master and that master has completed initialization.
+   * @return true if an active master becomes available. false if there are no masters left.
    * @throws InterruptedException
    */
   @Override
@@ -786,8 +761,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * @return List of region server threads. Does not return the master even though it is also
-   * a region server.
+   * @return List of region server threads. Does not return the master even though it is also a
+   *         region server.
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServerThreads() {
     return this.hbaseCluster.getRegionServers();
@@ -810,10 +785,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   public HRegionServer getRegionServer(ServerName serverName) {
-    return hbaseCluster.getRegionServers().stream()
-        .map(t -> t.getRegionServer())
-        .filter(r -> r.getServerName().equals(serverName))
-        .findFirst().orElse(null);
+    return hbaseCluster.getRegionServers().stream().map(t -> t.getRegionServer())
+        .filter(r -> r.getServerName().equals(serverName)).findFirst().orElse(null);
   }
 
   public List<HRegion> getRegions(byte[] tableName) {
@@ -826,7 +799,7 @@ public class MiniHBaseCluster extends HBaseCluster {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegionsLocalContext()) {
         if (region.getTableDescriptor().getTableName().equals(tableName)) {
-          ret.add((HRegion)region);
+          ret.add((HRegion) region);
         }
       }
     }
@@ -834,8 +807,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
-   * of HRS carrying regionName. Returns -1 if none found.
+   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()} of HRS carrying
+   *         regionName. Returns -1 if none found.
    */
   public int getServerWithMeta() {
     return getServerWith(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
@@ -844,12 +817,12 @@ public class MiniHBaseCluster extends HBaseCluster {
   /**
    * Get the location of the specified region
    * @param regionName Name of the region in bytes
-   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
-   * of HRS carrying hbase:meta. Returns -1 if none found.
+   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()} of HRS carrying
+   *         hbase:meta. Returns -1 if none found.
    */
   public int getServerWith(byte[] regionName) {
     int index = 0;
-    for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       if (!hrs.isStopped()) {
         Region region = hrs.getOnlineRegion(regionName);
@@ -864,7 +837,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-    throws IOException {
+      throws IOException {
     int index = getServerWith(regionName);
     if (index < 0) {
       return null;
@@ -873,9 +846,9 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Counts the total numbers of regions being served by the currently online
-   * region servers by asking each how many regions they have.  Does not look
-   * at hbase:meta at all.  Count includes catalog tables.
+   * Counts the total numbers of regions being served by the currently online region servers by
+   * asking each how many regions they have. Does not look at hbase:meta at all. Count includes
+   * catalog tables.
    * @return number of regions being served by all region servers
    */
   public long countServedRegions() {
@@ -887,8 +860,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Do a simulated kill all masters and regionservers. Useful when it is
-   * impossible to bring the mini-cluster back for clean shutdown.
+   * Do a simulated kill all masters and regionservers. Useful when it is impossible to bring the
+   * mini-cluster back for clean shutdown.
    */
   public void killAll() {
     // Do backups first.
@@ -920,18 +893,17 @@ public class MiniHBaseCluster extends HBaseCluster {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getRegions(tableName)) {
         if (region.getTableDescriptor().getTableName().equals(tableName)) {
-          ret.add((HRegion)region);
+          ret.add((HRegion) region);
         }
       }
     }
     return ret;
   }
 
-
   protected int getRegionServerIndex(ServerName serverName) {
-    //we have a small number of region servers, this should be fine for now.
+    // we have a small number of region servers, this should be fine for now.
     List<RegionServerThread> servers = getRegionServerThreads();
-    for (int i=0; i < servers.size(); i++) {
+    for (int i = 0; i < servers.size(); i++) {
       if (servers.get(i).getRegionServer().getServerName().equals(serverName)) {
         return i;
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,8 +47,8 @@ public final class LoadBalancerFactory {
   public static LoadBalancer getLoadBalancer(Configuration conf) {
     // Create the balancer
     Class<? extends LoadBalancer> balancerKlass =
-      conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
-        LoadBalancer.class);
+        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
+          LoadBalancer.class);
     return ReflectionUtils.newInstance(balancerKlass);
   }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -120,12 +119,13 @@ public class BackupManager implements Closeable {
     }
 
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
-    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, (plugins == null ? "" : plugins + ",") +
-      BackupHFileCleaner.class.getName());
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+      (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added log cleaner: {}. Added master procedure manager: {}."
-        +"Added master procedure manager: {}", cleanerClass, masterProcedureClass,
-        BackupHFileCleaner.class.getName());
+      LOG.debug(
+        "Added log cleaner: {}. Added master procedure manager: {}."
+            + "Added master procedure manager: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
     }
   }
 
@@ -230,7 +230,7 @@ public class BackupManager implements Closeable {
 
     // there are one or more tables in the table list
     backupInfo = new BackupInfo(backupId, type, tableList.toArray(new TableName[tableList.size()]),
-      targetRootDir);
+        targetRootDir);
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
     return backupInfo;
@@ -259,7 +259,8 @@ public class BackupManager implements Closeable {
     String ongoingBackupId = this.getOngoingBackupId();
     if (ongoingBackupId != null) {
       LOG.info("There is a ongoing backup {}"
-        + ". Can not launch new backup until no ongoing backup remains.", ongoingBackupId);
+          + ". Can not launch new backup until no ongoing backup remains.",
+        ongoingBackupId);
       throw new BackupException("There is ongoing backup seesion.");
     }
   }
@@ -320,21 +321,21 @@ public class BackupManager implements Closeable {
         if (BackupManifest.canCoverImage(ancestors, image)) {
           LOG.debug("Met the backup boundary of the current table set:");
           for (BackupImage image1 : ancestors) {
-            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(),  image1.getRootDir());
+            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(), image1.getRootDir());
           }
         } else {
           Path logBackupPath =
               HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
-          LOG.debug("Current backup has an incremental backup ancestor, "
-              + "touching its image manifest in {}"
-              + " to construct the dependency.", logBackupPath.toString());
+          LOG.debug(
+            "Current backup has an incremental backup ancestor, "
+                + "touching its image manifest in {}" + " to construct the dependency.",
+            logBackupPath.toString());
           BackupManifest lastIncrImgManifest = new BackupManifest(conf, logBackupPath);
           BackupImage lastIncrImage = lastIncrImgManifest.getBackupImage();
           ancestors.add(lastIncrImage);
 
-          LOG.debug(
-            "Last dependent incremental backup image: {BackupID={}" +
-                "BackupDir={}}", lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
+          LOG.debug("Last dependent incremental backup image: {BackupID={}" + "BackupDir={}}",
+            lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
         }
       }
     }
@@ -403,7 +404,7 @@ public class BackupManager implements Closeable {
               || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000) {
             lastWarningOutputTime = EnvironmentEdgeManager.currentTime();
             LOG.warn("Waiting to acquire backup exclusive lock for {}s",
-                +(lastWarningOutputTime - startTime) / 1000);
+              +(lastWarningOutputTime - startTime) / 1000);
           }
         } else {
           throw e;
@@ -411,7 +412,7 @@ public class BackupManager implements Closeable {
       }
     }
     throw new IOException(
-      "Failed to acquire backup system table exclusive lock after " + timeout / 1000 + "s");
+        "Failed to acquire backup system table exclusive lock after " + timeout / 1000 + "s");
   }
 
   /**
@@ -452,7 +453,7 @@ public class BackupManager implements Closeable {
   }
 
   public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+      readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
@@ -480,8 +481,8 @@ public class BackupManager implements Closeable {
    * @param tables tables
    * @throws IOException exception
    */
-  public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      Map<String, Long> newTimestamps) throws IOException {
+  public void writeRegionServerLogTimestamp(Set<TableName> tables, Map<String, Long> newTimestamps)
+      throws IOException {
     systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 

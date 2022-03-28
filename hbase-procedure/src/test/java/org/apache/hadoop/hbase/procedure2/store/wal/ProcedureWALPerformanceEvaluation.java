@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,13 +31,13 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 public class ProcedureWALPerformanceEvaluation
-  extends ProcedureStorePerformanceEvaluation<WALProcedureStore> {
+    extends ProcedureStorePerformanceEvaluation<WALProcedureStore> {
 
   // Command line options and defaults.
   public static int DEFAULT_NUM_WALS = 0;
   public static Option NUM_WALS_OPTION = new Option("wals", true,
-    "Number of WALs to write. If -ve or 0, uses " + WALProcedureStore.ROLL_THRESHOLD_CONF_KEY +
-      " conf to roll the logs. Default: " + DEFAULT_NUM_WALS);
+      "Number of WALs to write. If -ve or 0, uses " + WALProcedureStore.ROLL_THRESHOLD_CONF_KEY
+          + " conf to roll the logs. Default: " + DEFAULT_NUM_WALS);
 
   private long numProcsPerWal = Long.MAX_VALUE; // never roll wall based on this value.
   private int numWals;
@@ -79,10 +79,10 @@ public class ProcedureWALPerformanceEvaluation
   @Override
   protected void printRawFormatResult(long timeTakenNs) {
     System.out
-      .println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, " + "total_time_ms=%s]",
-        NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), stateSize,
-        SYNC_OPTION.getOpt(), syncType, NUM_THREADS_OPTION.getOpt(), numThreads,
-        NUM_WALS_OPTION.getOpt(), numWals, timeTakenNs));
+        .println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, " + "total_time_ms=%s]",
+          NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), stateSize,
+          SYNC_OPTION.getOpt(), syncType, NUM_THREADS_OPTION.getOpt(), numThreads,
+          NUM_WALS_OPTION.getOpt(), numWals, timeTakenNs));
   }
 
   @Override

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.ArrayList;
@@ -29,16 +28,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to unbalance the regions of a cluster.
-*/
+ * Action that tries to unbalance the regions of a cluster.
+ */
 public class UnbalanceRegionsAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(UnbalanceRegionsAction.class);
   private final double fractionOfRegions;
   private final double fractionOfServers;
 
   /**
-   * Unbalances the regions on the cluster by choosing "target" servers, and moving
-   * some regions from each of the non-target servers to random target servers.
+   * Unbalances the regions on the cluster by choosing "target" servers, and moving some regions
+   * from each of the non-target servers to random target servers.
    * @param fractionOfRegions Fraction of regions to move from each server.
    * @param fractionOfServers Fraction of servers to be chosen as targets.
    */
@@ -47,7 +46,8 @@ public class UnbalanceRegionsAction extends Action {
     this.fractionOfServers = fractionOfServers;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -56,7 +56,7 @@ public class UnbalanceRegionsAction extends Action {
     getLogger().info("Unbalancing regions");
     ClusterMetrics status = this.cluster.getClusterMetrics();
     List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
-    int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
+    int targetServerCount = (int) Math.ceil(fractionOfServers * victimServers.size());
     List<ServerName> targetServers = new ArrayList<>(targetServerCount);
     Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < targetServerCount; ++i) {

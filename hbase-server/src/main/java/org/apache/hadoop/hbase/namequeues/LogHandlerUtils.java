@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Event Handler utility class
@@ -54,13 +53,13 @@ public class LogHandlerUtils {
       List<TooSlowLog.SlowLogPayload> slowLogPayloadList, int totalFilters) {
     List<TooSlowLog.SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
     final String regionName =
-      StringUtils.isNotEmpty(request.getRegionName()) ? request.getRegionName() : null;
+        StringUtils.isNotEmpty(request.getRegionName()) ? request.getRegionName() : null;
     final String tableName =
-      StringUtils.isNotEmpty(request.getTableName()) ? request.getTableName() : null;
+        StringUtils.isNotEmpty(request.getTableName()) ? request.getTableName() : null;
     final String clientAddress =
-      StringUtils.isNotEmpty(request.getClientAddress()) ? request.getClientAddress() : null;
+        StringUtils.isNotEmpty(request.getClientAddress()) ? request.getClientAddress() : null;
     final String userName =
-      StringUtils.isNotEmpty(request.getUserName()) ? request.getUserName() : null;
+        StringUtils.isNotEmpty(request.getUserName()) ? request.getUserName() : null;
     for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloadList) {
       int totalFilterMatches = 0;
       if (slowLogPayload.getRegionName().equals(regionName)) {
@@ -76,7 +75,7 @@ public class LogHandlerUtils {
         totalFilterMatches++;
       }
       if (request.hasFilterByOperator() && request.getFilterByOperator()
-        .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)) {
+          .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)) {
         // Filter by AND operator
         if (totalFilterMatches == totalFilters) {
           filteredSlowLogPayloads.add(slowLogPayload);

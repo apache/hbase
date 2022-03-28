@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ public interface Meter extends Metric {
 
   /**
    * Records {@code events} occurrences.
-   *
    * @param events Number of occurrences to record.
    */
   void mark(long events);
@@ -53,14 +52,13 @@ public interface Meter extends Metric {
   double getMeanRate();
 
   /**
-   * Returns the one-minute exponentially-weighted moving average rate at which events have
-   * occurred since the meter was created.
+   * Returns the one-minute exponentially-weighted moving average rate at which events have occurred
+   * since the meter was created.
    * <p/>
    * This rate has the same exponential decay factor as the one-minute load average in the {@code
    * top} Unix command.
-   *
-   * @return the one-minute exponentially-weighted moving average rate at which events have
-   *         occurred since the meter was created
+   * @return the one-minute exponentially-weighted moving average rate at which events have occurred
+   *         since the meter was created
    */
   double getOneMinuteRate();
 
@@ -70,7 +68,6 @@ public interface Meter extends Metric {
    * <p/>
    * This rate has the same exponential decay factor as the five-minute load average in the {@code
    * top} Unix command.
-   *
    * @return the five-minute exponentially-weighted moving average rate at which events have
    *         occurred since the meter was created
    */
@@ -82,7 +79,6 @@ public interface Meter extends Metric {
    * <p/>
    * This rate has the same exponential decay factor as the fifteen-minute load average in the
    * {@code top} Unix command.
-   *
    * @return the fifteen-minute exponentially-weighted moving average rate at which events have
    *         occurred since the meter was created
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,21 +33,21 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class ClusterConnectionFactory {
 
   public static final String HBASE_SERVER_CLUSTER_CONNECTION_IMPL =
-    "hbase.server.cluster.connection.impl";
+      "hbase.server.cluster.connection.impl";
 
   private ClusterConnectionFactory() {
   }
 
   private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
-    ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
+      ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
     String clusterId = FutureUtils.get(registry.getClusterId());
     Class<? extends AsyncClusterConnection> clazz =
-      conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
-        AsyncClusterConnection.class);
+        conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
+          AsyncClusterConnection.class);
     try {
       return user
-        .runAs((PrivilegedExceptionAction<? extends AsyncClusterConnection>) () -> ReflectionUtils
-          .newInstance(clazz, conf, registry, clusterId, localAddress, user));
+          .runAs((PrivilegedExceptionAction<? extends AsyncClusterConnection>) () -> ReflectionUtils
+              .newInstance(clazz, conf, registry, clusterId, localAddress, user));
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -63,7 +63,7 @@ public final class ClusterConnectionFactory {
    * change later if we want a {@link java.util.concurrent.CompletableFuture} here.
    */
   public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
-    SocketAddress localAddress, User user) throws IOException {
+      SocketAddress localAddress, User user) throws IOException {
     return createAsyncClusterConnection(conf, ConnectionRegistryFactory.getRegistry(conf),
       localAddress, user);
   }
@@ -73,8 +73,8 @@ public final class ClusterConnectionFactory {
    * {@link ConnectionRegistryEndpoint}.
    */
   public static AsyncClusterConnection createAsyncClusterConnection(
-    ConnectionRegistryEndpoint endpoint, Configuration conf, SocketAddress localAddress, User user)
-    throws IOException {
+      ConnectionRegistryEndpoint endpoint, Configuration conf, SocketAddress localAddress,
+      User user) throws IOException {
     ShortCircuitConnectionRegistry registry = new ShortCircuitConnectionRegistry(endpoint);
     return createAsyncClusterConnection(conf, registry, localAddress, user);
   }

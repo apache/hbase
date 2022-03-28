@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.HashMap;
@@ -53,16 +52,14 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Constructor used to register the metrics
-   *
    * @param id Name of the source this class is monitoring
    */
   public MetricsSource(String id) {
     this.id = id;
-    singleSourceSource =
-        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-            .getSource(id);
+    singleSourceSource = CompatibilitySingletonFactory
+        .getInstance(MetricsReplicationSourceFactory.class).getSource(id);
     globalSourceSource = CompatibilitySingletonFactory
-      .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
   }
 
@@ -73,8 +70,8 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationGlobalSourceSource globalSourceSource,
-                       Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
+      MetricsReplicationGlobalSourceSource globalSourceSource,
+      Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
@@ -96,7 +93,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Update the table level replication metrics per table
-   *
    * @param walEntries List of pairs of WAL entry and it's size
    */
   public void updateTableLevelMetrics(List<Pair<Entry, Long>> walEntries) {
@@ -109,9 +105,8 @@ public class MetricsSource implements BaseSource {
 
       // get the replication metrics source for table at the run time
       MetricsReplicationTableSource tableSource = this.getSingleSourceSourceByTable()
-        .computeIfAbsent(tableName,
-          t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-            .getTableSource(t));
+          .computeIfAbsent(tableName, t -> CompatibilitySingletonFactory
+              .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t));
       tableSource.setLastShippedAge(age);
       tableSource.incrShippedBytes(entrySize);
     }
@@ -124,10 +119,10 @@ public class MetricsSource implements BaseSource {
    */
   public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
-    this.getSingleSourceSourceByTable().computeIfAbsent(
-        tableName, t -> CompatibilitySingletonFactory
+    this.getSingleSourceSourceByTable()
+        .computeIfAbsent(tableName, t -> CompatibilitySingletonFactory
             .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t))
-            .setLastShippedAge(age);
+        .setLastShippedAge(age);
   }
 
   /**
@@ -186,7 +181,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Add on the the number of log edits read
-   *
    * @param delta the number of log edits read.
    */
   private void incrLogEditsRead(long delta) {
@@ -201,7 +195,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Add on the number of log edits filtered
-   *
    * @param delta the number filtered.
    */
   public void incrLogEditsFiltered(long delta) {
@@ -216,7 +209,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Convience method to apply changes to metrics do to shipping a batch of logs.
-   *
    * @param batchSize the size of the batch that was shipped to sinks.
    */
   public void shipBatch(long batchSize, int sizeInBytes) {
@@ -234,7 +226,7 @@ public class MetricsSource implements BaseSource {
    * Gets the number of edits not eligible for replication this source queue logs so far.
    * @return logEditsFiltered non-replicable edits filtered from this queue logs.
    */
-  public long getEditsFiltered(){
+  public long getEditsFiltered() {
     return this.singleSourceSource.getEditsFiltered();
   }
 
@@ -242,7 +234,7 @@ public class MetricsSource implements BaseSource {
    * Gets the number of edits eligible for replication read from this source queue logs so far.
    * @return replicableEdits total number of replicable edits read from this queue logs.
    */
-  public long getReplicableEdits(){
+  public long getReplicableEdits() {
     return this.singleSourceSource.getWALEditsRead() - this.singleSourceSource.getEditsFiltered();
   }
 
@@ -256,7 +248,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Convience method to apply changes to metrics do to shipping a batch of logs.
-   *
    * @param batchSize the size of the batch that was shipped to sinks.
    * @param hfiles total number of hfiles shipped to sinks.
    */
@@ -300,7 +291,6 @@ public class MetricsSource implements BaseSource {
     return singleSourceSource.getSizeOfLogQueue();
   }
 
-
   /**
    * Get the value of uncleanlyClosedWAL counter
    * @return uncleanlyClosedWAL
@@ -332,9 +322,9 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * TimeStamp of next edit targeted for replication. Used for calculating lag,
-   * as if this timestamp is greater than timestamp of last shipped, it means there's
-   * at least one edit pending replication.
+   * TimeStamp of next edit targeted for replication. Used for calculating lag, as if this timestamp
+   * is greater than timestamp of last shipped, it means there's at least one edit pending
+   * replication.
    * @param timeStampNextToReplicate timestamp of next edit in the queue that should be replicated.
    */
   public void setTimeStampNextToReplicate(long timeStampNextToReplicate) {
@@ -342,9 +332,9 @@ public class MetricsSource implements BaseSource {
   }
 
   public long getReplicationDelay() {
-    if(getTimestampOfLastShippedOp()>=timeStampNextToReplicate){
+    if (getTimestampOfLastShippedOp() >= timeStampNextToReplicate) {
       return 0;
-    }else{
+    } else {
       return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
     }
   }
@@ -420,8 +410,8 @@ public class MetricsSource implements BaseSource {
   }
 
   /*
-   Sets the age of oldest log file just for source.
-  */
+   * Sets the age of oldest log file just for source.
+   */
   public void setOldestWalAge(long age) {
     singleSourceSource.setOldestWalAge(age);
   }

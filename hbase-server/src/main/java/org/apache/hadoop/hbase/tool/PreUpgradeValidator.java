@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.tool;
 
 import java.util.Arrays;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -44,8 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class PreUpgradeValidator implements Tool {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(PreUpgradeValidator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PreUpgradeValidator.class);
 
   public static final String TOOL_NAME = "pre-upgrade";
   public static final String VALIDATE_CP_NAME = "validate-cp";
@@ -68,11 +65,10 @@ public class PreUpgradeValidator implements Tool {
     System.out.println("usage: hbase " + TOOL_NAME + " command ...");
     System.out.println("Available commands:");
     System.out.printf(" %-15s Validate co-processors are compatible with HBase%n",
-        VALIDATE_CP_NAME);
+      VALIDATE_CP_NAME);
     System.out.printf(" %-15s Validate DataBlockEncodings are compatible with HBase%n",
-        VALIDATE_DBE_NAME);
-    System.out.printf(" %-15s Validate HFile contents are readable%n",
-        VALIDATE_HFILE);
+      VALIDATE_DBE_NAME);
+    System.out.printf(" %-15s Validate HFile contents are readable%n", VALIDATE_HFILE);
     System.out.println("For further information, please use command -h");
   }
 

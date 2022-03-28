@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +43,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
 
   @ClassRule
@@ -77,8 +76,7 @@ public class TestPrefetch {
         .newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true).build();
     Configuration c = HBaseConfiguration.create();
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
-    CacheConfig cc =
-        new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 
@@ -97,8 +95,8 @@ public class TestPrefetch {
   }
 
   /**
-   * Read a storefile in the same manner as a scanner -- using non-positional reads and
-   * without waiting for prefetch to complete.
+   * Read a storefile in the same manner as a scanner -- using non-positional reads and without
+   * waiting for prefetch to complete.
    */
   private void readStoreFileLikeScanner(Path storeFilePath) throws Exception {
     // Open the file
@@ -106,8 +104,8 @@ public class TestPrefetch {
     do {
       long offset = 0;
       while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-        HFileBlock block = reader.readBlock(offset, -1, false, /*pread=*/false,
-            false, true, null, null);
+        HFileBlock block =
+            reader.readBlock(offset, -1, false, /* pread= */false, false, true, null, null);
         offset += block.getOnDiskSizeWithHeader();
       }
     } while (!reader.prefetchComplete());
@@ -139,26 +137,17 @@ public class TestPrefetch {
 
   private Path writeStoreFile(String fname) throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
-    HFileContext meta = new HFileContextBuilder()
-      .withBlockSize(DATA_BLOCK_SIZE)
-      .build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeFileParentDir)
-      .withFileContext(meta)
-      .build();
+        .withOutputDir(storeFileParentDir).withFileContext(meta).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
       byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
       byte[] v = RandomKeyValueUtil.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
-      KeyValue kv = new KeyValue(
-          k, 0, rowLen,
-          k, rowLen, cfLen,
-          k, rowLen + cfLen, k.length - rowLen - cfLen,
-          rand.nextLong(),
-          generateKeyType(rand),
-          v, 0, v.length);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+          k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
     }
 
@@ -171,12 +160,10 @@ public class TestPrefetch {
       // Let's make half of KVs puts.
       return KeyValue.Type.Put;
     } else {
-      KeyValue.Type keyType =
-          KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
-      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum)
-      {
-        throw new RuntimeException("Generated an invalid key type: " + keyType
-            + ". " + "Probably the layout of KeyValue.Type has changed.");
+      KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
+        throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
+            + "Probably the layout of KeyValue.Type has changed.");
       }
       return keyType;
     }

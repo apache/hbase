@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,8 +24,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
- * Class to help with dealing with a snapshot description on the client side.
- * There is a corresponding class on the server side.
+ * Class to help with dealing with a snapshot description on the client side. There is a
+ * corresponding class on the server side.
  */
 @InterfaceAudience.Private
 public final class ClientSnapshotDescriptionUtils {
@@ -68,15 +67,9 @@ public final class ClientSnapshotDescriptionUtils {
       return null;
     }
 
-    return new StringBuilder("{ ss=")
-            .append(snapshot.getName())
-            .append(" table=")
-            .append(snapshot.hasTable() ? TableName.valueOf(snapshot.getTable()) : "")
-            .append(" type=")
-            .append(snapshot.getType())
-            .append(" ttl=")
-            .append(snapshot.getTtl())
-            .append(" }")
-            .toString();
+    return new StringBuilder("{ ss=").append(snapshot.getName()).append(" table=")
+        .append(snapshot.hasTable() ? TableName.valueOf(snapshot.getTable()) : "").append(" type=")
+        .append(snapshot.getType()).append(" ttl=").append(snapshot.getTtl()).append(" }")
+        .toString();
   }
 }

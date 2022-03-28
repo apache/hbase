@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public abstract class WALCorruptionDueToDanglingByteBufferTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
+      LoggerFactory.getLogger(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -66,7 +66,7 @@ public abstract class WALCorruptionDueToDanglingByteBufferTestBase {
       LOG.info("Put 100 rows with " + Durability.ASYNC_WAL + "...");
       for (int i = 0; i < 100; i++) {
         table.batch(Arrays.asList(new Put(getBytes("row", i))
-          .addColumn(CF, CQ, getBytes("value", i)).setDurability(Durability.ASYNC_WAL)),
+            .addColumn(CF, CQ, getBytes("value", i)).setDurability(Durability.ASYNC_WAL)),
           new Object[1]);
       }
       ARRIVE.await();

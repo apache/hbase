@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -232,7 +230,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   @RestrictedApi(explanation = "Should only be called in ChoreService", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ChoreService.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ChoreService.java")
   synchronized void setChoreService(ChoreService service) {
     choreService = service;
     timeOfThisRun = -1;
@@ -300,7 +298,7 @@ public abstract class ScheduledChore implements Runnable {
 
   @InterfaceAudience.Private
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public synchronized void choreForTesting() {
     chore();
   }
@@ -345,14 +343,14 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
-   * A summation of this chore in human readable format. Downstream users should not presume
-   * parsing of this string can relaibly be done between versions. Instead, they should rely
-   * on the public accessor methods to get the information they desire.
+   * A summation of this chore in human readable format. Downstream users should not presume parsing
+   * of this string can relaibly be done between versions. Instead, they should rely on the public
+   * accessor methods to get the information they desire.
    */
   @InterfaceAudience.Private
   @Override
   public String toString() {
-    return "ScheduledChore name=" + getName() + ", period=" + getPeriod() +
-      ", unit=" + getTimeUnit();
+    return "ScheduledChore name=" + getName() + ", period=" + getPeriod() + ", unit="
+        + getTimeUnit();
   }
 }

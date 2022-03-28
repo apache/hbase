@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -72,8 +71,8 @@ public class TestSplitWALProcedure {
   @After
   public void teardown() throws Exception {
     if (this.master != null) {
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
-        master.getMasterProcedureExecutor(), false);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
+        false);
     }
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -114,7 +113,7 @@ public class TestSplitWALProcedure {
     SplitWALProcedure splitWALProcedure =
         new SplitWALProcedure(wals.get(0).getPath().toString(), testServer.getServerName());
     long pid = ProcedureTestingUtility.submitProcedure(master.getMasterProcedureExecutor(),
-        splitWALProcedure, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      splitWALProcedure, HConstants.NO_NONCE, HConstants.NO_NONCE);
     TEST_UTIL.waitFor(5000, () -> splitWALProcedure.getWorker() != null);
     // Kill master
     TEST_UTIL.getHBaseCluster().killMaster(master.getServerName());

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED_DEFAULT;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -54,21 +52,18 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 public class ThriftServer extends org.apache.hadoop.hbase.thrift.ThriftServer {
   private static final Logger log = LoggerFactory.getLogger(ThriftServer.class);
 
-
   public ThriftServer(Configuration conf) {
     super(conf);
   }
 
   @Override
-  protected void printUsageAndExit(Options options, int exitCode)
-      throws Shell.ExitCodeException {
+  protected void printUsageAndExit(Options options, int exitCode) throws Shell.ExitCodeException {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, options,
-        "To start the Thrift server run 'hbase-daemon.sh start thrift2' or " +
-            "'hbase thrift2'\n" +
-            "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or" +
-            " send a kill signal to the thrift server pid",
-        true);
+      "To start the Thrift server run 'hbase-daemon.sh start thrift2' or " + "'hbase thrift2'\n"
+          + "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or"
+          + " send a kill signal to the thrift server pid",
+      true);
     throw new Shell.ExitCodeException(exitCode, "");
   }
 
@@ -93,7 +88,7 @@ public class ThriftServer extends org.apache.hadoop.hbase.thrift.ThriftServer {
   protected void addOptions(Options options) {
     super.addOptions(options);
     options.addOption("ro", READONLY_OPTION, false,
-        "Respond only to read method requests [default: false]");
+      "Respond only to read method requests [default: false]");
   }
 
   @Override

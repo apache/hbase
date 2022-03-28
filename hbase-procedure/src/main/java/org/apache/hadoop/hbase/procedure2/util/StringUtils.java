@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,8 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class StringUtils {
-  private StringUtils() {}
+  private StringUtils() {
+  }
 
   public static String humanTimeDiff(long timeDiff) {
     if (timeDiff < 1000) {
@@ -31,17 +32,17 @@ public final class StringUtils {
     }
 
     StringBuilder buf = new StringBuilder();
-    long hours = timeDiff / (60*60*1000);
-    long rem = (timeDiff % (60*60*1000));
-    long minutes =  rem / (60*1000);
-    rem = rem % (60*1000);
+    long hours = timeDiff / (60 * 60 * 1000);
+    long rem = (timeDiff % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
     float seconds = rem / 1000.0f;
 
-    if (hours != 0){
+    if (hours != 0) {
       buf.append(hours);
       buf.append(" hrs, ");
     }
-    if (minutes != 0){
+    if (minutes != 0) {
       buf.append(minutes);
       buf.append(" mins, ");
     }

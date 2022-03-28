@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,19 +21,29 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The terminal interface that is an abstraction of terminal screen.
  */
 @InterfaceAudience.Private
 public interface Terminal extends Closeable {
   void clear();
+
   void refresh();
-  @Nullable TerminalSize getSize();
-  @Nullable TerminalSize doResizeIfNecessary();
-  @Nullable KeyPress pollKeyPress();
+
+  @Nullable
+  TerminalSize getSize();
+
+  @Nullable
+  TerminalSize doResizeIfNecessary();
+
+  @Nullable
+  KeyPress pollKeyPress();
+
   CursorPosition getCursorPosition();
+
   void setCursorPosition(int column, int row);
+
   void hideCursor();
+
   TerminalPrinter getTerminalPrinter(int startRow);
 }

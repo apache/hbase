@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,11 +76,11 @@ public class TestGetLastFlushedSequenceId {
 
   @Test
   public void test() throws IOException, InterruptedException {
-    testUtil.getAdmin().createNamespace(
-      NamespaceDescriptor.create(tableName.getNamespaceAsString()).build());
+    testUtil.getAdmin()
+        .createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString()).build());
     Table table = testUtil.createTable(tableName, families);
-    table.put(new Put(Bytes.toBytes("k"))
-            .addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
+    table
+        .put(new Put(Bytes.toBytes("k")).addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
     SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     Region region = null;
@@ -94,7 +94,7 @@ public class TestGetLastFlushedSequenceId {
     assertNotNull(region);
     Thread.sleep(2000);
     RegionStoreSequenceIds ids = testUtil.getHBaseCluster().getMaster().getServerManager()
-      .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+        .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
     assertEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
     // This will be the sequenceid just before that of the earliest edit in memstore.
     long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
@@ -102,7 +102,7 @@ public class TestGetLastFlushedSequenceId {
     testUtil.getAdmin().flush(tableName);
     Thread.sleep(2000);
     ids = testUtil.getHBaseCluster().getMaster().getServerManager()
-      .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+        .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
     assertTrue(ids.getLastFlushedSequenceId() + " > " + storeSequenceId,
       ids.getLastFlushedSequenceId() > storeSequenceId);
     assertEquals(ids.getLastFlushedSequenceId(), ids.getStoreSequenceId(0).getSequenceId());

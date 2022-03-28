@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class TestCloseRegionWhileRSCrash {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCloseRegionWhileRSCrash.class);
+      HBaseClassTestRule.forClass(TestCloseRegionWhileRSCrash.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -169,7 +169,7 @@ public class TestCloseRegionWhileRSCrash {
     RegionInfo region = srcRs.getRegions(TABLE_NAME).get(0).getRegionInfo();
     HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     procExec.submitProcedure(new DummyServerProcedure(srcRs.getServerName()));
     ARRIVE.await();
     UTIL.getMiniHBaseCluster().killRegionServer(srcRs.getServerName());

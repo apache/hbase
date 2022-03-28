@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureExecution {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -178,7 +178,7 @@ public class TestProcedureExecution {
   public void testSingleSequentialProcRollback() {
     List<String> state = new ArrayList<>();
     Procedure<Void> subProc2 =
-      new TestSequentialProcedure("subProc2", state, new TestProcedureException("fail test"));
+        new TestSequentialProcedure("subProc2", state, new TestProcedureException("fail test"));
     Procedure<Void> subProc1 = new TestSequentialProcedure("subProc1", state, subProc2);
     Procedure<Void> rootProc = new TestSequentialProcedure("rootProc", state, subProc1);
     long rootId = ProcedureTestingUtility.submitAndWait(procExecutor, rootProc);
@@ -204,7 +204,8 @@ public class TestProcedureExecution {
   public static class TestFaultyRollback extends SequentialProcedure<Void> {
     private int retries = 0;
 
-    public TestFaultyRollback() { }
+    public TestFaultyRollback() {
+    }
 
     @Override
     protected Procedure<Void>[] execute(Void env) {

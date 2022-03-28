@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -354,8 +355,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+          new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -377,8 +378,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table3", "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+          new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -477,8 +478,9 @@ public class TestBackupSystemTable {
 
   private BackupInfo createBackupInfo() {
     BackupInfo ctxt =
-        new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
-            TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
+        new BackupInfo(
+            "backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
+                TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
             "/hbase/backup");
     ctxt.setStartTs(EnvironmentEdgeManager.currentTime());
     ctxt.setCompleteTs(EnvironmentEdgeManager.currentTime() + 1);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,5 +68,6 @@ public final class NettyAsyncFSWALConfigHelper {
     return EVENT_LOOP_CONFIG_MAP.get(name);
   }
 
-  private NettyAsyncFSWALConfigHelper() {}
+  private NettyAsyncFSWALConfigHelper() {
+  }
 }

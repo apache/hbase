@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
@@ -85,7 +84,9 @@ public class SecureTestUtil {
     // Assumes we won't ever have a minicluster with more than 5 slaves
     for (int i = 0; i < 5; i++) {
       sb.append(',');
-      sb.append(currentUser); sb.append(".hfs."); sb.append(i);
+      sb.append(currentUser);
+      sb.append(".hfs.");
+      sb.append(i);
     }
     // Add a supergroup for improving test coverage.
     sb.append(',').append("@supergroup");
@@ -97,8 +98,8 @@ public class SecureTestUtil {
   public static void enableSecurity(Configuration conf) throws IOException {
     conf.set("hadoop.security.authorization", "false");
     conf.set("hadoop.security.authentication", "simple");
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
-      "," + MasterSyncObserver.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      AccessController.class.getName() + "," + MasterSyncObserver.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     // Need HFile V3 for tags for security features
@@ -117,11 +118,10 @@ public class SecureTestUtil {
       } catch (ClassNotFoundException cnfe) {
       }
     }
-    if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY).contains(
-        AccessController.class.getName())
-        && accessControllerLoaded && conf.get(
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY).contains(
-        AccessController.class.getName()))) {
+    if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY)
+        .contains(AccessController.class.getName()) && accessControllerLoaded
+        && conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
+            .contains(AccessController.class.getName()))) {
       throw new RuntimeException("AccessController is missing from a system coprocessor list");
     }
     if (conf.getInt(HFile.FORMAT_VERSION_KEY, 2) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
@@ -135,16 +135,16 @@ public class SecureTestUtil {
   }
 
   /**
-   * An AccessTestAction performs an action that will be examined to confirm
-   * the results conform to expected access rights.
+   * An AccessTestAction performs an action that will be examined to confirm the results conform to
+   * expected access rights.
    * <p>
-   * To indicate an action was allowed, return null or a non empty list of
-   * KeyValues.
+   * To indicate an action was allowed, return null or a non empty list of KeyValues.
    * <p>
-   * To indicate the action was not allowed, either throw an AccessDeniedException
-   * or return an empty list of KeyValues.
+   * To indicate the action was not allowed, either throw an AccessDeniedException or return an
+   * empty list of KeyValues.
    */
-  public interface AccessTestAction extends PrivilegedExceptionAction<Object> { }
+  public interface AccessTestAction extends PrivilegedExceptionAction<Object> {
+  }
 
   /** This fails only in case of ADE or empty list for any of the actions. */
   public static void verifyAllowed(User user, AccessTestAction... actions) throws Exception {
@@ -200,8 +200,8 @@ public class SecureTestUtil {
         if (obj != null && obj instanceof List<?>) {
           List<?> results = (List<?>) obj;
           if (results != null && !results.isEmpty()) {
-            fail("Unexpected action results: " +  results + " for user '"
-                + user.getShortName() + "'");
+            fail(
+              "Unexpected action results: " + results + " for user '" + user.getShortName() + "'");
           }
         } else {
           fail("Unexpected results for user '" + user.getShortName() + "'");
@@ -213,7 +213,7 @@ public class SecureTestUtil {
   }
 
   /** This passes only in case of null for all users. */
-  public static void verifyIfNull(AccessTestAction  action, User... users) throws Exception {
+  public static void verifyIfNull(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
       try {
         Object obj = user.runAs(action);
@@ -234,18 +234,17 @@ public class SecureTestUtil {
         fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
       } catch (IOException e) {
         boolean isAccessDeniedException = false;
-        if(e instanceof RetriesExhaustedWithDetailsException) {
+        if (e instanceof RetriesExhaustedWithDetailsException) {
           // in case of batch operations, and put, the client assembles a
           // RetriesExhaustedWithDetailsException instead of throwing an
           // AccessDeniedException
-          for(Throwable ex : ((RetriesExhaustedWithDetailsException) e).getCauses()) {
+          for (Throwable ex : ((RetriesExhaustedWithDetailsException) e).getCauses()) {
             if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
               break;
             }
           }
-        }
-        else {
+        } else {
           // For doBulkLoad calls AccessDeniedException
           // is buried in the stack trace
           Throwable ex = e;
@@ -257,7 +256,7 @@ public class SecureTestUtil {
               isAccessDeniedException = true;
               break;
             }
-          } while((ex = ex.getCause()) != null);
+          } while ((ex = ex.getCause()) != null);
         }
         if (!isAccessDeniedException) {
           fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
@@ -269,7 +268,7 @@ public class SecureTestUtil {
           ex = ((PrivilegedActionException) ex).getException();
         }
         if (ex instanceof ServiceException) {
-          ServiceException se = (ServiceException)ex;
+          ServiceException se = (ServiceException) ex;
           if (se.getCause() != null && se.getCause() instanceof AccessDeniedException) {
             // expected result
             return;
@@ -282,11 +281,11 @@ public class SecureTestUtil {
 
   private static List<AccessController> getAccessControllers(SingleProcessHBaseCluster cluster) {
     List<AccessController> result = Lists.newArrayList();
-    for (RegionServerThread t: cluster.getLiveRegionServerThreads()) {
-      for (HRegion region: t.getRegionServer().getOnlineRegionsLocalContext()) {
+    for (RegionServerThread t : cluster.getLiveRegionServerThreads()) {
+      for (HRegion region : t.getRegionServer().getOnlineRegionsLocalContext()) {
         Coprocessor cp = region.getCoprocessorHost().findCoprocessor(AccessController.class);
         if (cp != null) {
-          result.add((AccessController)cp);
+          result.add((AccessController) cp);
         }
       }
     }
@@ -294,7 +293,7 @@ public class SecureTestUtil {
   }
 
   private static Map<AccessController, Long>
-    getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
+      getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
     Map<AccessController, Long> result = Maps.newHashMap();
     for (AccessController ac : getAccessControllers(cluster)) {
       result.put(ac, ac.getAuthManager().getMTime());
@@ -305,7 +304,7 @@ public class SecureTestUtil {
   @SuppressWarnings("rawtypes")
   private static void updateACLs(final HBaseTestingUtil util, Callable c) throws Exception {
     // Get the current mtimes for all access controllers
-    final Map<AccessController,Long> oldMTimes = getAuthManagerMTimes(util.getHBaseCluster());
+    final Map<AccessController, Long> oldMTimes = getAuthManagerMTimes(util.getHBaseCluster());
 
     // Run the update action
     c.call();
@@ -314,20 +313,20 @@ public class SecureTestUtil {
     util.waitFor(WAIT_TIME, 100, new Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        Map<AccessController,Long> mtimes = getAuthManagerMTimes(util.getHBaseCluster());
-        for (Map.Entry<AccessController,Long> e: mtimes.entrySet()) {
+        Map<AccessController, Long> mtimes = getAuthManagerMTimes(util.getHBaseCluster());
+        for (Map.Entry<AccessController, Long> e : mtimes.entrySet()) {
           if (!oldMTimes.containsKey(e.getKey())) {
-            LOG.error("Snapshot of AccessController state does not include instance on region " +
-              e.getKey().getRegion().getRegionInfo().getRegionNameAsString());
+            LOG.error("Snapshot of AccessController state does not include instance on region "
+                + e.getKey().getRegion().getRegionInfo().getRegionNameAsString());
             // Error out the predicate, we will try again
             return false;
           }
           long old = oldMTimes.get(e.getKey());
           long now = e.getValue();
           if (now <= old) {
-            LOG.info("AccessController on region " +
-              e.getKey().getRegion().getRegionInfo().getRegionNameAsString() +
-              " has not updated: mtime=" + now);
+            LOG.info("AccessController on region "
+                + e.getKey().getRegion().getRegionInfo().getRegionNameAsString()
+                + " has not updated: mtime=" + now);
             return false;
           }
         }
@@ -337,9 +336,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions globally to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions globally to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void grantGlobal(final HBaseTestingUtil util, final String user,
       final Permission.Action... actions) throws Exception {
@@ -356,12 +355,12 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions globally to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions globally to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
-  public static void grantGlobal(final User caller, final HBaseTestingUtil util,
-      final String user, final Permission.Action... actions) throws Exception {
+  public static void grantGlobal(final User caller, final HBaseTestingUtil util, final String user,
+      final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -376,9 +375,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions globally from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Revoke permissions globally from the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void revokeGlobal(final HBaseTestingUtil util, final String user,
       final Permission.Action... actions) throws Exception {
@@ -395,12 +394,12 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions globally from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Revoke permissions globally from the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
-  public static void revokeGlobal(final User caller, final HBaseTestingUtil util,
-      final String user, final Permission.Action... actions) throws Exception {
+  public static void revokeGlobal(final User caller, final HBaseTestingUtil util, final String user,
+      final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -415,9 +414,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions on a namespace to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions on a namespace to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void grantOnNamespace(final HBaseTestingUtil util, final String user,
       final String namespace, final Permission.Action... actions) throws Exception {
@@ -435,13 +434,13 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions on a namespace to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions on a namespace to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void grantOnNamespace(final User caller, final HBaseTestingUtil util,
-      final String user, final String namespace,
-      final Permission.Action... actions) throws Exception {
+      final String user, final String namespace, final Permission.Action... actions)
+      throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -457,9 +456,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions on a namespace to the given user using AccessControl Client.
-   * Will wait until all active AccessController instances have updated their permissions caches
-   * or will throw an exception upon timeout (10 seconds).
+   * Grant permissions on a namespace to the given user using AccessControl Client. Will wait until
+   * all active AccessController instances have updated their permissions caches or will throw an
+   * exception upon timeout (10 seconds).
    */
   public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final String namespace,
@@ -478,9 +477,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions on a namespace from the given user using AccessControl Client.
-   * Will wait until all active AccessController instances have updated their permissions caches
-   * or will throw an exception upon timeout (10 seconds).
+   * Revoke permissions on a namespace from the given user using AccessControl Client. Will wait
+   * until all active AccessController instances have updated their permissions caches or will throw
+   * an exception upon timeout (10 seconds).
    */
   public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final String namespace,
@@ -500,8 +499,8 @@ public class SecureTestUtil {
 
   /**
    * Revoke permissions on a namespace from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * AccessController instances have updated their permissions caches or will throw an exception
+   * upon timeout (10 seconds).
    */
   public static void revokeFromNamespace(final HBaseTestingUtil util, final String user,
       final String namespace, final Permission.Action... actions) throws Exception {
@@ -519,12 +518,12 @@ public class SecureTestUtil {
 
   /**
    * Revoke permissions on a namespace from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * AccessController instances have updated their permissions caches or will throw an exception
+   * upon timeout (10 seconds).
    */
   public static void revokeFromNamespace(final User caller, final HBaseTestingUtil util,
-      final String user, final String namespace,
-      final Permission.Action... actions) throws Exception {
+      final String user, final String namespace, final Permission.Action... actions)
+      throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -539,9 +538,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions on a table to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions on a table to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void grantOnTable(final HBaseTestingUtil util, final String user,
       final TableName table, final byte[] family, final byte[] qualifier,
@@ -560,12 +559,12 @@ public class SecureTestUtil {
   }
 
   /**
-   * Grant permissions on a table to the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Grant permissions on a table to the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
-  public static void grantOnTable(final User caller, final HBaseTestingUtil util,
-      final String user, final TableName table, final byte[] family, final byte[] qualifier,
+  public static void grantOnTable(final User caller, final HBaseTestingUtil util, final String user,
+      final TableName table, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -583,8 +582,8 @@ public class SecureTestUtil {
 
   /**
    * Grant permissions on a table to the given user using AccessControlClient. Will wait until all
-   * active AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * active AccessController instances have updated their permissions caches or will throw an
+   * exception upon timeout (10 seconds).
    */
   public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final TableName table, final byte[] family,
@@ -604,8 +603,8 @@ public class SecureTestUtil {
 
   /**
    * Grant global permissions to the given user using AccessControlClient. Will wait until all
-   * active AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * active AccessController instances have updated their permissions caches or will throw an
+   * exception upon timeout (10 seconds).
    */
   public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final Permission.Action... actions)
@@ -624,9 +623,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions on a table from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Revoke permissions on a table from the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void revokeFromTable(final HBaseTestingUtil util, final String user,
       final TableName table, final byte[] family, final byte[] qualifier,
@@ -644,9 +643,9 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions on a table from the given user. Will wait until all active
-   * AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Revoke permissions on a table from the given user. Will wait until all active AccessController
+   * instances have updated their permissions caches or will throw an exception upon timeout (10
+   * seconds).
    */
   public static void revokeFromTable(final User caller, final HBaseTestingUtil util,
       final String user, final TableName table, final byte[] family, final byte[] qualifier,
@@ -666,8 +665,8 @@ public class SecureTestUtil {
 
   /**
    * Revoke permissions on a table from the given user using AccessControlClient. Will wait until
-   * all active AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * all active AccessController instances have updated their permissions caches or will throw an
+   * exception upon timeout (10 seconds).
    */
   public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtil util,
       final Connection connection, final String user, final TableName table, final byte[] family,
@@ -686,12 +685,12 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke global permissions from the given user using AccessControlClient. Will wait until
-   * all active AccessController instances have updated their permissions caches or will
-   * throw an exception upon timeout (10 seconds).
+   * Revoke global permissions from the given user using AccessControlClient. Will wait until all
+   * active AccessController instances have updated their permissions caches or will throw an
+   * exception upon timeout (10 seconds).
    */
   public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtil util,
-      final Connection connection, final String user,final Permission.Action... actions)
+      final Connection connection, final String user, final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
@@ -717,8 +716,8 @@ public class SecureTestUtil {
 
     @Override
     public void postCompletedCreateTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableDescriptor desc, RegionInfo[] regions) throws IOException {
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc,
+        RegionInfo[] regions) throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedCreateTableAction()
       if (tableCreationLatch != null) {
@@ -728,8 +727,8 @@ public class SecureTestUtil {
 
     @Override
     public void postCompletedDeleteTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName) throws IOException {
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedDeleteTableAction()
       if (tableDeletionLatch != null) {
@@ -738,8 +737,8 @@ public class SecureTestUtil {
     }
   }
 
-  public static Table createTable(HBaseTestingUtil testUtil, TableName tableName,
-      byte[][] families) throws Exception {
+  public static Table createTable(HBaseTestingUtil testUtil, TableName tableName, byte[][] families)
+      throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
@@ -748,13 +747,12 @@ public class SecureTestUtil {
     return testUtil.getConnection().getTable(tableName);
   }
 
-  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd)
-      throws Exception {
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd) throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd);
   }
 
-  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd,
-      byte[][] splitKeys) throws Exception {
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor htd, byte[][] splitKeys)
+      throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd, splitKeys);
   }
 
@@ -767,8 +765,8 @@ public class SecureTestUtil {
       byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+        .findCoprocessor(MasterSyncObserver.class);
     observer.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
       admin.createTable(htd, splitKeys);
@@ -781,19 +779,18 @@ public class SecureTestUtil {
   }
 
   public static void createTable(HBaseTestingUtil testUtil, User user, TableDescriptor htd)
-    throws Exception {
+      throws Exception {
     createTable(testUtil, user, htd, null);
   }
 
   public static void createTable(HBaseTestingUtil testUtil, User user, TableDescriptor htd,
-    byte[][] splitKeys) throws Exception {
+      byte[][] splitKeys) throws Exception {
     try (Connection con = testUtil.getConnection(user); Admin admin = con.getAdmin()) {
       createTable(testUtil, admin, htd, splitKeys);
     }
   }
 
-  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
-      throws Exception {
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName) throws Exception {
     deleteTable(testUtil, testUtil.getAdmin(), tableName);
   }
 
@@ -802,8 +799,7 @@ public class SecureTestUtil {
     testUtil.getAdmin().createNamespace(nsDesc);
   }
 
-  public static void deleteNamespace(HBaseTestingUtil testUtil, String namespace)
-      throws Exception {
+  public static void deleteNamespace(HBaseTestingUtil testUtil, String namespace) throws Exception {
     testUtil.getAdmin().deleteNamespace(namespace);
   }
 
@@ -811,8 +807,8 @@ public class SecureTestUtil {
       throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+        .findCoprocessor(MasterSyncObserver.class);
     observer.tableDeletionLatch = new CountDownLatch(1);
     try {
       admin.disableTable(tableName);

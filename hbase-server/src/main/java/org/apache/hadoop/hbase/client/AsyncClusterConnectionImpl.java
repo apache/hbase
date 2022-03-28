@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,51 +93,52 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   @Override
   public CompletableFuture<String> prepareBulkLoad(TableName tableName) {
     return callerFactory.<String> single().table(tableName).row(HConstants.EMPTY_START_ROW)
-      .action((controller, loc, stub) -> ConnectionUtils
-        .<TableName, PrepareBulkLoadRequest, PrepareBulkLoadResponse, String> call(controller, loc,
-          stub, tableName, (rn, tn) -> {
-            RegionSpecifier region =
-              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
-            return PrepareBulkLoadRequest.newBuilder()
-              .setTableName(ProtobufUtil.toProtoTableName(tn)).setRegion(region).build();
-          }, (s, c, req, done) -> s.prepareBulkLoad(c, req, done),
-          (c, resp) -> resp.getBulkToken()))
-      .call();
+        .action((controller, loc, stub) -> ConnectionUtils
+            .<TableName, PrepareBulkLoadRequest, PrepareBulkLoadResponse, String> call(controller,
+              loc, stub, tableName, (rn, tn) -> {
+                RegionSpecifier region =
+                    RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
+                return PrepareBulkLoadRequest.newBuilder()
+                    .setTableName(ProtobufUtil.toProtoTableName(tn)).setRegion(region).build();
+              }, (s, c, req, done) -> s.prepareBulkLoad(c, req, done),
+              (c, resp) -> resp.getBulkToken()))
+        .call();
   }
 
   @Override
   public CompletableFuture<Boolean> bulkLoad(TableName tableName,
-    List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-    String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
+      List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
+      String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
     return callerFactory.<Boolean> single().table(tableName).row(row)
-      .action((controller, loc, stub) -> ConnectionUtils
-        .<Void, BulkLoadHFileRequest, BulkLoadHFileResponse, Boolean> call(controller, loc, stub,
-          null,
-          (rn, nil) -> RequestConverter.buildBulkLoadHFileRequest(familyPaths, rn, assignSeqNum,
-            userToken, bulkToken, copyFiles, clusterIds, replicate),
-          (s, c, req, done) -> s.bulkLoadHFile(c, req, done), (c, resp) -> resp.getLoaded()))
-      .call();
+        .action((controller, loc, stub) -> ConnectionUtils
+            .<Void, BulkLoadHFileRequest, BulkLoadHFileResponse, Boolean> call(controller, loc,
+              stub, null,
+              (rn, nil) -> RequestConverter.buildBulkLoadHFileRequest(familyPaths, rn, assignSeqNum,
+                userToken, bulkToken, copyFiles, clusterIds, replicate),
+              (s, c, req, done) -> s.bulkLoadHFile(c, req, done), (c, resp) -> resp.getLoaded()))
+        .call();
   }
 
   @Override
   public CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken) {
     return callerFactory.<Void> single().table(tableName).row(HConstants.EMPTY_START_ROW)
-      .action((controller, loc, stub) -> ConnectionUtils
-        .<String, CleanupBulkLoadRequest, CleanupBulkLoadResponse, Void> call(controller, loc, stub,
-          bulkToken, (rn, bt) -> {
-            RegionSpecifier region =
-              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
-            return CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bt).build();
-          }, (s, c, req, done) -> s.cleanupBulkLoad(c, req, done), (c, resp) -> null))
-      .call();
+        .action((controller, loc, stub) -> ConnectionUtils
+            .<String, CleanupBulkLoadRequest, CleanupBulkLoadResponse, Void> call(controller, loc,
+              stub, bulkToken, (rn, bt) -> {
+                RegionSpecifier region =
+                    RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
+                return CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bt)
+                    .build();
+              }, (s, c, req, done) -> s.cleanupBulkLoad(c, req, done), (c, resp) -> null))
+        .call();
   }
 
   @Override
   public CompletableFuture<List<ServerName>>
-    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+      getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
     CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
-    RegionServerStatusService.Interface stub = RegionServerStatusService
-      .newStub(rpcClient.createRpcChannel(masterAddrTracker.getMasterAddress(), user, rpcTimeout));
+    RegionServerStatusService.Interface stub = RegionServerStatusService.newStub(
+      rpcClient.createRpcChannel(masterAddrTracker.getMasterAddress(), user, rpcTimeout));
     HBaseRpcController controller = rpcControllerFactory.newController();
     stub.getLiveRegionServers(controller,
       GetLiveRegionServersRequest.newBuilder().setCount(count).build(), resp -> {
@@ -145,7 +146,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
           future.completeExceptionally(controller.getFailed());
         } else {
           future.complete(resp.getServerList().stream().map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()));
+              .collect(Collectors.toList()));
         }
       });
     return future;
@@ -155,7 +156,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   public CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer) {
     CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
     BootstrapNodeService.Interface stub =
-      BootstrapNodeService.newStub(rpcClient.createRpcChannel(regionServer, user, rpcTimeout));
+        BootstrapNodeService.newStub(rpcClient.createRpcChannel(regionServer, user, rpcTimeout));
     HBaseRpcController controller = rpcControllerFactory.newController();
     stub.getAllBootstrapNodes(controller, GetAllBootstrapNodesRequest.getDefaultInstance(),
       resp -> {
@@ -163,18 +164,17 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
           future.completeExceptionally(controller.getFailed());
         } else {
           future.complete(resp.getNodeList().stream().map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()));
+              .collect(Collectors.toList()));
         }
       });
     return future;
   }
 
   @Override
-  public CompletableFuture<Void> replicate(RegionInfo replica,
-    List<Entry> entries, int retries, long rpcTimeoutNs,
-    long operationTimeoutNs) {
+  public CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int retries,
+      long rpcTimeoutNs, long operationTimeoutNs) {
     return new AsyncRegionReplicationRetryingCaller(RETRY_TIMER, this,
-      ConnectionUtils.retries2Attempts(retries), rpcTimeoutNs, operationTimeoutNs, replica, entries)
-        .call();
+        ConnectionUtils.retries2Attempts(retries), rpcTimeoutNs, operationTimeoutNs, replica,
+        entries).call();
   }
 }

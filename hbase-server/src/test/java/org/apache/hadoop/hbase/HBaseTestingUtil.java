@@ -151,7 +151,9 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -292,7 +294,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static final Collection<Object[]> BLOOM_AND_COMPRESSION_COMBINATIONS =
-    bloomAndCompressionCombinations();
+      bloomAndCompressionCombinations();
 
   /**
    * <p>
@@ -412,13 +414,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     if (sysValue != null) {
       // There is already a value set. So we do nothing but hope
       // that there will be no conflicts
-      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue +
-        " so I do NOT create it in " + parent);
+      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
+          + " so I do NOT create it in " + parent);
       String confValue = conf.get(propertyName);
       if (confValue != null && !confValue.endsWith(sysValue)) {
-        LOG.warn(propertyName + " property value differs in configuration and system: " +
-          "Configuration=" + confValue + " while System=" + sysValue +
-          " Erasing configuration value by system value.");
+        LOG.warn(propertyName + " property value differs in configuration and system: "
+            + "Configuration=" + confValue + " while System=" + sysValue
+            + " Erasing configuration value by system value.");
       }
       conf.set(propertyName, sysValue);
     } else {
@@ -572,7 +574,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public MiniDFSCluster startMiniDFSCluster(int servers, final String[] racks, String[] hosts)
-    throws Exception {
+      throws Exception {
     createDirsAndSetProperties();
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
@@ -580,8 +582,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
       "ERROR");
-    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
-      true, null, racks, hosts, null);
+    this.dfsCluster =
+        new MiniDFSCluster(0, this.conf, servers, true, true, true, null, racks, hosts, null);
 
     // Set this just-started cluster as our filesystem.
     setFs();
@@ -604,8 +606,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
       "ERROR");
-    dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
-      null, null, null);
+    dfsCluster =
+        new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
     return dfsCluster;
   }
 
@@ -742,7 +744,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   public SingleProcessHBaseCluster startMiniCluster(int numSlaves) throws Exception {
     StartTestingClusterOption option = StartTestingClusterOption.builder()
-      .numRegionServers(numSlaves).numDataNodes(numSlaves).build();
+        .numRegionServers(numSlaves).numDataNodes(numSlaves).build();
     return startMiniCluster(option);
   }
 
@@ -763,7 +765,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @see #shutdownMiniDFSCluster()
    */
   public SingleProcessHBaseCluster startMiniCluster(StartTestingClusterOption option)
-    throws Exception {
+      throws Exception {
     LOG.info("Starting up minicluster with option: {}", option);
 
     // If we already put up a cluster, fail.
@@ -801,7 +803,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @see #shutdownMiniHBaseCluster()
    */
   public SingleProcessHBaseCluster startMiniHBaseCluster(StartTestingClusterOption option)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     // Now do the mini hbase cluster. Set the hbase.rootdir in config.
     createRootDir(option.isCreateRootDir());
     if (option.isCreateWALDir()) {
@@ -825,13 +827,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new SingleProcessHBaseCluster(c, option.getNumMasters(),
-      option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
-      option.getMasterClass(), option.getRsClass());
+        option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
+        option.getMasterClass(), option.getRsClass());
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
     try (Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-      ResultScanner s = t.getScanner(new Scan())) {
+        ResultScanner s = t.getScanner(new Scan())) {
       for (;;) {
         if (s.next() == null) {
           break;
@@ -852,7 +854,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @see #shutdownMiniHBaseCluster()
    */
   public SingleProcessHBaseCluster startMiniHBaseCluster()
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     return startMiniHBaseCluster(StartTestingClusterOption.builder().build());
   }
 
@@ -871,9 +873,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   @Deprecated
   public SingleProcessHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(numMasters)
-      .numRegionServers(numRegionServers).build();
+        .numRegionServers(numRegionServers).build();
     return startMiniHBaseCluster(option);
   }
 
@@ -893,9 +895,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   @Deprecated
   public SingleProcessHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
-    List<Integer> rsPorts) throws IOException, InterruptedException {
+      List<Integer> rsPorts) throws IOException, InterruptedException {
     StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(numMasters)
-      .numRegionServers(numRegionServers).rsPorts(rsPorts).build();
+        .numRegionServers(numRegionServers).rsPorts(rsPorts).build();
     return startMiniHBaseCluster(option);
   }
 
@@ -919,12 +921,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   @Deprecated
   public SingleProcessHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
-    List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
-    boolean createRootDir, boolean createWALDir) throws IOException, InterruptedException {
+      List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+      boolean createRootDir, boolean createWALDir) throws IOException, InterruptedException {
     StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(numMasters)
-      .masterClass(masterClass).numRegionServers(numRegionServers).rsClass(rsClass).rsPorts(rsPorts)
-      .createRootDir(createRootDir).createWALDir(createWALDir).build();
+        .masterClass(masterClass).numRegionServers(numRegionServers).rsClass(rsClass)
+        .rsPorts(rsPorts).createRootDir(createRootDir).createWALDir(createWALDir).build();
     return startMiniHBaseCluster(option);
   }
 
@@ -938,19 +940,19 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void restartHBaseCluster(int servers, List<Integer> ports)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     StartTestingClusterOption option =
-      StartTestingClusterOption.builder().numRegionServers(servers).rsPorts(ports).build();
+        StartTestingClusterOption.builder().numRegionServers(servers).rsPorts(ports).build();
     restartHBaseCluster(option);
     invalidateConnection();
   }
 
   public void restartHBaseCluster(StartTestingClusterOption option)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     closeConnection();
     this.hbaseCluster = new SingleProcessHBaseCluster(this.conf, option.getNumMasters(),
-      option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
-      option.getMasterClass(), option.getRsClass());
+        option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
+        option.getMasterClass(), option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
     Table t = conn.getTable(TableName.META_TABLE_NAME);
@@ -974,7 +976,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       return (SingleProcessHBaseCluster) this.hbaseCluster;
     }
     throw new RuntimeException(
-      hbaseCluster + " not an instance of " + SingleProcessHBaseCluster.class.getName());
+        hbaseCluster + " not an instance of " + SingleProcessHBaseCluster.class.getName());
   }
 
   /**
@@ -1191,7 +1193,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
-    throws IOException {
+      throws IOException {
     if (numRegions < 3) throw new IOException("Must create at least 3 regions");
     byte[] startKey = Bytes.toBytes("aaaaa");
     byte[] endKey = Bytes.toBytes("zzzzz");
@@ -1231,7 +1233,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, int replicaCount, byte[][] families)
-    throws IOException {
+      throws IOException {
     return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE, replicaCount);
   }
 
@@ -1244,7 +1246,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
-    throws IOException {
+      throws IOException {
     return createTable(tableName, families, splitKeys, 1, new Configuration(getConfiguration()));
   }
 
@@ -1258,13 +1260,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
-    int replicaCount) throws IOException {
+      int replicaCount) throws IOException {
     return createTable(tableName, families, splitKeys, replicaCount,
       new Configuration(getConfiguration()));
   }
 
   public Table createTable(TableName tableName, byte[][] families, int numVersions, byte[] startKey,
-    byte[] endKey, int numRegions) throws IOException {
+      byte[] endKey, int numRegions) throws IOException {
     TableDescriptor desc = createTableDescriptor(tableName, families, numVersions);
 
     getAdmin().createTable(desc, startKey, endKey, numRegions);
@@ -1280,7 +1282,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableDescriptor htd, byte[][] families, Configuration c)
-    throws IOException {
+      throws IOException {
     return createTable(htd, families, null, c);
   }
 
@@ -1294,7 +1296,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException if getAdmin or createTable fails
    */
   public Table createTable(TableDescriptor htd, byte[][] families, byte[][] splitKeys,
-    Configuration c) throws IOException {
+      Configuration c) throws IOException {
     // Disable blooms (they are on by default as of 0.95) but we disable them here because
     // tests have hard coded counts of what to expect in block cache, etc., and blooms being
     // on is interfering.
@@ -1314,11 +1316,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
 
   public Table createTable(TableDescriptor htd, byte[][] families, byte[][] splitKeys,
-    BloomType type, int blockSize, Configuration c) throws IOException {
+      BloomType type, int blockSize, Configuration c) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfdb = ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setBloomFilterType(type).setBlocksize(blockSize);
+          .setBloomFilterType(type).setBlocksize(blockSize);
       if (isNewVersionBehaviorEnabled()) {
         cfdb.setNewVersionBehavior(true);
       }
@@ -1372,9 +1374,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
-    int replicaCount, final Configuration c) throws IOException {
+      int replicaCount, final Configuration c) throws IOException {
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(replicaCount).build();
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(replicaCount).build();
     return createTable(htd, families, splitKeys, c);
   }
 
@@ -1391,7 +1393,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions)
-    throws IOException {
+      throws IOException {
     return createTable(tableName, families, numVersions, (byte[][]) null);
   }
 
@@ -1400,11 +1402,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions,
-    byte[][] splitKeys) throws IOException {
+      byte[][] splitKeys) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(numVersions);
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(numVersions);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1426,7 +1428,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families, int numVersions)
-    throws IOException {
+      throws IOException {
     return createTable(tableName, families, numVersions, KEYS_FOR_HBA_CREATE_TABLE);
   }
 
@@ -1435,11 +1437,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions, int blockSize)
-    throws IOException {
+      throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setMaxVersions(numVersions).setBlocksize(blockSize);
+          .setMaxVersions(numVersions).setBlocksize(blockSize);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1453,11 +1455,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public Table createTable(TableName tableName, byte[][] families, int numVersions, int blockSize,
-    String cpName) throws IOException {
+      String cpName) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setMaxVersions(numVersions).setBlocksize(blockSize);
+          .setMaxVersions(numVersions).setBlocksize(blockSize);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1478,12 +1480,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, int[] numVersions)
-    throws IOException {
+      throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     int i = 0;
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(numVersions[i]);
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(numVersions[i]);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1502,7 +1504,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[] family, byte[][] splitRows)
-    throws IOException {
+      throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
     if (isNewVersionBehaviorEnabled()) {
@@ -1528,9 +1530,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Set the number of Region replicas.
    */
   public static void setReplicas(Admin admin, TableName table, int replicaCount)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table))
-      .setRegionReplication(replicaCount).build();
+        .setRegionReplication(replicaCount).build();
     admin.modifyTable(desc);
   }
 
@@ -1580,12 +1582,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public TableDescriptor createTableDescriptor(final TableName name, final int minVersions,
-    final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+      final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     for (byte[] cfName : new byte[][] { fam1, fam2, fam3 }) {
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(cfName)
-        .setMinVersions(minVersions).setMaxVersions(versions).setKeepDeletedCells(keepDeleted)
-        .setBlockCacheEnabled(false).setTimeToLive(ttl);
+          .setMinVersions(minVersions).setMaxVersions(versions).setKeepDeletedCells(keepDeleted)
+          .setBlockCacheEnabled(false).setTimeToLive(ttl);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1595,12 +1597,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public TableDescriptorBuilder createModifyableTableDescriptor(final TableName name,
-    final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     for (byte[] cfName : new byte[][] { fam1, fam2, fam3 }) {
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(cfName)
-        .setMinVersions(minVersions).setMaxVersions(versions).setKeepDeletedCells(keepDeleted)
-        .setBlockCacheEnabled(false).setTimeToLive(ttl);
+          .setMinVersions(minVersions).setMaxVersions(versions).setKeepDeletedCells(keepDeleted)
+          .setBlockCacheEnabled(false).setTimeToLive(ttl);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1624,11 +1626,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public TableDescriptor createTableDescriptor(final TableName tableName, byte[][] families,
-    int maxVersions) {
+      int maxVersions) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(maxVersions);
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(maxVersions);
       if (isNewVersionBehaviorEnabled()) {
         cfBuilder.setNewVersionBehavior(true);
       }
@@ -1645,9 +1647,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return a region that writes to local dir for testing
    */
   public HRegion createLocalHRegion(TableDescriptor desc, byte[] startKey, byte[] endKey)
-    throws IOException {
+      throws IOException {
     RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName()).setStartKey(startKey)
-      .setEndKey(endKey).build();
+        .setEndKey(endKey).build();
     return createLocalHRegion(hri, desc);
   }
 
@@ -1669,7 +1671,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
-    WAL wal) throws IOException {
+      WAL wal) throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
@@ -1684,15 +1686,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-    Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
-    throws IOException {
+      Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
+      throws IOException {
     return createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey, conf, isReadOnly,
       durability, wal, null, families);
   }
 
   public HRegion createLocalHRegionWithInMemoryFlags(TableName tableName, byte[] startKey,
-    byte[] stopKey, Configuration conf, boolean isReadOnly, Durability durability, WAL wal,
-    boolean[] compactedMemStore, byte[]... families) throws IOException {
+      byte[] stopKey, Configuration conf, boolean isReadOnly, Durability durability, WAL wal,
+      boolean[] compactedMemStore, byte[]... families) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setReadOnly(isReadOnly);
     int i = 0;
@@ -1711,7 +1713,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
     builder.setDurability(durability);
     RegionInfo info =
-      RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
+        RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
     return createLocalHRegion(info, conf, builder.build(), wal);
   }
 
@@ -1746,7 +1748,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return HTable for the new table
    */
   public Table truncateTable(final TableName tableName, final boolean preserveRegions)
-    throws IOException {
+      throws IOException {
     Admin admin = getAdmin();
     if (!admin.isTableDisabled(tableName)) {
       admin.disableTable(tableName);
@@ -1820,7 +1822,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value, boolean writeToWAL)
-    throws IOException {
+      throws IOException {
     List<Put> puts = new ArrayList<>();
     for (byte[] row : HBaseTestingUtil.ROWS) {
       Put put = new Put(row);
@@ -1874,14 +1876,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           for (byte b3 = 'a'; b3 <= 'z'; b3++) {
             int count = seenRows[i(b1)][i(b2)][i(b3)];
             int expectedCount = 0;
-            if (Bytes.compareTo(new byte[] { b1, b2, b3 }, startRow) >= 0 &&
-              Bytes.compareTo(new byte[] { b1, b2, b3 }, stopRow) < 0) {
+            if (Bytes.compareTo(new byte[] { b1, b2, b3 }, startRow) >= 0
+                && Bytes.compareTo(new byte[] { b1, b2, b3 }, stopRow) < 0) {
               expectedCount = 1;
             }
             if (count != expectedCount) {
               String row = new String(new byte[] { b1, b2, b3 }, StandardCharsets.UTF_8);
-              throw new RuntimeException("Row:" + row + " has a seen count of " + count + " " +
-                "instead of " + expectedCount);
+              throw new RuntimeException("Row:" + row + " has a seen count of " + count + " "
+                  + "instead of " + expectedCount);
             }
           }
         }
@@ -1942,7 +1944,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void loadNumericRows(final Table t, final byte[] f, int startRow, int endRow)
-    throws IOException {
+      throws IOException {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Put put = new Put(data);
@@ -1952,7 +1954,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
-    throws IOException {
+      throws IOException {
     for (int i = 0; i < totalRows; i++) {
       byte[] row = new byte[rowSize];
       Bytes.random(row);
@@ -1963,7 +1965,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void verifyNumericRows(Table table, final byte[] f, int startRow, int endRow,
-    int replicaId) throws IOException {
+      int replicaId) throws IOException {
     for (int i = startRow; i < endRow; i++) {
       String failMsg = "Failed verification of row :" + i;
       byte[] data = Bytes.toBytes(String.valueOf(i));
@@ -1980,22 +1982,22 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow)
-    throws IOException {
+      throws IOException {
     verifyNumericRows((HRegion) region, f, startRow, endRow);
   }
 
   public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
-    throws IOException {
+      throws IOException {
     verifyNumericRows(region, f, startRow, endRow, true);
   }
 
   public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow,
-    final boolean present) throws IOException {
+      final boolean present) throws IOException {
     verifyNumericRows((HRegion) region, f, startRow, endRow, present);
   }
 
   public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow,
-    final boolean present) throws IOException {
+      final boolean present) throws IOException {
     for (int i = startRow; i < endRow; i++) {
       String failMsg = "Failed verification of row :" + i;
       byte[] data = Bytes.toBytes(String.valueOf(i));
@@ -2014,7 +2016,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void deleteNumericRows(final Table t, final byte[] f, int startRow, int endRow)
-    throws IOException {
+      throws IOException {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Delete delete = new Delete(data);
@@ -2111,20 +2113,20 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static final byte[][] KEYS = { HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
-    Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"),
-    Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("jjj"),
-    Bytes.toBytes("kkk"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
-    Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"), Bytes.toBytes("rrr"),
-    Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
-    Bytes.toBytes("www"), Bytes.toBytes("xxx"), Bytes.toBytes("yyy") };
+      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"),
+      Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("jjj"),
+      Bytes.toBytes("kkk"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"), Bytes.toBytes("rrr"),
+      Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
+      Bytes.toBytes("www"), Bytes.toBytes("xxx"), Bytes.toBytes("yyy") };
 
   public static final byte[][] KEYS_FOR_HBA_CREATE_TABLE = { Bytes.toBytes("bbb"),
-    Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"),
-    Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("jjj"),
-    Bytes.toBytes("kkk"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
-    Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"), Bytes.toBytes("rrr"),
-    Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
-    Bytes.toBytes("www"), Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz") };
+      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"),
+      Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("jjj"),
+      Bytes.toBytes("kkk"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"), Bytes.toBytes("rrr"),
+      Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
+      Bytes.toBytes("www"), Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz") };
 
   /**
    * Create rows in hbase:meta for regions of the specified table with the specified start keys. The
@@ -2132,7 +2134,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return list of region info for regions added to meta
    */
   public List<RegionInfo> createMultiRegionsInMeta(final Configuration conf,
-    final TableDescriptor htd, byte[][] startKeys) throws IOException {
+      final TableDescriptor htd, byte[][] startKeys) throws IOException {
     try (Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
       Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
       List<RegionInfo> newRegions = new ArrayList<>(startKeys.length);
@@ -2142,7 +2144,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       for (int i = 0; i < startKeys.length; i++) {
         int j = (i + 1) % startKeys.length;
         RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKeys[i])
-          .setEndKey(startKeys[j]).build();
+            .setEndKey(startKeys[j]).build();
         MetaTableAccessor.addRegionsToMeta(getConnection(), Collections.singletonList(hri), 1);
         newRegions.add(hri);
       }
@@ -2154,7 +2156,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Create an unmanaged WAL. Be sure to close it when you're through.
    */
   public static WAL createWal(final Configuration conf, final Path rootDir, final RegionInfo hri)
-    throws IOException {
+      throws IOException {
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
@@ -2167,7 +2169,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor htd) throws IOException {
+      final Configuration conf, final TableDescriptor htd) throws IOException {
     return createRegionAndWAL(info, rootDir, conf, htd, true);
   }
 
@@ -2176,7 +2178,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor htd, BlockCache blockCache) throws IOException {
+      final Configuration conf, final TableDescriptor htd, BlockCache blockCache)
+      throws IOException {
     HRegion region = createRegionAndWAL(info, rootDir, conf, htd, false);
     region.setBlockCache(blockCache);
     region.initialize();
@@ -2188,8 +2191,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor htd, MobFileCache mobFileCache)
-    throws IOException {
+      final Configuration conf, final TableDescriptor htd, MobFileCache mobFileCache)
+      throws IOException {
     HRegion region = createRegionAndWAL(info, rootDir, conf, htd, false);
     region.setMobFileCache(mobFileCache);
     region.initialize();
@@ -2201,7 +2204,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor htd, boolean initialize) throws IOException {
+      final Configuration conf, final TableDescriptor htd, boolean initialize) throws IOException {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     WAL wal = createWal(conf, rootDir, info);
@@ -2228,7 +2231,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return region server that holds it, null if the row doesn't exist
    */
   public HRegionServer getRSForFirstRegionInTable(TableName tableName)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     List<RegionInfo> regions = getAdmin().getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       return null;
@@ -2236,8 +2239,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     LOG.debug("Found " + regions.size() + " regions for table " + tableName);
 
     byte[] firstRegionName =
-      regions.stream().filter(r -> !r.isOffline()).map(RegionInfo::getRegionName).findFirst()
-        .orElseThrow(() -> new IOException("online regions not found in table " + tableName));
+        regions.stream().filter(r -> !r.isOffline()).map(RegionInfo::getRegionName).findFirst()
+            .orElseThrow(() -> new IOException("online regions not found in table " + tableName));
 
     LOG.debug("firstRegionName=" + Bytes.toString(firstRegionName));
     long pause = getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -2330,9 +2333,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
 
     // Allow the user to override FS URI for this map-reduce cluster to use.
-    mrCluster =
-      new MiniMRCluster(servers, FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(),
-        1, null, null, new JobConf(this.conf));
+    mrCluster = new MiniMRCluster(servers,
+        FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1, null, null,
+        new JobConf(this.conf));
     JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();
@@ -2397,7 +2400,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * TestTokenAuthentication
    */
   public RegionServerServices createMockRegionServerService(RpcServerInterface rpc)
-    throws IOException {
+      throws IOException {
     final MockRegionServerServices rss = new MockRegionServerServices(getZooKeeperWatcher());
     rss.setFileSystem(getTestFileSystem());
     rss.setRpcServer(rpc);
@@ -2489,13 +2492,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
     // Making it expire
     ZooKeeper newZK =
-      new ZooKeeper(quorumServers, 1000, EmptyWatcher.instance, sessionID, password);
+        new ZooKeeper(quorumServers, 1000, EmptyWatcher.instance, sessionID, password);
 
     // ensure that we have connection to the server before closing down, otherwise
     // the close session event will be eaten out before we start CONNECTING state
     long start = EnvironmentEdgeManager.currentTime();
-    while (newZK.getState() != States.CONNECTED &&
-      EnvironmentEdgeManager.currentTime() - start < 1000) {
+    while (newZK.getState() != States.CONNECTED
+        && EnvironmentEdgeManager.currentTime() - start < 1000) {
       Thread.sleep(1);
     }
     newZK.close();
@@ -2724,7 +2727,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @throws IOException if the FileSystem could not be set from the passed dfs cluster
    */
   public void setDFSCluster(MiniDFSCluster cluster, boolean requireDown)
-    throws IllegalStateException, IOException {
+      throws IllegalStateException, IOException {
     if (dfsCluster != null && requireDown && dfsCluster.isClusterUp()) {
       throw new IllegalStateException("DFSCluster is already running! Shut it down first.");
     }
@@ -2746,7 +2749,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void waitTableAvailable(TableName table, long timeoutMillis)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitFor(timeoutMillis, predicateTableAvailable(table));
   }
 
@@ -2756,30 +2759,30 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param timeoutMillis Timeout.
    */
   public void waitTableAvailable(byte[] table, long timeoutMillis)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitFor(timeoutMillis, predicateTableAvailable(TableName.valueOf(table)));
   }
 
   public String explainTableAvailability(TableName tableName) throws IOException {
     StringBuilder msg =
-      new StringBuilder(explainTableState(tableName, TableState.State.ENABLED)).append(", ");
+        new StringBuilder(explainTableState(tableName, TableState.State.ENABLED)).append(", ");
     if (getHBaseCluster().getMaster().isAlive()) {
       Map<RegionInfo, ServerName> assignments = getHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionAssignments();
+          .getRegionStates().getRegionAssignments();
       final List<Pair<RegionInfo, ServerName>> metaLocations =
-        MetaTableAccessor.getTableRegionsAndLocations(getConnection(), tableName);
+          MetaTableAccessor.getTableRegionsAndLocations(getConnection(), tableName);
       for (Pair<RegionInfo, ServerName> metaLocation : metaLocations) {
         RegionInfo hri = metaLocation.getFirst();
         ServerName sn = metaLocation.getSecond();
         if (!assignments.containsKey(hri)) {
           msg.append(", region ").append(hri)
-            .append(" not assigned, but found in meta, it expected to be on ").append(sn);
+              .append(" not assigned, but found in meta, it expected to be on ").append(sn);
         } else if (sn == null) {
           msg.append(",  region ").append(hri).append(" assigned,  but has no server in meta");
         } else if (!sn.equals(assignments.get(hri))) {
           msg.append(",  region ").append(hri)
-            .append(" assigned,  but has different servers in meta and AM ( ").append(sn)
-            .append(" <> ").append(assignments.get(hri));
+              .append(" assigned,  but has different servers in meta and AM ( ").append(sn)
+              .append(" <> ").append(assignments.get(hri));
         }
       }
     }
@@ -2787,11 +2790,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public String explainTableState(final TableName table, TableState.State state)
-    throws IOException {
+      throws IOException {
     TableState tableState = MetaTableAccessor.getTableState(getConnection(), table);
     if (tableState == null) {
-      return "TableState in META: No table state in META for table " + table +
-        " last state in meta (including deleted is " + findLastTableState(table) + ")";
+      return "TableState in META: No table state in META for table " + table
+          + " last state in meta (including deleted is " + findLastTableState(table) + ")";
     } else if (!tableState.inStates(state)) {
       return "TableState in META: Not " + state + " state, but " + tableState;
     } else {
@@ -2840,7 +2843,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param timeoutMillis Time to wait on it being marked enabled.
    */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitTableEnabled(TableName.valueOf(table), timeoutMillis);
   }
 
@@ -2858,7 +2861,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void waitTableDisabled(TableName table, long millisTimeout)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitFor(millisTimeout, predicateTableDisabled(table));
   }
 
@@ -2868,7 +2871,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param timeoutMillis Time to wait on it being marked disabled.
    */
   public void waitTableDisabled(byte[] table, long timeoutMillis)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitTableDisabled(TableName.valueOf(table), timeoutMillis);
   }
 
@@ -2922,7 +2925,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return A new configuration instance with a different user set into it.
    */
   public static User getDifferentUser(final Configuration c, final String differentiatingSuffix)
-    throws IOException {
+      throws IOException {
     FileSystem currentfs = FileSystem.get(c);
     if (!(currentfs instanceof DistributedFileSystem) || User.isHBaseSecurityEnabled(c)) {
       return User.getCurrent();
@@ -2935,12 +2938,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static NavigableSet<String> getAllOnlineRegions(SingleProcessHBaseCluster cluster)
-    throws IOException {
+      throws IOException {
     NavigableSet<String> online = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       try {
         for (RegionInfo region : ProtobufUtil
-          .getOnlineRegions(rst.getRegionServer().getRSRpcServices())) {
+            .getOnlineRegions(rst.getRegionServer().getRSRpcServices())) {
           online.add(region.getRegionNameAsString());
         }
       } catch (RegionServerStoppedException e) {
@@ -2971,7 +2974,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         if (className.equals("DFSOutputStream")) {
           if (clazz.isInstance(stream)) {
             Field maxRecoveryErrorCountField =
-              stream.getClass().getDeclaredField("maxRecoveryErrorCount");
+                stream.getClass().getDeclaredField("maxRecoveryErrorCount");
             maxRecoveryErrorCountField.setAccessible(true);
             maxRecoveryErrorCountField.setInt(stream, max);
             break;
@@ -2989,7 +2992,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return true if the region is assigned false otherwise.
    */
   public boolean assignRegion(final RegionInfo regionInfo)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     final AssignmentManager am = getHBaseCluster().getMaster().getAssignmentManager();
     am.assign(regionInfo);
     return AssignmentTestingUtil.waitForAssignment(am, regionInfo);
@@ -3001,13 +3004,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param destServer destination server of the region
    */
   public void moveRegionAndWait(RegionInfo destRegion, ServerName destServer)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     HMaster master = getMiniHBaseCluster().getMaster();
     // TODO: Here we start the move. The move can take a while.
     getAdmin().move(destRegion.getEncodedNameAsBytes(), destServer);
     while (true) {
       ServerName serverName =
-        master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(destRegion);
+          master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(destRegion);
       if (serverName != null && serverName.equals(destServer)) {
         assertRegionOnServer(destRegion, serverName, 2000);
         break;
@@ -3042,11 +3045,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param timeout timeout, in milliseconds
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
-    throws IOException {
+      throws IOException {
     if (!TableName.isMetaTableName(tableName)) {
       try (final Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
-        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
-          timeout + "ms");
+        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = "
+            + timeout + "ms");
         waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
           @Override
           public String explainFailure() throws IOException {
@@ -3068,17 +3071,17 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
                   // (for fault tolerance testing).
                   tableFound = true;
                   byte[] server =
-                    r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+                      r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
                   if (server == null) {
                     return false;
                   } else {
                     byte[] startCode =
-                      r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+                        r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
                     ServerName serverName =
-                      ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
-                        Bytes.toLong(startCode));
-                    if (!getHBaseClusterInterface().isDistributedCluster() &&
-                      getHBaseCluster().isKilledRS(serverName)) {
+                        ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + ","
+                            + Bytes.toLong(startCode));
+                    if (!getHBaseClusterInterface().isDistributedCluster()
+                        && getHBaseCluster().isKilledRS(serverName)) {
                       return false;
                     }
                   }
@@ -3164,7 +3167,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * querying itself, and relies on StoreScanner.
    */
   public static List<Cell> getFromStoreFile(HStore store, byte[] row, NavigableSet<byte[]> columns)
-    throws IOException {
+      throws IOException {
     Get get = new Get(row);
     Map<byte[], NavigableSet<byte[]>> s = get.getFamilyMap();
     s.put(store.getColumnFamilyDescriptor().getName(), columns);
@@ -3173,14 +3176,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static void assertKVListsEqual(String additionalMsg, final List<? extends Cell> expected,
-    final List<? extends Cell> actual) {
+      final List<? extends Cell> actual) {
     final int eLen = expected.size();
     final int aLen = actual.size();
     final int minLen = Math.min(eLen, aLen);
 
     int i = 0;
-    while (i < minLen &&
-      CellComparator.getInstance().compare(expected.get(i), actual.get(i)) == 0) {
+    while (i < minLen
+        && CellComparator.getInstance().compare(expected.get(i), actual.get(i)) == 0) {
       i++;
     }
 
@@ -3192,9 +3195,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
 
     if (eLen != aLen || i != minLen) {
-      throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": " +
-        safeGetAsStr(expected, i) + " (length " + eLen + ") vs. " + safeGetAsStr(actual, i) +
-        " (length " + aLen + ")" + additionalMsg);
+      throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": "
+          + safeGetAsStr(expected, i) + " (length " + eLen + ") vs. " + safeGetAsStr(actual, i)
+          + " (length " + aLen + ")" + additionalMsg);
     }
   }
 
@@ -3207,20 +3210,20 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public String getClusterKey() {
-    return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
-      conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":" +
-      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
+        + ":"
+        + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
   }
 
   /**
    * Creates a random table with the given parameters
    */
   public Table createRandomTable(TableName tableName, final Collection<String> families,
-    final int maxVersions, final int numColsPerRow, final int numFlushes, final int numRegions,
-    final int numRowsPerFlush) throws IOException, InterruptedException {
-    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions + " regions, " +
-      numFlushes + " storefiles per region, " + numRowsPerFlush + " rows per flush, maxVersions=" +
-      maxVersions + "\n");
+      final int maxVersions, final int numColsPerRow, final int numFlushes, final int numRegions,
+      final int numRowsPerFlush) throws IOException, InterruptedException {
+    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions + " regions, "
+        + numFlushes + " storefiles per region, " + numRowsPerFlush
+        + " rows per flush, maxVersions=" + maxVersions + "\n");
 
     final Random rand = new Random(tableName.hashCode() * 17L + 12938197137L);
     final int numCF = families.size();
@@ -3261,8 +3264,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           final byte[] qual = Bytes.toBytes("col" + iCol);
           if (rand.nextBoolean()) {
             final byte[] value =
-              Bytes.toBytes("value_for_row_" + iRow + "_cf_" + Bytes.toStringBinary(cf) + "_col_" +
-                iCol + "_ts_" + ts + "_random_" + rand.nextLong());
+                Bytes.toBytes("value_for_row_" + iRow + "_cf_" + Bytes.toStringBinary(cf) + "_col_"
+                    + iCol + "_ts_" + ts + "_random_" + rand.nextLong());
             put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
             del.addColumn(cf, qual, ts);
@@ -3329,8 +3332,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding)
-    throws IOException {
+      byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding)
+      throws IOException {
     return createPreSplitLoadTestTable(conf, tableName, columnFamily, compression,
       dataBlockEncoding, DEFAULT_REGIONS_PER_SERVER, 1, Durability.USE_DEFAULT);
   }
@@ -3341,13 +3344,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
+      byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding,
+      int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setDurability(durability);
     builder.setRegionReplication(regionReplication);
     ColumnFamilyDescriptorBuilder cfBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(columnFamily);
+        ColumnFamilyDescriptorBuilder.newBuilder(columnFamily);
     cfBuilder.setDataBlockEncoding(dataBlockEncoding);
     cfBuilder.setCompressionType(compression);
     return createPreSplitLoadTestTable(conf, builder.build(), cfBuilder.build(),
@@ -3360,15 +3363,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[][] columnFamilies, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
+      byte[][] columnFamilies, Algorithm compression, DataBlockEncoding dataBlockEncoding,
+      int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setDurability(durability);
     builder.setRegionReplication(regionReplication);
     ColumnFamilyDescriptor[] hcds = new ColumnFamilyDescriptor[columnFamilies.length];
     for (int i = 0; i < columnFamilies.length; i++) {
       ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(columnFamilies[i]);
+          ColumnFamilyDescriptorBuilder.newBuilder(columnFamilies[i]);
       cfBuilder.setDataBlockEncoding(dataBlockEncoding);
       cfBuilder.setCompressionType(compression);
       hcds[i] = cfBuilder.build();
@@ -3382,7 +3385,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd) throws IOException {
+      ColumnFamilyDescriptor hcd) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
   }
 
@@ -3392,7 +3395,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd, int numRegionsPerServer) throws IOException {
+      ColumnFamilyDescriptor hcd, int numRegionsPerServer) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, new ColumnFamilyDescriptor[] { hcd },
       numRegionsPerServer);
   }
@@ -3403,7 +3406,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+      ColumnFamilyDescriptor[] hcds, int numRegionsPerServer) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcds, new RegionSplitter.HexStringSplit(),
       numRegionsPerServer);
   }
@@ -3414,8 +3417,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor td,
-    ColumnFamilyDescriptor[] cds, SplitAlgorithm splitter, int numRegionsPerServer)
-    throws IOException {
+      ColumnFamilyDescriptor[] cds, SplitAlgorithm splitter, int numRegionsPerServer)
+      throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(td);
     for (ColumnFamilyDescriptor cd : cds) {
       if (!td.hasColumnFamily(cd.getName())) {
@@ -3437,9 +3440,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
 
       totalNumberOfRegions = numberOfServers * numRegionsPerServer;
-      LOG.info(
-        "Number of live regionservers: " + numberOfServers + ", " + "pre-splitting table into " +
-          totalNumberOfRegions + " regions " + "(regions per server: " + numRegionsPerServer + ")");
+      LOG.info("Number of live regionservers: " + numberOfServers + ", "
+          + "pre-splitting table into " + totalNumberOfRegions + " regions "
+          + "(regions per server: " + numRegionsPerServer + ")");
 
       byte[][] splits = splitter.split(totalNumberOfRegions);
 
@@ -3467,7 +3470,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * yet, after the assignment znode is deleted and the new assignment is recorded in master.
    */
   public void assertRegionOnServer(final RegionInfo hri, final ServerName server,
-    final long timeout) throws IOException, InterruptedException {
+      final long timeout) throws IOException, InterruptedException {
     long timeoutTime = EnvironmentEdgeManager.currentTime() + timeout;
     while (true) {
       List<RegionInfo> regions = getAdmin().getRegions(server);
@@ -3483,13 +3486,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Check to make sure the region is open on the specified region server, but not on any other one.
    */
   public void assertRegionOnlyOnServer(final RegionInfo hri, final ServerName server,
-    final long timeout) throws IOException, InterruptedException {
+      final long timeout) throws IOException, InterruptedException {
     long timeoutTime = EnvironmentEdgeManager.currentTime() + timeout;
     while (true) {
       List<RegionInfo> regions = getAdmin().getRegions(server);
       if (regions.stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0)) {
         List<JVMClusterUtil.RegionServerThread> rsThreads =
-          getHBaseCluster().getLiveRegionServerThreads();
+            getHBaseCluster().getLiveRegionServerThreads();
         for (JVMClusterUtil.RegionServerThread rsThread : rsThreads) {
           HRegionServer rs = rsThread.getRegionServer();
           if (server.equals(rs.getServerName())) {
@@ -3512,15 +3515,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd) throws IOException {
     TableDescriptor td =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), td);
   }
 
   public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd,
-    BlockCache blockCache) throws IOException {
+      BlockCache blockCache) throws IOException {
     TableDescriptor td =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), td, blockCache);
   }
@@ -3537,7 +3540,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       @Override
       public String explainFailure() throws IOException {
         final RegionStates regionStates =
-          getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+            getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
         return "found in transition: " + regionStates.getRegionsInTransition().toString();
       }
 
@@ -3603,10 +3606,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           try (Table table = getConnection().getTable(tableName)) {
             TableDescriptor htd = table.getDescriptor();
             for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
-              .getAllRegionLocations()) {
+                .getAllRegionLocations()) {
               Scan scan = new Scan().withStartRow(loc.getRegion().getStartKey())
-                .withStopRow(loc.getRegion().getEndKey()).setOneRowLimit()
-                .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
+                  .withStopRow(loc.getRegion().getEndKey()).setOneRowLimit()
+                  .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
               for (byte[] family : htd.getColumnFamilyNames()) {
                 scan.addFamily(family);
               }
@@ -3689,7 +3692,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         for (BloomType bloomType : BloomType.values()) {
           String name = String.format("%s-cf-!@#&-%d!@#", prefix, familyId);
           ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(name));
+              ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(name));
           columnFamilyDescriptorBuilder.setCompressionType(compressionType);
           columnFamilyDescriptorBuilder.setDataBlockEncoding(encodingType);
           columnFamilyDescriptorBuilder.setBloomFilterType(bloomType);
@@ -3790,7 +3793,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public int getNumHFilesForRS(final HRegionServer rs, final TableName tableName,
-    final byte[] family) {
+      final byte[] family) {
     int numHFiles = 0;
     for (Region region : rs.getRegions(tableName)) {
       numHFiles += region.getStore(family).getStorefilesCount();
@@ -3804,7 +3807,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Collection<ColumnFamilyDescriptor> rtdFamilies = Arrays.asList(rtd.getColumnFamilies());
     assertEquals(ltdFamilies.size(), rtdFamilies.size());
     for (Iterator<ColumnFamilyDescriptor> it = ltdFamilies.iterator(),
-      it2 = rtdFamilies.iterator(); it.hasNext();) {
+        it2 = rtdFamilies.iterator(); it.hasNext();) {
       assertEquals(0, ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
     }
   }
@@ -3814,7 +3817,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * invocations.
    */
   public static void await(final long sleepMillis, final BooleanSupplier condition)
-    throws InterruptedException {
+      throws InterruptedException {
     try {
       while (!condition.getAsBoolean()) {
         Thread.sleep(sleepMillis);

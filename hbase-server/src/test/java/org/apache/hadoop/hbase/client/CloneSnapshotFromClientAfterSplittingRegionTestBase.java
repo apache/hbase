@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,26 +54,26 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Clone the snapshot to another table
       TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+          TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
       verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
 
       RegionStates regionStates =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+          TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
 
       // The region count of the cloned table should be the same as the one of the original table
       int openRegionCountOfOriginalTable =
-        regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN).size();
+          regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN).size();
       int openRegionCountOfClonedTable =
-        regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.OPEN).size();
+          regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.OPEN).size();
       assertEquals(openRegionCountOfOriginalTable, openRegionCountOfClonedTable);
 
       int splitRegionCountOfOriginalTable =
-        regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.SPLIT).size();
+          regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.SPLIT).size();
       int splitRegionCountOfClonedTable =
-        regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.SPLIT).size();
+          regionStates.getRegionByStateOfTable(clonedTableName).get(RegionState.State.SPLIT).size();
       assertEquals(splitRegionCountOfOriginalTable, splitRegionCountOfClonedTable);
 
       TEST_UTIL.deleteTable(clonedTableName);
@@ -84,7 +84,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
   @Test
   public void testCloneSnapshotBeforeSplittingRegionAndDroppingTable()
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
 
@@ -94,7 +94,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Clone the snapshot to another table
       TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+          TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 

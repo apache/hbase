@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
@@ -48,13 +47,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
- * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}.
- *
- * Snapshot v1 layout format
- *  - Each region in the table is represented by a directory with the .hregioninfo file
- *      /snapshotName/regionName/.hregioninfo
- *  - Each file present in the table is represented by an empty file
- *      /snapshotName/regionName/familyName/fileName
+ * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}. Snapshot v1 layout format - Each region in the
+ * table is represented by a directory with the .hregioninfo file
+ * /snapshotName/regionName/.hregioninfo - Each file present in the table is represented by an empty
+ * file /snapshotName/regionName/familyName/fileName
  */
 @InterfaceAudience.Private
 public final class SnapshotManifestV1 {
@@ -65,8 +61,7 @@ public final class SnapshotManifestV1 {
   private SnapshotManifestV1() {
   }
 
-  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<
-                                                          HRegionFileSystem, Path> {
+  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<HRegionFileSystem, Path> {
     private final Configuration conf;
     private final Path snapshotDir;
     private final FileSystem rootFs;
@@ -82,8 +77,8 @@ public final class SnapshotManifestV1 {
 
     @Override
     public HRegionFileSystem regionOpen(final RegionInfo regionInfo) throws IOException {
-      HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        workingDirFs, snapshotDir, regionInfo);
+      HRegionFileSystem snapshotRegionFs =
+          HRegionFileSystem.createRegionOnFileSystem(conf, workingDirFs, snapshotDir, regionInfo);
       return snapshotRegionFs;
     }
 
@@ -110,8 +105,8 @@ public final class SnapshotManifestV1 {
         // write the Reference object to the snapshot
         storeFile.getReference().write(workingDirFs, referenceFile);
       } else {
-        // create "reference" to this store file.  It is intentionally an empty file -- all
-        // necessary information is captured by its fs location and filename.  This allows us to
+        // create "reference" to this store file. It is intentionally an empty file -- all
+        // necessary information is captured by its fs location and filename. This allows us to
         // only figure out what needs to be done via a single nn operation (instead of having to
         // open and read the files as well).
         success = workingDirFs.createNewFile(referenceFile);
@@ -123,18 +118,18 @@ public final class SnapshotManifestV1 {
   }
 
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
-      final Executor executor,final FileSystem fs, final Path snapshotDir,
+      final Executor executor, final FileSystem fs, final Path snapshotDir,
       final SnapshotDescription desc) throws IOException {
     FileStatus[] regions =
-      CommonFSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
+        CommonFSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
       LOG.debug("No regions under directory:" + snapshotDir);
       return null;
     }
 
     final ExecutorCompletionService<SnapshotRegionManifest> completionService =
-      new ExecutorCompletionService<>(executor);
-    for (final FileStatus region: regions) {
+        new ExecutorCompletionService<>(executor);
+    for (final FileStatus region : regions) {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
@@ -163,10 +158,10 @@ public final class SnapshotManifestV1 {
     fs.delete(new Path(snapshotDir, regionName), true);
   }
 
-  static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final RegionInfo regionInfo) throws IOException {
-    HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-          tableDir, regionInfo, true);
+  static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf, final FileSystem fs,
+      final Path tableDir, final RegionInfo regionInfo) throws IOException {
+    HRegionFileSystem regionFs =
+        HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, true);
     SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
 
     // 1. dump region meta info into the snapshot directory
@@ -183,7 +178,7 @@ public final class SnapshotManifestV1 {
     // files/batch, far more than the number of store files under a single column family.
     Collection<String> familyNames = regionFs.getFamilies();
     if (familyNames != null) {
-      for (String familyName: familyNames) {
+      for (String familyName : familyNames) {
         Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName, false);
         if (storeFiles == null) {
           LOG.debug("No files under family: " + familyName);
@@ -192,21 +187,21 @@ public final class SnapshotManifestV1 {
 
         // 2.1. build the snapshot reference for the store
         SnapshotRegionManifest.FamilyFiles.Builder family =
-              SnapshotRegionManifest.FamilyFiles.newBuilder();
+            SnapshotRegionManifest.FamilyFiles.newBuilder();
         family.setFamilyName(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(familyName)));
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+          LOG.debug("Adding snapshot references for " + storeFiles + " hfiles");
         }
 
         // 2.2. iterate through all the store's files and create "references".
         int i = 0;
         int sz = storeFiles.size();
-        for (StoreFileInfo storeFile: storeFiles) {
+        for (StoreFileInfo storeFile : storeFiles) {
           // create "reference" to this store file.
-          LOG.debug("Adding reference for file ("+ (++i) +"/" + sz + "): " + storeFile.getPath());
+          LOG.debug("Adding reference for file (" + (++i) + "/" + sz + "): " + storeFile.getPath());
           SnapshotRegionManifest.StoreFile.Builder sfManifest =
-                SnapshotRegionManifest.StoreFile.newBuilder();
+              SnapshotRegionManifest.StoreFile.newBuilder();
           sfManifest.setName(storeFile.getPath().getName());
           family.addStoreFiles(sfManifest.build());
         }

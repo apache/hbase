@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class TableSkewCostFunction extends CostFunction {
   private static final String TABLE_SKEW_COST_KEY =
-    "hbase.master.balancer.stochastic.tableSkewCost";
+      "hbase.master.balancer.stochastic.tableSkewCost";
   private static final float DEFAULT_TABLE_SKEW_COST = 35;
   DoubleArrayCost[] costsPerTable;
 

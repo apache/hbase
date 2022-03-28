@@ -105,8 +105,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public String getPeerId() {
     String[] parts = peerClusterId.split("-", 2);
-    return parts.length != 1 ?
-        parts[0] : peerClusterId;
+    return parts.length != 1 ? parts[0] : peerClusterId;
   }
 
   @Override

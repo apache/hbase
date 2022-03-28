@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
@@ -59,7 +58,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionProcedureStore.class);
+      HBaseClassTestRule.forClass(TestRegionProcedureStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionProcedureStore.class);
 
@@ -128,24 +127,24 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
     // the row should still be there
     assertTrue(store.region
-      .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
+        .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
     assertTrue(store.region
-      .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
+        .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
 
     // proc2 will be deleted after cleanup, but proc3 should still be there as it holds the max proc
     // id
     store.cleanup();
     assertTrue(store.region
-      .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
+        .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
     assertFalse(store.region
-      .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
+        .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
 
     RegionProcedureStoreTestProcedure proc4 = new RegionProcedureStoreTestProcedure();
     store.insert(proc4, null);
     store.cleanup();
     // proc3 should also be deleted as now proc4 holds the max proc id
     assertFalse(store.region
-      .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
+        .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
   }
 
   /**
@@ -228,7 +227,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
-        String error) {
+          String error) {
       }
 
       @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class TestStoreFileListFile {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileListFile.class);
+      HBaseClassTestRule.forClass(TestStoreFileListFile.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileListFile.class);
 
@@ -74,7 +74,7 @@ public class TestStoreFileListFile {
     HRegionFileSystem hfs = mock(HRegionFileSystem.class);
     when(hfs.getFileSystem()).thenReturn(FileSystem.get(UTIL.getConfiguration()));
     StoreContext ctx = StoreContext.getBuilder().withFamilyStoreDirectoryPath(testDir)
-      .withRegionFileSystem(hfs).build();
+        .withRegionFileSystem(hfs).build();
     return new StoreFileListFile(ctx);
   }
 
@@ -206,12 +206,12 @@ public class TestStoreFileListFile {
 
     StoreFileListFile storeFileListFile2 = create();
     storeFileListFile2.update(StoreFileList.newBuilder()
-      .addStoreFile(StoreFileEntry.newBuilder().setName("hehe").setSize(10).build()));
+        .addStoreFile(StoreFileEntry.newBuilder().setName("hehe").setSize(10).build()));
 
     // let's update storeFileListFile several times
     for (int i = 0; i < 10; i++) {
       storeFileListFile.update(StoreFileList.newBuilder()
-        .addStoreFile(StoreFileEntry.newBuilder().setName("haha-" + i).setSize(100 + i).build()));
+          .addStoreFile(StoreFileEntry.newBuilder().setName("haha-" + i).setSize(100 + i).build()));
     }
 
     // create a new list file, make sure we load the list generate by storeFileListFile2.

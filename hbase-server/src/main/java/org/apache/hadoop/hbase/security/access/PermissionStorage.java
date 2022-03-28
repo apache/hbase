@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.ByteArrayInputStream;
@@ -78,14 +77,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 
 /**
- * Maintains lists of permission grants to users and groups to allow for
- * authorization checks by {@link AccessController}.
- *
+ * Maintains lists of permission grants to users and groups to allow for authorization checks by
+ * {@link AccessController}.
  * <p>
- * Access control lists are stored in an "internal" metadata table named
- * {@code _acl_}. Each table's permission grants are stored as a separate row,
- * keyed by the table name. KeyValues for permissions assignments are stored
- * in one of the formats:
+ * Access control lists are stored in an "internal" metadata table named {@code _acl_}. Each table's
+ * permission grants are stored as a separate row, keyed by the table name. KeyValues for
+ * permissions assignments are stored in one of the formats:
+ * 
  * <pre>
  * Key                      Desc
  * --------                 --------
@@ -116,8 +114,8 @@ public final class PermissionStorage {
   public static final char NAMESPACE_PREFIX = '@';
 
   /**
-   * Delimiter to separate user, column family, and qualifier in
-   * _acl_ table info: column keys */
+   * Delimiter to separate user, column family, and qualifier in _acl_ table info: column keys
+   */
   public static final char ACL_KEY_DELIMITER = ',';
 
   private static final Logger LOG = LoggerFactory.getLogger(PermissionStorage.class);
@@ -147,7 +145,7 @@ public final class PermissionStorage {
     }
 
     Set<Permission.Action> actionSet = new TreeSet<Permission.Action>();
-    if(mergeExistingPermissions){
+    if (mergeExistingPermissions) {
       List<UserPermission> perms = getUserPermissions(conf, rowKey, null, null, null, false);
       UserPermission currentPerm = null;
       for (UserPermission perm : perms) {
@@ -157,7 +155,7 @@ public final class PermissionStorage {
         }
       }
 
-      if (currentPerm != null && currentPerm.getPermission().getActions() != null){
+      if (currentPerm != null && currentPerm.getPermission().getActions() != null) {
         actionSet.addAll(Arrays.asList(currentPerm.getPermission().getActions()));
       }
     }
@@ -171,14 +169,9 @@ public final class PermissionStorage {
     for (Permission.Action action : actionSet) {
       value[index++] = action.code();
     }
-    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-        .setRow(p.getRow())
-        .setFamily(ACL_LIST_FAMILY)
-        .setQualifier(key)
-        .setTimestamp(p.getTimestamp())
-        .setType(Type.Put)
-        .setValue(value)
-        .build());
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
+        .setFamily(ACL_LIST_FAMILY).setQualifier(key).setTimestamp(p.getTimestamp())
+        .setType(Type.Put).setValue(value).build());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Writing permission with rowKey " + Bytes.toString(rowKey) + " "
           + Bytes.toString(key) + ": " + Bytes.toStringBinary(value));
@@ -191,19 +184,17 @@ public final class PermissionStorage {
   }
 
   static void addUserPermission(Configuration conf, UserPermission userPerm, Table t)
-          throws IOException{
+      throws IOException {
     addUserPermission(conf, userPerm, t, false);
   }
 
   /**
-   * Removes a previously granted permission from the stored access control
-   * lists.  The {@link TablePermission} being removed must exactly match what
-   * is stored -- no wildcard matching is attempted.  Ie, if user "bob" has
-   * been granted "READ" access to the "data" table, but only to column family
-   * plus qualifier "info:colA", then trying to call this method with only
-   * user "bob" and the table name "data" (but without specifying the
-   * column qualifier "info:colA") will have no effect.
-   *
+   * Removes a previously granted permission from the stored access control lists. The
+   * {@link TablePermission} being removed must exactly match what is stored -- no wildcard matching
+   * is attempted. Ie, if user "bob" has been granted "READ" access to the "data" table, but only to
+   * column family plus qualifier "info:colA", then trying to call this method with only user "bob"
+   * and the table name "data" (but without specifying the column qualifier "info:colA") will have
+   * no effect.
    * @param conf the configuration
    * @param userPerm the details of the permission to be revoked
    * @param t acl table
@@ -211,14 +202,13 @@ public final class PermissionStorage {
    */
   public static void removeUserPermission(Configuration conf, UserPermission userPerm, Table t)
       throws IOException {
-    if (null == userPerm.getPermission().getActions() ||
-        userPerm.getPermission().getActions().length == 0) {
+    if (null == userPerm.getPermission().getActions()
+        || userPerm.getPermission().getActions().length == 0) {
       removePermissionRecord(conf, userPerm, t);
     } else {
       // Get all the global user permissions from the acl table
-      List<UserPermission> permsList =
-        getUserPermissions(conf, userPermissionRowKey(userPerm.getPermission()),
-          null, null, null, false);
+      List<UserPermission> permsList = getUserPermissions(conf,
+        userPermissionRowKey(userPerm.getPermission()), null, null, null, false);
       List<Permission.Action> remainingActions = new ArrayList<>();
       List<Permission.Action> dropActions = Arrays.asList(userPerm.getPermission().getActions());
       for (UserPermission perm : permsList) {
@@ -241,7 +231,7 @@ public final class PermissionStorage {
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed permission "+ userPerm.toString());
+      LOG.debug("Removed permission " + userPerm.toString());
     }
   }
 
@@ -260,12 +250,12 @@ public final class PermissionStorage {
    * Remove specified table from the _acl_ table.
    */
   static void removeTablePermissions(Configuration conf, TableName tableName, Table t)
-      throws IOException{
+      throws IOException {
     Delete d = new Delete(tableName.getName());
     d.addFamily(ACL_LIST_FAMILY);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed table "+ tableName);
+      LOG.debug("Removing permissions of removed table " + tableName);
     }
     try {
       t.delete(d);
@@ -278,11 +268,11 @@ public final class PermissionStorage {
    * Remove specified namespace from the acl table.
    */
   static void removeNamespacePermissions(Configuration conf, String namespace, Table t)
-      throws IOException{
+      throws IOException {
     Delete d = new Delete(Bytes.toBytes(toNamespaceEntry(namespace)));
     d.addFamily(ACL_LIST_FAMILY);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed namespace "+ namespace);
+      LOG.debug("Removing permissions of removed namespace " + namespace);
     }
 
     try {
@@ -298,10 +288,9 @@ public final class PermissionStorage {
     scan.addFamily(ACL_LIST_FAMILY);
 
     String columnName = Bytes.toString(column);
-    scan.setFilter(new QualifierFilter(CompareOperator.EQUAL, new RegexStringComparator(
-        String.format("(%s%s%s)|(%s%s)$",
-            ACL_KEY_DELIMITER, columnName, ACL_KEY_DELIMITER,
-            ACL_KEY_DELIMITER, columnName))));
+    scan.setFilter(new QualifierFilter(CompareOperator.EQUAL,
+        new RegexStringComparator(String.format("(%s%s%s)|(%s%s)$", ACL_KEY_DELIMITER, columnName,
+          ACL_KEY_DELIMITER, ACL_KEY_DELIMITER, columnName))));
 
     Set<byte[]> qualifierSet = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     ResultScanner scanner = null;
@@ -336,8 +325,8 @@ public final class PermissionStorage {
   static void removeTablePermissions(Configuration conf, TableName tableName, byte[] column,
       Table t) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed column " + Bytes.toString(column) +
-          " from table "+ tableName);
+      LOG.debug("Removing permissions of removed column " + Bytes.toString(column) + " from table "
+          + tableName);
     }
     removeTablePermissions(tableName, column, t, true);
   }
@@ -358,10 +347,7 @@ public final class PermissionStorage {
   }
 
   /**
-   * Build qualifier key from user permission:
-   *  username
-   *  username,family
-   *  username,family,qualifier
+   * Build qualifier key from user permission: username username,family username,family,qualifier
    */
   static byte[] userPermissionKey(UserPermission permission) {
     byte[] key = Bytes.toBytes(permission.getUser());
@@ -374,9 +360,9 @@ public final class PermissionStorage {
     }
 
     if (family != null && family.length > 0) {
-      key = Bytes.add(key, Bytes.add(new byte[]{ACL_KEY_DELIMITER}, family));
+      key = Bytes.add(key, Bytes.add(new byte[] { ACL_KEY_DELIMITER }, family));
       if (qualifier != null && qualifier.length > 0) {
-        key = Bytes.add(key, Bytes.add(new byte[]{ACL_KEY_DELIMITER}, qualifier));
+        key = Bytes.add(key, Bytes.add(new byte[] { ACL_KEY_DELIMITER }, qualifier));
       }
     }
 
@@ -384,8 +370,7 @@ public final class PermissionStorage {
   }
 
   /**
-   * Returns {@code true} if the given region is part of the {@code _acl_}
-   * metadata table.
+   * Returns {@code true} if the given region is part of the {@code _acl_} metadata table.
    */
   static boolean isAclRegion(Region region) {
     return ACL_TABLE_NAME.equals(region.getTableDescriptor().getTableName());
@@ -399,9 +384,7 @@ public final class PermissionStorage {
   }
 
   /**
-   * Loads all of the permission grants stored in a region of the {@code _acl_}
-   * table.
-   *
+   * Loads all of the permission grants stored in a region of the {@code _acl_} table.
    * @param aclRegion the acl region
    * @return a map of the permissions for this table.
    * @throws IOException if an error occurs
@@ -409,11 +392,11 @@ public final class PermissionStorage {
   static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Region aclRegion)
       throws IOException {
     if (!isAclRegion(aclRegion)) {
-      throw new IOException("Can only load permissions from "+ACL_TABLE_NAME);
+      throw new IOException("Can only load permissions from " + ACL_TABLE_NAME);
     }
 
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-      new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+        new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_ table
 
@@ -459,13 +442,13 @@ public final class PermissionStorage {
   }
 
   /**
-   * Load all permissions from the region server holding {@code _acl_},
-   * primarily intended for testing purposes.
+   * Load all permissions from the region server holding {@code _acl_}, primarily intended for
+   * testing purposes.
    */
-  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(
-      Configuration conf) throws IOException {
+  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Configuration conf)
+      throws IOException {
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-      new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+        new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_, filtering on only first table region rows
 
@@ -624,10 +607,8 @@ public final class PermissionStorage {
     byte[] key = CellUtil.cloneQualifier(kv);
     byte[] value = CellUtil.cloneValue(kv);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Read acl: entry[" +
-        Bytes.toStringBinary(entryName) + "], kv [" +
-        Bytes.toStringBinary(key) + ": " +
-        Bytes.toStringBinary(value)+"]");
+      LOG.debug("Read acl: entry[" + Bytes.toStringBinary(entryName) + "], kv ["
+          + Bytes.toStringBinary(key) + ": " + Bytes.toStringBinary(value) + "]");
     }
 
     // check for a column family appended to the key
@@ -670,13 +651,13 @@ public final class PermissionStorage {
     int idx = username.indexOf(ACL_KEY_DELIMITER);
     byte[] permFamily = null;
     byte[] permQualifier = null;
-    if (idx > 0 && idx < username.length()-1) {
-      String remainder = username.substring(idx+1);
+    if (idx > 0 && idx < username.length() - 1) {
+      String remainder = username.substring(idx + 1);
       username = username.substring(0, idx);
       idx = remainder.indexOf(ACL_KEY_DELIMITER);
-      if (idx > 0 && idx < remainder.length()-1) {
+      if (idx > 0 && idx < remainder.length() - 1) {
         permFamily = Bytes.toBytes(remainder.substring(0, idx));
-        permQualifier = Bytes.toBytes(remainder.substring(idx+1));
+        permQualifier = Bytes.toBytes(remainder.substring(idx + 1));
       } else {
         permFamily = Bytes.toBytes(remainder);
       }
@@ -761,8 +742,8 @@ public final class PermissionStorage {
 
   private static final int WRITABLE_NOT_ENCODED = 0;
 
-  private static List<Permission> readWritableUserPermission(DataInput in,
-      Configuration conf) throws IOException, ClassNotFoundException {
+  private static List<Permission> readWritableUserPermission(DataInput in, Configuration conf)
+      throws IOException, ClassNotFoundException {
     assert WritableUtils.readVInt(in) == LIST_CODE;
     int length = in.readInt();
     List<Permission> list = new ArrayList<>(length);
@@ -784,7 +765,7 @@ public final class PermissionStorage {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
         AccessControlProtos.UsersAndPermissions.Builder builder =
-          AccessControlProtos.UsersAndPermissions.newBuilder();
+            AccessControlProtos.UsersAndPermissions.newBuilder();
         ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
         return AccessControlUtil.toUserPermission(builder.build());
       } catch (IOException e) {
@@ -811,13 +792,13 @@ public final class PermissionStorage {
     }
   }
 
-  public static ListMultimap<String, Permission> readPermissions(byte[] data,
-      Configuration conf) throws DeserializationException {
+  public static ListMultimap<String, Permission> readPermissions(byte[] data, Configuration conf)
+      throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
         AccessControlProtos.UsersAndPermissions.Builder builder =
-          AccessControlProtos.UsersAndPermissions.newBuilder();
+            AccessControlProtos.UsersAndPermissions.newBuilder();
         ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
         return AccessControlUtil.toPermission(builder.build());
       } catch (IOException e) {
@@ -850,7 +831,7 @@ public final class PermissionStorage {
   }
 
   public static boolean isNamespaceEntry(byte[] entryName) {
-    return entryName != null && entryName.length !=0 && entryName[0] == NAMESPACE_PREFIX;
+    return entryName != null && entryName.length != 0 && entryName[0] == NAMESPACE_PREFIX;
   }
 
   public static boolean isTableEntry(byte[] entryName) {
@@ -869,16 +850,16 @@ public final class PermissionStorage {
   }
 
   public static byte[] toNamespaceEntry(byte[] namespace) {
-    byte[] ret = new byte[namespace.length+1];
+    byte[] ret = new byte[namespace.length + 1];
     ret[0] = NAMESPACE_PREFIX;
     System.arraycopy(namespace, 0, ret, 1, namespace.length);
     return ret;
   }
 
   public static byte[] fromNamespaceEntry(byte[] namespace) {
-    if(namespace[0] != NAMESPACE_PREFIX) {
-      throw new IllegalArgumentException("Argument is not a valid namespace entry: " +
-          Bytes.toString(namespace));
+    if (namespace[0] != NAMESPACE_PREFIX) {
+      throw new IllegalArgumentException(
+          "Argument is not a valid namespace entry: " + Bytes.toString(namespace));
     }
     return Arrays.copyOfRange(namespace, 1, namespace.length);
   }
@@ -905,7 +886,7 @@ public final class PermissionStorage {
         } else {
           ProtobufUtil.mergeFrom(builder, Tag.cloneValue(tag));
         }
-        ListMultimap<String,Permission> kvPerms =
+        ListMultimap<String, Permission> kvPerms =
             AccessControlUtil.toUsersAndPermissions(builder.build());
         // Are there permissions for this user?
         List<Permission> userPerms = kvPerms.get(user.getShortName());

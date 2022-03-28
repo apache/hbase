@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -195,8 +194,8 @@ public class RemoteHTable implements Table {
         } else {
           throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
         }
-        kvs
-          .add(new KeyValue(row.getKey(), column, qualifier, cell.getTimestamp(), cell.getValue()));
+        kvs.add(
+          new KeyValue(row.getKey(), column, qualifier, cell.getTimestamp(), cell.getValue()));
       }
       results.add(Result.create(kvs));
     }
@@ -209,7 +208,8 @@ public class RemoteHTable implements Table {
     for (List<Cell> cells : put.getFamilyCellMap().values()) {
       for (Cell cell : cells) {
         row.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
-          ts != HConstants.LATEST_TIMESTAMP ? ts : cell.getTimestamp(), CellUtil.cloneValue(cell)));
+            ts != HConstants.LATEST_TIMESTAMP ? ts : cell.getTimestamp(),
+            CellUtil.cloneValue(cell)));
       }
     }
     CellSetModel model = new CellSetModel();
@@ -365,7 +365,7 @@ public class RemoteHTable implements Table {
     sb.append(toURLEncodedBytes(put.getRow()));
     for (int i = 0; i < maxRetries; i++) {
       Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
         case 200:
@@ -420,7 +420,7 @@ public class RemoteHTable implements Table {
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
       Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
         case 200:
@@ -521,7 +521,7 @@ public class RemoteHTable implements Table {
       sb.append("scanner");
       for (int i = 0; i < maxRetries; i++) {
         Response response =
-          client.post(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+            client.post(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
         int code = response.getCode();
         switch (code) {
           case 201:
@@ -679,7 +679,7 @@ public class RemoteHTable implements Table {
 
     for (int i = 0; i < maxRetries; i++) {
       Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
         case 200:
@@ -715,7 +715,7 @@ public class RemoteHTable implements Table {
 
     for (int i = 0; i < maxRetries; i++) {
       Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
         case 200:
@@ -873,8 +873,8 @@ public class RemoteHTable implements Table {
 
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
-        " an empty byte array, or just do not call this method if you want a null qualifier");
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using"
+          + " an empty byte array, or just do not call this method if you want a null qualifier");
       return this;
     }
 
@@ -886,7 +886,7 @@ public class RemoteHTable implements Table {
     @Override
     public CheckAndMutateBuilder ifNotExists() {
       throw new UnsupportedOperationException(
-        "CheckAndMutate for non-equal comparison " + "not implemented");
+          "CheckAndMutate for non-equal comparison " + "not implemented");
     }
 
     @Override
@@ -896,7 +896,7 @@ public class RemoteHTable implements Table {
         return this;
       } else {
         throw new UnsupportedOperationException(
-          "CheckAndMutate for non-equal comparison " + "not implemented");
+            "CheckAndMutate for non-equal comparison " + "not implemented");
       }
     }
 

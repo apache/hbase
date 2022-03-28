@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,7 +85,7 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
     ReplaySyncReplicationWALParameter param =
-      ReplaySyncReplicationWALParameter.parseFrom(parameter);
+        ReplaySyncReplicationWALParameter.parseFrom(parameter);
     this.peerId = param.getPeerId();
     param.getWalList().forEach(this.wals::add);
     this.batchSize = rs.getConfiguration().getLong(REPLAY_SYNC_REPLICATION_WAL_BATCH_SIZE,
@@ -104,9 +104,9 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
             .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
         ReplicateWALEntryRequest request = pair.getFirst();
-        rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
-            pair.getSecond(), request.getReplicationClusterId(),
-            request.getSourceBaseNamespaceDirPath(), request.getSourceHFileArchiveDirPath());
+        rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(), pair.getSecond(),
+          request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
+          request.getSourceHFileArchiveDirPath());
         // Read next entries.
         entries = readWALEntries(reader);
       }

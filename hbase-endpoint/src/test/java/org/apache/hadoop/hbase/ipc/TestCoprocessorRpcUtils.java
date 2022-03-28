@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,13 +40,11 @@ public class TestCoprocessorRpcUtils {
   @Test
   public void testServiceName() throws Exception {
     // verify that we de-namespace build in HBase rpc services
-    ServiceDescriptor authService =
-        AuthenticationProtos.AuthenticationService.getDescriptor();
+    ServiceDescriptor authService = AuthenticationProtos.AuthenticationService.getDescriptor();
     assertEquals(authService.getName(), CoprocessorRpcUtils.getServiceName(authService));
 
     // non-hbase rpc services should remain fully qualified
-    ServiceDescriptor dummyService =
-        DummyRegionServerEndpointProtos.DummyService.getDescriptor();
+    ServiceDescriptor dummyService = DummyRegionServerEndpointProtos.DummyService.getDescriptor();
     assertEquals(dummyService.getFullName(), CoprocessorRpcUtils.getServiceName(dummyService));
   }
 }

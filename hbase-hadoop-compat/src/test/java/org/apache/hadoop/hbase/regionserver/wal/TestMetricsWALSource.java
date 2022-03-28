@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public class TestMetricsWALSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsWALSource.class);
+      HBaseClassTestRule.forClass(TestMetricsWALSource.class);
 
   @Test
   public void testGetInstance() throws Exception {

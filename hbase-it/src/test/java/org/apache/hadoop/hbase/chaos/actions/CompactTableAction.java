@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -39,14 +38,14 @@ public class CompactTableAction extends Action {
     this(-1, tableName, majorRatio);
   }
 
-  public CompactTableAction(
-      int sleepTime, TableName tableName, float majorRatio) {
+  public CompactTableAction(int sleepTime, TableName tableName, float majorRatio) {
     this.tableName = tableName;
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

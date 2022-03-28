@@ -53,8 +53,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class Replication implements ReplicationSourceService {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(Replication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
@@ -82,13 +81,13 @@ public class Replication implements ReplicationSourceService {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
-      ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
+        ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
     if (this.isReplicationForBulkLoadDataEnabled) {
       if (conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
           || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()) {
-        throw new IllegalArgumentException(HConstants.REPLICATION_CLUSTER_ID
-            + " cannot be null/empty when " + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
-            + " is set to true.");
+        throw new IllegalArgumentException(
+            HConstants.REPLICATION_CLUSTER_ID + " cannot be null/empty when "
+                + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is set to true.");
       }
     }
 
@@ -111,15 +110,15 @@ public class Replication implements ReplicationSourceService {
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, conf,
-      this.server, fs, logDir, oldLogDir, clusterId, walFactory, mapping, globalMetricsSource);
+        this.server, fs, logDir, oldLogDir, clusterId, walFactory, mapping, globalMetricsSource);
     this.syncReplicationPeerInfoProvider =
         new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;
     // Get the user-space WAL provider
-    WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
+    WALProvider walProvider = walFactory != null ? walFactory.getWALProvider() : null;
     if (walProvider != null) {
       walProvider
-        .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
+          .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
       if (walProvider instanceof SyncReplicationWALProvider) {
         SyncReplicationWALProvider syncWALProvider = (SyncReplicationWALProvider) walProvider;
         peerActionListener = syncWALProvider;
@@ -136,12 +135,11 @@ public class Replication implements ReplicationSourceService {
               p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
-    this.statsPeriodInSecond =
-        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
 
     this.peerProcedureHandler =
-      new PeerProcedureHandlerImpl(replicationManager, peerActionListener);
+        new PeerProcedureHandlerImpl(replicationManager, peerActionListener);
   }
 
   @Override
@@ -158,15 +156,14 @@ public class Replication implements ReplicationSourceService {
   }
 
   /**
-   * If replication is enabled and this cluster is a master,
-   * it starts
+   * If replication is enabled and this cluster is a master, it starts
    */
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.server.getChoreService().scheduleChore(
-      new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
-          (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
+    this.server.getChoreService()
+        .scheduleChore(new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
+            (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
     LOG.info("{} started", this.server.toString());
   }
 

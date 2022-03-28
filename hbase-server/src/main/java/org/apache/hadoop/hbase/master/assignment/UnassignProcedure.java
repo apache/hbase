@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -72,9 +69,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     UnassignRegionStateData.Builder state =
-      UnassignRegionStateData.newBuilder().setTransitionState(getTransitionState())
-        .setHostingServer(ProtobufUtil.toServerName(this.hostingServer))
-        .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
+        UnassignRegionStateData.newBuilder().setTransitionState(getTransitionState())
+            .setHostingServer(ProtobufUtil.toServerName(this.hostingServer))
+            .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
     if (this.destinationServer != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }

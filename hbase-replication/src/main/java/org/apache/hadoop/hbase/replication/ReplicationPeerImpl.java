@@ -63,7 +63,7 @@ public class ReplicationPeerImpl implements ReplicationPeer {
     setPeerState(peerState);
     this.peerConfig = peerConfig;
     this.syncReplicationStateBits =
-      syncReplicationState.value() | (newSyncReplicationState.value() << SHIFT);
+        syncReplicationState.value() | (newSyncReplicationState.value() << SHIFT);
     this.peerConfigListeners = new ArrayList<>();
   }
 
@@ -78,12 +78,12 @@ public class ReplicationPeerImpl implements ReplicationPeer {
 
   public void setNewSyncReplicationState(SyncReplicationState newState) {
     this.syncReplicationStateBits =
-      (this.syncReplicationStateBits & AND_BITS) | (newState.value() << SHIFT);
+        (this.syncReplicationStateBits & AND_BITS) | (newState.value() << SHIFT);
   }
 
   public void transitSyncReplicationState() {
     this.syncReplicationStateBits =
-      (this.syncReplicationStateBits >>> SHIFT) | (SyncReplicationState.NONE.value() << SHIFT);
+        (this.syncReplicationStateBits >>> SHIFT) | (SyncReplicationState.NONE.value() << SHIFT);
   }
 
   /**

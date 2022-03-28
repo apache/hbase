@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,26 +84,28 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
 
   @Override
   public long createNamespace(NamespaceDescriptor namespaceDescriptor, final NonceKey nonceKey,
-      final ProcedurePrepareLatch latch)
-      throws IOException {
+      final ProcedurePrepareLatch latch) throws IOException {
     return submitProcedure(new CreateNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor, latch),
-        nonceKey);
+        this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor,
+        latch),
+      nonceKey);
   }
 
   @Override
   public long modifyNamespace(NamespaceDescriptor namespaceDescriptor, final NonceKey nonceKey,
       final ProcedurePrepareLatch latch) throws IOException {
     return submitProcedure(new ModifyNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor, latch),
-        nonceKey);
+        this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor,
+        latch),
+      nonceKey);
   }
 
   @Override
-  public long deleteNamespace(String name, final NonceKey nonceKey, final ProcedurePrepareLatch latch)
-      throws IOException {
-    return submitProcedure(new DeleteNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), name, latch),
+  public long deleteNamespace(String name, final NonceKey nonceKey,
+      final ProcedurePrepareLatch latch) throws IOException {
+    return submitProcedure(
+      new DeleteNamespaceProcedure(
+          this.masterServices.getMasterProcedureExecutor().getEnvironment(), name, latch),
       nonceKey);
   }
 
@@ -118,7 +120,7 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
   public List<NamespaceDescriptor> getNamespaces() throws IOException {
     checkIsRunning();
     return getTableNamespaceManager().list().stream()
-      .sorted(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR)
-      .collect(ImmutableList.toImmutableList());
+        .sorted(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR)
+        .collect(ImmutableList.toImmutableList());
   }
 }

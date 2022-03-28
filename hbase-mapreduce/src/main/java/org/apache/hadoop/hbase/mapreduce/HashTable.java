@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -220,9 +220,9 @@ public class HashTable extends Configured implements Tool {
     }
 
     /**
-     * Choose partitions between row ranges to hash to a single output file
-     * Selects region boundaries that fall within the scan range, and groups them
-     * into the desired number of partitions.
+     * Choose partitions between row ranges to hash to a single output file Selects region
+     * boundaries that fall within the scan range, and groups them into the desired number of
+     * partitions.
      */
     void selectPartitions(Pair<byte[][], byte[][]> regionStartEndKeys) {
       List<byte[]> startKeys = new ArrayList<>();
@@ -232,13 +232,13 @@ public class HashTable extends Configured implements Tool {
 
         // if scan begins after this region, or starts before this region, then drop this region
         // in other words:
-        //   IF (scan begins before the end of this region
-        //      AND scan ends before the start of this region)
-        //   THEN include this region
+        // IF (scan begins before the end of this region
+        // AND scan ends before the start of this region)
+        // THEN include this region
         if ((isTableStartRow(startRow) || isTableEndRow(regionEndKey)
             || Bytes.compareTo(startRow, regionEndKey) < 0)
-          && (isTableEndRow(stopRow) || isTableStartRow(regionStartKey)
-            || Bytes.compareTo(stopRow, regionStartKey) > 0)) {
+            && (isTableEndRow(stopRow) || isTableStartRow(regionStartKey)
+                || Bytes.compareTo(stopRow, regionStartKey) > 0)) {
           startKeys.add(regionStartKey);
         }
       }
@@ -267,8 +267,8 @@ public class HashTable extends Configured implements Tool {
     void writePartitionFile(Configuration conf, Path path) throws IOException {
       FileSystem fs = path.getFileSystem(conf);
       @SuppressWarnings("deprecation")
-      SequenceFile.Writer writer = SequenceFile.createWriter(
-        fs, conf, path, ImmutableBytesWritable.class, NullWritable.class);
+      SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, path,
+        ImmutableBytesWritable.class, NullWritable.class);
 
       for (int i = 0; i < partitions.size(); i++) {
         writer.append(partitions.get(i), NullWritable.get());
@@ -277,7 +277,7 @@ public class HashTable extends Configured implements Tool {
     }
 
     private void readPartitionFile(FileSystem fs, Configuration conf, Path path)
-         throws IOException {
+        throws IOException {
       @SuppressWarnings("deprecation")
       SequenceFile.Reader reader = new SequenceFile.Reader(fs, path, conf);
       ImmutableBytesWritable key = new ImmutableBytesWritable();
@@ -351,15 +351,15 @@ public class HashTable extends Configured implements Tool {
         int partitionIndex = Collections.binarySearch(partitions, startKey);
         if (partitionIndex >= 0) {
           // if the key is equal to a partition, then go the file after that partition
-          hashFileIndex = partitionIndex+1;
+          hashFileIndex = partitionIndex + 1;
         } else {
           // if the key is between partitions, then go to the file between those partitions
-          hashFileIndex = -1-partitionIndex;
+          hashFileIndex = -1 - partitionIndex;
         }
         openHashFile();
 
         // MapFile's don't make it easy to seek() so that the subsequent next() returns
-        // the desired key/value pair.  So we cache it for the first call of next().
+        // the desired key/value pair. So we cache it for the first call of next().
         hash = new ImmutableBytesWritable();
         key = (ImmutableBytesWritable) mapFileReader.getClosest(startKey, hash);
         if (key == null) {
@@ -371,8 +371,8 @@ public class HashTable extends Configured implements Tool {
       }
 
       /**
-       * Read the next key/hash pair.
-       * Returns true if such a pair exists and false when at the end of the data.
+       * Read the next key/hash pair. Returns true if such a pair exists and false when at the end
+       * of the data.
        */
       public boolean next() throws IOException {
         if (cachedNext) {
@@ -443,19 +443,19 @@ public class HashTable extends Configured implements Tool {
     generatePartitions(partitionsPath);
 
     Job job = Job.getInstance(getConf(),
-          getConf().get("mapreduce.job.name", "hashTable_" + tableHash.tableName));
+      getConf().get("mapreduce.job.name", "hashTable_" + tableHash.tableName));
     Configuration jobConf = job.getConfiguration();
     jobConf.setLong(HASH_BATCH_SIZE_CONF_KEY, tableHash.batchSize);
     jobConf.setBoolean(IGNORE_TIMESTAMPS, tableHash.ignoreTimestamps);
     job.setJarByClass(HashTable.class);
 
     TableMapReduceUtil.initTableMapperJob(tableHash.tableName, tableHash.initScan(),
-        HashMapper.class, ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+      HashMapper.class, ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
 
     // use a TotalOrderPartitioner and reducers to group region output into hash files
     job.setPartitionerClass(TotalOrderPartitioner.class);
     TotalOrderPartitioner.setPartitionFile(jobConf, partitionsPath);
-    job.setReducerClass(Reducer.class);  // identity reducer
+    job.setReducerClass(Reducer.class); // identity reducer
     job.setNumReduceTasks(tableHash.numHashFiles);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(ImmutableBytesWritable.class);
@@ -467,8 +467,8 @@ public class HashTable extends Configured implements Tool {
 
   private void generatePartitions(Path partitionsPath) throws IOException {
     Connection connection = ConnectionFactory.createConnection(getConf());
-    Pair<byte[][], byte[][]> regionKeys
-      = connection.getRegionLocator(TableName.valueOf(tableHash.tableName)).getStartEndKeys();
+    Pair<byte[][], byte[][]> regionKeys =
+        connection.getRegionLocator(TableName.valueOf(tableHash.tableName)).getStartEndKeys();
     connection.close();
 
     tableHash.selectPartitions(regionKeys);
@@ -556,7 +556,7 @@ public class HashTable extends Configured implements Tool {
   }
 
   public static class HashMapper
-    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+      extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     private ResultHasher hasher;
     private long targetBatchSize;
@@ -565,11 +565,10 @@ public class HashTable extends Configured implements Tool {
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
-      targetBatchSize = context.getConfiguration()
-          .getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
+      targetBatchSize =
+          context.getConfiguration().getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
       hasher = new ResultHasher();
-      hasher.ignoreTimestamps = context.getConfiguration().
-        getBoolean(IGNORE_TIMESTAMPS, false);
+      hasher.ignoreTimestamps = context.getConfiguration().getBoolean(IGNORE_TIMESTAMPS, false);
       TableSplit split = (TableSplit) context.getInputSplit();
       hasher.startBatch(new ImmutableBytesWritable(split.getStartRow()));
     }
@@ -612,6 +611,7 @@ public class HashTable extends Configured implements Tool {
   }
 
   private static final int NUM_ARGS = 2;
+
   private static void printUsage(final String errorMsg) {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
@@ -646,8 +646,8 @@ public class HashTable extends Configured implements Tool {
     System.err.println();
     System.err.println("Examples:");
     System.err.println(" To hash 'TestTable' in 32kB batches for a 1 hour window into 50 files:");
-    System.err.println(" $ hbase " +
-        "org.apache.hadoop.hbase.mapreduce.HashTable --batchsize=32000 --numhashfiles=50"
+    System.err.println(" $ hbase "
+        + "org.apache.hadoop.hbase.mapreduce.HashTable --batchsize=32000 --numhashfiles=50"
         + " --starttime=1265875194289 --endtime=1265878794289 --families=cf2,cf3"
         + " TestTable /hashes/testTable");
   }
@@ -659,8 +659,8 @@ public class HashTable extends Configured implements Tool {
     }
     try {
 
-      tableHash.tableName = args[args.length-2];
-      destPath = new Path(args[args.length-1]);
+      tableHash.tableName = args[args.length - 2];
+      destPath = new Path(args[args.length - 1]);
 
       for (int i = 0; i < args.length - NUM_ARGS; i++) {
         String cmd = args[i];
@@ -731,8 +731,8 @@ public class HashTable extends Configured implements Tool {
 
         final String ignoreTimestampsKey = "--ignoreTimestamps=";
         if (cmd.startsWith(ignoreTimestampsKey)) {
-          tableHash.ignoreTimestamps = Boolean.
-            parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
+          tableHash.ignoreTimestamps =
+              Boolean.parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
           continue;
         }
 
@@ -741,8 +741,8 @@ public class HashTable extends Configured implements Tool {
       }
       if ((tableHash.startTime != 0 || tableHash.endTime != 0)
           && (tableHash.startTime >= tableHash.endTime)) {
-        printUsage("Invalid time range filter: starttime="
-            + tableHash.startTime + " >=  endtime=" + tableHash.endTime);
+        printUsage("Invalid time range filter: starttime=" + tableHash.startTime + " >=  endtime="
+            + tableHash.endTime);
         return false;
       }
 

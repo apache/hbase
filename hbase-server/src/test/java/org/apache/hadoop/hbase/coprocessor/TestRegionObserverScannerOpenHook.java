@@ -76,7 +76,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverScannerOpenHook {
 
   @ClassRule
@@ -147,8 +147,10 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+    }
   };
+
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
@@ -186,14 +188,13 @@ public class TestRegionObserverScannerOpenHook {
   HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for (byte[] family : families) {
-      builder.setColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor tableDescriptor = builder.build();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtil.createWal(conf, path, info);
@@ -229,7 +230,8 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -256,7 +258,8 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -267,9 +270,9 @@ public class TestRegionObserverScannerOpenHook {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
     @SuppressWarnings("deprecation")
-    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, RegionInfo info,
-        TableDescriptor htd, RegionServerServices rsServices) {
+    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log, FileSystem fs,
+        Configuration confParam, RegionInfo info, TableDescriptor htd,
+        RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
@@ -309,15 +312,16 @@ public class TestRegionObserverScannerOpenHook {
     UTIL.startMiniCluster();
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(A))
-        .setCoprocessor(CoprocessorDescriptorBuilder
-          .newBuilder(EmptyRegionObsever.class.getName()).setJarPath(null)
-          .setPriority(Coprocessor.PRIORITY_USER).setProperties(Collections.emptyMap()).build())
-        .setCoprocessor(CoprocessorDescriptorBuilder
-          .newBuilder(NoDataFromCompaction.class.getName()).setJarPath(null)
-          .setPriority(Coprocessor.PRIORITY_HIGHEST).setProperties(Collections.emptyMap()).build())
+        .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(EmptyRegionObsever.class.getName())
+            .setJarPath(null).setPriority(Coprocessor.PRIORITY_USER)
+            .setProperties(Collections.emptyMap()).build())
+        .setCoprocessor(
+          CoprocessorDescriptorBuilder.newBuilder(NoDataFromCompaction.class.getName())
+              .setJarPath(null).setPriority(Coprocessor.PRIORITY_HIGHEST)
+              .setProperties(Collections.emptyMap()).build())
         .build();
 
     Admin admin = UTIL.getAdmin();
@@ -335,8 +339,8 @@ public class TestRegionObserverScannerOpenHook {
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());
-    CountDownLatch latch = ((CompactionCompletionNotifyingRegion)region)
-        .getCompactionStateChangeLatch();
+    CountDownLatch latch =
+        ((CompactionCompletionNotifyingRegion) region).getCompactionStateChangeLatch();
 
     // put another row and flush that too
     put = new Put(Bytes.toBytes("anotherrow"));
@@ -352,13 +356,15 @@ public class TestRegionObserverScannerOpenHook {
     Result r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
 
     table.close();
     UTIL.shutdownMiniCluster();

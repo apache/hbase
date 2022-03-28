@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,6 @@ public class TestBackupStatusProgress extends TestBackupBase {
 
   /**
    * Verify that full backup is created on a single table with data correctly.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test

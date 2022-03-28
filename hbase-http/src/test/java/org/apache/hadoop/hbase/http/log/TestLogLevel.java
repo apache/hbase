@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ import org.junit.experimental.categories.Category;
 public class TestLogLevel {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogLevel.class);
+      HBaseClassTestRule.forClass(TestLogLevel.class);
 
   private static String keystoresDir;
   private static String sslConfDir;
@@ -78,7 +78,7 @@ public class TestLogLevel {
   private static final String protectedPrefix = "protected";
   private static final String protectedLogName = protectedPrefix + "." + logName;
   private static final org.apache.logging.log4j.Logger log =
-    org.apache.logging.log4j.LogManager.getLogger(logName);
+      org.apache.logging.log4j.LogManager.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
   private final static String KEYTAB = "loglevel.keytab";
 
@@ -205,7 +205,7 @@ public class TestLogLevel {
     assertFalse(
       validateCommand(new String[] { "-setlevel", "foo.bar:8080", className, "DEBUG", "blah" }));
     assertFalse(validateCommand(new String[] { "-getlevel", "foo.bar:8080", className, "-setlevel",
-      "foo.bar:8080", className }));
+        "foo.bar:8080", className }));
   }
 
   /**
@@ -236,24 +236,24 @@ public class TestLogLevel {
    */
   private HttpServer createServer(String protocol, boolean isSpnego) throws Exception {
     HttpServer.Builder builder = new HttpServer.Builder().setName("..")
-      .addEndpoint(new URI(protocol + "://localhost:0")).setFindPort(true).setConf(serverConf);
+        .addEndpoint(new URI(protocol + "://localhost:0")).setFindPort(true).setConf(serverConf);
     if (isSpnego) {
       // Set up server Kerberos credentials.
       // Since the server may fall back to simple authentication,
       // use ACL to make sure the connection is Kerberos/SPNEGO authenticated.
       builder.setSecurityEnabled(true).setUsernameConfKey(PRINCIPAL).setKeytabConfKey(KEYTAB)
-        .setACL(new AccessControlList("client"));
+          .setACL(new AccessControlList("client"));
     }
 
     // if using HTTPS, configure keystore/truststore properties.
     if (protocol.equals(LogLevel.PROTOCOL_HTTPS)) {
       builder = builder.keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
-        .keyStore(sslConf.get("ssl.server.keystore.location"),
-          sslConf.get("ssl.server.keystore.password"),
-          sslConf.get("ssl.server.keystore.type", "jks"))
-        .trustStore(sslConf.get("ssl.server.truststore.location"),
-          sslConf.get("ssl.server.truststore.password"),
-          sslConf.get("ssl.server.truststore.type", "jks"));
+          .keyStore(sslConf.get("ssl.server.keystore.location"),
+            sslConf.get("ssl.server.keystore.password"),
+            sslConf.get("ssl.server.keystore.type", "jks"))
+          .trustStore(sslConf.get("ssl.server.truststore.location"),
+            sslConf.get("ssl.server.truststore.password"),
+            sslConf.get("ssl.server.truststore.type", "jks"));
     }
 
     HttpServer server = builder.build();
@@ -262,17 +262,14 @@ public class TestLogLevel {
   }
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-    final boolean isSpnego) throws Exception {
-    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
-      logName,
+      final boolean isSpnego) throws Exception {
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName,
       org.apache.logging.log4j.Level.DEBUG.toString());
   }
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-    final boolean isSpnego, final String newLevel) throws Exception {
-    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
-      logName,
-      newLevel);
+      final boolean isSpnego, final String newLevel) throws Exception {
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, newLevel);
   }
 
   /**
@@ -283,7 +280,7 @@ public class TestLogLevel {
    * @throws Exception if client can't accesss server.
    */
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-    final boolean isSpnego, final String loggerName, final String newLevel) throws Exception {
+      final boolean isSpnego, final String loggerName, final String newLevel) throws Exception {
     if (!LogLevel.isValidProtocol(bindProtocol)) {
       throw new Exception("Invalid server protocol " + bindProtocol);
     }
@@ -315,7 +312,7 @@ public class TestLogLevel {
     String keytabFilePath = keyTabFile.getAbsolutePath();
 
     UserGroupInformation clientUGI =
-      UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal, keytabFilePath);
+        UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal, keytabFilePath);
     try {
       clientUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
         // client command line
@@ -350,7 +347,8 @@ public class TestLogLevel {
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
-  private void setLevel(String protocol, String authority, String logName, String newLevel) throws Exception {
+  private void setLevel(String protocol, String authority, String logName, String newLevel)
+      throws Exception {
     String[] setLevelArgs = { "-setlevel", authority, logName, newLevel, "-protocol", protocol };
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(setLevelArgs);
@@ -369,7 +367,8 @@ public class TestLogLevel {
       fail("Expected IO exception due to protected logger");
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("" + HttpServletResponse.SC_PRECONDITION_FAILED));
-      assertTrue(e.getMessage().contains("Modification of logger " + protectedLogName + " is disallowed in configuration."));
+      assertTrue(e.getMessage().contains(
+        "Modification of logger " + protectedLogName + " is disallowed in configuration."));
     }
   }
 
@@ -472,7 +471,7 @@ public class TestLogLevel {
       }
       t = t.getCause();
     }
-    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:" +
-      StringUtils.stringifyException(throwable), throwable);
+    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:"
+        + StringUtils.stringifyException(throwable), throwable);
   }
 }

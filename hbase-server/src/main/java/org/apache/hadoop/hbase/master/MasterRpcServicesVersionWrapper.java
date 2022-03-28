@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -29,8 +28,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
 
 /**
- * A wrapper class for MasterRpcServices shortcut that ensures a client version is available
- * to the callee without a current RPC call.
+ * A wrapper class for MasterRpcServices shortcut that ensures a client version is available to the
+ * callee without a current RPC call.
  */
 @InterfaceAudience.Private
 public class MasterRpcServicesVersionWrapper
@@ -42,11 +41,8 @@ public class MasterRpcServicesVersionWrapper
   }
 
   private final MasterRpcServices masterRpcServices;
-  private final ServiceCallFunction<RegionServerStatusProtos.RegionServerStartupRequest,
-    RegionServerStatusProtos.RegionServerStartupResponse> startupCall;
-  private final ServiceCallFunction<RegionServerStatusProtos.RegionServerReportRequest,
-    RegionServerStatusProtos.RegionServerReportResponse> reportCall;
-
+  private final ServiceCallFunction<RegionServerStatusProtos.RegionServerStartupRequest, RegionServerStatusProtos.RegionServerStartupResponse> startupCall;
+  private final ServiceCallFunction<RegionServerStatusProtos.RegionServerReportRequest, RegionServerStatusProtos.RegionServerReportResponse> reportCall;
 
   public MasterRpcServicesVersionWrapper(MasterRpcServices masterRpcServices) {
     this.masterRpcServices = masterRpcServices;
@@ -84,8 +80,7 @@ public class MasterRpcServicesVersionWrapper
 
   @Override
   public RegionServerStatusProtos.ReportRegionStateTransitionResponse reportRegionStateTransition(
-      RpcController controller,
-      RegionServerStatusProtos.ReportRegionStateTransitionRequest request)
+      RpcController controller, RegionServerStatusProtos.ReportRegionStateTransitionRequest request)
       throws ServiceException {
     return masterRpcServices.reportRegionStateTransition(controller, request);
   }
@@ -113,7 +108,7 @@ public class MasterRpcServicesVersionWrapper
 
   @Override
   public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
-    GetLiveRegionServersRequest request) throws ServiceException {
+      GetLiveRegionServersRequest request) throws ServiceException {
     return masterRpcServices.getLiveRegionServers(controller, request);
   }
 }

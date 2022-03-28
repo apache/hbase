@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,8 +70,8 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
     isBalancerDecisionRecording = conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
       BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
     isBalancerRejectionRecording =
-      conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
-        BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
+        conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
+          BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
     if (isBalancerDecisionRecording || isBalancerRejectionRecording) {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
     } else {
@@ -116,7 +116,7 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
 
   @Override
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-    TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
+      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
     return HRegion.computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo);
   }
 
@@ -143,10 +143,10 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
 
   @Override
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
-    Predicate<ServerMetrics> filter) {
+      Predicate<ServerMetrics> filter) {
     ServerManager sm = services.getServerManager();
-    return sm != null ? sm.getOnlineServersListWithPredicator(servers, filter) :
-      Collections.emptyList();
+    return sm != null ? sm.getOnlineServersListWithPredicator(servers, filter)
+        : Collections.emptyList();
   }
 
   @Override
@@ -191,7 +191,7 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   NamedQueueRecorder getNamedQueueRecorder() {
     return namedQueueRecorder;
   }

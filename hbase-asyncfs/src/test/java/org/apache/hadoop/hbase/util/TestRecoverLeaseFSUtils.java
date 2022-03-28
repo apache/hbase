@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,7 +40,7 @@ public class TestRecoverLeaseFSUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoverLeaseFSUtils.class);
+      HBaseClassTestRule.forClass(TestRecoverLeaseFSUtils.class);
 
   private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
   static {
@@ -64,13 +63,13 @@ public class TestRecoverLeaseFSUtils {
     DistributedFileSystem dfs = Mockito.mock(DistributedFileSystem.class);
     // Fail four times and pass on the fifth.
     Mockito.when(dfs.recoverLease(FILE)).thenReturn(false).thenReturn(false).thenReturn(false)
-      .thenReturn(false).thenReturn(true);
+        .thenReturn(false).thenReturn(true);
     RecoverLeaseFSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
     Mockito.verify(dfs, Mockito.times(5)).recoverLease(FILE);
     // Make sure we waited at least hbase.lease.recovery.dfs.timeout * 3 (the first two
     // invocations will happen pretty fast... the we fall into the longer wait loop).
-    assertTrue((EnvironmentEdgeManager.currentTime() - startTime) > (3 *
-      HTU.getConfiguration().getInt("hbase.lease.recovery.dfs.timeout", 61000)));
+    assertTrue((EnvironmentEdgeManager.currentTime() - startTime) > (3
+        * HTU.getConfiguration().getInt("hbase.lease.recovery.dfs.timeout", 61000)));
   }
 
   /**

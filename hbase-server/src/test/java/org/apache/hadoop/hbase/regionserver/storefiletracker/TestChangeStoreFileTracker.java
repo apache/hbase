@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestChangeStoreFileTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChangeStoreFileTracker.class);
+      HBaseClassTestRule.forClass(TestChangeStoreFileTracker.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -74,65 +74,70 @@ public class TestChangeStoreFileTracker {
   @Test(expected = DoNotRetryIOException.class)
   public void testCreateError() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .build();
     UTIL.getAdmin().createTable(td);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testModifyError1() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
-    TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+    TableDescriptor newTd =
+        TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.FILE.name()).build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testModifyError2() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testModifyError3() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
   // return the TableDescriptor for creating table
   private TableDescriptor createTableAndChangeToMigrationTracker() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
     return td;
   }
@@ -141,11 +146,12 @@ public class TestChangeStoreFileTracker {
   public void testModifyError4() throws IOException {
     TableDescriptor td = createTableAndChangeToMigrationTracker();
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
@@ -153,11 +159,13 @@ public class TestChangeStoreFileTracker {
   public void testModifyError5() throws IOException {
     TableDescriptor td = createTableAndChangeToMigrationTracker();
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
@@ -165,23 +173,23 @@ public class TestChangeStoreFileTracker {
   public void testModifyError6() throws IOException {
     TableDescriptor td = createTableAndChangeToMigrationTracker();
     TableDescriptor newTd =
-      TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+        TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void testModifyError7() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1"))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.MIGRATION.name())
-        .build())
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1"))
+            .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
+              StoreFileTrackerFactory.Trackers.MIGRATION.name())
+            .build())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
@@ -189,39 +197,40 @@ public class TestChangeStoreFileTracker {
   @Test(expected = IOException.class)
   public void testModifyError8() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     TableDescriptor newTd =
-      TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name()).build();
+        TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name()).build();
     UTIL.getAdmin().modifyTable(newTd);
   }
 
   @Test
   public void testModifyError9() throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     UTIL.getAdmin().disableTable(td.getTableName());
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
-    TableDescriptor newTd2 = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+    TableDescriptor newTd2 =
+        TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.FILE.name()).build();
     // changing from MIGRATION while table is disabled is not allowed
     assertThrows(TableNotEnabledException.class, () -> UTIL.getAdmin().modifyTable(newTd2));
   }
 
   private String getStoreFileName(TableName table, byte[] family) {
     return Iterables
-      .getOnlyElement(Iterables.getOnlyElement(UTIL.getMiniHBaseCluster().getRegions(table))
-        .getStore(family).getStorefiles())
-      .getPath().getName();
+        .getOnlyElement(Iterables.getOnlyElement(UTIL.getMiniHBaseCluster().getRegions(table))
+            .getStore(family).getStorefiles())
+        .getPath().getName();
   }
 
   @Test
@@ -232,7 +241,7 @@ public class TestChangeStoreFileTracker {
     byte[] qualifier = Bytes.toBytes("qualifier");
     byte[] value = Bytes.toBytes("value");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     UTIL.getAdmin().createTable(td);
     try (Table table = UTIL.getConnection().getTable(tn)) {
       table.put(new Put(row).addColumn(family, qualifier, value));
@@ -241,20 +250,21 @@ public class TestChangeStoreFileTracker {
     String fileName = getStoreFileName(tn, family);
 
     TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(MigrationStoreFileTracker.SRC_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name())
+        .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .build();
     UTIL.getAdmin().modifyTable(newTd);
     assertEquals(fileName, getStoreFileName(tn, family));
     try (Table table = UTIL.getConnection().getTable(tn)) {
       assertArrayEquals(value, table.get(new Get(row)).getValue(family, qualifier));
     }
 
-    TableDescriptor newTd2 = TableDescriptorBuilder.newBuilder(td)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .build();
+    TableDescriptor newTd2 =
+        TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.FILE.name()).build();
     UTIL.getAdmin().modifyTable(newTd2);
     assertEquals(fileName, getStoreFileName(tn, family));
     try (Table table = UTIL.getConnection().getTable(tn)) {

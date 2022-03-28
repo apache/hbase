@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,6 +68,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -232,7 +232,7 @@ public final class BackupSystemTable implements Closeable {
     long TIMEOUT = 60000;
     long startTime = EnvironmentEdgeManager.currentTime();
     LOG.debug("Backup table {} is not present and available, waiting for it to become so",
-        tableName);
+      tableName);
     while (!admin.tableExists(tableName) || !admin.isTableAvailable(tableName)) {
       try {
         Thread.sleep(100);
@@ -240,7 +240,7 @@ public final class BackupSystemTable implements Closeable {
       }
       if (EnvironmentEdgeManager.currentTime() - startTime > TIMEOUT) {
         throw new IOException(
-          "Failed to create backup system table " + tableName + " after " + TIMEOUT + "ms");
+            "Failed to create backup system table " + tableName + " after " + TIMEOUT + "ms");
       }
     }
     LOG.debug("Backup table {} exists and available", tableName);
@@ -259,7 +259,7 @@ public final class BackupSystemTable implements Closeable {
   public void updateBackupInfo(BackupInfo info) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("update backup status in backup system table for: " + info.getBackupId()
-        + " set status=" + info.getState());
+          + " set status=" + info.getState());
     }
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForBackupInfo(info);
@@ -315,11 +315,11 @@ public final class BackupSystemTable implements Closeable {
             tbl = TableName.valueOf(CellUtil.cloneValue(cell));
           } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
             BackupSystemTable.FAM_COL.length) == 0) {
-            fam = CellUtil.cloneValue(cell);
-          } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-            BackupSystemTable.PATH_COL.length) == 0) {
-            path = Bytes.toString(CellUtil.cloneValue(cell));
-          }
+              fam = CellUtil.cloneValue(cell);
+            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0) {
+                path = Bytes.toString(CellUtil.cloneValue(cell));
+              }
         }
         int srcIdx = IncrementalTableBackupClient.getIndex(tbl, sTableList);
         if (srcIdx == -1) {
@@ -371,7 +371,7 @@ public final class BackupSystemTable implements Closeable {
       Map<byte[], List<Path>> finalPaths) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + finalPaths.size()
-        + " entries");
+          + " entries");
     }
     try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region, finalPaths);
@@ -426,7 +426,7 @@ public final class BackupSystemTable implements Closeable {
    * whether the hfile was recorded by preCommitStoreFile hook (true)
    */
   public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+      readBulkloadRows(List<TableName> tableList) throws IOException {
 
     Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = new HashMap<>();
     List<byte[]> rows = new ArrayList<>();
@@ -453,16 +453,16 @@ public final class BackupSystemTable implements Closeable {
               fam = Bytes.toString(CellUtil.cloneValue(cell));
             } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
               BackupSystemTable.PATH_COL.length) == 0) {
-              path = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
-              BackupSystemTable.STATE_COL.length) == 0) {
-              byte[] state = CellUtil.cloneValue(cell);
-              if (Bytes.equals(BackupSystemTable.BL_PREPARE, state)) {
-                raw = true;
-              } else {
-                raw = false;
-              }
-            }
+                path = Bytes.toString(CellUtil.cloneValue(cell));
+              } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
+                BackupSystemTable.STATE_COL.length) == 0) {
+                  byte[] state = CellUtil.cloneValue(cell);
+                  if (Bytes.equals(BackupSystemTable.BL_PREPARE, state)) {
+                    raw = true;
+                  } else {
+                    raw = false;
+                  }
+                }
           }
           if (map.get(tTable) == null) {
             map.put(tTable, new HashMap<>());
@@ -852,8 +852,8 @@ public final class BackupSystemTable implements Closeable {
    * @param backupRoot root directory path to backup
    * @throws IOException exception
    */
-  public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      Map<String, Long> newTimestamps, String backupRoot) throws IOException {
+  public void writeRegionServerLogTimestamp(Set<TableName> tables, Map<String, Long> newTimestamps,
+      String backupRoot) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("write RS log time stamps to backup system table for tables ["
           + StringUtils.join(tables, ",") + "]");
@@ -916,7 +916,7 @@ public final class BackupSystemTable implements Closeable {
     BackupProtos.TableServerTimestamp.Builder tstBuilder =
         BackupProtos.TableServerTimestamp.newBuilder();
     tstBuilder
-    .setTableName(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toProtoTableName(table));
+        .setTableName(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toProtoTableName(table));
 
     for (Entry<String, Long> entry : map.entrySet()) {
       BackupProtos.ServerTimestamp.Builder builder = BackupProtos.ServerTimestamp.newBuilder();
@@ -933,7 +933,7 @@ public final class BackupSystemTable implements Closeable {
   }
 
   private HashMap<String, Long>
-    fromTableServerTimestampProto(BackupProtos.TableServerTimestamp proto) {
+      fromTableServerTimestampProto(BackupProtos.TableServerTimestamp proto) {
 
     HashMap<String, Long> map = new HashMap<>();
     List<BackupProtos.ServerTimestamp> list = proto.getServerTimestampList();
@@ -981,7 +981,7 @@ public final class BackupSystemTable implements Closeable {
       throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Add incremental backup table set to backup system table. ROOT=" + backupRoot
-        + " tables [" + StringUtils.join(tables, " ") + "]");
+          + " tables [" + StringUtils.join(tables, " ") + "]");
     }
     if (LOG.isDebugEnabled()) {
       tables.forEach(table -> LOG.debug(Objects.toString(table)));

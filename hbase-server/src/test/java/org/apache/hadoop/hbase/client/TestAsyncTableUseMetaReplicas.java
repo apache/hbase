@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestAsyncTableUseMetaReplicas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableUseMetaReplicas.class);
+      HBaseClassTestRule.forClass(TestAsyncTableUseMetaReplicas.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -77,8 +77,8 @@ public class TestAsyncTableUseMetaReplicas {
     public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
         throws IOException {
       RegionInfo region = c.getEnvironment().getRegionInfo();
-      if (FAIL_PRIMARY_SCAN && TableName.isMetaTableName(region.getTable()) &&
-        region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
+      if (FAIL_PRIMARY_SCAN && TableName.isMetaTableName(region.getTable())
+          && region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
         throw new IOException("Inject error");
       }
     }
@@ -123,7 +123,7 @@ public class TestAsyncTableUseMetaReplicas {
     conf.setLong(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT, TimeUnit.SECONDS.toMicros(1));
     try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
       Result result = FutureUtils.get(conn.getTableBuilder(TABLE_NAME)
-        .setOperationTimeout(3, TimeUnit.SECONDS).build().get(new Get(ROW)));
+          .setOperationTimeout(3, TimeUnit.SECONDS).build().get(new Get(ROW)));
       assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
     }
   }

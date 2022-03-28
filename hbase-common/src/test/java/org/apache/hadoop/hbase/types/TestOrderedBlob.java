@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,17 +31,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedBlob {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestOrderedBlob.class);
 
-  private static final byte[][] VALUES = new byte[][] {
-    null, Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
-    Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
-    Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"),
-  };
+  private static final byte[][] VALUES = new byte[][] { null, Bytes.toBytes(""), Bytes.toBytes("1"),
+      Bytes.toBytes("22"), Bytes.toBytes("333"), Bytes.toBytes("4444"), Bytes.toBytes("55555"),
+      Bytes.toBytes("666666"), Bytes.toBytes("7777777"), Bytes.toBytes("88888888"),
+      Bytes.toBytes("999999999"), };
 
   @Test
   public void testIsSkippableFalse() {
@@ -54,7 +53,7 @@ public class TestOrderedBlob {
   public void testEncodedLength() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(20);
     for (final DataType<byte[]> type : new OrderedBlob[] { new OrderedBlob(Order.ASCENDING),
-      new OrderedBlob(Order.DESCENDING) }) {
+        new OrderedBlob(Order.DESCENDING) }) {
       for (final byte[] val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);

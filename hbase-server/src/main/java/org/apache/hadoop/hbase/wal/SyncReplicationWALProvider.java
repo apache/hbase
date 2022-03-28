@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,7 +76,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   private final WALProvider provider;
 
   private SyncReplicationPeerInfoProvider peerInfoProvider =
-    new DefaultSyncReplicationPeerInfoProvider();
+      new DefaultSyncReplicationPeerInfoProvider();
 
   private WALFactory factory;
 
@@ -94,7 +94,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   // the peer yet. When getting WAL from this map the caller should know that it should not use
   // DualAsyncFSWAL any more.
   private final ConcurrentMap<String, Optional<DualAsyncFSWAL>> peerId2WAL =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
@@ -116,7 +116,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     this.conf = conf;
     this.factory = factory;
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
-      NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
+        NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
     eventLoopGroup = eventLoopGroupAndChannelClass.getFirst();
     channelClass = eventLoopGroupAndChannelClass.getSecond();
   }
@@ -131,7 +131,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private DualAsyncFSWAL createWAL(String peerId, String remoteWALDir) throws IOException {
     Class<? extends DualAsyncFSWAL> clazz =
-      conf.getClass(DUAL_WAL_IMPL, DualAsyncFSWAL.class, DualAsyncFSWAL.class);
+        conf.getClass(DUAL_WAL_IMPL, DualAsyncFSWAL.class, DualAsyncFSWAL.class);
     try {
       Constructor<?> constructor = null;
       for (Constructor<?> c : clazz.getDeclaredConstructors()) {
@@ -144,8 +144,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
         throw new IllegalArgumentException("No valid constructor provided for class " + clazz);
       }
       constructor.setAccessible(true);
-      return (DualAsyncFSWAL) constructor.newInstance(
-        CommonFSUtils.getWALFileSystem(conf),
+      return (DualAsyncFSWAL) constructor.newInstance(CommonFSUtils.getWALFileSystem(conf),
         ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
         CommonFSUtils.getWALRootDir(conf),
         ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId),
@@ -263,7 +262,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public long getLogFileSize() {
     return peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get)
-      .mapToLong(DualAsyncFSWAL::getLogFileSize).sum() + provider.getLogFileSize();
+        .mapToLong(DualAsyncFSWAL::getLogFileSize).sum() + provider.getLogFileSize();
   }
 
   private void safeClose(WAL wal) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,8 +86,9 @@ public class ModifyNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-modify-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to modify namespace=" + newNsDescriptor.getName() +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to modify namespace=" + newNsDescriptor.getName()
+            + " (in state=" + state + ")",
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -137,8 +138,8 @@ public class ModifyNamespaceProcedure
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData.Builder modifyNamespaceMsg =
-      MasterProcedureProtos.ModifyNamespaceStateData.newBuilder()
-        .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.newNsDescriptor));
+        MasterProcedureProtos.ModifyNamespaceStateData.newBuilder()
+            .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.newNsDescriptor));
     if (this.oldNsDescriptor != null) {
       modifyNamespaceMsg.setUnmodifiedNamespaceDescriptor(
         ProtobufUtil.toProtoNamespaceDescriptor(this.oldNsDescriptor));
@@ -151,12 +152,12 @@ public class ModifyNamespaceProcedure
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData modifyNamespaceMsg =
-      serializer.deserialize(MasterProcedureProtos.ModifyNamespaceStateData.class);
+        serializer.deserialize(MasterProcedureProtos.ModifyNamespaceStateData.class);
     newNsDescriptor =
-      ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getNamespaceDescriptor());
+        ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getNamespaceDescriptor());
     if (modifyNamespaceMsg.hasUnmodifiedNamespaceDescriptor()) {
       oldNsDescriptor =
-        ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getUnmodifiedNamespaceDescriptor());
+          ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getUnmodifiedNamespaceDescriptor());
     }
   }
 

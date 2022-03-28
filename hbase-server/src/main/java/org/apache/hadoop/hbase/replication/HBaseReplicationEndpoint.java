@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
@@ -26,15 +25,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.zookeeper.ZKListener;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,12 +47,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
- * A {@link BaseReplicationEndpoint} for replication endpoints whose
- * target cluster is an HBase cluster.
+ * A {@link BaseReplicationEndpoint} for replication endpoints whose target cluster is an HBase
+ * cluster.
  */
 @InterfaceAudience.Private
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
-  implements Abortable {
+    implements Abortable {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
@@ -65,15 +64,14 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private AsyncClusterConnection conn;
 
   /**
-   * Default maximum number of times a replication sink can be reported as bad before
-   * it will no longer be provided as a sink for replication without the pool of
-   * replication sinks being refreshed.
+   * Default maximum number of times a replication sink can be reported as bad before it will no
+   * longer be provided as a sink for replication without the pool of replication sinks being
+   * refreshed.
    */
   public static final int DEFAULT_BAD_SINK_THRESHOLD = 3;
 
   /**
-   * Default ratio of the total number of peer cluster region servers to consider
-   * replicating to.
+   * Default ratio of the total number of peer cluster region servers to consider replicating to.
    */
   public static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.5f;
 
@@ -94,18 +92,17 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * as protected for possible overridings.
    */
   protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
-    return ClusterConnectionFactory.createAsyncClusterConnection(conf,
-      null, User.getCurrent());
+    return ClusterConnectionFactory.createAsyncClusterConnection(conf, null, User.getCurrent());
   }
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
-    this.ratio =
-      ctx.getConfiguration().getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
+    this.ratio = ctx.getConfiguration().getFloat("replication.source.ratio",
+      DEFAULT_REPLICATION_SOURCE_RATIO);
     this.badSinkThreshold =
-      ctx.getConfiguration().getInt("replication.bad.sink.threshold", DEFAULT_BAD_SINK_THRESHOLD);
+        ctx.getConfiguration().getInt("replication.bad.sink.threshold", DEFAULT_BAD_SINK_THRESHOLD);
     this.badReportCounts = Maps.newHashMap();
   }
 
@@ -195,8 +192,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       if (zkw != null) {
         zkw.close();
       }
-      zkw = new ZKWatcher(ctx.getConfiguration(),
-          "connection to cluster: " + ctx.getPeerId(), this);
+      zkw =
+          new ZKWatcher(ctx.getConfiguration(), "connection to cluster: " + ctx.getPeerId(), this);
       zkw.registerListener(new PeerRegionServerListener(this));
     }
   }
@@ -213,7 +210,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   @Override
   public void abort(String why, Throwable e) {
     LOG.error("The HBaseReplicationEndpoint corresponding to peer " + ctx.getPeerId()
-        + " was aborted for the following reason(s):" + why, e);
+        + " was aborted for the following reason(s):" + why,
+      e);
   }
 
   @Override
@@ -224,7 +222,6 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   /**
    * Get the list of all the region servers from the specified peer
-   *
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
   protected List<ServerName> fetchSlavesAddresses() {
@@ -277,16 +274,14 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       throw new IOException("No replication sinks are available");
     }
     ServerName serverName =
-      sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
+        sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
     return new SinkPeer(serverName, conn.getRegionServerAdmin(serverName));
   }
 
   /**
-   * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it
-   * failed). If a single SinkPeer is reported as bad more than
-   * replication.bad.sink.threshold times, it will be removed
+   * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it failed). If a single
+   * SinkPeer is reported as bad more than replication.bad.sink.threshold times, it will be removed
    * from the pool of potential replication targets.
-   *
    * @param sinkPeer The SinkPeer that had a failed replication attempt on it
    */
   protected synchronized void reportBadSink(SinkPeer sinkPeer) {
@@ -302,9 +297,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   /**
    * Report that a {@code SinkPeer} successfully replicated a chunk of data.
-   *
-   * @param sinkPeer
-   *          The SinkPeer that had a failed replication attempt on it
+   * @param sinkPeer The SinkPeer that had a failed replication attempt on it
    */
   protected synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
     badReportCounts.remove(sinkPeer.getServerName());

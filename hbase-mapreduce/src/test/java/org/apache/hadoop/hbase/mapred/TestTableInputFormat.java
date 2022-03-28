@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -75,7 +75,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This tests the TableInputFormat and its recovery semantics
  */
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestTableInputFormat {
 
   @ClassRule
@@ -109,7 +109,6 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values.
-   *
    * @param tableName the name of the table to create
    * @return A Table instance for the created table.
    * @throws IOException
@@ -120,7 +119,6 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values per column family.
-   *
    * @param tableName
    * @return A Table instance for the created table.
    * @throws IOException
@@ -142,15 +140,14 @@ public class TestTableInputFormat {
 
   /**
    * Verify that the result and key have expected values.
-   *
    * @param r single row result
    * @param key the row key
    * @param expectedKey the expected key
    * @param expectedValue the expected value
    * @return true if the result contains the expected key and value, false otherwise.
    */
-  static boolean checkResult(Result r, ImmutableBytesWritable key,
-      byte[] expectedKey, byte[] expectedValue) {
+  static boolean checkResult(Result r, ImmutableBytesWritable key, byte[] expectedKey,
+      byte[] expectedValue) {
     assertEquals(0, key.compareTo(expectedKey));
     Map<byte[], byte[]> vals = r.getFamilyMap(FAMILY);
     byte[] value = vals.values().iterator().next();
@@ -159,9 +156,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create table data and run tests on specified htable using the
-   * o.a.h.hbase.mapred API.
-   *
+   * Create table data and run tests on specified htable using the o.a.h.hbase.mapred API.
    * @param table
    * @throws IOException
    */
@@ -192,11 +187,9 @@ public class TestTableInputFormat {
 
   /**
    * Create a table that IOE's on first scanner next call
-   *
    * @throws IOException
    */
-  static Table createIOEScannerTable(byte[] name, final int failCnt)
-      throws IOException {
+  static Table createIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
       int cnt = 0;
@@ -225,13 +218,10 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create a table that throws a DoNoRetryIOException on first scanner next
-   * call
-   *
+   * Create a table that throws a DoNoRetryIOException on first scanner next call
    * @throws IOException
    */
-  static Table createDNRIOEScannerTable(byte[] name, final int failCnt)
-      throws IOException {
+  static Table createDNRIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
       int cnt = 0;
@@ -246,8 +236,7 @@ public class TestTableInputFormat {
           ResultScanner scanner = mock(ResultScanner.class);
 
           invocation.callRealMethod(); // simulate NotServingRegionException
-          doThrow(
-              new NotServingRegionException("Injected simulated TimeoutException"))
+          doThrow(new NotServingRegionException("Injected simulated TimeoutException"))
               .when(scanner).next();
           return scanner;
         }
@@ -264,7 +253,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming no errors using mapred api.
-   *
    * @throws IOException
    */
   @Test
@@ -275,7 +263,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming Scanner IOException failure using mapred api,
-   *
    * @throws IOException
    */
   @Test
@@ -286,7 +273,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming Scanner IOException failure using mapred api,
-   *
    * @throws IOException
    */
   @Test(expected = IOException.class)
@@ -297,7 +283,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming NotServingRegionException using mapred api.
-   *
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test
@@ -308,7 +293,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming NotServingRegionException using mapred api.
-   *
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
@@ -330,8 +314,8 @@ public class TestTableInputFormat {
 
   @Test
   public void testDeprecatedExtensionOfTableInputFormatBase() throws IOException {
-    LOG.info("testing use of an InputFormat taht extends InputFormatBase, "
-        + "as it was given in 0.98.");
+    LOG.info(
+      "testing use of an InputFormat taht extends InputFormatBase, " + "as it was given in 0.98.");
     final Table table = createTable(Bytes.toBytes("exampleDeprecatedTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
     testInputFormat(ExampleDeprecatedTIF.class);
@@ -339,8 +323,8 @@ public class TestTableInputFormat {
 
   @Test
   public void testJobConfigurableExtensionOfTableInputFormatBase() throws IOException {
-    LOG.info("testing use of an InputFormat taht extends InputFormatBase, "
-        + "using JobConfigurable.");
+    LOG.info(
+      "testing use of an InputFormat taht extends InputFormatBase, " + "using JobConfigurable.");
     final Table table = createTable(Bytes.toBytes("exampleJobConfigurableTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
     testInputFormat(ExampleJobConfigurableTIF.class);
@@ -378,17 +362,19 @@ public class TestTableInputFormat {
 
     @Override
     public void map(ImmutableBytesWritable key, Result value,
-        OutputCollector<NullWritable,NullWritable> output,
-        Reporter reporter) throws IOException {
+        OutputCollector<NullWritable, NullWritable> output, Reporter reporter) throws IOException {
       for (Cell cell : value.listCells()) {
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":row",
-            Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
+        reporter
+            .getCounter(TestTableInputFormat.class.getName() + ":row",
+              Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
             .increment(1l);
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":family",
-            Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))
+        reporter
+            .getCounter(TestTableInputFormat.class.getName() + ":family",
+              Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))
             .increment(1l);
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":value",
-            Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()))
+        reporter
+            .getCounter(TestTableInputFormat.class.getName() + ":value",
+              Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()))
             .increment(1l);
       }
     }
@@ -408,12 +394,11 @@ public class TestTableInputFormat {
         Table exampleTable = connection.getTable(TableName.valueOf("exampleDeprecatedTable"));
         // mandatory
         initializeTable(connection, exampleTable.getName());
-        byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
-          Bytes.toBytes("columnB") };
+        byte[][] inputColumns = new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") };
         // mandatory
         setInputColumns(inputColumns);
         Filter exampleFilter =
-          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
+            new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         // optional
         setRowFilter(exampleFilter);
       } catch (IOException exception) {
@@ -440,7 +425,6 @@ public class TestTableInputFormat {
     }
   }
 
-
   public static class ExampleTIF extends TableInputFormatBase {
 
     @Override
@@ -453,12 +437,11 @@ public class TestTableInputFormat {
       TableName tableName = TableName.valueOf(table);
       // mandatory
       initializeTable(connection, tableName);
-      byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
-        Bytes.toBytes("columnB") };
+      byte[][] inputColumns = new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") };
       // mandatory
       setInputColumns(inputColumns);
       Filter exampleFilter =
-        new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
+          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
       // optional
       setRowFilter(exampleFilter);
     }
@@ -466,4 +449,3 @@ public class TestTableInputFormat {
   }
 
 }
-

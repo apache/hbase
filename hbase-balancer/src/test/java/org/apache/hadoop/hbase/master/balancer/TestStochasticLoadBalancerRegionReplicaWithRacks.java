@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,7 +88,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
     int numTables = 1;
     int numRacks = 4; // all replicas should be on a different rack
     Map<ServerName, List<RegionInfo>> serverMap =
-      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+        createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
 
     testWithClusterWithIteration(serverMap, rm, true, true);

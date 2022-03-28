@@ -37,16 +37,14 @@ import org.junit.runners.Parameterized;
 public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor5.class);
+      HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor5.class);
 
   // Override the parameters from the parent class. We just want to run it for the default
   // param combination.
   @Parameterized.Parameters
   public static Collection parameters() {
-    return Arrays.asList(new Object[][] {
-        { MasterRegistry.class, 1},
-        { ZKConnectionRegistry.class, 1}
-    });
+    return Arrays
+        .asList(new Object[][] { { MasterRegistry.class, 1 }, { ZKConnectionRegistry.class, 1 } });
   }
 
   @AfterClass
@@ -56,6 +54,6 @@ public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
 
   public TestFromClientSideWithCoprocessor5(Class registry, int numHedgedReqs) throws Exception {
     initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
-        MultiRowMutationEndpoint.class);
+      MultiRowMutationEndpoint.class);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,8 +72,8 @@ public class TestShutdownBackupMaster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, MockHMaster.class, HMaster.class);
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(2).numRegionServers(2).numDataNodes(2).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2)
+        .numRegionServers(2).numDataNodes(2).build();
     UTIL.startMiniCluster(option);
     UTIL.waitUntilAllSystemRegionsAssigned();
   }

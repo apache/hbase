@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,7 +76,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+    implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -192,10 +192,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected final synchronized void setupClusterConnection() throws IOException {
     if (asyncClusterConnection == null) {
       InetSocketAddress localAddress =
-        new InetSocketAddress(rpcServices.getSocketAddress().getAddress(), 0);
+          new InetSocketAddress(rpcServices.getSocketAddress().getAddress(), 0);
       User user = userProvider.getCurrent();
       asyncClusterConnection =
-        ClusterConnectionFactory.createAsyncClusterConnection(this, conf, localAddress, user);
+          ClusterConnectionFactory.createAsyncClusterConnection(this, conf, localAddress, user);
     }
   }
 
@@ -216,7 +216,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
     String rootDirUri =
-      CommonFSUtils.getDirUri(this.conf, new Path(conf.get(HConstants.HBASE_DIR)));
+        CommonFSUtils.getDirUri(this.conf, new Path(conf.get(HConstants.HBASE_DIR)));
     if (rootDirUri != null) {
       CommonFSUtils.setFsDefault(this.conf, rootDirUri);
     }
@@ -224,15 +224,15 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+        !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   public HBaseServerBase(Configuration conf, String name)
-    throws ZooKeeperConnectionException, IOException {
+      throws ZooKeeperConnectionException, IOException {
     super(name); // thread name
     this.conf = conf;
     this.eventLoopGroupConfig =
-      NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
+        NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
     this.startcode = EnvironmentEdgeManager.currentTime();
     this.userProvider = UserProvider.instantiate(conf);
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
@@ -241,8 +241,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     this.rpcServices = createRpcServices();
     useThisHostnameInstead = getUseThisHostnameInstead(conf);
     InetSocketAddress addr = rpcServices.getSocketAddress();
-    String hostName = StringUtils.isBlank(useThisHostnameInstead) ? addr.getHostName() :
-      this.useThisHostnameInstead;
+    String hostName = StringUtils.isBlank(useThisHostnameInstead) ? addr.getHostName()
+        : this.useThisHostnameInstead;
     serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
     // login the zookeeper client principal (if using security)
     ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
@@ -253,7 +253,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     // or process owner as default super user.
     Superusers.initialize(conf);
     zooKeeper =
-      new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
+        new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
 
     this.configurationManager = new ConfigurationManager();
     setupWindows(conf, configurationManager);
@@ -285,8 +285,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
    * Puts up the webui.
    */
   private void putUpWebUI() throws IOException {
-    int port =
-      this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+      HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
 
     if (this instanceof HMaster) {
@@ -299,9 +299,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     }
 
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
-      String msg = "Failed to start http info server. Address " + addr +
-        " does not belong to this host. Correct configuration parameter: " +
-        "hbase.regionserver.info.bindAddress";
+      String msg = "Failed to start http info server. Address " + addr
+          + " does not belong to this host. Correct configuration parameter: "
+          + "hbase.regionserver.info.bindAddress";
       LOG.error(msg);
       throw new IOException(msg);
     }
@@ -329,7 +329,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     port = this.infoServer.getPort();
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, port);
     int masterInfoPort =
-      conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
+        conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
     conf.setInt("hbase.master.info.port.orig", masterInfoPort);
     conf.setInt(HConstants.MASTER_INFO_PORT, port);
   }
@@ -383,8 +383,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       long globalMemStoreSize = pair.getFirst();
       boolean offheap = pair.getSecond() == MemoryType.NON_HEAP;
       // When off heap memstore in use, take full area for chunk pool.
-      float poolSizePercentage = offheap ? 1.0F :
-        conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
+      float poolSizePercentage = offheap ? 1.0F
+          : conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
         MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
@@ -556,7 +556,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public MetaRegionLocationCache getMetaRegionLocationCache() {
     return this.metaRegionLocationCache;
   }

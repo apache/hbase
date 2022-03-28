@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
@@ -168,23 +167,24 @@ public class TestVerifyReplicationCrossDiffHdfs {
     FileSystem fs = rootDir.getFileSystem(conf1);
     String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util1.getAdmin(), TABLE_NAME,
-        Bytes.toString(FAMILY), sourceSnapshotName, rootDir, fs, true);
+      Bytes.toString(FAMILY), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(conf2);
     FileSystem peerFs = peerRootDir.getFileSystem(conf2);
     String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util2.getAdmin(), TABLE_NAME,
-        Bytes.toString(FAMILY), peerSnapshotName, peerRootDir, peerFs, true);
+      Bytes.toString(FAMILY), peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String temPath1 = new Path(fs.getUri().toString(), "/tmp1").toString();
     String temPath2 = "/tmp2";
 
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
-      "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
-      "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(conf2), PEER_ID, TABLE_NAME.toString() };
+        "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
+        "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
+        "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(conf2), PEER_ID,
+        TABLE_NAME.toString() };
 
     // Use the yarn's config override the source cluster's config.
     Configuration newConf = HBaseConfiguration.create(conf1);

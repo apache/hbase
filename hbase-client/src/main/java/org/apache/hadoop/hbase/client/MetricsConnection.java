@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.Timer;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -34,20 +33,20 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * This class is for maintaining the various connection statistics and publishing them through
- * the metrics interfaces.
- *
- * This class manages its own {@link MetricRegistry} and {@link JmxReporter} so as to not
- * conflict with other uses of Yammer Metrics within the client application. Instantiating
+ * This class is for maintaining the various connection statistics and publishing them through the
+ * metrics interfaces. This class manages its own {@link MetricRegistry} and {@link JmxReporter} so
+ * as to not conflict with other uses of Yammer Metrics within the client application. Instantiating
  * this class implicitly creates and "starts" instances of these classes; be sure to call
  * {@link #shutdown()} to terminate the thread pools they allocate.
  */
@@ -139,12 +138,10 @@ public class MetricsConnection implements StatisticTrackable {
         sb.append("(").append(subName).append(")");
       }
       this.name = sb.toString();
-      this.callTimer = registry.timer(name(MetricsConnection.class,
-        DRTN_BASE + this.name, scope));
-      this.reqHist = registry.histogram(name(MetricsConnection.class,
-        REQ_BASE + this.name, scope));
-      this.respHist = registry.histogram(name(MetricsConnection.class,
-        RESP_BASE + this.name, scope));
+      this.callTimer = registry.timer(name(MetricsConnection.class, DRTN_BASE + this.name, scope));
+      this.reqHist = registry.histogram(name(MetricsConnection.class, REQ_BASE + this.name, scope));
+      this.respHist =
+          registry.histogram(name(MetricsConnection.class, RESP_BASE + this.name, scope));
     }
 
     private CallTracker(MetricRegistry registry, String name, String scope) {
@@ -170,10 +167,10 @@ public class MetricsConnection implements StatisticTrackable {
 
     public RegionStats(MetricRegistry registry, String name) {
       this.name = name;
-      this.memstoreLoadHist = registry.histogram(name(MetricsConnection.class,
-          MEMLOAD_BASE + this.name));
-      this.heapOccupancyHist = registry.histogram(name(MetricsConnection.class,
-          HEAP_BASE + this.name));
+      this.memstoreLoadHist =
+          registry.histogram(name(MetricsConnection.class, MEMLOAD_BASE + this.name));
+      this.heapOccupancyHist =
+          registry.histogram(name(MetricsConnection.class, HEAP_BASE + this.name));
     }
 
     public void update(RegionLoadStats regionStatistics) {
@@ -188,12 +185,10 @@ public class MetricsConnection implements StatisticTrackable {
     final Histogram delayIntevalHist;
 
     public RunnerStats(MetricRegistry registry) {
-      this.normalRunners = registry.counter(
-        name(MetricsConnection.class, "normalRunnersCount"));
-      this.delayRunners = registry.counter(
-        name(MetricsConnection.class, "delayRunnersCount"));
-      this.delayIntevalHist = registry.histogram(
-        name(MetricsConnection.class, "delayIntervalHist"));
+      this.normalRunners = registry.counter(name(MetricsConnection.class, "normalRunnersCount"));
+      this.delayRunners = registry.counter(name(MetricsConnection.class, "delayRunnersCount"));
+      this.delayIntevalHist =
+          registry.histogram(name(MetricsConnection.class, "delayIntervalHist"));
     }
 
     public void incrNormalRunners() {
@@ -209,11 +204,10 @@ public class MetricsConnection implements StatisticTrackable {
     }
   }
 
-  protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats
-          = new ConcurrentHashMap<>();
+  protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats =
+      new ConcurrentHashMap<>();
 
-  public void updateServerStats(ServerName serverName, byte[] regionName,
-                                Object r) {
+  public void updateServerStats(ServerName serverName, byte[] regionName, Object r) {
     if (!(r instanceof Result)) {
       return;
     }
@@ -254,19 +248,22 @@ public class MetricsConnection implements StatisticTrackable {
   private final String scope;
 
   private final NewMetric<Timer> timerFactory = new NewMetric<Timer>() {
-    @Override public Timer newMetric(Class<?> clazz, String name, String scope) {
+    @Override
+    public Timer newMetric(Class<?> clazz, String name, String scope) {
       return registry.timer(name(clazz, name, scope));
     }
   };
 
   private final NewMetric<Histogram> histogramFactory = new NewMetric<Histogram>() {
-    @Override public Histogram newMetric(Class<?> clazz, String name, String scope) {
+    @Override
+    public Histogram newMetric(Class<?> clazz, String name, String scope) {
       return registry.histogram(name(clazz, name, scope));
     }
   };
 
   private final NewMetric<Counter> counterFactory = new NewMetric<Counter>() {
-    @Override public Counter newMetric(Class<?> clazz, String name, String scope) {
+    @Override
+    public Counter newMetric(Class<?> clazz, String name, String scope) {
       return registry.counter(name(clazz, name, scope));
     }
   };
@@ -299,46 +296,43 @@ public class MetricsConnection implements StatisticTrackable {
   // a big improvement over calling registry.newMetric each time.
   protected final ConcurrentMap<String, Timer> rpcTimers =
       new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  protected final ConcurrentMap<String, Histogram> rpcHistograms =
-      new ConcurrentHashMap<>(CAPACITY * 2 /* tracking both request and response sizes */,
-          LOAD_FACTOR, CONCURRENCY_LEVEL);
+  protected final ConcurrentMap<String, Histogram> rpcHistograms = new ConcurrentHashMap<>(
+      CAPACITY * 2 /* tracking both request and response sizes */, LOAD_FACTOR, CONCURRENCY_LEVEL);
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
-    new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  protected final ConcurrentMap<String, Counter>  rpcCounters =
+      new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
+  protected final ConcurrentMap<String, Counter> rpcCounters =
       new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
       Supplier<ThreadPoolExecutor> metaPool) {
     this.scope = scope;
     this.registry = new MetricRegistry();
-    this.registry.register(getExecutorPoolName(),
-        new RatioGauge() {
-          @Override
-          protected Ratio getRatio() {
-            ThreadPoolExecutor pool = batchPool.get();
-            if (pool == null) {
-              return Ratio.of(0, 0);
-            }
-            return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
-          }
-        });
-    this.registry.register(getMetaPoolName(),
-        new RatioGauge() {
-          @Override
-          protected Ratio getRatio() {
-            ThreadPoolExecutor pool = metaPool.get();
-            if (pool == null) {
-              return Ratio.of(0, 0);
-            }
-            return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
-          }
-        });
+    this.registry.register(getExecutorPoolName(), new RatioGauge() {
+      @Override
+      protected Ratio getRatio() {
+        ThreadPoolExecutor pool = batchPool.get();
+        if (pool == null) {
+          return Ratio.of(0, 0);
+        }
+        return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
+      }
+    });
+    this.registry.register(getMetaPoolName(), new RatioGauge() {
+      @Override
+      protected Ratio getRatio() {
+        ThreadPoolExecutor pool = metaPool.get();
+        if (pool == null) {
+          return Ratio.of(0, 0);
+        }
+        return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
+      }
+    });
     this.metaCacheHits = registry.counter(name(this.getClass(), "metaCacheHits", scope));
     this.metaCacheMisses = registry.counter(name(this.getClass(), "metaCacheMisses", scope));
-    this.metaCacheNumClearServer = registry.counter(name(this.getClass(),
-      "metaCacheNumClearServer", scope));
-    this.metaCacheNumClearRegion = registry.counter(name(this.getClass(),
-      "metaCacheNumClearRegion", scope));
+    this.metaCacheNumClearServer =
+        registry.counter(name(this.getClass(), "metaCacheNumClearServer", scope));
+    this.metaCacheNumClearRegion =
+        registry.counter(name(this.getClass(), "metaCacheNumClearRegion", scope));
     this.hedgedReadOps = registry.counter(name(this.getClass(), "hedgedReadOps", scope));
     this.hedgedReadWin = registry.counter(name(this.getClass(), "hedgedReadWin", scope));
     this.getTracker = new CallTracker(this.registry, "Get", scope);
@@ -349,10 +343,10 @@ public class MetricsConnection implements StatisticTrackable {
     this.putTracker = new CallTracker(this.registry, "Mutate", "Put", scope);
     this.multiTracker = new CallTracker(this.registry, "Multi", scope);
     this.runnerStats = new RunnerStats(this.registry);
-    this.concurrentCallsPerServerHist = registry.histogram(name(MetricsConnection.class,
-      "concurrentCallsPerServer", scope));
-    this.numActionsPerServerHist = registry.histogram(name(MetricsConnection.class,
-      "numActionsPerServer", scope));
+    this.concurrentCallsPerServerHist =
+        registry.histogram(name(MetricsConnection.class, "concurrentCallsPerServer", scope));
+    this.numActionsPerServerHist =
+        registry.histogram(name(MetricsConnection.class, "numActionsPerServer", scope));
     this.nsLookups = registry.counter(name(this.getClass(), NS_LOOKUPS, scope));
     this.nsLookupsFailed = registry.counter(name(this.getClass(), NS_LOOKUPS_FAILED, scope));
 
@@ -437,8 +431,8 @@ public class MetricsConnection implements StatisticTrackable {
 
   /** Update call stats for non-critical-path methods */
   private void updateRpcGeneric(String methodName, CallStats stats) {
-    getMetric(DRTN_BASE + methodName, rpcTimers, timerFactory)
-        .update(stats.getCallTimeMs(), TimeUnit.MILLISECONDS);
+    getMetric(DRTN_BASE + methodName, rpcTimers, timerFactory).update(stats.getCallTimeMs(),
+      TimeUnit.MILLISECONDS);
     getMetric(REQ_BASE + methodName, rpcHistograms, histogramFactory)
         .update(stats.getRequestSizeBytes());
     getMetric(RESP_BASE + methodName, rpcHistograms, histogramFactory)
@@ -457,7 +451,7 @@ public class MetricsConnection implements StatisticTrackable {
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
     if (method.getService() == ClientService.getDescriptor()) {
-      switch(method.getIndex()) {
+      switch (method.getIndex()) {
         case 0:
           assert "Get".equals(method.getName());
           getTracker.updateRpc(stats);
@@ -465,7 +459,7 @@ public class MetricsConnection implements StatisticTrackable {
         case 1:
           assert "Mutate".equals(method.getName());
           final MutationType mutationType = ((MutateRequest) param).getMutation().getMutateType();
-          switch(mutationType) {
+          switch (mutationType) {
             case APPEND:
               appendTracker.updateRpc(stats);
               return;
@@ -519,8 +513,8 @@ public class MetricsConnection implements StatisticTrackable {
   }
 
   public void incrCacheDroppingExceptions(Object exception) {
-    getMetric(CACHE_BASE +
-      (exception == null? UNKNOWN_EXCEPTION : exception.getClass().getSimpleName()),
+    getMetric(
+      CACHE_BASE + (exception == null ? UNKNOWN_EXCEPTION : exception.getClass().getSimpleName()),
       cacheDroppingExceptions, counterFactory).inc();
   }
 

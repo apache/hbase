@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShutdownOfMetaReplicaHolder.class);
+      HBaseClassTestRule.forClass(TestShutdownOfMetaReplicaHolder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestShutdownOfMetaReplicaHolder.class);
 
@@ -50,7 +50,7 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
+        RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
       HRegionLocation hrl = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);

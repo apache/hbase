@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -130,10 +130,10 @@ public final class FutureUtils {
     StackTraceElement[] localStackTrace = Thread.currentThread().getStackTrace();
     StackTraceElement[] originalStackTrace = error.getStackTrace();
     StackTraceElement[] newStackTrace =
-      new StackTraceElement[localStackTrace.length + originalStackTrace.length + 1];
+        new StackTraceElement[localStackTrace.length + originalStackTrace.length + 1];
     System.arraycopy(localStackTrace, 0, newStackTrace, 0, localStackTrace.length);
     newStackTrace[localStackTrace.length] =
-      new StackTraceElement("--------Future", "get--------", null, -1);
+        new StackTraceElement("--------Future", "get--------", null, -1);
     System.arraycopy(originalStackTrace, 0, newStackTrace, localStackTrace.length + 1,
       originalStackTrace.length);
     error.setStackTrace(newStackTrace);

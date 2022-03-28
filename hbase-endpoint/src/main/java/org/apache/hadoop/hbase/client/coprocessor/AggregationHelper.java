@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -40,7 +39,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.Aggrega
  */
 @InterfaceAudience.Private
 public final class AggregationHelper {
-  private AggregationHelper() {}
+  private AggregationHelper() {
+  }
 
   /**
    * @param scan the HBase scan object to use to read data from HBase

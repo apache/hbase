@@ -24,7 +24,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -76,10 +75,10 @@ public class TestWALLockup {
   public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";
-  private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
+  private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static Configuration CONF ;
+  private static Configuration CONF;
   private String dir;
 
   // Test names
@@ -191,11 +190,12 @@ public class TestWALLockup {
   }
 
   /**
-   * Reproduce locking up that happens when we get an inopportune sync during setup for
-   * zigzaglatch wait. See HBASE-14317. If below is broken, we will see this test timeout because
-   * it is locked up.
-   * <p>First I need to set up some mocks for Server and RegionServerServices. I also need to
-   * set up a dodgy WAL that will throw an exception when we go to append to it.
+   * Reproduce locking up that happens when we get an inopportune sync during setup for zigzaglatch
+   * wait. See HBASE-14317. If below is broken, we will see this test timeout because it is locked
+   * up.
+   * <p>
+   * First I need to set up some mocks for Server and RegionServerServices. I also need to set up a
+   * dodgy WAL that will throw an exception when we go to append to it.
    */
   @Test
   public void testLockupWhenSyncInMiddleOfZigZagSetup() throws IOException {
@@ -218,9 +218,8 @@ public class TestWALLockup {
     logRoller.start();
     // Now get a region and start adding in edits.
     final HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
-    byte [] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
-        Bytes.BYTES_COMPARATOR);
+    byte[] bytes = Bytes.toBytes(getName());
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
@@ -230,7 +229,7 @@ public class TestWALLockup {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKeyImpl key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
-        TableName.META_TABLE_NAME, EnvironmentEdgeManager.currentTime(), mvcc, scopes);
+          TableName.META_TABLE_NAME, EnvironmentEdgeManager.currentTime(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -256,7 +255,7 @@ public class TestWALLockup {
       // Get a memstore flush going too so we have same hung profile as up in the issue over
       // in HBASE-14317. Flush hangs trying to get sequenceid because the ringbuffer is held up
       // by the zigzaglatch waiting on syncs to come home.
-      Thread t = new Thread ("Flusher") {
+      Thread t = new Thread("Flusher") {
         @Override
         public void run() {
           try {
@@ -305,13 +304,12 @@ public class TestWALLockup {
   }
 
   /**
-   *
    * If below is broken, we will see this test timeout because RingBufferEventHandler was stuck in
    * attainSafePoint. Everyone will wait for sync to finish forever. See HBASE-14317.
    */
   @Test
   public void testRingBufferEventHandlerStuckWhenSyncFailed()
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
 
     // A WAL that we can have throw exceptions and slow FSHLog.replaceWriter down
     class DodgyFSLog extends FSHLog {
@@ -319,7 +317,7 @@ public class TestWALLockup {
       private volatile boolean zigZagCreated = false;
 
       public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
-        throws IOException {
+          throws IOException {
         super(fs, root, logDir, conf);
       }
 
@@ -424,7 +422,8 @@ public class TestWALLockup {
 
       try {
         LOG.info("Call sync for testing whether RingBufferEventHandler is hanging.");
-        dodgyWAL.sync(false); // Should not get a hang here, otherwise we will see timeout in this test.
+        dodgyWAL.sync(false); // Should not get a hang here, otherwise we will see timeout in this
+                              // test.
         Assert.fail("Expect an IOException here.");
       } catch (IOException ignore) {
       }
@@ -447,8 +446,8 @@ public class TestWALLockup {
    */
   private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       Configuration conf, WAL wal) throws IOException {
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false,
       Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
   }

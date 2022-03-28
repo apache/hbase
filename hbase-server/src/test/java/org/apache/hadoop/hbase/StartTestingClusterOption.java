@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -110,10 +109,10 @@ public final class StartTestingClusterOption {
    * Private constructor. Use {@link Builder#build()}.
    */
   private StartTestingClusterOption(int numMasters, int numAlwaysStandByMasters,
-    Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
-    int numDataNodes, String[] dataNodeHosts, int numZkServers, boolean createRootDir,
-    boolean createWALDir) {
+      Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
+      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+      int numDataNodes, String[] dataNodeHosts, int numZkServers, boolean createRootDir,
+      boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -173,11 +172,11 @@ public final class StartTestingClusterOption {
 
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass +
-      ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) +
-      ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" +
-      Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir=" +
-      createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
+        + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
+        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts="
+        + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir="
+        + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
@@ -214,8 +213,8 @@ public final class StartTestingClusterOption {
         numDataNodes = dataNodeHosts.length;
       }
       return new StartTestingClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
-        numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-        createRootDir, createWALDir);
+          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
+          createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {
@@ -244,7 +243,7 @@ public final class StartTestingClusterOption {
     }
 
     public Builder
-      rsClass(Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass) {
+        rsClass(Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass) {
       this.rsClass = rsClass;
       return this;
     }
@@ -265,8 +264,7 @@ public final class StartTestingClusterOption {
     }
 
     public Builder numWorkers(int numWorkers) {
-      return numDataNodes(numWorkers)
-        .numRegionServers(numWorkers);
+      return numDataNodes(numWorkers).numRegionServers(numWorkers);
     }
 
     public Builder createRootDir(boolean createRootDir) {

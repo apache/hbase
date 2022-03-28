@@ -56,10 +56,10 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
+      LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
   private static final double ALLOWED_WINDOW = 1.20;
   private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
   private static String RULES_FILE;
@@ -150,27 +150,27 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
     createRulesFile(RULES_FILE);
     final Map<ServerName, List<RegionInfo>> serverMap =
-      this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
+        this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     final List<RegionPlan> plans =
-      loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+        loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     // As we disabled all the other cost functions, balancing only according to
     // the heterogeneous cost function should return nothing.
     assertNull(plans);
   }
 
   private void testHeterogeneousWithCluster(final int numNodes, final int numRegions,
-    final int numRegionsPerServer, final List<String> rules) throws IOException {
+      final int numRegionsPerServer, final List<String> rules) throws IOException {
 
     createRulesFile(RULES_FILE, rules);
     final Map<ServerName, List<RegionInfo>> serverMap =
-      this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
+        this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     this.testWithCluster(serverMap, null, true, false);
   }
 
   @Override
   protected void testWithCluster(final Map<ServerName, List<RegionInfo>> serverMap,
-    final RackManager rackManager, final boolean assertFullyBalanced,
-    final boolean assertFullyBalancedForReplicas) {
+      final RackManager rackManager, final boolean assertFullyBalanced,
+      final boolean assertFullyBalancedForReplicas) {
     final List<ServerAndLoad> list = this.convertToList(serverMap);
     LOG.info("Mock Cluster : " + this.printMock(list) + " " + this.printStats(list));
 
@@ -178,7 +178,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
     // Run the balancer.
     final List<RegionPlan> plans =
-      loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+        loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -191,13 +191,13 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
       if (assertFullyBalanced) {
         final List<RegionPlan> secondPlans =
-          loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+            loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
         assertNull(secondPlans);
 
         // create external cost function to retrieve limit
         // for each RS
         final HeterogeneousRegionCountCostFunction cf =
-          new HeterogeneousRegionCountCostFunction(conf);
+            new HeterogeneousRegionCountCostFunction(conf);
         assertNotNull(cf);
         BalancerClusterState cluster = new BalancerClusterState(serverMap, null, null, null);
         cf.prepare(cluster);
@@ -214,9 +214,10 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
           // as the balancer is stochastic, we cannot check exactly the result of the balancing,
           // hence the allowedWindow parameter
-          assertTrue("Host " + sn.getHostname() + " should be below " +
-            cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage + ", " +
-            numberRegions + ", " + limit, usage <= cf.overallUsage * ALLOWED_WINDOW);
+          assertTrue("Host " + sn.getHostname() + " should be below "
+              + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage
+              + ", " + numberRegions + ", " + limit,
+            usage <= cf.overallUsage * ALLOWED_WINDOW);
         }
       }
 
@@ -228,7 +229,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
   @Override
   protected Map<ServerName, List<RegionInfo>> createServerMap(int numNodes, int numRegions,
-    int numRegionsPerServer, int replication, int numTables) {
+      int numRegionsPerServer, int replication, int numTables) {
     // construct a cluster of numNodes, having a total of numRegions. Each RS will hold
     // numRegionsPerServer many regions except for the last one, which will host all the
     // remaining regions
@@ -255,7 +256,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
   @Override
   protected TreeMap<ServerName, List<RegionInfo>> mockClusterServers(int[] mockCluster,
-    int numTables) {
+      int numTables) {
     int numServers = mockCluster.length;
     TreeMap<ServerName, List<RegionInfo>> servers = new TreeMap<>();
     for (int i = 0; i < numServers; i++) {
@@ -285,7 +286,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
     @Override
     public BalanceAction pickRandomRegions(BalancerClusterState cluster, int thisServer,
-      int otherServer) {
+        int otherServer) {
       if (thisServer < 0 || otherServer < 0) {
         return BalanceAction.NULL_ACTION;
       }
@@ -304,7 +305,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
   static class StochasticLoadTestBalancer extends StochasticLoadBalancer {
     private FairRandomCandidateGenerator fairRandomCandidateGenerator =
-      new FairRandomCandidateGenerator();
+        new FairRandomCandidateGenerator();
 
     @Override
     protected CandidateGenerator getRandomGenerator() {

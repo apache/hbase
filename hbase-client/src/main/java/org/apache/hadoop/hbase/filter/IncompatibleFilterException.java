@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class IncompatibleFilterException extends RuntimeException {
   private static final long serialVersionUID = 3236763276623198231L;
 
-/** constructor */
+  /** constructor */
   public IncompatibleFilterException() {
     super();
   }

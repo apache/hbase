@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,9 +73,9 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
-    TableMapReduceUtil
-        .initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans), ScanMapper.class,
-            ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
+    TableMapReduceUtil.initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans),
+      ScanMapper.class, ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true,
+      restoreDir);
   }
 
   protected Map<String, Collection<Scan>> getSnapshotScanMapping(final List<Scan> scans) {
@@ -84,7 +84,7 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
       @Override
       public String apply(Scan input) {
         return snapshotNameForTable(
-            Bytes.toStringBinary(input.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME)));
+          Bytes.toStringBinary(input.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME)));
       }
     }).asMap();
   }

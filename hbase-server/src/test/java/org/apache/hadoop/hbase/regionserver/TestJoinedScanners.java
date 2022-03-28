@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -66,7 +65,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
  * Test performance improvement of joined scanners optimization:
  * https://issues.apache.org/jira/browse/HBASE-5416
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestJoinedScanners {
 
   @ClassRule
@@ -97,7 +96,7 @@ public class TestJoinedScanners {
     TEST_UTIL.getConfiguration().setInt("dfs.replication", 1);
     TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 322122547200L);
 
-    String[] dataNodeHosts = new String[] {"host1", "host2", "host3"};
+    String[] dataNodeHosts = new String[] { "host1", "host2", "host3" };
     int regionServersCount = 3;
     StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(regionServersCount).dataNodeHosts(dataNodeHosts).build();
@@ -111,14 +110,13 @@ public class TestJoinedScanners {
 
   @Test
   public void testJoinedScanners() throws Exception {
-    byte[][] families = {cf_essential, cf_joined};
+    byte[][] families = { cf_essential, cf_joined };
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setDataBlockEncoding(blockEncoding).build();
+          .setDataBlockEncoding(blockEncoding).build();
       builder.setColumnFamily(familyDescriptor);
     }
     TableDescriptor tableDescriptor = builder.build();
@@ -128,8 +126,8 @@ public class TestJoinedScanners {
     long rows_to_insert = 1000;
     int insert_batch = 20;
 
-    LOG.info("Make " + Long.toString(rows_to_insert) + " rows, total size = " + Float
-      .toString(rows_to_insert * valueWidth / 1024 / 1024) + " MB");
+    LOG.info("Make " + Long.toString(rows_to_insert) + " rows, total size = "
+        + Float.toString(rows_to_insert * valueWidth / 1024 / 1024) + " MB");
 
     long time = System.nanoTime();
     Random rand = ThreadLocalRandom.current();
@@ -154,8 +152,8 @@ public class TestJoinedScanners {
       puts.clear();
     }
 
-    LOG.info("Data generated in "
-      + Double.toString((System.nanoTime() - time) / 1000000000.0) + " seconds");
+    LOG.info("Data generated in " + Double.toString((System.nanoTime() - time) / 1000000000.0)
+        + " seconds");
 
     boolean slow = true;
     for (int i = 0; i < 10; ++i) {
@@ -172,8 +170,8 @@ public class TestJoinedScanners {
     scan.addColumn(cf_essential, col_name);
     scan.addColumn(cf_joined, col_name);
 
-    SingleColumnValueFilter filter = new SingleColumnValueFilter(
-        cf_essential, col_name, CompareOperator.EQUAL, flag_yes);
+    SingleColumnValueFilter filter =
+        new SingleColumnValueFilter(cf_essential, col_name, CompareOperator.EQUAL, flag_yes);
     filter.setFilterIfMissing(true);
     scan.setFilter(filter);
     scan.setLoadColumnFamiliesOnDemand(!slow);
@@ -188,7 +186,7 @@ public class TestJoinedScanners {
     double timeSec = (System.nanoTime() - time) / 1000000000.0;
     result_scanner.close();
     LOG.info((slow ? "Slow" : "Joined") + " scanner finished in " + Double.toString(timeSec)
-      + " seconds, got " + Long.toString(rows_count/2) + " rows");
+        + " seconds, got " + Long.toString(rows_count / 2) + " rows");
   }
 
   private static Options options = new Options();
@@ -199,18 +197,18 @@ public class TestJoinedScanners {
    * @throws IOException if there is a bug while reading from disk
    */
   public static void main(final String[] args) throws Exception {
-    Option encodingOption = new Option("e", "blockEncoding", true,
-      "Data block encoding; Default: FAST_DIFF");
+    Option encodingOption =
+        new Option("e", "blockEncoding", true, "Data block encoding; Default: FAST_DIFF");
     encodingOption.setRequired(false);
     options.addOption(encodingOption);
 
     Option ratioOption = new Option("r", "selectionRatio", true,
-      "Ratio of selected rows using essential column family");
+        "Ratio of selected rows using essential column family");
     ratioOption.setRequired(false);
     options.addOption(ratioOption);
 
-    Option widthOption = new Option("w", "valueWidth", true,
-      "Width of value for non-essential column family");
+    Option widthOption =
+        new Option("w", "valueWidth", true, "Width of value for non-essential column family");
     widthOption.setRequired(false);
     options.addOption(widthOption);
 
@@ -242,13 +240,12 @@ public class TestJoinedScanners {
 
       TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf1"))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf2"))
-          .build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf2")).build();
       admin.createTable(tableDescriptor);
 
       try (Table table = con.getTable(tableName)) {
         SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes.toBytes("cf1"),
-          Bytes.toBytes("col"), CompareOperator.EQUAL, Bytes.toBytes("val"));
+            Bytes.toBytes("col"), CompareOperator.EQUAL, Bytes.toBytes("val"));
         filter.setFilterIfMissing(true);
 
         // Reverse scan with loading CFs on demand

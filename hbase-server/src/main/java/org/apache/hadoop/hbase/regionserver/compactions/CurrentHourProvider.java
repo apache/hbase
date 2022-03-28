@@ -68,7 +68,7 @@ public class CurrentHourProvider {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   static void advanceTick() {
     tick = nextTick();
   }

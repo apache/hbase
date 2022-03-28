@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestMobFile {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Configuration conf = TEST_UTIL.getConfiguration();
-  private CacheConfig cacheConf =  new CacheConfig(conf);
+  private CacheConfig cacheConf = new CacheConfig(conf);
   @Rule
   public TestName testName = new TestName();
 
@@ -111,11 +111,9 @@ public class TestMobFile {
   public void testGetScanner() throws Exception {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
-            .withOutputDir(testDir)
-            .withFileContext(meta)
-            .build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
+        .withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer, testName.getMethodName());
 
     MobFile mobFile =

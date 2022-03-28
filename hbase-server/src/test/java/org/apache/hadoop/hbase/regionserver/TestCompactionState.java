@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -46,8 +45,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-/** Unit tests to test retrieving table/region compaction state*/
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+/** Unit tests to test retrieving table/region compaction state */
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestCompactionState {
 
   @ClassRule
@@ -118,8 +117,8 @@ public class TestCompactionState {
   @Test
   public void testInvalidColumnFamily() throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    byte [] family = Bytes.toBytes("family");
-    byte [] fakecf = Bytes.toBytes("fakecf");
+    byte[] family = Bytes.toBytes("family");
+    byte[] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;
     boolean caughtMajorCompact = false;
     Table ht = null;
@@ -146,9 +145,8 @@ public class TestCompactionState {
   }
 
   /**
-   * Load data to a table, flush it to disk, trigger compaction,
-   * confirm the compaction state is right and wait till it is done.
-   *
+   * Load data to a table, flush it to disk, trigger compaction, confirm the compaction state is
+   * right and wait till it is done.
    * @param tableName
    * @param flushes
    * @param expectedState
@@ -162,9 +160,9 @@ public class TestCompactionState {
       throws IOException, InterruptedException {
     // Create a table with regions
     TableName table = TableName.valueOf(tableName);
-    byte [] family = Bytes.toBytes("family");
-    byte [][] families =
-      {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};
+    byte[] family = Bytes.toBytes("family");
+    byte[][] families =
+        { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
     Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, families);
@@ -201,7 +199,7 @@ public class TestCompactionState {
       // Now, should have the right compaction state,
       // otherwise, the compaction should have already been done
       if (expectedState != state) {
-        for (Region region: regions) {
+        for (Region region : regions) {
           state = CompactionState.valueOf(region.getCompactionState().toString());
           assertEquals(CompactionState.NONE, state);
         }
@@ -240,27 +238,25 @@ public class TestCompactionState {
 
   private static CompactionState getCompactionState(StateSource stateSource, HMaster master,
       Admin admin, TableName table) throws IOException {
-    CompactionState state = stateSource == StateSource.ADMIN ?
-      admin.getCompactionState(table) :
-      master.getCompactionState(table);
+    CompactionState state = stateSource == StateSource.ADMIN ? admin.getCompactionState(table)
+        : master.getCompactionState(table);
     return state;
   }
 
-  private static int countStoreFilesInFamily(
-      List<HRegion> regions, final byte[] family) {
-    return countStoreFilesInFamilies(regions, new byte[][]{family});
+  private static int countStoreFilesInFamily(List<HRegion> regions, final byte[] family) {
+    return countStoreFilesInFamilies(regions, new byte[][] { family });
   }
 
   private static int countStoreFilesInFamilies(List<HRegion> regions, final byte[][] families) {
     int count = 0;
-    for (HRegion region: regions) {
+    for (HRegion region : regions) {
       count += region.getStoreFileList(families).size();
     }
     return count;
   }
 
-  private static void loadData(final Table ht, final byte[][] families,
-      final int rows, final int flushes) throws IOException {
+  private static void loadData(final Table ht, final byte[][] families, final int rows,
+      final int flushes) throws IOException {
     List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");
     Random rand = ThreadLocalRandom.current();

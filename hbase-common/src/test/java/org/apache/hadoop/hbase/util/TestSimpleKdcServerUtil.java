@@ -29,24 +29,23 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestSimpleKdcServerUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleKdcServerUtil.class);
+      HBaseClassTestRule.forClass(TestSimpleKdcServerUtil.class);
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   /**
-   * Test we are able to ride over clashing port... BindException.. when starting up a
-   * kdc server.
+   * Test we are able to ride over clashing port... BindException.. when starting up a kdc server.
    */
   @Test
   public void testBindException() throws KrbException, IOException {
     SimpleKdcServer kdc = null;
     try {
       File dir = new File(UTIL.getDataTestDir().toString());
-      kdc = SimpleKdcServerUtil.
-        getRunningSimpleKdcServer(dir, HBaseCommonTestingUtil::randomFreePort, true);
+      kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(dir,
+        HBaseCommonTestingUtil::randomFreePort, true);
       kdc.createPrincipal("wah");
     } finally {
       kdc.stop();

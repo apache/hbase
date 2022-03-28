@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureSuspended {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -181,8 +181,8 @@ public class TestProcedureSuspended {
     private AtomicBoolean lock = null;
     private boolean hasLock = false;
 
-    public TestLockProcedure(final AtomicBoolean lock, final String key,
-        final boolean throwYield, final boolean throwSuspend) {
+    public TestLockProcedure(final AtomicBoolean lock, final String key, final boolean throwYield,
+        final boolean throwSuspend) {
       this.lock = lock;
       this.key = key;
       this.throwYield = throwYield;
@@ -259,13 +259,11 @@ public class TestProcedureSuspended {
     }
 
     @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
   }
 

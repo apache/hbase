@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,7 +69,7 @@ public class TestCatalogJanitorInMemoryStates {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogJanitorInMemoryStates.class);
+      HBaseClassTestRule.forClass(TestCatalogJanitorInMemoryStates.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorInMemoryStates.class);
 
@@ -95,7 +95,7 @@ public class TestCatalogJanitorInMemoryStates {
    */
   @Test
   public void testInMemoryParentCleanup()
-    throws IOException, InterruptedException, ExecutionException {
+      throws IOException, InterruptedException, ExecutionException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final AssignmentManager am = master.getAssignmentManager();
     final ServerManager sm = master.getServerManager();
@@ -132,11 +132,10 @@ public class TestCatalogJanitorInMemoryStates {
       @Override
       public boolean evaluate() throws Exception {
         ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
-        for (Procedure<MasterProcedureEnv> proc: pe.getProcedures()) {
-          if (proc.getClass().isAssignableFrom(GCRegionProcedure.class) &&
-              proc.isFinished()) {
+        for (Procedure<MasterProcedureEnv> proc : pe.getProcedures()) {
+          if (proc.getClass().isAssignableFrom(GCRegionProcedure.class) && proc.isFinished()) {
             return true;
-          }          
+          }
         }
         return false;
       }
@@ -155,7 +154,7 @@ public class TestCatalogJanitorInMemoryStates {
    * @return List of region locations
    */
   private List<HRegionLocation> splitRegion(final RegionInfo r)
-    throws IOException, InterruptedException, ExecutionException {
+      throws IOException, InterruptedException, ExecutionException {
     List<HRegionLocation> locations = new ArrayList<>();
     // Split this table in two.
     Admin admin = TEST_UTIL.getAdmin();
@@ -183,7 +182,7 @@ public class TestCatalogJanitorInMemoryStates {
     long start = EnvironmentEdgeManager.currentTime();
     PairOfSameType<RegionInfo> pair = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
+        Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
       RegionInfo region = null;
       while ((EnvironmentEdgeManager.currentTime() - start) < 60000) {

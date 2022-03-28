@@ -21,8 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Compute the cost of total number of coprocessor requests  The more unbalanced the higher the
- * computed cost will be.  This uses a rolling average of regionload.
+ * Compute the cost of total number of coprocessor requests The more unbalanced the higher the
+ * computed cost will be. This uses a rolling average of regionload.
  */
 @InterfaceAudience.Private
 class CPRequestCostFunction extends CostFromRegionLoadAsRateFunction {

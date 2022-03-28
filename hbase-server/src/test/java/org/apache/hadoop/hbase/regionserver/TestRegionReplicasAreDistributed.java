@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,7 +80,7 @@ public class TestRegionReplicasAreDistributed {
 
   private static void createTableDirectlyFromHTD(final TableName tableName) throws IOException {
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3).build();
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3).build();
     // create a table with 3 replication
 
     table = HTU.createTable(htd, new byte[][] { f }, getSplits(20),

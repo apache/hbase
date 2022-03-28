@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -137,9 +137,9 @@ public class TestBoundedRegionGroupingStrategy {
   @Test
   public void testMoreRegionsThanBound() throws Exception {
     final String parallelism = Integer.toString(DEFAULT_NUM_REGION_GROUPS * 2);
-    int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-      new String[] { "-threads", parallelism, "-verify", "-noclosefs", "-iterations", "3000",
-          "-regions", parallelism });
+    int errCode =
+        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
+            parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
     assertEquals(0, errCode);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,13 +46,13 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionInitialize.class);
+      HBaseClassTestRule.forClass(TestMasterRegionInitialize.class);
 
   @Test
   public void testUpgrade() throws IOException {
     Path rootDir = new Path(htu.getDataTestDir(), REGION_DIR_NAME);
     Path tableDir =
-      CommonFSUtils.getTableDir(rootDir, region.region.getTableDescriptor().getTableName());
+        CommonFSUtils.getTableDir(rootDir, region.region.getTableDescriptor().getTableName());
     Path initializingFlag = new Path(tableDir, MasterRegion.INITIALIZING_FLAG);
     Path initializedFlag = new Path(tableDir, MasterRegion.INITIALIZED_FLAG);
     HRegionFileSystem hfs = region.region.getRegionFileSystem();
@@ -88,7 +88,7 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
   public void testInitializingCleanup() throws IOException {
     Path rootDir = new Path(htu.getDataTestDir(), REGION_DIR_NAME);
     Path tableDir =
-      CommonFSUtils.getTableDir(rootDir, region.region.getTableDescriptor().getTableName());
+        CommonFSUtils.getTableDir(rootDir, region.region.getTableDescriptor().getTableName());
     Path initializingFlag = new Path(tableDir, MasterRegion.INITIALIZING_FLAG);
     Path initializedFlag = new Path(tableDir, MasterRegion.INITIALIZED_FLAG);
     HRegionFileSystem hfs = region.region.getRegionFileSystem();

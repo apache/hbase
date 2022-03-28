@@ -35,13 +35,13 @@ final class CatalogReplicaLoadBalanceSelectorFactory {
 
   /**
    * Create a CatalogReplicaLoadBalanceReplicaSelector based on input config.
-   * @param replicaSelectorClass  Selector classname.
-   * @param tableName  System table name.
+   * @param replicaSelectorClass Selector classname.
+   * @param tableName System table name.
    * @param conn {@link AsyncConnectionImpl}
-   * @return  {@link CatalogReplicaLoadBalanceSelector}
+   * @return {@link CatalogReplicaLoadBalanceSelector}
    */
   public static CatalogReplicaLoadBalanceSelector createSelector(String replicaSelectorClass,
-    TableName tableName, AsyncConnectionImpl conn, IntSupplier getReplicaCount) {
+      TableName tableName, AsyncConnectionImpl conn, IntSupplier getReplicaCount) {
     return ReflectionUtils.instantiateWithCustomCtor(replicaSelectorClass,
       new Class[] { TableName.class, AsyncConnectionImpl.class, IntSupplier.class },
       new Object[] { tableName, conn, getReplicaCount });

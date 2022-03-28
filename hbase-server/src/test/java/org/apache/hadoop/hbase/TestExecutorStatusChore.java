@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestExecutorStatusChore {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -60,21 +60,21 @@ public class TestExecutorStatusChore {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
-        ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(maxThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+        .setExecutorType(ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(maxThreads));
 
     MetricsRegionServerSource serverSource = CompatibilitySingletonFactory
         .getInstance(MetricsRegionServerSourceFactory.class).createServer(null);
     assertTrue(serverSource instanceof MetricsRegionServerSourceImpl);
 
-    ExecutorStatusChore statusChore = new ExecutorStatusChore(60000,
-        mockedServer, executorService, serverSource);
+    ExecutorStatusChore statusChore =
+        new ExecutorStatusChore(60000, mockedServer, executorService, serverSource);
 
     AtomicBoolean lock = new AtomicBoolean(true);
     AtomicInteger counter = new AtomicInteger(0);
     for (int i = 0; i < maxThreads + 1; i++) {
       executorService
-        .submit(new TestEventHandler(mockedServer, EventType.RS_PARALLEL_SEEK, lock, counter));
+          .submit(new TestEventHandler(mockedServer, EventType.RS_PARALLEL_SEEK, lock, counter));
     }
 
     // The TestEventHandler will increment counter when it starts.

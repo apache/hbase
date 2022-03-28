@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAddToSerialReplicationPeer.class);
+      HBaseClassTestRule.forClass(TestAddToSerialReplicationPeer.class);
 
   @Before
   public void setUp() throws IOException, StreamLacksCapabilityException {
@@ -69,7 +69,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   }
 
   private void waitUntilReplicatedToTheCurrentWALFile(HRegionServer rs, final String oldWalName)
-    throws Exception {
+      throws Exception {
     Path path = ((AbstractFSWAL<?>) rs.getWAL(null)).getCurrentFileName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(path.getName());
     UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
@@ -77,10 +77,10 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
       @Override
       public boolean evaluate() throws Exception {
         ReplicationSourceManager manager =
-          ((Replication) rs.getReplicationSourceService()).getReplicationManager();
+            ((Replication) rs.getReplicationSourceService()).getReplicationManager();
         // Make sure replication moves to the new file.
-        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1) &&
-          !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
+        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1)
+            && !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
       }
 
       @Override
@@ -114,8 +114,8 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testChangeToSerial() throws Exception {
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build();
+        ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
+            .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build();
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
 
     TableName tableName = createTable();
@@ -129,7 +129,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(tableName);
     // Get the current wal file name
     String walFileNameBeforeRollover =
-      ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
+        ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
 
     HRegionServer rs = UTIL.getOtherRegionServer(srcRs);
     moveRegionAndArchiveOldWals(region, rs);
@@ -153,9 +153,9 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
   @Test
   public void testAddToSerialPeer() throws Exception {
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName())
-        .setReplicateAllUserTables(false).setSerial(true).build();
+        ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
+            .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName())
+            .setReplicateAllUserTables(false).setSerial(true).build();
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
 
     TableName tableName = createTable();
@@ -170,7 +170,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
 
     // Get the current wal file name
     String walFileNameBeforeRollover =
-      ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
+        ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
 
     moveRegionAndArchiveOldWals(region, rs);
 
@@ -180,7 +180,7 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     UTIL.getAdmin().disableReplicationPeer(PEER_ID);
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,
       ReplicationPeerConfig.newBuilder(peerConfig)
-        .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).build());
+          .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).build());
     UTIL.getAdmin().enableReplicationPeer(PEER_ID);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {

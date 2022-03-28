@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -68,8 +67,7 @@ public class BackupException extends HBaseIOException {
   }
 
   /**
-   * Exception when the description of the backup cannot be determined, due to some other root
-   * cause
+   * Exception when the description of the backup cannot be determined, due to some other root cause
    * @param message description of what caused the failure
    * @param e root cause
    */

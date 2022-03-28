@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,7 +77,7 @@ public class RegionServerTracker extends ZKListener {
   }
 
   private RegionServerInfo getServerInfo(ServerName serverName)
-    throws KeeperException, IOException {
+      throws KeeperException, IOException {
     String nodePath = watcher.getZNodePaths().getRsPath(serverName);
     byte[] data;
     try {
@@ -119,16 +119,16 @@ public class RegionServerTracker extends ZKListener {
    * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
    */
   public void upgrade(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersBeforeRestart,
-    Set<ServerName> splittingServersFromWALDir) throws KeeperException, IOException {
+      Set<ServerName> splittingServersFromWALDir) throws KeeperException, IOException {
     LOG.info(
-      "Upgrading RegionServerTracker to active master mode; {} have existing" +
-        "ServerCrashProcedures, {} possibly 'live' servers, and {} 'splitting'.",
+      "Upgrading RegionServerTracker to active master mode; {} have existing"
+          + "ServerCrashProcedures, {} possibly 'live' servers, and {} 'splitting'.",
       deadServersFromPE.size(), liveServersBeforeRestart.size(), splittingServersFromWALDir.size());
     // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
-    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
-      forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
+    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s))
+        .forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     // create ServerNode for all possible live servers from wal directory
     liveServersBeforeRestart
         .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
@@ -190,9 +190,9 @@ public class RegionServerTracker extends ZKListener {
       server.abort("Unexpected zk exception getting RS nodes", e);
       return;
     }
-    Set<ServerName> newServers = CollectionUtils.isEmpty(names) ? Collections.emptySet() :
-      names.stream().map(ServerName::parseServerName)
-        .collect(Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
+    Set<ServerName> newServers = CollectionUtils.isEmpty(names) ? Collections.emptySet()
+        : names.stream().map(ServerName::parseServerName).collect(
+          Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
     if (active) {
       processAsActiveMaster(newServers);
     }
@@ -201,8 +201,8 @@ public class RegionServerTracker extends ZKListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.getZNodePaths().rsZNode) && !server.isAborted() &&
-      !server.isStopped()) {
+    if (path.equals(watcher.getZNodePaths().rsZNode) && !server.isAborted()
+        && !server.isStopped()) {
       executor.execute(this::refresh);
     }
   }

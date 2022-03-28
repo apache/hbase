@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public abstract class WALEntryStreamTestBase {
   protected static final byte[] family = Bytes.toBytes("column");
   protected static final byte[] qualifier = Bytes.toBytes("qualifier");
   protected static final RegionInfo info = RegionInfoBuilder.newBuilder(tableName)
-    .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.LAST_ROW).build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.LAST_ROW).build();
   protected static final NavigableMap<byte[], Integer> scopes = getScopes();
   protected final String fakeWalGroupId = "fake-wal-group-id";
 
@@ -84,8 +84,8 @@ public abstract class WALEntryStreamTestBase {
     private Entry result;
 
     public WALEntryStreamWithRetries(ReplicationSourceLogQueue logQueue, Configuration conf,
-      long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
-      MetricsSource metrics, String walGroupId) throws IOException {
+        long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
+        MetricsSource metrics, String walGroupId) throws IOException {
       super(logQueue, conf, startPosition, walFileLengthProvider, serverName, metrics, walGroupId);
     }
 
@@ -147,7 +147,7 @@ public abstract class WALEntryStreamTestBase {
     logQueue = new ReplicationSourceLogQueue(CONF, metricsSource, source);
     pathWatcher = new PathWatcher();
     final WALFactory wals =
-      new WALFactory(CONF, TableNameTestRule.cleanUpTestName(tn.getMethodName()));
+        new WALFactory(CONF, TableNameTestRule.cleanUpTestName(tn.getMethodName()));
     wals.getWALProvider().addWALActionsListener(pathWatcher);
     log = wals.getWAL(info);
   }
@@ -168,14 +168,15 @@ public abstract class WALEntryStreamTestBase {
 
   protected long appendToLog(int count) throws IOException {
     return log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-      EnvironmentEdgeManager.currentTime(), mvcc, scopes), getWALEdits(count));
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes),
+      getWALEdits(count));
   }
 
   protected WALEdit getWALEdits(int count) {
     WALEdit edit = new WALEdit();
     for (int i = 0; i < count; i++) {
       edit.add(new KeyValue(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), family, qualifier,
-        EnvironmentEdgeManager.currentTime(), qualifier));
+          EnvironmentEdgeManager.currentTime(), qualifier));
     }
     return edit;
   }

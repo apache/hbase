@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,45 +33,55 @@ public class MetricsUserAggregateFactory {
     if (conf.getBoolean(METRIC_USER_ENABLED_CONF, DEFAULT_METRIC_USER_ENABLED_CONF)) {
       return new MetricsUserAggregateImpl(conf);
     } else {
-      //NoOpMetricUserAggregate
+      // NoOpMetricUserAggregate
       return new MetricsUserAggregate() {
-        @Override public MetricsUserAggregateSource getSource() {
+        @Override
+        public MetricsUserAggregateSource getSource() {
           return null;
         }
 
-        @Override public void updatePut(long t) {
+        @Override
+        public void updatePut(long t) {
 
         }
 
-        @Override public void updateDelete(long t) {
+        @Override
+        public void updateDelete(long t) {
 
         }
 
-        @Override public void updateGet(long t) {
+        @Override
+        public void updateGet(long t) {
 
         }
 
-        @Override public void updateIncrement(long t) {
+        @Override
+        public void updateIncrement(long t) {
 
         }
 
-        @Override public void updateAppend(long t) {
+        @Override
+        public void updateAppend(long t) {
 
         }
 
-        @Override public void updateReplay(long t) {
+        @Override
+        public void updateReplay(long t) {
 
         }
 
-        @Override public void updateScanTime(long t) {
+        @Override
+        public void updateScanTime(long t) {
 
         }
 
-        @Override public void updateFilteredReadRequests() {
+        @Override
+        public void updateFilteredReadRequests() {
 
         }
 
-        @Override public void updateReadRequestCount() {
+        @Override
+        public void updateReadRequestCount() {
 
         }
       };

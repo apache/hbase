@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -103,7 +103,7 @@ public class TestMutateRowsRecovery {
       admin = connection.getAdmin();
       hTable = connection.getTable(tableName);
       TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
       admin.createTable(tableDescriptor);
 
       // Add a multi

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestExceptionInUnassignedRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExceptionInUnassignedRegion.class);
+      HBaseClassTestRule.forClass(TestExceptionInUnassignedRegion.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -72,11 +72,11 @@ public class TestExceptionInUnassignedRegion {
   @Test
   public void testExceptionInUnassignRegion() {
     ProcedureExecutor procedureExecutor =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
 
     JVMClusterUtil.RegionServerThread rsThread = null;
     for (JVMClusterUtil.RegionServerThread t : UTIL.getMiniHBaseCluster()
-      .getRegionServerThreads()) {
+        .getRegionServerThreads()) {
       if (!t.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
         rsThread = t;
         break;
@@ -88,7 +88,7 @@ public class TestExceptionInUnassignedRegion {
     TransitRegionStateProcedure moveRegionProcedure = TransitRegionStateProcedure.reopen(
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(), hri);
     RegionStateNode regionNode = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-      .getRegionStates().getOrCreateRegionStateNode(hri);
+        .getRegionStates().getOrCreateRegionStateNode(hri);
     regionNode.setProcedure(moveRegionProcedure);
     long prodId = procedureExecutor.submitProcedure(moveRegionProcedure);
     ProcedureTestingUtility.waitProcedure(procedureExecutor, prodId);

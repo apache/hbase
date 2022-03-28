@@ -28,23 +28,22 @@ public class RegionInfoBuilder {
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
 
-  //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
+  // TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
 
   public static final RegionInfo UNDEFINED =
-    RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
+      RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
 
   /**
-   * RegionInfo for first meta region
-   * You cannot use this builder to make an instance of the {@link #FIRST_META_REGIONINFO}.
-   * Just refer to this instance. Also, while the instance is actually a MutableRI, its type is
-   * just RI so the mutable methods are not available (unless you go casting); it appears
-   * as immutable (I tried adding Immutable type but it just makes a mess).
+   * RegionInfo for first meta region You cannot use this builder to make an instance of the
+   * {@link #FIRST_META_REGIONINFO}. Just refer to this instance. Also, while the instance is
+   * actually a MutableRI, its type is just RI so the mutable methods are not available (unless you
+   * go casting); it appears as immutable (I tried adding Immutable type but it just makes a mess).
    */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
   // hbase:meta,,1.1588230740 should be the hbase:meta first region name.
   public static final RegionInfo FIRST_META_REGIONINFO =
-    new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
+      new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
 
   private final TableName tableName;
   private byte[] startKey = HConstants.EMPTY_START_ROW;
@@ -108,8 +107,7 @@ public class RegionInfoBuilder {
   }
 
   public RegionInfo build() {
-    return new MutableRegionInfo(tableName, startKey, endKey, split,
-        regionId, replicaId, offLine);
+    return new MutableRegionInfo(tableName, startKey, endKey, split, regionId, replicaId, offLine);
   }
 
 }

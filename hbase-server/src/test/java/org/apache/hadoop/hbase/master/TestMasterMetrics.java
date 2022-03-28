@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,11 +56,11 @@ public class TestMasterMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterMetrics.class);
+      HBaseClassTestRule.forClass(TestMasterMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetrics.class);
   private static final MetricsAssertHelper metricsHelper =
-    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private static SingleProcessHBaseCluster cluster;
   private static HMaster master;
@@ -78,7 +78,7 @@ public class TestMasterMetrics {
 
         @Override
         public RegionServerStartupResponse regionServerStartup(RpcController controller,
-          RegionServerStartupRequest request) throws ServiceException {
+            RegionServerStartupRequest request) throws ServiceException {
           RegionServerStartupResponse resp = super.regionServerStartup(controller, request);
           ServerManager serverManager = getServerManager();
           // to let the region server actual online otherwise we can not assign meta region
@@ -87,9 +87,8 @@ public class TestMasterMetrics {
               try {
                 serverManager.regionServerReport(sn,
                   ServerMetricsBuilder.newBuilder(sn).setVersionNumber(sm.getVersionNumber())
-                    .setVersion(sm.getVersion())
-                      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime())
-                    .build());
+                      .setVersion(sm.getVersion())
+                      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
               } catch (YouAreDeadException e) {
                 throw new UncheckedIOException(e);
               }
@@ -102,7 +101,7 @@ public class TestMasterMetrics {
   }
 
   public static class MyRegionServer
-    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+      extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
@@ -119,7 +118,7 @@ public class TestMasterMetrics {
     LOG.info("Starting cluster");
     // Set master class and use default values for other options.
     StartTestingClusterOption option = StartTestingClusterOption.builder()
-      .masterClass(MyMaster.class).rsClass(MyRegionServer.class).build();
+        .masterClass(MyMaster.class).rsClass(MyRegionServer.class).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -137,16 +136,15 @@ public class TestMasterMetrics {
   public void testClusterRequests() throws Exception {
     // sending fake request to master to see how metric value has changed
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
-      RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
+        RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
     ServerName serverName = cluster.getMaster(0).getServerName();
     request.setServer(ProtobufUtil.toServerName(serverName));
     long expectedRequestNumber = 10000;
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-       .setTotalNumberOfRequests(expectedRequestNumber)
-       .setReadRequestsCount(expectedRequestNumber)
-       .setWriteRequestsCount(expectedRequestNumber).build();
+        .setTotalNumberOfRequests(expectedRequestNumber).setReadRequestsCount(expectedRequestNumber)
+        .setWriteRequestsCount(expectedRequestNumber).build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -156,10 +154,9 @@ public class TestMasterMetrics {
 
     expectedRequestNumber = 15000;
 
-    sl = ClusterStatusProtos.ServerLoad.newBuilder()
-            .setTotalNumberOfRequests(expectedRequestNumber)
-            .setReadRequestsCount(expectedRequestNumber)
-            .setWriteRequestsCount(expectedRequestNumber).build();
+    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber)
+        .setReadRequestsCount(expectedRequestNumber).setWriteRequestsCount(expectedRequestNumber)
+        .build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -184,7 +181,7 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
 
-    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount",
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       0, masterSource);
   }
 

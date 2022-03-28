@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ class RegionReplicationFlushRequester {
    * The minimum interval between two flush requests
    */
   public static final String MIN_INTERVAL_SECS =
-    "hbase.region.read-replica.sink.flush.min-interval.secs";
+      "hbase.region.read-replica.sink.flush.min-interval.secs";
 
   public static final int MIN_INTERVAL_SECS_DEFAULT = 30;
 
@@ -79,10 +79,12 @@ class RegionReplicationFlushRequester {
       if (timer != null) {
         return timer;
       }
-      timer = new HashedWheelTimer(
-        new ThreadFactoryBuilder().setNameFormat("RegionReplicationFlushRequester-Timer-pool-%d")
-          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-        500, TimeUnit.MILLISECONDS);
+      timer =
+          new HashedWheelTimer(
+              new ThreadFactoryBuilder()
+                  .setNameFormat("RegionReplicationFlushRequester-Timer-pool-%d").setDaemon(true)
+                  .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+              500, TimeUnit.MILLISECONDS);
       TIMER = timer;
     }
     return timer;
@@ -122,7 +124,7 @@ class RegionReplicationFlushRequester {
     HashedWheelTimer timer = getTimer();
     pendingFlushRequestSequenceId = sequenceId;
     pendingFlushRequest =
-      timer.newTimeout(this::flush, minIntervalSecs - elapsedSecs, TimeUnit.SECONDS);
+        timer.newTimeout(this::flush, minIntervalSecs - elapsedSecs, TimeUnit.SECONDS);
   }
 
   /**

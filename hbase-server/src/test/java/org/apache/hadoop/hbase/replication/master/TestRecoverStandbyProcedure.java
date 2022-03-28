@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRecoverStandbyProcedure {
 
   @ClassRule
@@ -155,16 +155,15 @@ public class TestRecoverStandbyProcedure {
 
   private void setupSyncReplicationWALs() throws IOException, StreamLacksCapabilityException {
     Path peerRemoteWALDir = ReplicationUtils
-      .getPeerRemoteWALDir(syncReplicationReplayWALManager.getRemoteWALDir(), PEER_ID);
+        .getPeerRemoteWALDir(syncReplicationReplayWALManager.getRemoteWALDir(), PEER_ID);
     if (!fs.exists(peerRemoteWALDir)) {
       fs.mkdirs(peerRemoteWALDir);
     }
     for (int i = 0; i < WAL_NUMBER; i++) {
       try (ProtobufLogWriter writer = new ProtobufLogWriter()) {
         Path wal = new Path(peerRemoteWALDir, "srv1,8888." + i + ".syncrep");
-        writer.init(fs, wal, conf, true,
-            WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir),
-            StreamSlowMonitor.create(conf, "defaultMonitor"));
+        writer.init(fs, wal, conf, true, WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir),
+          StreamSlowMonitor.create(conf, "defaultMonitor"));
         List<Entry> entries = setupWALEntries(i * ROW_COUNT, (i + 1) * ROW_COUNT);
         for (Entry entry : entries) {
           writer.append(entry);

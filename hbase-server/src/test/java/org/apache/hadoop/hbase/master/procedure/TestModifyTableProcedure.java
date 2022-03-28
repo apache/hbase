@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,14 +49,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestModifyTableProcedure.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static final String column_Family1 = "cf1";
   private static final String column_Family2 = "cf2";
@@ -76,7 +77,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // Test 1: Modify 1 property
     long newMaxFileSize = htd.getMaxFileSize() * 2;
     htd = TableDescriptorBuilder.newBuilder(htd).setMaxFileSize(newMaxFileSize)
-      .setRegionReplication(3).build();
+        .setRegionReplication(3).build();
 
     long procId1 = ProcedureTestingUtility.submitAndWait(procExec,
       new ModifyTableProcedure(procExec.getEnvironment(), htd));
@@ -89,10 +90,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     boolean newReadOnlyOption = htd.isReadOnly() ? false : true;
     long newMemStoreFlushSize = htd.getMemStoreFlushSize() * 2;
     htd = TableDescriptorBuilder.newBuilder(htd).setReadOnly(newReadOnlyOption)
-      .setMemStoreFlushSize(newMemStoreFlushSize).build();
+        .setMemStoreFlushSize(newMemStoreFlushSize).build();
 
-    long procId2 = ProcedureTestingUtility.submitAndWait(
-        procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
@@ -112,14 +113,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // Test 1: Modify the table descriptor online
     String cf2 = "cf2";
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
+        TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new ModifyTableProcedure(
-        procExec.getEnvironment(), tableDescriptorBuilder.build()));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), tableDescriptorBuilder.build()));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
@@ -131,14 +131,12 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     String cf3 = "cf3";
     tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf3)).build();
+        TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf3)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    long procId2 =
-      ProcedureTestingUtility.submitAndWait(procExec,
-        new ModifyTableProcedure(procExec.getEnvironment(), tableDescriptorBuilder.build()));
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), tableDescriptorBuilder.build()));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
@@ -162,8 +160,8 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
     htd = TableDescriptorBuilder.newBuilder(htd).removeColumnFamily(Bytes.toBytes(cf2)).build();
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-        procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
@@ -177,12 +175,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor htd2 = UTIL.getAdmin().getDescriptor(tableName);
     // Disable Sanity check
     htd2 = TableDescriptorBuilder.newBuilder(htd2).removeColumnFamily(Bytes.toBytes(cf3))
-      .setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString())
-      .build();
+        .setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString()).build();
 
-    long procId2 =
-        ProcedureTestingUtility.submitAndWait(procExec,
-          new ModifyTableProcedure(procExec.getEnvironment(), htd2));
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), htd2));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
@@ -192,14 +188,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // Removing the last family will fail
     TableDescriptor htd3 = UTIL.getAdmin().getDescriptor(tableName);
     htd3 = TableDescriptorBuilder.newBuilder(htd3).removeColumnFamily(Bytes.toBytes(cf1)).build();
-    long procId3 =
-        ProcedureTestingUtility.submitAndWait(procExec,
-            new ModifyTableProcedure(procExec.getEnvironment(), htd3));
+    long procId3 = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), htd3));
     final Procedure<?> result = procExec.getResult(procId3);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected DoNotRetryIOException, got " + cause,
-        cause instanceof DoNotRetryIOException);
+      cause instanceof DoNotRetryIOException);
     assertEquals(1, currentHtd.getColumnFamilyNames().size());
     assertTrue(currentHtd.hasColumnFamily(Bytes.toBytes(cf1)));
   }
@@ -212,8 +207,8 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "cf1", cf3);
+    RegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1", cf3);
     UTIL.getAdmin().disableTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
@@ -224,13 +219,11 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor newDescriptor = TableDescriptorBuilder.newBuilder(oldDescriptor)
         .setCompactionEnabled(!oldDescriptor.isCompactionEnabled())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2))
-        .removeColumnFamily(Bytes.toBytes(cf3))
-        .setRegionReplication(3)
-        .build();
+        .removeColumnFamily(Bytes.toBytes(cf3)).setRegionReplication(3).build();
 
     // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), newDescriptor));
+    long procId = procExec
+        .submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newDescriptor));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
@@ -253,16 +246,16 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "cf1", cf3);
+    RegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1", cf3);
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Modify multiple properties of the table.
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
+        TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build();
     boolean newCompactionEnableOption = !tableDescriptorBuilder.build().isCompactionEnabled();
     tableDescriptorBuilder.setCompactionEnabled(newCompactionEnableOption);
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -303,7 +296,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
     TableDescriptor newTd =
         TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2)).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2)).build();
 
     PerClientRandomNonceGenerator nonceGenerator = PerClientRandomNonceGenerator.get();
     long nonceGroup = nonceGenerator.getNonceGroup();
@@ -329,7 +322,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       }
     });
 
-    //Try with different nonce, now it should fail the checks
+    // Try with different nonce, now it should fail the checks
     try {
       UTIL.getHBaseCluster().getMaster().addColumn(tableName,
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build(), nonceGroup,
@@ -357,19 +350,19 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "cf1");
+    RegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1");
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
     TableDescriptor newTd =
-      TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).build();
+        TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).build();
 
     // Start the Modify procedure && kill the executor
     long procId =
-      procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd));
+        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
     int lastStep = 8; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
@@ -386,8 +379,8 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "cf1");
+    RegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1");
     UTIL.getAdmin().disableTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
@@ -395,13 +388,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
     TableDescriptor newTd =
-      TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).setRegionReplication(3)
-        .build();
+        TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).setRegionReplication(3)
+            .build();
 
     // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), newTd));
+    long procId =
+        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
     // Restart the executor and rollback the step twice
     int lastStep = 8; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
@@ -440,13 +433,11 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       }
     }
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family2)).build();
-    ConcurrentAddColumnFamily t1 =
-      new ConcurrentAddColumnFamily(tableName, columnFamilyDescriptor);
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family2)).build();
+    ConcurrentAddColumnFamily t1 = new ConcurrentAddColumnFamily(tableName, columnFamilyDescriptor);
     columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family3)).build();
-    ConcurrentAddColumnFamily t2 =
-      new ConcurrentAddColumnFamily(tableName, columnFamilyDescriptor);
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family3)).build();
+    ConcurrentAddColumnFamily t2 = new ConcurrentAddColumnFamily(tableName, columnFamilyDescriptor);
 
     t1.start();
     t2.start();
@@ -461,16 +452,15 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
   @Test
   public void testConcurrentDeleteColumnFamily() throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tableName);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family1)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family1)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family2)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family2)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family3)).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family3)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     UTIL.getAdmin().createTable(tableDescriptorBuilder.build());
 

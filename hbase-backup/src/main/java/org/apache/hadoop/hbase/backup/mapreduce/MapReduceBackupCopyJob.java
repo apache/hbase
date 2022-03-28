@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -130,8 +129,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
    * @param bytesCopied bytes copied
    * @throws NoNodeException exception
    */
-  static void updateProgress(BackupInfo backupInfo, BackupManager backupManager,
-      int newProgress, long bytesCopied) throws IOException {
+  static void updateProgress(BackupInfo backupInfo, BackupManager backupManager, int newProgress,
+      long bytesCopied) throws IOException {
     // compose the new backup progress data, using fake number for now
     String backupProgressData = newProgress + "%";
 
@@ -142,12 +141,10 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
   }
 
   /**
-   * Extends DistCp for progress updating to backup system table
-   * during backup. Using DistCpV2 (MAPREDUCE-2765).
-   * Simply extend it and override execute() method to get the
-   * Job reference for progress updating.
-   * Only the argument "src1, [src2, [...]] dst" is supported,
-   * no more DistCp options.
+   * Extends DistCp for progress updating to backup system table during backup. Using DistCpV2
+   * (MAPREDUCE-2765). Simply extend it and override execute() method to get the Job reference for
+   * progress updating. Only the argument "src1, [src2, [...]] dst" is supported, no more DistCp
+   * options.
    */
 
   class BackupDistCp extends DistCp {
@@ -161,8 +158,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       this.backupInfo = backupInfo;
       this.backupManager = backupManager;
     }
-
-
 
     @Override
     public Job execute() throws Exception {
@@ -188,16 +183,14 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
         long totalSrcLgth = 0;
         for (Path aSrc : srcs) {
-          totalSrcLgth +=
-              BackupUtils.getFilesLength(aSrc.getFileSystem(super.getConf()), aSrc);
+          totalSrcLgth += BackupUtils.getFilesLength(aSrc.getFileSystem(super.getConf()), aSrc);
         }
 
         // Async call
         job = super.execute();
         // Update the copy progress to system table every 0.5s if progress value changed
-        int progressReportFreq =
-            MapReduceBackupCopyJob.this.getConf().getInt("hbase.backup.progressreport.frequency",
-              500);
+        int progressReportFreq = MapReduceBackupCopyJob.this.getConf()
+            .getInt("hbase.backup.progressreport.frequency", 500);
         float lastProgress = progressDone;
         while (!job.isComplete()) {
           float newProgress =
@@ -241,8 +234,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       String jobID = job.getJobID().toString();
       job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
 
-      LOG.debug("DistCp job-id: " + jobID + " completed: " + job.isComplete() + " "
-          + job.isSuccessful());
+      LOG.debug(
+        "DistCp job-id: " + jobID + " completed: " + job.isComplete() + " " + job.isSuccessful());
       Counters ctrs = job.getCounters();
       LOG.debug(Objects.toString(ctrs));
       if (job.isComplete() && !job.isSuccessful()) {
@@ -252,11 +245,11 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       return job;
     }
 
-    private Field getInputOptionsField(Class<?> classDistCp) throws IOException{
+    private Field getInputOptionsField(Class<?> classDistCp) throws IOException {
       Field f = null;
       try {
         f = classDistCp.getDeclaredField("inputOptions");
-      } catch(Exception e) {
+      } catch (Exception e) {
         // Haddop 3
         try {
           f = classDistCp.getDeclaredField("context");
@@ -268,7 +261,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Path> getSourcePaths(Field fieldInputOptions) throws IOException{
+    private List<Path> getSourcePaths(Field fieldInputOptions) throws IOException {
       Object options;
       try {
         options = fieldInputOptions.get(this);
@@ -282,9 +275,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
           return (List<Path>) methodGetSourcePaths.invoke(options);
         }
-      } catch (IllegalArgumentException | IllegalAccessException |
-                ClassNotFoundException | NoSuchMethodException |
-                SecurityException | InvocationTargetException e) {
+      } catch (IllegalArgumentException | IllegalAccessException | ClassNotFoundException
+          | NoSuchMethodException | SecurityException | InvocationTargetException e) {
         throw new IOException(e);
       }
 
@@ -351,8 +343,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       options.setAccessible(true);
       return getSourcePaths(options);
     }
-
-
 
     private SequenceFile.Writer getWriter(Path pathToListFile) throws IOException {
       FileSystem fs = pathToListFile.getFileSystem(conf);

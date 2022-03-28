@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(BufferedMutatorOverAsyncBufferedMutator.class);
+      LoggerFactory.getLogger(BufferedMutatorOverAsyncBufferedMutator.class);
 
   private final AsyncBufferedMutator mutator;
 
@@ -56,7 +56,7 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
   private final AtomicLong bufferedSize = new AtomicLong(0);
 
   private final ConcurrentLinkedQueue<Pair<Mutation, Throwable>> errors =
-    new ConcurrentLinkedQueue<>();
+      new ConcurrentLinkedQueue<>();
 
   BufferedMutatorOverAsyncBufferedMutator(AsyncBufferedMutator mutator,
       ExceptionListener listener) {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,12 +79,12 @@ public final class MobUtils {
   public static final String SEP = "_";
 
   private static final ThreadLocal<SimpleDateFormat> LOCAL_FORMAT =
-    new ThreadLocal<SimpleDateFormat>() {
-      @Override
-      protected SimpleDateFormat initialValue() {
-        return new SimpleDateFormat("yyyyMMdd");
-      }
-    };
+      new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+          return new SimpleDateFormat("yyyyMMdd");
+        }
+      };
 
   /**
    * Private constructor to keep this class from being instantiated.
@@ -164,8 +163,8 @@ public final class MobUtils {
     if (maybe.isPresent()) {
       final Tag tag = maybe.get();
       if (tag.hasArray()) {
-        name = Optional.of(TableName.valueOf(tag.getValueArray(), tag.getValueOffset(),
-            tag.getValueLength()));
+        name = Optional
+            .of(TableName.valueOf(tag.getValueArray(), tag.getValueOffset(), tag.getValueLength()));
       } else {
         // TODO ByteBuffer handling in tags looks busted. revisit.
         ByteBuffer buffer = tag.getValueByteBuffer().duplicate();
@@ -583,9 +582,9 @@ public final class MobUtils {
         .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(cryptoContext)
         .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
-        .withFilePath(path).withBloomType(bloomType)
-        .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs).withFilePath(path)
+        .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext)
+        .build();
     return w;
   }
 
@@ -758,8 +757,8 @@ public final class MobUtils {
       for (String tableEnc : tables) {
         final int delim = tableEnc.indexOf('/');
         if (delim <= 0) {
-          throw new IllegalStateException("MOB reference data does not match expected encoding: " +
-              "no table name included before list of mob refs.");
+          throw new IllegalStateException("MOB reference data does not match expected encoding: "
+              + "no table name included before list of mob refs.");
         }
         TableName table = TableName.valueOf(tableEnc.substring(0, delim));
         String[] refs = tableEnc.substring(delim + 1).split(",");
@@ -768,10 +767,11 @@ public final class MobUtils {
     } else {
       if (LOG.isDebugEnabled()) {
         // array length 1 should be the NULL_VALUE.
-        if (! Arrays.equals(HStoreFile.NULL_VALUE, bytes)) {
-          LOG.debug("Serialized MOB file refs array was treated as the placeholder 'no entries' but"
-              + " didn't have the expected placeholder byte. expected={} and actual={}",
-              Arrays.toString(HStoreFile.NULL_VALUE), Arrays.toString(bytes));
+        if (!Arrays.equals(HStoreFile.NULL_VALUE, bytes)) {
+          LOG.debug(
+            "Serialized MOB file refs array was treated as the placeholder 'no entries' but"
+                + " didn't have the expected placeholder byte. expected={} and actual={}",
+            Arrays.toString(HStoreFile.NULL_VALUE), Arrays.toString(bytes));
         }
       }
     }

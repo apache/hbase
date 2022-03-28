@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestCloseAnOpeningRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCloseAnOpeningRegion.class);
+      HBaseClassTestRule.forClass(TestCloseAnOpeningRegion.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -71,12 +71,12 @@ public class TestCloseAnOpeningRegion {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManager(master, masterRegion) {
 
         @Override
         public ReportRegionStateTransitionResponse reportRegionStateTransition(
-          ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+            ReportRegionStateTransitionRequest req) throws PleaseHoldException {
           ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(req);
           TransitionCode code = req.getTransition(0).getTransitionCode();
           if (code == TransitionCode.OPENED && ARRIVE != null) {
@@ -97,7 +97,7 @@ public class TestCloseAnOpeningRegion {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, 60000);
     UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(2)
-      .masterClass(MockHMaster.class).build());
+        .masterClass(MockHMaster.class).build());
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
   }

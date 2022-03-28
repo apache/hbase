@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -52,10 +51,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Test that a coprocessor can open a connection and write to another table, inside a hook.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestOpenTableInCoprocessor {
 
   @ClassRule
@@ -67,6 +68,7 @@ public class TestOpenTableInCoprocessor {
   private static final byte[] family = new byte[] { 'f' };
 
   private static boolean[] completed = new boolean[1];
+
   /**
    * Custom coprocessor that just copies the write to another table.
    */
@@ -80,8 +82,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      try (Table table = e.getEnvironment().getConnection().
-          getTable(otherTable)) {
+      try (Table table = e.getEnvironment().getConnection().getTable(otherTable)) {
         table.put(put);
         completed[0] = true;
       }
@@ -90,6 +91,7 @@ public class TestOpenTableInCoprocessor {
   }
 
   private static boolean[] completedWithPool = new boolean[1];
+
   /**
    * Coprocessor that creates an HTable with a pool to write to another table
    */
@@ -103,9 +105,9 @@ public class TestOpenTableInCoprocessor {
       int maxThreads = 1;
       long keepAliveTime = 60;
       ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
-        TimeUnit.SECONDS, new SynchronousQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").setDaemon(true)
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          TimeUnit.SECONDS, new SynchronousQueue<>(),
+          new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").setDaemon(true)
+              .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }
@@ -119,8 +121,8 @@ public class TestOpenTableInCoprocessor {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
       try (Table table = e.getEnvironment().getConnection().getTable(otherTable, getPool())) {
-        Put p = new Put(new byte[]{'a'});
-        p.addColumn(family, null, new byte[]{'a'});
+        Put p = new Put(new byte[] { 'a' });
+        p.addColumn(family, null, new byte[] { 'a' });
         try {
           table.batch(Collections.singletonList(put), null);
         } catch (InterruptedException e1) {
@@ -169,13 +171,11 @@ public class TestOpenTableInCoprocessor {
     assert (RegionObserver.class.isAssignableFrom(clazz));
     // add our coprocessor
     TableDescriptor primaryDescriptor = TableDescriptorBuilder.newBuilder(primaryTable)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCoprocessor(clazz.getName())
-      .build();
-
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCoprocessor(clazz.getName())
+        .build();
 
     TableDescriptor otherDescriptor = TableDescriptorBuilder.newBuilder(otherTable)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
-
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Admin admin = UTIL.getAdmin();
     admin.createTable(primaryDescriptor);
@@ -183,7 +183,7 @@ public class TestOpenTableInCoprocessor {
 
     Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
-    p.addColumn(family, null, new byte[]{'a'});
+    p.addColumn(family, null, new byte[] { 'a' });
     table.put(p);
     table.close();
 

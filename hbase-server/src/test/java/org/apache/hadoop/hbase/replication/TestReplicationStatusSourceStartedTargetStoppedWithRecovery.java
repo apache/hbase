@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,8 +41,8 @@ public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
     extends TestReplicationBase {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatusSourceStartedTargetStoppedWithRecovery.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
+      .forClass(TestReplicationStatusSourceStartedTargetStoppedWithRecovery.class);
 
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedWithRecovery() throws Exception {
@@ -60,7 +60,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
     Thread.sleep(10000);
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     List<ReplicationLoadSource> loadSources =
-      metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
+        metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
     assertEquals(2, loadSources.size());
     boolean foundRecovery = false;
     boolean foundNormal = false;

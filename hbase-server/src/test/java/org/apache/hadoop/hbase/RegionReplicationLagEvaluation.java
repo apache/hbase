@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,6 +42,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -69,14 +70,14 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
   public static final int ROW_LENGTH = 16;
 
   private static final Options OPTIONS = new Options().addOption("t", "table", true, "Table name")
-    .addOption("rlen", "rlength", true, "The length of row key")
-    .addOption("vlen", "vlength", true, "The length of value")
-    .addRequiredOption("r", "rows", true, "Number of rows to test");
+      .addOption("rlen", "rlength", true, "The length of row key")
+      .addOption("vlen", "vlength", true, "The length of value")
+      .addRequiredOption("r", "rows", true, "Number of rows to test");
 
   private FastLongHistogram histogram = new FastLongHistogram();
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   FastLongHistogram getHistogram() {
     return histogram;
   }
@@ -105,8 +106,8 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
 
   private void createTable(Admin admin, TableName tableName) throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).setRegionReplication(2)
-      .build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).setRegionReplication(2)
+        .build();
     admin.createTable(td);
   }
 
@@ -158,7 +159,7 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int res =
-      ToolRunner.run(HBaseConfiguration.create(), new RegionReplicationLagEvaluation(), args);
+        ToolRunner.run(HBaseConfiguration.create(), new RegionReplicationLagEvaluation(), args);
     System.exit(res);
   }
 }

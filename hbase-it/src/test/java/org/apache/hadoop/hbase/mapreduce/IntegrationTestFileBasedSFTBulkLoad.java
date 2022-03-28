@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,18 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -68,63 +79,34 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import static org.junit.Assert.assertEquals;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * Test Bulk Load and MR on a distributed cluster.
- * With FileBased StorefileTracker enabled.
- * It starts an MR job that creates linked chains
- *
- * The format of rows is like this:
- * Row Key -> Long
- *
- * L:<< Chain Id >> -> Row Key of the next link in the chain
- * S:<< Chain Id >> -> The step in the chain that his link is.
- * D:<< Chain Id >> -> Random Data.
- *
- * All chains start on row 0.
- * All rk's are > 0.
- *
+ * Test Bulk Load and MR on a distributed cluster. With FileBased StorefileTracker enabled. It
+ * starts an MR job that creates linked chains The format of rows is like this: Row Key -> Long L:<<
+ * Chain Id >> -> Row Key of the next link in the chain S:<< Chain Id >> -> The step in the chain
+ * that his link is. D:<< Chain Id >> -> Random Data. All chains start on row 0. All rk's are > 0.
  * After creating the linked lists they are walked over using a TableMapper based Mapreduce Job.
- *
- * There are a few options exposed:
- *
- * hbase.IntegrationTestBulkLoad.chainLength
- * The number of rows that will be part of each and every chain.
- *
- * hbase.IntegrationTestBulkLoad.numMaps
- * The number of mappers that will be run.  Each mapper creates on linked list chain.
- *
- * hbase.IntegrationTestBulkLoad.numImportRounds
- * How many jobs will be run to create linked lists.
- *
- * hbase.IntegrationTestBulkLoad.tableName
- * The name of the table.
- *
- * hbase.IntegrationTestBulkLoad.replicaCount
- * How many region replicas to configure for the table under test.
+ * There are a few options exposed: hbase.IntegrationTestBulkLoad.chainLength The number of rows
+ * that will be part of each and every chain. hbase.IntegrationTestBulkLoad.numMaps The number of
+ * mappers that will be run. Each mapper creates on linked list chain.
+ * hbase.IntegrationTestBulkLoad.numImportRounds How many jobs will be run to create linked lists.
+ * hbase.IntegrationTestBulkLoad.tableName The name of the table.
+ * hbase.IntegrationTestBulkLoad.replicaCount How many region replicas to configure for the table
+ * under test.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad {
 
-  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestFileBasedSFTBulkLoad.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IntegrationTestFileBasedSFTBulkLoad.class);
 
   private static String NUM_MAPS_KEY = "hbase.IntegrationTestBulkLoad.numMaps";
   private static String NUM_IMPORT_ROUNDS_KEY = "hbase.IntegrationTestBulkLoad.numImportRounds";
@@ -160,7 +142,7 @@ public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int status =  ToolRunner.run(conf, new IntegrationTestFileBasedSFTBulkLoad(), args);
+    int status = ToolRunner.run(conf, new IntegrationTestFileBasedSFTBulkLoad(), args);
     System.exit(status);
   }
 }

@@ -42,7 +42,7 @@ import org.junit.experimental.categories.Category;
 public class TestRowIndexV1DataEncoder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowIndexV1DataEncoder.class);
+      HBaseClassTestRule.forClass(TestRowIndexV1DataEncoder.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -66,12 +66,11 @@ public class TestRowIndexV1DataEncoder {
 
   private void writeDataToHFile(Path hfilePath, int entryCount) throws IOException {
     HFileContext context =
-      new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(dataBlockEncoding)
-        .withCellComparator(CellComparatorImpl.COMPARATOR).build();
+        new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(dataBlockEncoding)
+            .withCellComparator(CellComparatorImpl.COMPARATOR).build();
     CacheConfig cacheConfig = new CacheConfig(conf);
-    HFile.Writer writer =
-      new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath).withFileContext(context)
-        .create();
+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)
+        .withFileContext(context).create();
 
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
 
@@ -94,7 +93,7 @@ public class TestRowIndexV1DataEncoder {
   }
 
   private void writeKeyValues(int entryCount, HFile.Writer writer, List<KeyValue> keyValues)
-    throws IOException {
+      throws IOException {
     for (int i = 0; i < entryCount; ++i) {
       byte[] keyBytes = intToBytes(i);
 

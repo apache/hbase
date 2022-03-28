@@ -31,9 +31,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Leave here only for checking if we can successfully start the master.
@@ -92,9 +93,11 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
     sb.append(getProcName());
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     RegionInfo r = getRegionInfo();
-    return getClass().getSimpleName() + " " + getTableName() + (r != null? r.getEncodedName(): "");
+    return getClass().getSimpleName() + " " + getTableName()
+        + (r != null ? r.getEncodedName() : "");
   }
 
   public RegionStateNode getRegionState(final MasterProcedureEnv env) {

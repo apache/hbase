@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestOpenRegionProcedureHang {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionProcedureHang.class);
+      HBaseClassTestRule.forClass(TestOpenRegionProcedureHang.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionProcedureHang.class);
 
@@ -75,7 +75,7 @@ public class TestOpenRegionProcedureHang {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master,MasterRegion masterRegion) {
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
       super(master, masterRegion);
     }
 
@@ -83,9 +83,9 @@ public class TestOpenRegionProcedureHang {
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
         ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition transition = req.getTransition(0);
-      if (transition.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME) &&
-        ARRIVE != null) {
+      if (transition.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME)
+          && ARRIVE != null) {
         ARRIVE.countDown();
         try {
           RESUME.await();
@@ -112,7 +112,7 @@ public class TestOpenRegionProcedureHang {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
 
@@ -185,20 +185,20 @@ public class TestOpenRegionProcedureHang {
       return false;
     });
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.waitFor(30000,
       () -> procExec.getProcedures().stream().filter(p -> p instanceof OpenRegionProcedure)
-        .map(p -> (OpenRegionProcedure) p).anyMatch(p -> p.region.getTable().equals(NAME)));
+          .map(p -> (OpenRegionProcedure) p).anyMatch(p -> p.region.getTable().equals(NAME)));
     OpenRegionProcedure proc = procExec.getProcedures().stream()
-      .filter(p -> p instanceof OpenRegionProcedure).map(p -> (OpenRegionProcedure) p)
-      .filter(p -> p.region.getTable().equals(NAME)).findFirst().get();
+        .filter(p -> p instanceof OpenRegionProcedure).map(p -> (OpenRegionProcedure) p)
+        .filter(p -> p.region.getTable().equals(NAME)).findFirst().get();
     // wait a bit to let the OpenRegionProcedure send out the request
     Thread.sleep(2000);
     RESUME.countDown();
     if (!FINISH.await(15, TimeUnit.SECONDS)) {
-      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if" +
-        " we update the procedure store, as the WALProcedureStore" +
-        " will retry forever to roll the writer if it is not closed");
+      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if"
+          + " we update the procedure store, as the WALProcedureStore"
+          + " will retry forever to roll the writer if it is not closed");
     }
     FINISH = null;
     // if the reportRegionTransition is finished, wait a bit to let it return the data to RS

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -226,7 +226,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     public void run() {
       Scan s = new Scan().withStartRow(ROW4).withStopRow(ROW5).setCaching(1);
       try {
-        while(!doScan.get()) {
+        while (!doScan.get()) {
           try {
             // Sleep till you start scan
             Thread.sleep(1);
@@ -300,8 +300,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
-      HRegion region = (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName)
-          .getRegion(regionName);
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -364,7 +364,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       s.setAllowPartialResults(true);
       s.setMaxResultSize(1000);
       try (ScanPerNextResultScanner scanner =
-        new ScanPerNextResultScanner(TEST_UTIL.getAsyncConnection().getTable(tableName), s)) {
+          new ScanPerNextResultScanner(TEST_UTIL.getAsyncConnection().getTable(tableName), s)) {
         Thread evictorThread = new Thread() {
           @Override
           public void run() {
