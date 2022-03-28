@@ -57,6 +57,21 @@ public class MetricsConnection implements StatisticTrackable {
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
 
+  /**
+   * Set to specify a custom scope for the metrics published through {@link MetricsConnection}.
+   * The scope is added to JMX MBean objectName, and defaults to a combination of the Connection's
+   * clusterId and hashCode. For example, a default value for a connection to cluster "foo" might
+   * be "foo-7d9d0818", where "7d9d0818" is the hashCode of the underlying AsyncConnectionImpl.
+   * Users may set this key to give a more contextual name for this scope. For example, one might
+   * want to differentiate a read connection from a write connection by setting the scopes to
+   * "foo-read" and "foo-write" respectively.
+   *
+   * Scope is the only thing that lends any uniqueness to the metrics. Care should be taken to
+   * avoid using the same scope for multiple Connections, otherwise the metrics may aggregate in
+   * unforeseen ways.
+   */
+  public static final String METRICS_SCOPE_KEY = "hbase.client.metrics.scope";
+
   private static final String CNT_BASE = "rpcCount_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
@@ -251,7 +266,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   private final MetricRegistry registry;
   private final JmxReporter reporter;
-  private final String scope;
+  protected final String scope;
 
   private final NewMetric<Timer> timerFactory = new NewMetric<Timer>() {
     @Override public Timer newMetric(Class<?> clazz, String name, String scope) {
