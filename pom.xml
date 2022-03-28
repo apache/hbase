@@ -1422,6 +1422,36 @@
         <inherited>true</inherited>
         <extensions>true</extensions>
       </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <!-- optional: limit format enforcement to just the files changed from this point -->
+          <ratchetFrom>245229055edd7727fc287c9683365cbac02b64ee</ratchetFrom>
+          <!-- define a language-specific format -->
+          <java>
+            <!-- apply a specific flavor -->
+            <eclipse>
+              <file>${session.executionRootDirectory}/dev-support/hbase_eclipse_formatter.xml</file>
+            </eclipse>
+            <importOrder>
+              <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
+            </importOrder>
+            <!-- make sure every file has the following copyright header.
+              optionally, Spotless can set copyright years by digging
+              through git history (see "license" section below) -->
+            <licenseHeader>
+              <file>${session.executionRootDirectory}/dev-support/license-header</file>
+            </licenseHeader>
+          </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
+          </pom>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <properties>
@@ -1536,6 +1566,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
+    <spotless.version>2.21.0</spotless.version>
     <hbase-thirdparty.version>3.5.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
