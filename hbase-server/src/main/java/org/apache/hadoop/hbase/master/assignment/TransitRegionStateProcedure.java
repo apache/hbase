@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -199,7 +201,7 @@ public class TransitRegionStateProcedure
 
   private void openRegion(MasterProcedureEnv env, RegionStateNode regionNode) throws IOException {
     ServerName loc = regionNode.getRegionLocation();
-    if (loc == null) {
+    if (loc == null || BOGUS_SERVER_NAME.equals(loc)) {
       LOG.warn("No location specified for {}, jump back to state {} to get one", getRegion(),
         RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
