@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.ServerCall;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -100,6 +103,19 @@ public class ServerConnectionUtils {
       return super.getMaster();
     }
 
+    /**
+     * When we directly invoke {@link RSRpcServices#get} on the same RegionServer through
+     * {@link ShortCircuitingClusterConnection} in region CPs such as
+     * {@link RegionObserver#postScannerOpen} to get other rows, the {@link RegionScanner} created
+     * for the directly {@link RSRpcServices#get} may not be closed until the outmost rpc call is
+     * completed if there is an outmost {@link RpcCall}, and even worse , the
+     * {@link ServerCall#rpcCallback} may be override which would cause serious problem,so for
+     * {@link ShortCircuitingClusterConnection#getClient}, if return
+     * {@link ShortCircuitingClusterConnection#localHostClient},we would add a wrapper class to wrap
+     * it , which using {@link RpcServer#unsetCurrentCall} and {RpcServer#setCurrentCall} to
+     * surround the scan and get method call,so the {@link RegionScanner} created for the directly
+     * {@link RSRpcServices#get} could be closed immediately,see HBASE-26812 for more.
+     */
     static class ClientServiceBlockingInterfaceWrapper
         implements ClientService.BlockingInterface {
 
@@ -111,25 +127,9 @@ public class ServerConnectionUtils {
 
       @Override
       public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
-        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        try {
-          User requestUser = getRequestUser(rpcCallOptional);
-          if (requestUser != null) {
-            try {
-              return requestUser.runAs(new PrivilegedExceptionAction<GetResponse>() {
-                public GetResponse run() throws Exception {
-                  return target.get(controller, request);
-                }
-              });
-            } catch (InterruptedException | IOException e) {
-              throw new ServiceException(e);
-            }
-          } else {
-            return target.get(controller, request);
-          }
-        } finally {
-          rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
-        }
+        return this.doCall(controller, request, (c, r) -> {
+          return target.get(c, r);
+        });
       }
 
       @Override
@@ -138,56 +138,31 @@ public class ServerConnectionUtils {
         /**
          * Here is for multiGet
          */
-        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        try {
-          User requestUser = getRequestUser(rpcCallOptional);
-          if (requestUser != null) {
-            try {
-              return requestUser.runAs(new PrivilegedExceptionAction<MultiResponse>() {
-
-                public MultiResponse run() throws Exception {
-                  return target.multi(controller, request);
-                }
-              });
-            } catch (InterruptedException | IOException e) {
-              throw new ServiceException(e);
-            }
-          } else {
-            return target.multi(controller, request);
-          }
-        } finally {
-          rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
-        }
+        return this.doCall(controller, request, (c, r) -> {
+          return target.multi(c, r);
+        });
       }
 
       @Override
       public ScanResponse scan(RpcController controller, ScanRequest request)
           throws ServiceException {
+        return this.doCall(controller, request, (c, r) -> {
+          return target.scan(c, r);
+        });
+      }
+
+      interface Operation<REQUEST, RESPONSE> {
+        RESPONSE call(RpcController controller, REQUEST request) throws ServiceException;
+      }
+
+      private <REQUEST, RESPONSE> RESPONSE doCall(RpcController controller, REQUEST request,
+          Operation<REQUEST, RESPONSE> operation) throws ServiceException {
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
         try {
-          User requestUser = getRequestUser(rpcCallOptional);
-          if (requestUser != null) {
-            try {
-              return requestUser.runAs(new PrivilegedExceptionAction<ScanResponse>() {
-
-                public ScanResponse run() throws Exception {
-                  return target.scan(controller, request);
-                }
-              });
-            } catch (InterruptedException | IOException e) {
-              throw new ServiceException(e);
-            }
-          } else {
-            return target.scan(controller, request);
-          }
+            return operation.call(controller, request);
         } finally {
           rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
         }
-      }
-
-      private static User getRequestUser(Optional<RpcCall> rpcCallOptional) {
-        RpcCall rpcCall = rpcCallOptional.orElse(null);
-        return rpcCall == null ? null : rpcCall.getRequestUser().orElse(null);
       }
 
       @Override

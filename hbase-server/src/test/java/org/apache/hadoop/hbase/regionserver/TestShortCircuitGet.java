@@ -21,12 +21,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.security.auth.Subject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -34,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -108,14 +106,16 @@ public class TestShortCircuitGet {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * This test is for HBASE-26821,when we initiate get or scan in cp, the {@link RegionScanner} for
+   * get and scan is close when get or scan is completed.
+   */
   @Test
-  public void testScannerClose() throws Exception {
-    ResultScanner resultScanner = null;
+  public void testScannerCloseWhenScanAndGetInCP() throws Exception {
     Table table = null;
     try {
       table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1,
         HConstants.DEFAULT_BLOCKSIZE, MyScanObserver.class.getName());
-
       putToTable(table, r0);
       putToTable(table, r1);
       putToTable(table, r2);
@@ -123,27 +123,42 @@ public class TestShortCircuitGet {
       putToTable(table, r4);
       putToTable(table, r5);
       putToTable(table, r6);
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
 
+    final Configuration conf = TEST_UTIL.getConfiguration();
+    ResultScanner resultScanner = null;
+    Connection conn = null;
+    Table clientTable = null;
+    try {
+      conn = ConnectionFactory.createConnection(conf);
+      clientTable = conn.getTable(tableName);
       Scan scan = new Scan();
       scan.setCaching(1);
       scan.withStartRow(r0, true).withStopRow(r1, true);
       resultScanner = table.getScanner(scan);
       Result result = resultScanner.next();
-      // fetched when openScanner
       assertTrue("Expected row: row-0", Bytes.equals(r0, result.getRow()));
       result = resultScanner.next();
       assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
       assertNull(resultScanner.next());
-      assertTrue(MyRSRpcServices.exceptionRef.get() == null);
-      assertTrue(MyScanObserver.exceptionRef.get() == null);
     } finally {
       if (resultScanner != null) {
         resultScanner.close();
       }
-      if (table != null) {
-        table.close();
+      if (clientTable != null) {
+        clientTable.close();
+      }
+      if (conn != null) {
+        conn.close();
       }
     }
+
+    assertTrue(MyRSRpcServices.exceptionRef.get() == null);
+    assertTrue(MyScanObserver.exceptionRef.get() == null);
   }
 
   private void putToTable(Table ht, byte[] rowkey) throws IOException {
@@ -178,14 +193,10 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
-        // for multi,which is executed by threadPool,so there is no user.
-        AccessControlContext context = AccessController.getContext();
-        Subject subject = Subject.getSubject(context);
-        assertTrue(subject != null);
         return super.multi(rpcc, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
-        throw e;
+        throw new ServiceException(e);
       }
     }
 
@@ -208,9 +219,6 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
-        AccessControlContext context = AccessController.getContext();
-        Subject subject = Subject.getSubject(context);
-        assertTrue(subject != null);
         return super.scan(controller, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
@@ -235,9 +243,6 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
-        AccessControlContext context = AccessController.getContext();
-        Subject subject = Subject.getSubject(context);
-        assertTrue(subject != null);
         return super.get(controller, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
@@ -343,7 +348,6 @@ public class TestShortCircuitGet {
       } catch (Throwable e) {
         exceptionRef.set(e);
         throw e;
-
       }
     }
   }
