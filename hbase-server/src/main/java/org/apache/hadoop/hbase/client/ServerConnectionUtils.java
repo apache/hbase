@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 @InterfaceAudience.Private
-public class ServerConnectionUtils {
+public final class ServerConnectionUtils {
 
   private ServerConnectionUtils() {
   }
@@ -159,7 +159,7 @@ public class ServerConnectionUtils {
           Operation<REQUEST, RESPONSE> operation) throws ServiceException {
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
         try {
-            return operation.call(controller, request);
+          return operation.call(controller, request);
         } finally {
           rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
         }
