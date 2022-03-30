@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,23 +31,19 @@ public class TracedAdvancedScanResultConsumer implements AdvancedScanResultConsu
 
   @Override
   public void onScanMetricsCreated(ScanMetrics scanMetrics) {
-    TraceUtil.trace(
-      () -> delegate.onScanMetricsCreated(scanMetrics),
+    TraceUtil.trace(() -> delegate.onScanMetricsCreated(scanMetrics),
       "TracedAdvancedScanResultConsumer#onScanMetricsCreated");
   }
 
   @Override
   public void onNext(Result[] results, ScanController controller) {
-    TraceUtil.trace(
-      () -> delegate.onNext(results, controller),
+    TraceUtil.trace(() -> delegate.onNext(results, controller),
       "TracedAdvancedScanResultConsumer#onNext");
   }
 
   @Override
   public void onError(Throwable error) {
-    TraceUtil.trace(
-      () -> delegate.onError(error),
-      "TracedAdvancedScanResultConsumer#onError");
+    TraceUtil.trace(() -> delegate.onError(error), "TracedAdvancedScanResultConsumer#onError");
   }
 
   @Override

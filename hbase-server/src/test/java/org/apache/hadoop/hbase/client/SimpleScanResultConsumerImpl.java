@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 class SimpleScanResultConsumerImpl implements SimpleScanResultConsumer {

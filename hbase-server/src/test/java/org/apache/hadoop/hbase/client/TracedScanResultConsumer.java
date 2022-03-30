@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,8 +22,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 
 /**
- * A wrapper over {@link SimpleScanResultConsumer} that adds tracing of spans to its
- * implementation.
+ * A wrapper over {@link SimpleScanResultConsumer} that adds tracing of spans to its implementation.
  */
 class TracedScanResultConsumer implements SimpleScanResultConsumer {
 
@@ -35,15 +34,13 @@ class TracedScanResultConsumer implements SimpleScanResultConsumer {
 
   @Override
   public void onScanMetricsCreated(ScanMetrics scanMetrics) {
-    TraceUtil.trace(
-      () -> delegate.onScanMetricsCreated(scanMetrics),
+    TraceUtil.trace(() -> delegate.onScanMetricsCreated(scanMetrics),
       "TracedScanResultConsumer#onScanMetricsCreated");
   }
 
   @Override
   public boolean onNext(Result result) {
-    return TraceUtil.trace(() -> delegate.onNext(result),
-      "TracedScanResultConsumer#onNext");
+    return TraceUtil.trace(() -> delegate.onNext(result), "TracedScanResultConsumer#onNext");
   }
 
   @Override

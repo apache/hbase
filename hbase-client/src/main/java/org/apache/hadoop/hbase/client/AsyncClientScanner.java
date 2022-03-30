@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetri
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -41,7 +42,9 @@ import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.Interface;
@@ -123,10 +126,7 @@ class AsyncClientScanner {
      * `start()` method. The cost of doing so would be making access to the `span` safe for
      * concurrent threads.
      */
-    span = new TableOperationSpanBuilder(conn)
-      .setTableName(tableName)
-      .setOperation(scan)
-      .build();
+    span = new TableOperationSpanBuilder(conn).setTableName(tableName).setOperation(scan).build();
     if (consumer instanceof AsyncTableResultScanner) {
       AsyncTableResultScanner scanner = (AsyncTableResultScanner) consumer;
       scanner.setSpan(span);
@@ -167,8 +167,8 @@ class AsyncClientScanner {
       }
       CompletableFuture<OpenScannerResponse> future = new CompletableFuture<>();
       try {
-        ScanRequest request = RequestConverter.buildScanRequest(
-          loc.getRegion().getRegionName(), scan, scan.getCaching(), false);
+        ScanRequest request = RequestConverter.buildScanRequest(loc.getRegion().getRegionName(),
+          scan, scan.getCaching(), false);
         stub.scan(controller, request, resp -> {
           try (Scope ignored1 = span.makeCurrent()) {
             if (controller.failed()) {
@@ -178,8 +178,8 @@ class AsyncClientScanner {
               span.end();
               return;
             }
-            future.complete(new OpenScannerResponse(
-              loc, isRegionServerRemote, stub, controller, resp));
+            future.complete(
+              new OpenScannerResponse(loc, isRegionServerRemote, stub, controller, resp));
           }
         });
       } catch (IOException e) {
@@ -193,13 +193,13 @@ class AsyncClientScanner {
   private void startScan(OpenScannerResponse resp) {
     addListener(
       conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
-        .remote(resp.isRegionServerRemote)
-        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
-        .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
-        .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
+          .remote(resp.isRegionServerRemote)
+          .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+          .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
+          .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+          .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+          .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+          .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
       (hasMore, error) -> {
         try (Scope ignored = span.makeCurrent()) {
           if (error != null) {
@@ -228,18 +228,18 @@ class AsyncClientScanner {
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
     try (Scope ignored = span.makeCurrent()) {
       return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
-        .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
-        .priority(scan.getPriority())
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
-        .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
+          .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
+          .priority(scan.getPriority()).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+          .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS)
+          .pause(pauseNs, TimeUnit.NANOSECONDS).pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS)
+          .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+          .action(this::callOpenScanner).call();
     }
   }
 
   private long getPrimaryTimeoutNs() {
     return TableName.isMetaTableName(tableName) ? conn.connConf.getPrimaryMetaScanTimeoutNs()
-      : conn.connConf.getPrimaryScanTimeoutNs();
+        : conn.connConf.getPrimaryScanTimeoutNs();
   }
 
   private void openScanner() {
