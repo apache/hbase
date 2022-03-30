@@ -23,7 +23,6 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -40,7 +39,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.net.ssl.SSLContext;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
@@ -113,8 +111,11 @@ public class Client {
       Constants.DEFAULT_REST_CLIENT_CONN_TIMEOUT);
     int socketTimeout = this.conf.getInt(Constants.REST_CLIENT_SOCKET_TIMEOUT,
       Constants.DEFAULT_REST_CLIENT_SOCKET_TIMEOUT);
-    RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout)
-        .setSocketTimeout(socketTimeout).build();
+    RequestConfig requestConfig = RequestConfig.custom()
+      .setConnectTimeout(connTimeout)
+      .setSocketTimeout(socketTimeout)
+      .setNormalizeUri(false) // URIs should not be normalized, see HBASE-26903
+      .build();
     httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
     // Since HBASE-25267 we don't use the deprecated DefaultHttpClient anymore.
