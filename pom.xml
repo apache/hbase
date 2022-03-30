@@ -2491,7 +2491,6 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
         <version>${mockito-core.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>io.opentelemetry</groupId>

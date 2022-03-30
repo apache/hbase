@@ -66,6 +66,7 @@
               <exclude>org.apache.logging.log4j:*</exclude>
               <exclude>io.opentelemetry.javaagent:*</exclude>
               <exclude>org.hamcrest:hamcrest-core</exclude>
+              <exclude>org.mockito:mockito-core</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
