@@ -165,9 +165,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
    * Else return MAX_VALUE.
    */
   protected long prepare(Cell cell) {
-    boolean matchCq =
-        PrivateCellUtil.matchingQualifier(cell, lastCqArray, lastCqOffset, lastCqLength);
-    if (!matchCq) {
+    if (isColumnQualifierChanged(cell)) {
       // The last cell is family-level delete and this is not, or the cq is changed,
       // we should construct delColMap as a deep copy of delFamMap.
       delColMap.clear();
@@ -175,8 +173,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
         delColMap.put(e.getKey(), e.getValue().getDeepCopy());
       }
       countCurrentCol = 0;
-    }
-    if (matchCq && !PrivateCellUtil.isDelete(lastCqType) && lastCqType == cell.getTypeByte()
+    } else if (!PrivateCellUtil.isDelete(lastCqType) && lastCqType == cell.getTypeByte()
         && lastCqTs == cell.getTimestamp()) {
       // Put with duplicate timestamp, ignore.
       return lastCqMvcc;
@@ -188,6 +185,15 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
     lastCqMvcc = cell.getSequenceId();
     lastCqType = cell.getTypeByte();
     return Long.MAX_VALUE;
+  }
+
+  private boolean isColumnQualifierChanged(Cell cell) {
+    if (delColMap.isEmpty() && lastCqArray == null && cell.getQualifierLength() == 0
+      && (PrivateCellUtil.isDeleteColumns(cell) || PrivateCellUtil.isDeleteColumnVersion(cell))) {
+      // for null columnQualifier
+      return true;
+    }
+    return !PrivateCellUtil.matchingQualifier(cell, lastCqArray, lastCqOffset, lastCqLength);
   }
 
   // DeleteTracker
