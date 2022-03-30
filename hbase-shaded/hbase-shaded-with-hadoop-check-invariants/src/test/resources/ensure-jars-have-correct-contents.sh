@@ -48,6 +48,12 @@ do
   esac
 done
 
+if [ -z "${JAVA_HOME}" ]; then
+  echo "[ERROR] Must have JAVA_HOME defined." 1>&2
+  exit 1
+fi
+JAR="${JAVA_HOME}/bin/jar"
+
 # should still have jars to check.
 if [ $# -lt 1 ]; then
   usage
@@ -113,8 +119,8 @@ allowed_expr+=")"
 declare -i bad_artifacts=0
 declare -a bad_contents
 for artifact in "${artifact_list[@]}"; do
-  bad_contents=($(jar tf "${artifact}" | grep -v -E "${allowed_expr}" || true))
-  class_count=$(jar tf "${artifact}" | grep -c -E '\.class$' || true)
+  bad_contents=($("${JAR}" tf "${artifact}" | grep -v -E "${allowed_expr}" || true))
+  class_count=$("${JAR}" tf "${artifact}" | grep -c -E '\.class$' || true)
   if [ ${#bad_contents[@]} -eq 0 ] && [ "${class_count}" -lt 1 ]; then
     bad_contents=("The artifact contains no java class files.")
   fi
