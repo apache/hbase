@@ -3714,46 +3714,6 @@
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-app</artifactId>
-            <version>${hadoop-three.version}</version>
-            <type>test-jar</type>
-            <exclusions>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-jaxrs</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-xc</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>javax.xml.bind</groupId>
-                <artifactId>jaxb-api</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>javax.ws.rs</groupId>
-                <artifactId>jsr311-api</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
             <version>${hadoop-three.version}</version>
             <exclusions>
