@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
+
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Queue;
@@ -36,14 +39,13 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ClientAsyncPrefetchScanner implements async scanner behaviour.
- * Specifically, the cache used by this scanner is a concurrent queue which allows both
- * the producer (hbase client) and consumer (application) to access the queue in parallel.
- * The number of rows returned in a prefetch is defined by the caching factor and the result size
- * factor.
- * This class allocates a buffer cache, whose size is a function of both factors.
- * The prefetch is invoked when the cache is half­filled, instead of waiting for it to be empty.
- * This is defined in the method {@link ClientAsyncPrefetchScanner#prefetchCondition()}.
+ * ClientAsyncPrefetchScanner implements async scanner behaviour. Specifically, the cache used by
+ * this scanner is a concurrent queue which allows both the producer (hbase client) and consumer
+ * (application) to access the queue in parallel. The number of rows returned in a prefetch is
+ * defined by the caching factor and the result size factor. This class allocates a buffer cache,
+ * whose size is a function of both factors. The prefetch is invoked when the cache is half-filled,
+ * instead of waiting for it to be empty. This is defined in the method
+ * {@link ClientAsyncPrefetchScanner#prefetchCondition()}.
  */
 @InterfaceAudience.Private
 public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
@@ -66,7 +68,9 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
         replicaCallTimeoutMicroSecondScan);
     exceptionsQueue = new ConcurrentLinkedQueue<>();
-    Threads.setDaemonThreadRunning(new Thread(new PrefetchRunnable()), name + ".asyncPrefetcher");
+    final Context context = Context.current();
+    final Runnable runnable = context.wrap(new PrefetchRunnable());
+    Threads.setDaemonThreadRunning(new Thread(runnable), name + ".asyncPrefetcher");
   }
 
   void setPrefetchListener(Consumer<Boolean> prefetchListener) {
@@ -88,7 +92,7 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
 
   @Override
   public Result next() throws IOException {
-    try {
+    try (Scope ignored = span.makeCurrent()) {
       lock.lock();
       while (cache.isEmpty()) {
         handleException();
@@ -98,6 +102,7 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
         try {
           notEmpty.await();
         } catch (InterruptedException e) {
+          span.recordException(e);
           throw new InterruptedIOException("Interrupted when wait to load cache");
         }
       }
@@ -132,8 +137,8 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   }
 
   private void handleException() throws IOException {
-    //The prefetch task running in the background puts any exception it
-    //catches into this exception queue.
+    // The prefetch task running in the background puts any exception it
+    // catches into this exception queue.
     // Rethrow the exception so the application can handle it.
     while (!exceptionsQueue.isEmpty()) {
       Exception first = exceptionsQueue.peek();
@@ -171,6 +176,7 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
           succeed = true;
         } catch (Exception e) {
           exceptionsQueue.add(e);
+          span.recordException(e);
         } finally {
           notEmpty.signalAll();
           lock.unlock();
@@ -180,7 +186,6 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
         }
       }
     }
-
   }
 
 }
