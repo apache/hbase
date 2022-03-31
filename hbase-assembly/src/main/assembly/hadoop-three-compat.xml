@@ -114,6 +114,9 @@
               <exclude>org.slf4j:slf4j-api</exclude>
               <exclude>org.slf4j:slf4j-log4j12</exclude>
               <exclude>org.slf4j:slf4j-reload4j</exclude>
+              <exclude>junit:junit</exclude>
+              <exclude>org.hamcrest:hamcrest-core</exclude>
+              <exclude>org.mockito:mockito-core</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -256,6 +259,16 @@
         <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
         <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
         <include>jakarta.jws:jakarta.jws-api</include>
+      </includes>
+    </dependencySet>
+
+    <!-- Adds junit libs to lib/test -->
+    <dependencySet>
+      <outputDirectory>lib/test</outputDirectory>
+      <includes>
+        <include>junit:junit</include>
+        <include>org.hamcrest:hamcrest-core</include>
+        <include>org.mockito:mockito-core</include>
       </includes>
     </dependencySet>
   </dependencySets>
