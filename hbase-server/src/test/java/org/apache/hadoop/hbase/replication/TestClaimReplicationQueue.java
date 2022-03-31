@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.replication.ClaimReplicationQueuesProcedure;
@@ -67,8 +68,8 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
 
   public static final class ServerManagerForTest extends ServerManager {
 
-    public ServerManagerForTest(MasterServices master) {
-      super(master);
+    public ServerManagerForTest(MasterServices master, RegionServerList storage) {
+      super(master, storage);
     }
 
     @Override
@@ -92,9 +93,10 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master) throws IOException {
+    protected ServerManager createServerManager(MasterServices master,
+      RegionServerList storage) throws IOException {
       setupClusterConnection();
-      return new ServerManagerForTest(master);
+      return new ServerManagerForTest(master, storage);
     }
   }
 

@@ -425,6 +425,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // the master local storage to store procedure data, meta region locations, etc.
   private MasterRegion masterRegion;
 
+  private RegionServerList rsListStorage;
+
   // handle table states
   private TableStateManager tableStateManager;
 
@@ -927,15 +929,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
     // The below two managers must be created before loading procedures, as they will be used during
     // loading.
-    this.serverManager = createServerManager(this);
+    // initialize master local region
+    masterRegion = MasterRegionFactory.create(this);
+    rsListStorage = new MasterRegionServerList(masterRegion, this);
+
+    this.serverManager = createServerManager(this, rsListStorage);
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     if (!conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
       DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
       this.splitWALManager = new SplitWALManager(this);
     }
 
-    // initialize master local region
-    masterRegion = MasterRegionFactory.create(this);
+
 
     tryMigrateMetaLocationsFromZooKeeper();
 
@@ -964,7 +969,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
-      walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
+      Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
+      walManager.getSplittingServersFromWALDir());
     // This manager must be accessed AFTER hbase:meta is confirmed on line..
     this.tableStateManager = new TableStateManager(this);
 
@@ -1387,11 +1393,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * </p>
    */
   @InterfaceAudience.Private
-  protected ServerManager createServerManager(final MasterServices master) throws IOException {
+  protected ServerManager createServerManager(MasterServices master,
+    RegionServerList storage) throws IOException {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up ServerManager.
     setupClusterConnection();
-    return new ServerManager(master);
+    return new ServerManager(master, storage);
   }
 
   private void waitForRegionServers(final MonitoredTask status)
