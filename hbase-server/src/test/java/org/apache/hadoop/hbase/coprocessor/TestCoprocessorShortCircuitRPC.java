@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.ServerConnectionUtils;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -119,7 +119,7 @@ public class TestCoprocessorShortCircuitRPC {
   }
 
   private static void checkShortCircuit(Connection connection) {
-    assertTrue(connection instanceof ConnectionUtils.ShortCircuitingClusterConnection);
+    assertTrue(connection instanceof ServerConnectionUtils.ShortCircuitingClusterConnection);
   }
 
   @Test
