@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.List;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-
 /**
- * A simplistic {@link ScanResultConsumer} for use in tests.
+ * Advise the scanning infrastructure to collect up to {@code limit} results.
  */
-public interface SimpleScanResultConsumer extends ScanResultConsumer {
+class LimitedScanResultConsumer extends SimpleScanResultConsumerImpl {
 
-  List<Result> getAll() throws Exception;
+  private final int limit;
 
-  ScanMetrics getScanMetrics();
+  public LimitedScanResultConsumer(int limit) {
+    this.limit = limit;
+  }
+
+  @Override
+  public synchronized boolean onNext(Result result) {
+    return super.onNext(result) && results.size() < limit;
+  }
 }
