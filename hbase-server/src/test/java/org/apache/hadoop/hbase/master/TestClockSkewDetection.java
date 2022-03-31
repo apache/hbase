@@ -49,7 +49,7 @@ public class TestClockSkewDetection {
   public void testClockSkewDetection() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
     ServerManager sm =
-      new ServerManager(new MockNoopMasterServices(conf), new DummyRegionServerListStorage());
+      new ServerManager(new MockNoopMasterServices(conf), new DummyRegionServerList());
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

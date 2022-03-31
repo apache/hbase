@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 
-public class DummyRegionServerListStorage implements RegionServerList {
+public class DummyRegionServerList implements RegionServerList {
 
   @Override
   public void started(ServerName sn) {
