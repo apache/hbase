@@ -380,6 +380,8 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <!-- Making it compile here so that it can be downloaded during packaging. -->
+      <!-- All other modules scope it as test or inherit test scope from parent pom.  -->
       <scope>compile</scope>
     </dependency>
   </dependencies>
