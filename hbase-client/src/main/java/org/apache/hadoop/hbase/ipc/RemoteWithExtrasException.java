@@ -113,7 +113,12 @@ public class RemoteWithExtrasException extends RemoteException {
     ex.initCause(this);
 
     if (ex instanceof HBaseServerException) {
-      ((HBaseServerException) ex).setServerOverloaded(serverOverloaded);
+      // this is a newly constructed exception.
+      // if an exception defaults to meaning isServerOverloaded, we use that.
+      // otherwise, see if the remote exception value should mean setting to true.
+      HBaseServerException serverException = (HBaseServerException) ex;
+      if (serverOverloaded && !serverException.isServerOverloaded())
+      serverException.setServerOverloaded(true);
     }
 
     return ex;
