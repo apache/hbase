@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -90,6 +91,8 @@ public class TestIncrementTimeRange {
     // Make general delay zero rather than default. Timing is off in this
     // test that depends on an evironment edge that is manually moved forward.
     util.getConfiguration().setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 0);
+    // Row commit sequencer won't work because this test uses ManualEnvironmentEdge
+    util.getConfiguration().setBoolean(HRegion.COMMIT_SEQUENCER_ENABLED_KEY, false);
     util.startMiniCluster();
     EnvironmentEdgeManager.injectEdge(mee);
   }

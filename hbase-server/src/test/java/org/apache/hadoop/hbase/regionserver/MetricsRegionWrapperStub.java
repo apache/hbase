@@ -199,4 +199,9 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
     map.put("info", 0L);
     return map;
   }
+
+  @Override
+  public long getRowSequencingYields() {
+    return 0;
+  }
 }

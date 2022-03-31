@@ -7121,9 +7121,9 @@ public class TestHRegion {
 
   @Test
   public void testIncrementTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Increment inc = new Increment(row);
@@ -7146,9 +7146,9 @@ public class TestHRegion {
 
   @Test
   public void testAppendTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Append a = new Append(row);
@@ -7177,29 +7177,29 @@ public class TestHRegion {
 
   @Test
   public void testCheckAndMutateTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
-    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
-    edge.setValue(10);
+    final long t0 = edge.currentTime();
     Put p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
-    p.addColumn(fam1, qual1, qual1);
+    p.addColumn(fam1, qual1, t0, qual1);
     region.put(p);
 
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(10L, c.getTimestamp());
+    assertEquals(t0, c.getTimestamp());
 
-    edge.setValue(1); // clock goes back
+    edge.incrementTime(-10000); // clock goes back
     p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
     p.addColumn(fam1, qual1, qual2);
     region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(qual1), p);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(10L, c.getTimestamp());
+    assertEquals(t0, c.getTimestamp());
 
     assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
       qual2, 0, qual2.length));
@@ -7381,22 +7381,22 @@ public class TestHRegion {
 
   @Test
   public void testCheckAndRowMutateTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
-    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
-    edge.setValue(10);
+    long t0 = edge.currentTime();
     Put p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
-    p.addColumn(fam1, qual1, qual1);
+    p.addColumn(fam1, qual1, t0, qual1);
     region.put(p);
 
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(10L, c.getTimestamp());
+    assertEquals(t0, c.getTimestamp());
 
-    edge.setValue(1); // clock goes back
+    edge.incrementTime(-10000); // clock goes back
     p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
     p.addColumn(fam1, qual1, qual2);
@@ -7406,7 +7406,7 @@ public class TestHRegion {
         new BinaryComparator(qual1), rm));
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(10L, c.getTimestamp());
+    assertEquals(t0, c.getTimestamp());
     LOG.info("c value " +
       Bytes.toStringBinary(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
 
@@ -8024,7 +8024,189 @@ public class TestHRegion {
     assertEquals(regionCoprocessor, regionCoprocessorAfterOnConfigurationChange);
   }
 
+  @Test
+  public void testRowCommitSequencer() throws Exception {
+    final byte[] cf1 = Bytes.toBytes("CF1");
+    final byte[][] families = { cf1 };
+    final byte[] AAA = Bytes.toBytes("AAA");
+    final byte[] AAB = Bytes.toBytes("AAB");
+    final byte[] AAC = Bytes.toBytes("AAC");
+    final byte[] AAD = Bytes.toBytes("AAD");
+    final byte[] AAE = Bytes.toBytes("AAE");
+    final byte[] AAF = Bytes.toBytes("AAF");
+    final byte[] AAG = Bytes.toBytes("AAG");
+
+    region = initHRegion(tableName, method, CONF, families);
+    HRegion.RowCommitSequencer sequencer = region.getRowCommitSequencer();
+
+    // Tick 1
+
+    sequencer.updateTime(1);
+    assertTrue (checkForOverlap(AAA, AAB, AAC));
+    assertFalse(checkForOverlap(AAA));
+
+    // Tick 2
+
+    sequencer.updateTime(2);
+    assertTrue (checkForOverlap(AAA));
+
+    // Tick 3
+
+    sequencer.updateTime(3);
+    // Two disjoint batches allowed
+    assertTrue (checkForOverlap(AAA, AAB, AAC));
+    assertTrue (checkForOverlap(AAD, AAE, AAF));
+    // Single row mutations that conflict with the batches are disallowed
+    assertFalse(checkForOverlap(AAA));
+    assertFalse(checkForOverlap(AAB));
+    assertFalse(checkForOverlap(AAC));
+    assertFalse(checkForOverlap(AAD));
+    assertFalse(checkForOverlap(AAE));
+    assertFalse(checkForOverlap(AAF));
+    // Single row mutation that does not conflict is fine
+    assertTrue (checkForOverlap(AAG));
+
+    // Tick 4
+
+    sequencer.updateTime(4);
+    // Two single row mutations allowed
+    assertTrue (checkForOverlap(AAA));
+    assertTrue (checkForOverlap(AAD));
+    // A batch with a conflicting row disallowed
+    assertFalse(checkForOverlap(AAA, AAB, AAC));
+    // Single row mutations in the batch that do not conflict are allowed on their own
+    // This tests that the check does not add rows which are not going to pass the filter.
+    assertTrue (checkForOverlap(AAB));
+    assertTrue (checkForOverlap(AAC));
+    // Another batch with a conflicting row disallowed
+    assertFalse(checkForOverlap(AAD, AAE, AAF));
+    // More row mutations in the batch that do not conflict are allowed on their own
+    // This tests that the check does not add rows which are not going to pass the filter.
+    assertTrue (checkForOverlap(AAE));
+    assertTrue (checkForOverlap(AAF));
+
+    // Time jumps forward
+    // Tick 10
+
+    sequencer.updateTime(10);
+    // A batch with a previosuly conflicting row now allowed
+    assertTrue (checkForOverlap(AAA, AAB, AAC));
+
+    // Time jumps backwards
+    // Tick 7
+
+    sequencer.updateTime(7);
+    // Same check
+    assertTrue (checkForOverlap(AAA, AAB, AAC));
+
+    // Time jumps backwards again
+    // Tick 6
+
+    sequencer.updateTime(6);
+    // Same check
+    assertTrue (checkForOverlap(AAA, AAB, AAC));
+
+    // Tick 11
+
+    // Some interleaving
+    sequencer.updateTime(11);
+    assertTrue (checkForOverlap(AAA, AAB));
+    assertFalse(checkForOverlap(AAB, AAC));
+    assertTrue (checkForOverlap(AAC, AAD));
+    assertFalse(checkForOverlap(AAD, AAE));
+    assertTrue (checkForOverlap(AAE, AAF));
+    assertFalse(checkForOverlap(AAF, AAG));
+    assertTrue (checkForOverlap(AAG));
+
+    // Tick 12
+
+    sequencer.updateTime(12);
+    assertTrue (checkForOverlap(AAA, AAB, AAC, AAD, AAE, AAF, AAG));
+    assertFalse(checkForOverlap(AAA));
+    assertFalse(checkForOverlap(AAB));
+    assertFalse(checkForOverlap(AAC));
+    assertFalse(checkForOverlap(AAD));
+    assertFalse(checkForOverlap(AAE));
+    assertFalse(checkForOverlap(AAF));
+    assertFalse(checkForOverlap(AAG));
+
+    // Tick 13
+
+    sequencer.updateTime(13);
+    assertTrue (checkForOverlap(AAA));
+    assertTrue (checkForOverlap(AAB));
+    assertTrue (checkForOverlap(AAC));
+    assertTrue (checkForOverlap(AAD));
+    assertTrue (checkForOverlap(AAE));
+    assertTrue (checkForOverlap(AAF));
+    assertTrue (checkForOverlap(AAG));
+  }
+
+  @Test
+  public void testRowCommitSequencerYields() throws Exception {
+    final byte[] cf1 = Bytes.toBytes("CF1");
+    final byte[][] families = { cf1 };
+    final byte[] empty = HConstants.EMPTY_BYTE_ARRAY;
+    final Put putAAA = new Put(Bytes.toBytes("AAA")).addColumn(cf1, empty, Bytes.toBytes(0));
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    mee.setValue(1);
+    EnvironmentEdgeManager.injectEdge(mee);
+    try {
+      region = initHRegion(tableName, method, CONF, families);
+      Thread ticker = new Thread(() -> {
+        int i = 2;
+        while (true) {
+          i += 1;
+          LOG.info("Set time to {}", i);
+          mee.setValue(i);
+          try {
+            Thread.sleep(HRegion.RowCommitSequencer.ROW_SEQUENCER_SLEEP_TIME * 10);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted while ticking");
+            return;
+          }
+        }
+      });
+      Thread committer = new Thread(() -> {
+        for (int i = 0; i < 100; i++) {
+          try {
+            region.put(putAAA);
+            LOG.info("Put {}", putAAA);
+          } catch (IOException e) {
+            LOG.error("Error during put", e);
+          }
+        }
+      });
+      ticker.start();
+      committer.start();
+      committer.join();
+      ticker.interrupt();
+      ticker.join();
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+
+    LOG.info("rowSequencingYields: {}", region.getRowSequencingYields());
+    // There should be at least 99 yields (there will probably be many more...)
+    assertTrue(region.getRowSequencingYields() >= 99);
+  }
+
+  private boolean checkForOverlap(final byte[]... rows) throws IOException {
+    List<RowLock> list = new ArrayList<>(rows.length);
+    for (byte[] row: rows) {
+      list.add(region.getRowLock(row));
+    }
+    try {
+      return region.getRowCommitSequencer().checkAndAddRows(list);
+    } finally {
+      for (RowLock l: list) {
+        l.release();
+      }
+    }
+  }
+
   public static class NoOpRegionCoprocessor implements RegionCoprocessor, RegionObserver {
     // a empty region coprocessor class
   }
+
 }

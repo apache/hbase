@@ -183,4 +183,8 @@ public interface MetricsRegionWrapper {
    */
   Map<String, Long> getMixedRowReadsCount();
 
+  /**
+   * @return the number of yields made for row sequencing
+   */
+  long getRowSequencingYields();
 }

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +62,8 @@ public class TestMinVersions {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMinVersions.class);
 
-  HBaseTestingUtil hbu = new HBaseTestingUtil();
+  private static final HBaseTestingUtil hbu = new HBaseTestingUtil();
+
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -72,6 +74,12 @@ public class TestMinVersions {
   private final byte[] c0 = COLUMNS[0];
 
   @Rule public TestName name = new TestName();
+
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    // Row commit sequencer won't work because this test uses ManualEnvironmentEdge
+    hbu.getConfiguration().setBoolean(HRegion.COMMIT_SEQUENCER_ENABLED_KEY, false);
+  }
 
   /**
    * Verify behavior of getClosestBefore(...)
