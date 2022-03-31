@@ -696,6 +696,13 @@ elif [ "$COMMAND" = "hbtop" ] ; then
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
   CLASS=$COMMAND
+if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
+    for f in ${HBASE_HOME}/lib/test/*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+      fi
+    done
+  fi
 fi
 
 # Add lib/jdk11 jars to the classpath
