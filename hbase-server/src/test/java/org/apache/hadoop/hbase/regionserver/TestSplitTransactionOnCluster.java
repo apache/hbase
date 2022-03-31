@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
@@ -618,7 +619,7 @@ public class TestSplitTransactionOnCluster {
   private void clearReferences(HRegion region) throws IOException {
     // Presumption.
     assertEquals(1, region.getStores().size());
-    HStore store = region.getStores().get(0);
+    HStore store = Iterables.getOnlyElement(region.getStores());
     while (store.hasReferences()) {
       // Wait on any current compaction to complete first.
       CompactionProgress progress = store.getCompactionProgress();
