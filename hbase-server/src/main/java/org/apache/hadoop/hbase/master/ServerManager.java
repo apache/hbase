@@ -139,6 +139,7 @@ public class ServerManager {
 
   private final MasterServices master;
   private final ClusterConnection connection;
+  private final RegionServerList storage;
 
   private final DeadServer deadservers = new DeadServer();
 
@@ -153,8 +154,9 @@ public class ServerManager {
   /**
    * Constructor.
    */
-  public ServerManager(final MasterServices master) {
+  public ServerManager(final MasterServices master, RegionServerList storage) {
     this.master = master;
+    this.storage = storage;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
@@ -185,7 +187,6 @@ public class ServerManager {
    * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
    * @param ia the InetAddress from which request is received
    * @return The ServerName we know this server as.
-   * @throws IOException
    */
   ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
       String version, InetAddress ia) throws IOException {
@@ -206,13 +207,12 @@ public class ServerManager {
       LOG.warn(
         "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
     }
+    storage.started(sn);
     return sn;
   }
 
   /**
    * Updates last flushed sequence Ids for the regions on server sn
-   * @param sn
-   * @param hsl
    */
   private void updateLastFlushedSequenceIds(ServerName sn, ServerMetrics hsl) {
     for (Entry<byte[], RegionMetrics> entry : hsl.getRegionMetrics().entrySet()) {
@@ -581,6 +581,7 @@ public class ServerManager {
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
     long pid = master.getAssignmentManager().submitServerCrash(serverName, true, force);
+    storage.expired(serverName);
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {
       this.listeners.stream().forEach(l -> l.serverRemoved(serverName));
