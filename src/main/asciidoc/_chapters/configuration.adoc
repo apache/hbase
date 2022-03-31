@@ -315,14 +315,15 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 .Hadoop version support matrix for active release lines
 
-[cols="1,2*^.^", options="header"]
+[cols="1,3*^.^", options="header"]
 |===
-| | HBase-2.3.x | HBase-2.4.x
-|Hadoop-2.10.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.2.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.3.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| | HBase-2.3.x | HBase-2.4.x | HBase-2.5.x
+|Hadoop-2.10.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.1.[0-3] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.4+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.2.[0,1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.2.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.3.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop version support matrix for EOM 2.x release lines
@@ -407,6 +408,16 @@ link:https://s.apache.org/hadoop-2.9.0-announcement[Apache Hadoop 2.9.0].
 The Hadoop PMC called out the 3.1.0 release as not stable / production ready. As such, HBase
 expressly advises downstream users to avoid running on top of this release. For reference, see
 the link:https://s.apache.org/hadoop-3.1.0-announcement[release announcement for Hadoop 3.1.0].
+====
+
+.Hadoop 3.1.[0-3] and 3.2.[0,1] Releases
+[TIP]
+====
+These versions of Hadoop ship with an older version of Jetty that has an
+link:https://github.com/eclipse/jetty.project/issues/2090[issue] such that it does not support
+link:https://openjdk.java.net/jeps/223[JEP 223] compliant Java version strings. For consistent
+runtime reliability, HBase requires versions of Hadoop that include
+link:https://issues.apache.org/jira/browse/HADOOP-16152[HADOOP-16152].
 ====
 
 .Replace the Hadoop Bundled With HBase!
