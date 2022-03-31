@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertTrue;
 
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -108,8 +107,8 @@ public class TestRegionHDFSBlockLocationFinderCacheBound {
     Configuration conf = HBaseConfiguration.create();
 
     for (RegionInfo regionInfo : REGIONS) {
-      maxSize += (ObjectSizeCalculator.getObjectSize(regionInfo) +
-        ObjectSizeCalculator.getObjectSize(generate(regionInfo)));
+      maxSize += (regionInfo.heapSize() +
+        generate(regionInfo).heapSize());
     }
 
     conf.setLong("hbase.master.balancer.regionBlockLocation.cache.max.size", maxSize);
@@ -127,10 +126,8 @@ public class TestRegionHDFSBlockLocationFinderCacheBound {
 
     long actualSize = 0;
     for (Map.Entry<RegionInfo, HDFSBlocksDistribution> entry: finder.getCache().asMap().entrySet()) {
-      actualSize += (ObjectSizeCalculator.getObjectSize(entry.getKey()) +
-        ObjectSizeCalculator.getObjectSize(entry.getValue()));
+      actualSize += entry.getKey().heapSize() + entry.getValue().heapSize();
     }
-
     assertTrue(actualSize < maxSize);
   }
 }

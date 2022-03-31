@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HashKey;
@@ -66,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  *
  */
 @InterfaceAudience.Public
-public interface RegionInfo extends Comparable<RegionInfo> {
+public interface RegionInfo  extends Comparable<RegionInfo>, HeapSize {
   /**
    * @deprecated since 2.3.2/3.0.0; to be removed in 4.0.0 with no replacement (for internal use).
    */

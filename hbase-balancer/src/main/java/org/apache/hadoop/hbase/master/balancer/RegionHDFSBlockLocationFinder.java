@@ -29,7 +29,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -120,8 +119,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
           new Weigher<RegionInfo, HDFSBlocksDistribution>() {
             @Override
             public int weigh(RegionInfo regionInfo, HDFSBlocksDistribution hdfsBlocksDistribution) {
-              return (int)(ObjectSizeCalculator.getObjectSize(regionInfo) +
-                ObjectSizeCalculator.getObjectSize(hdfsBlocksDistribution));
+              return (int) (regionInfo.heapSize() +
+                hdfsBlocksDistribution.heapSize());
             }
           }
         )

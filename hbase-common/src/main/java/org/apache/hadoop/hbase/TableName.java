@@ -25,7 +25,9 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -55,7 +57,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * </p>
  */
 @InterfaceAudience.Public
-public final class TableName implements Comparable<TableName> {
+public final class TableName implements Comparable<TableName>, HeapSize {
+
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(TableName.class, false);
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
   private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
@@ -124,6 +128,20 @@ public final class TableName implements Comparable<TableName> {
   private final String qualifierAsString;
   private final boolean systemTable;
   private final int hashCode;
+
+  @Override
+  public long heapSize() {
+    long size = FIXED_OVERHEAD;
+
+    size += ClassSize.STRING + 2 * this.nameAsString.length();
+    size += ClassSize.STRING + 2 * this.namespaceAsString.length();
+    size += ClassSize.STRING + 2 * this.qualifierAsString.length();
+    size += ClassSize.sizeOfByteArray(this.name.length);
+    size += ClassSize.sizeOfByteArray(this.namespace.length);
+    size += ClassSize.sizeOfByteArray(this.qualifier.length);
+
+    return ClassSize.align(size);
+  }
 
   /**
    * Check passed byte array, "tableName", is legal user-space table name.

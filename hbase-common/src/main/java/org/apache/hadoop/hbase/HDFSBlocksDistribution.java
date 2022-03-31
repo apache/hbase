@@ -26,6 +26,8 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,7 +37,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Adding erroneous data will be ignored silently.
  */
 @InterfaceAudience.Private
-public class HDFSBlocksDistribution {
+public class HDFSBlocksDistribution implements HeapSize {
+
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HDFSBlocksDistribution.class, false);
+
   private Map<String,HostAndWeight> hostAndWeights = null;
   private long uniqueBlocksTotalWeight = 0;
 
@@ -49,7 +54,8 @@ public class HDFSBlocksDistribution {
    * this class is used to count the total weight for each host.  The weight is
    * currently just the size of the file.
    */
-  public static class HostAndWeight {
+  public static class HostAndWeight implements HeapSize {
+    public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HostAndWeight.class, false);
 
     private final String host;
     private long weight;
@@ -109,6 +115,14 @@ public class HDFSBlocksDistribution {
         }
         return l.getWeight() < r.getWeight() ? -1 : 1;
       }
+    }
+
+    @Override
+    public long heapSize() {
+      long size = FIXED_OVERHEAD;
+      size += ClassSize.STRING + 2 * this.host.length();
+
+      return ClassSize.align(size);
     }
   }
 
@@ -332,6 +346,19 @@ public class HDFSBlocksDistribution {
     NavigableSet<HostAndWeight> orderedHosts = new TreeSet<>(new HostAndWeight.WeightComparator());
     orderedHosts.addAll(this.hostAndWeights.values());
     return orderedHosts.descendingSet().toArray(new HostAndWeight[orderedHosts.size()]);
+  }
+
+  @Override
+  public long heapSize() {
+    long size = FIXED_OVERHEAD;
+
+    size += ClassSize.align(this.hostAndWeights.size() * ClassSize.MAP_ENTRY);
+    for(Map.Entry<String, HostAndWeight> entry : this.hostAndWeights.entrySet()) {
+      size += ClassSize.align(ClassSize.STRING + 2 * entry.getKey().length());
+      size += ClassSize.align(ClassSize.ARRAY + entry.getValue().heapSize());
+    }
+
+    return ClassSize.align(size);
   }
 
 }
