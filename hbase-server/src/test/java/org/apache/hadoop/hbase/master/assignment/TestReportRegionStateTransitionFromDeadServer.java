@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -71,8 +72,8 @@ public class TestReportRegionStateTransitionFromDeadServer {
 
   private static final class ServerManagerForTest extends ServerManager {
 
-    public ServerManagerForTest(MasterServices master) {
-      super(master);
+    public ServerManagerForTest(MasterServices master, RegionServerList storage) {
+      super(master, storage);
     }
 
     @Override
@@ -128,9 +129,10 @@ public class TestReportRegionStateTransitionFromDeadServer {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master) throws IOException {
+    protected ServerManager createServerManager(MasterServices master,
+      RegionServerList storage) throws IOException {
       setupClusterConnection();
-      return new ServerManagerForTest(master);
+      return new ServerManagerForTest(master, storage);
     }
   }
 

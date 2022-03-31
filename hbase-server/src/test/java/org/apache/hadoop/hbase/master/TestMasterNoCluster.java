@@ -219,8 +219,9 @@ public class TestMasterNoCluster {
       protected void initClusterSchemaService() throws IOException, InterruptedException {}
 
       @Override
-      protected ServerManager createServerManager(MasterServices master) throws IOException {
-        ServerManager sm = super.createServerManager(master);
+      protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+        throws IOException {
+        ServerManager sm = super.createServerManager(master, storage);
         // Spy on the created servermanager
         ServerManager spy = Mockito.spy(sm);
         return spy;

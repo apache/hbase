@@ -59,7 +59,7 @@ public class TestClockSkewDetection {
         when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
         return conn;
       }
-    });
+    }, new DummyRegionServerList());
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

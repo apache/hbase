@@ -115,22 +115,22 @@ public class RegionServerTracker extends ZKListener {
    * {@link ServerManager#findDeadServersAndProcess(Set, Set)}, we call it here under the lock
    * protection to prevent concurrency issues with server expiration operation.
    * @param deadServersFromPE the region servers which already have SCP associated.
-   * @param liveServersFromWALDir the live region servers from wal directory.
+   * @param liveServersBeforeRestart the live region servers we recorded before master restarts.
    * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
    */
-  public void upgrade(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir,
+  public void upgrade(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersBeforeRestart,
     Set<ServerName> splittingServersFromWALDir) throws KeeperException, IOException {
     LOG.info(
       "Upgrading RegionServerTracker to active master mode; {} have existing" +
         "ServerCrashProcedures, {} possibly 'live' servers, and {} 'splitting'.",
-      deadServersFromPE.size(), liveServersFromWALDir.size(), splittingServersFromWALDir.size());
+      deadServersFromPE.size(), liveServersBeforeRestart.size(), splittingServersFromWALDir.size());
     // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
     splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
       forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     // create ServerNode for all possible live servers from wal directory
-    liveServersFromWALDir
+    liveServersBeforeRestart
         .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
     ServerManager serverManager = server.getServerManager();
     synchronized (this) {
@@ -142,7 +142,7 @@ public class RegionServerTracker extends ZKListener {
           info.getVersionInfo().getVersion()) : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
-      serverManager.findDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
+      serverManager.findDeadServersAndProcess(deadServersFromPE, liveServersBeforeRestart);
       active = true;
     }
   }
