@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -558,5 +559,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     } else {
       return response;
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public synchronized RpcCallback getCallBack() {
+    return this.rpcCallback;
   }
 }

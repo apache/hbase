@@ -412,7 +412,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
-  private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /**
    * The sequence ID that was enLongAddered when this region was opened.
