@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.ServerConnectionUtils;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -863,7 +864,7 @@ public class HRegionServer extends Thread implements
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
-    return ConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
+    return ServerConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
       serverName, rpcServices, rpcServices);
   }
 
@@ -3846,7 +3847,7 @@ public class HRegionServer extends Thread implements
   @Override
   public Connection createConnection(Configuration conf) throws IOException {
     User user = UserProvider.instantiate(conf).getCurrent();
-    return ConnectionUtils.createShortCircuitConnection(conf, null, user, this.serverName,
+    return ServerConnectionUtils.createShortCircuitConnection(conf, null, user, this.serverName,
         this.rpcServices, this.rpcServices);
   }
 
