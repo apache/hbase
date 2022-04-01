@@ -696,6 +696,7 @@ public abstract class RpcServer implements RpcServerInterface,
     return rpcCall;
   }
 
+
   /**
    * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
    * rpc call back after mutate region.

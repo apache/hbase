@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -62,11 +61,8 @@ import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * Utility used by client connections.
@@ -128,67 +124,6 @@ public final class ConnectionUtils {
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
-  }
-
-  /**
-   * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
-   * if the invocation target is 'this' server; save on network and protobuf invocations.
-   */
-  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
-  // Class is visible so can assert we are short-circuiting when expected.
-  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
-    private final ServerName serverName;
-    private final AdminService.BlockingInterface localHostAdmin;
-    private final ClientService.BlockingInterface localHostClient;
-
-    private ShortCircuitingClusterConnection(Configuration conf, User user,
-        ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
-      super(conf, null, user, registry);
-      this.serverName = serverName;
-      this.localHostAdmin = admin;
-      this.localHostClient = client;
-    }
-
-    @Override
-    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
-    }
-
-    @Override
-    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
-    }
-
-    @Override
-    public MasterKeepAliveConnection getMaster() throws IOException {
-      if (this.localHostClient instanceof MasterService.BlockingInterface) {
-        return new ShortCircuitMasterConnection(
-          (MasterService.BlockingInterface) this.localHostClient);
-      }
-      return super.getMaster();
-    }
-  }
-
-  /**
-   * Creates a short-circuit connection that can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) when talking to a local server.
-   * @param conf the current configuration
-   * @param user the user the connection is for
-   * @param serverName the local server name
-   * @param admin the admin interface of the local server
-   * @param client the client interface of the local server
-   * @param registry the connection registry to be used, can be null
-   * @return an short-circuit connection.
-   * @throws IOException if IO failure occurred
-   */
-  public static ClusterConnection createShortCircuitConnection(final Configuration conf, User user,
-    final ServerName serverName, final AdminService.BlockingInterface admin,
-    final ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
-    if (user == null) {
-      user = UserProvider.instantiate(conf).getCurrent();
-    }
-    return new ShortCircuitingClusterConnection(conf, user, serverName, admin, client, registry);
   }
 
   /**
