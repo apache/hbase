@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.DummyRegionServerList;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -115,7 +116,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.assignmentManager =
       new AssignmentManager(this, masterRegion, new MockRegionStateStore(this, masterRegion));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
-    this.serverManager = new ServerManager(this);
+    this.serverManager = new ServerManager(this, new DummyRegionServerList());
     this.tableStateManager = Mockito.mock(TableStateManager.class);
     Mockito.when(this.tableStateManager.getTableState(Mockito.any())).
         thenReturn(new TableState(TableName.valueOf("AnyTableNameSetInMockMasterServcies"),

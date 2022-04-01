@@ -139,6 +139,8 @@ public abstract class TableInputFormatBase
   private TableRecordReader tableRecordReader = null;
   /** The underlying {@link Connection} of the table. */
   private Connection connection;
+  /** Used to generate splits based on region size. */
+  private RegionSizeCalculator regionSizeCalculator;
 
 
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
@@ -288,8 +290,11 @@ public abstract class TableInputFormatBase
    * @throws IOException throws IOException
    */
   private List<InputSplit> oneInputSplitPerRegion() throws IOException {
-    RegionSizeCalculator sizeCalculator =
-        createRegionSizeCalculator(getRegionLocator(), getAdmin());
+    if (regionSizeCalculator == null) {
+      // Initialize here rather than with the other resources because this involves
+      // a full scan of meta, which can be heavy. We might as well only do it if/when necessary.
+      regionSizeCalculator = createRegionSizeCalculator(getRegionLocator(), getAdmin());
+    }
 
     TableName tableName = getTable().getName();
 
@@ -302,7 +307,7 @@ public abstract class TableInputFormatBase
         throw new IOException("Expecting at least one region.");
       }
       List<InputSplit> splits = new ArrayList<>(1);
-      long regionSize = sizeCalculator.getRegionSize(regLoc.getRegion().getRegionName());
+      long regionSize = regionSizeCalculator.getRegionSize(regLoc.getRegion().getRegionName());
       // In the table input format for single table we do not need to
       // store the scan object in table split because it can be memory intensive and redundant
       // information to what is already stored in conf SCAN. See HBASE-25212
@@ -345,7 +350,7 @@ public abstract class TableInputFormatBase
 
         byte[] regionName = location.getRegion().getRegionName();
         String encodedRegionName = location.getRegion().getEncodedName();
-        long regionSize = sizeCalculator.getRegionSize(regionName);
+        long regionSize = regionSizeCalculator.getRegionSize(regionName);
         // In the table input format for single table we do not need to
         // store the scan object in table split because it can be memory intensive and redundant
         // information to what is already stored in conf SCAN. See HBASE-25212
@@ -597,6 +602,7 @@ public abstract class TableInputFormatBase
     this.regionLocator = connection.getRegionLocator(tableName);
     this.admin = connection.getAdmin();
     this.connection = connection;
+    this.regionSizeCalculator = null;
   }
 
   @InterfaceAudience.Private
@@ -664,6 +670,7 @@ public abstract class TableInputFormatBase
     table = null;
     regionLocator = null;
     connection = null;
+    regionSizeCalculator = null;
   }
 
   private void close(Closeable... closables) throws IOException {

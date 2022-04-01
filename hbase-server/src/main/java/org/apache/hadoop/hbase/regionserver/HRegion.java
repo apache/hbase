@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -164,6 +165,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -709,7 +711,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final MultiVersionConcurrencyControl mvcc;
 
   // Coprocessor host
-  private RegionCoprocessorHost coprocessorHost;
+  private volatile RegionCoprocessorHost coprocessorHost;
 
   private TableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
@@ -8602,6 +8604,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
+    // update coprocessorHost if the configuration has changed.
+    if (CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)) {
+      LOG.info("Update the system coprocessors because the configuration has changed");
+      decorateRegionConfiguration(conf);
+      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+    }
   }
 
   /**
@@ -8740,5 +8750,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void addWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  boolean isReadsEnabled() {
+    return this.writestate.readsEnabled;
   }
 }

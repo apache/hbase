@@ -1276,6 +1276,10 @@ Here are those configurations:
 | Key
 | hbase.ipc.server.fallback-to-simple-auth-allowed
 | hbase.cleaner.scan.dir.concurrent.size
+| hbase.coprocessor.master.classes
+| hbase.coprocessor.region.classes
+| hbase.coprocessor.regionserver.classes
+| hbase.coprocessor.user.region.classes
 | hbase.regionserver.thread.compaction.large
 | hbase.regionserver.thread.compaction.small
 | hbase.regionserver.thread.split

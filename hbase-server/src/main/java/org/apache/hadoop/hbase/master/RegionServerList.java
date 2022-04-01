@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,17 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.master;
 
-import java.util.List;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import java.io.IOException;
+import java.util.Set;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A simplistic {@link ScanResultConsumer} for use in tests.
+ * For storing the region server list.
+ * <p/>
+ * Mainly be used when restarting master, to load the previous active region server list.
  */
-public interface SimpleScanResultConsumer extends ScanResultConsumer {
+@InterfaceAudience.Private
+public interface RegionServerList {
 
-  List<Result> getAll() throws Exception;
+  /**
+   * Called when a region server join the cluster.
+   */
+  void started(ServerName sn);
 
-  ScanMetrics getScanMetrics();
+  /**
+   * Called when a region server is dead.
+   */
+  void expired(ServerName sn);
+
+  /**
+   * Get all live region servers.
+   */
+  Set<ServerName> getAll() throws IOException;
 }
