@@ -77,10 +77,11 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
   }
 
   /**
-   * This test is for HBASE-26811,when
+   * This test is for HBASE-26811,before HBASE-26811,when
    * {@link ServerRegionReplicaUtil#REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY} is false and set
    * {@link TableDescriptorBuilder#setRegionMemStoreReplication} to true explicitly,the secondary
-   * replica would be disabled for read after open.
+   * replica would be disabled for read after open,after HBASE-26811,the secondary replica would be
+   * enabled for read after open.
    */
   @Test
   public void testSecondaryReplicaReadEnabled() throws Exception {
