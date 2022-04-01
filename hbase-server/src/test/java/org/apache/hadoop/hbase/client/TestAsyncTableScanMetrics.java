@@ -123,7 +123,7 @@ public class TestAsyncTableScanMetrics {
 
   private static Pair<List<Result>, ScanMetrics> doScanWithAsyncTableScan(Scan scan)
       throws Exception {
-    SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
+    SimpleScanResultConsumerImpl consumer = new SimpleScanResultConsumerImpl();
     CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).scan(scan, consumer);
     return Pair.newPair(consumer.getAll(), consumer.getScanMetrics());
   }

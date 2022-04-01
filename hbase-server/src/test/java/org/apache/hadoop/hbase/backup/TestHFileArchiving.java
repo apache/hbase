@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -161,7 +163,36 @@ public class TestHFileArchiving {
       HFileArchiver::archiveStoreFiles);
   }
 
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystemsFileAlreadyArchived() throws Exception {
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, false, false,
+      HFileArchiver::archiveStoreFiles);
+  }
+
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystemsArchiveFileMatchCurrent() throws Exception {
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true, false,
+      HFileArchiver::archiveStoreFiles);
+  }
+
+  @Test(expected = IOException.class)
+  public void testArchiveStoreFilesDifferentFileSystemsArchiveFileMismatch() throws Exception {
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true, true,
+      HFileArchiver::archiveStoreFiles);
+  }
+
   private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
+    ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
+      Collection<HStoreFile>> archivingFunction) throws IOException {
+    testArchiveStoreFilesDifferentFileSystems(walDir, expectedBase, false, true, false,
+      archivingFunction);
+  }
+
+  private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
+    boolean archiveFileExists, boolean sourceFileExists, boolean archiveFileDifferentLength,
     ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
       Collection<HStoreFile>> archivingFunction) throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
@@ -169,10 +200,19 @@ public class TestHFileArchiving {
     if(walDir != null) {
       conf.set(CommonFSUtils.HBASE_WAL_DIR, walDir);
     }
-    Path filePath = new Path("/mockDir/wals/mockFile");
     when(mockedFileSystem.getScheme()).thenReturn("mockFS");
     when(mockedFileSystem.mkdirs(any())).thenReturn(true);
-    when(mockedFileSystem.exists(any())).thenReturn(true);
+    HashMap<Path,Boolean> existsTracker = new HashMap<>();
+    Path filePath = new Path("/mockDir/wals/mockFile");
+    String expectedDir = expectedBase +
+      "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
+    existsTracker.put(new Path(expectedDir), archiveFileExists);
+    existsTracker.put(filePath, sourceFileExists);
+    when(mockedFileSystem.exists(any())).thenAnswer(invocation ->
+      existsTracker.getOrDefault((Path)invocation.getArgument(0), true));
+    FileStatus mockedStatus = mock(FileStatus.class);
+    when(mockedStatus.getLen()).thenReturn(12L).thenReturn(archiveFileDifferentLength ? 34L : 12L);
+    when(mockedFileSystem.getFileStatus(any())).thenReturn(mockedStatus);
     RegionInfo mockedRegion = mock(RegionInfo.class);
     TableName tableName = TableName.valueOf("mockTable");
     when(mockedRegion.getTable()).thenReturn(tableName);
@@ -185,11 +225,30 @@ public class TestHFileArchiving {
     when(mockedFile.getPath()).thenReturn(filePath);
     when(mockedFileSystem.rename(any(),any())).thenReturn(true);
     archivingFunction.apply(conf, mockedFileSystem, mockedRegion, tableDir, family, list);
-    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-    verify(mockedFileSystem, times(2)).rename(pathCaptor.capture(), any());
-    String expectedDir = expectedBase +
-      "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
-    assertTrue(pathCaptor.getAllValues().get(0).toString().equals(expectedDir));
+
+    if (sourceFileExists) {
+      ArgumentCaptor<Path> srcPath = ArgumentCaptor.forClass(Path.class);
+      ArgumentCaptor<Path> destPath = ArgumentCaptor.forClass(Path.class);
+      if (archiveFileExists) {
+        // Verify we renamed the archived file to sideline, and then renamed the source file.
+        verify(mockedFileSystem, times(2)).rename(srcPath.capture(), destPath.capture());
+        assertEquals(expectedDir, srcPath.getAllValues().get(0).toString());
+        assertEquals(filePath, srcPath.getAllValues().get(1));
+        assertEquals(expectedDir, destPath.getAllValues().get(1).toString());
+      } else {
+        // Verify we renamed the source file to the archived file.
+        verify(mockedFileSystem, times(1)).rename(srcPath.capture(), destPath.capture());
+        assertEquals(filePath, srcPath.getAllValues().get(0));
+        assertEquals(expectedDir, destPath.getAllValues().get(0).toString());
+      }
+    } else {
+      if (archiveFileExists) {
+        // Verify we did not rename. No source file with a present archive file should be a no-op.
+        verify(mockedFileSystem, never()).rename(any(), any());
+      } else {
+        fail("Unsupported test conditions: sourceFileExists and archiveFileExists both false.");
+      }
+    }
   }
 
   @FunctionalInterface

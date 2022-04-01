@@ -2929,8 +2929,7 @@ Note how the META replication period is distinct from the user-space
 `hbase.regionserver.storefile.refresh.period` value.
 
 ==== Async WAL Replication for META table as of hbase-2.4.0+ ====
-Async WAL replication for META is added as a new feature in 2.4.0. It is still under
-active development. Use with caution. Set
+Async WAL replication for META is added as a new feature in 2.4.0. Set
 `hbase.region.replica.replication.catalog.enabled` to enable async WAL Replication
 for META region replicas. It is off by default.
 
@@ -2951,7 +2950,7 @@ table. And the ability to alter META table is also kept.
 
 ==== Load Balancing META table load ====
 
-hbase-2.4.0 also adds a *new* client-side `LoadBalance` mode. When enabled
+hbase-2.4.0 also adds a new client-side `LoadBalance` mode. When enabled
 client-side, clients will try to read META replicas first before falling back on
 the primary. Before this, the replica lookup mode -- now named `HedgedRead` in
 hbase-2.4.0 -- had clients read the primary and if no response after a
@@ -2968,8 +2967,6 @@ to "LoadBalance". Valid options for this configuration are `None`, `HedgedRead`,
 through to `HedgedRead`, the current default).  Do NOT put this configuration in any
 hbase server-side's configuration, Master or RegionServer (Master could make decisions
 based off stale state -- to be avoided).
-
-`LoadBalance` also is a new feature. Use with caution.
 
 === Memory accounting
 The secondary region replicas refer to the data files of the primary region replica, but they have their own memstores (in HBase-1.1+) and uses block cache as well. However, one distinction is that the secondary region replicas cannot flush the data when there is memory pressure for their memstores. They can only free up memstore memory when the primary region does a flush and this flush is replicated to the secondary. Since in a region server hosting primary replicas for some regions and secondaries for some others, the secondaries might cause extra flushes to the primary regions in the same host. In extreme situations, there can be no memory left for adding new writes coming from the primary via wal replication. For unblocking this situation (and since secondary cannot flush by itself), the secondary is allowed to do a “store file refresh” by doing a file system list operation to pick up new files from primary, and possibly dropping its memstore. This refresh will only be performed if the memstore size of the biggest secondary region replica is at least `hbase.region.replica.storefile.refresh.memstore.multiplier` (default 4) times bigger than the biggest memstore of a primary replica. One caveat is that if this is performed, the secondary can observe partial row updates across column families (since column families are flushed independently). The default should be good to not do this operation frequently. You can set this value to a large number to disable this feature if desired, but be warned that it might cause the replication to block forever.

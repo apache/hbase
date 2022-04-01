@@ -488,26 +488,57 @@ public class HFileArchiver {
     Path archiveFile = new Path(archiveDir, filename);
     FileSystem fs = currentFile.getFileSystem();
 
-    // if the file already exists in the archive, move that one to a timestamped backup. This is a
-    // really, really unlikely situtation, where we get the same name for the existing file, but
-    // is included just for that 1 in trillion chance.
+    // An existing destination file in the archive is unexpected, but we handle it here.
     if (fs.exists(archiveFile)) {
-      LOG.debug("{} already exists in archive, moving to timestamped backup and " +
-          "overwriting current.", archiveFile);
+      if (!fs.exists(currentFile.getPath())) {
+        // If the file already exists in the archive, and there is no current file to archive, then
+        // assume that the file in archive is correct. This is an unexpected situation, suggesting a
+        // race condition or split brain.
+        // In HBASE-26718 this was found when compaction incorrectly happened during warmupRegion.
+        LOG.warn("{} exists in archive. Attempted to archive nonexistent file {}.", archiveFile,
+          currentFile);
+        // We return success to match existing behavior in this method, where FileNotFoundException
+        // in moveAndClose is ignored.
+        return true;
+      }
+      // There is a conflict between the current file and the already existing archived file.
+      // Move the archived file to a timestamped backup. This is a really, really unlikely
+      // situation, where we get the same name for the existing file, but is included just for that
+      // 1 in trillion chance. We are potentially incurring data loss in the archive directory if
+      // the files are not identical. The timestamped backup will be cleaned by HFileCleaner as it
+      // has no references.
+      FileStatus curStatus = fs.getFileStatus(currentFile.getPath());
+      FileStatus archiveStatus = fs.getFileStatus(archiveFile);
+      long curLen = curStatus.getLen();
+      long archiveLen = archiveStatus.getLen();
+      long curMtime = curStatus.getModificationTime();
+      long archiveMtime = archiveStatus.getModificationTime();
+      if (curLen != archiveLen) {
+        LOG.error("{} already exists in archive with different size than current {}."
+            + " archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
+          archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
+        throw new IOException(archiveFile + " already exists in archive with different size" +
+          " than " + currentFile);
+      }
+
+      LOG.error("{} already exists in archive, moving to timestamped backup and overwriting"
+          + " current {}. archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
+        archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
       if (!fs.rename(archiveFile, backedupArchiveFile)) {
         LOG.error("Could not rename archive file to backup: " + backedupArchiveFile
             + ", deleting existing file in favor of newer.");
-        // try to delete the exisiting file, if we can't rename it
+        // try to delete the existing file, if we can't rename it
         if (!fs.delete(archiveFile, false)) {
           throw new IOException("Couldn't delete existing archive file (" + archiveFile
               + ") or rename it to the backup file (" + backedupArchiveFile
               + ") to make room for similarly named file.");
         }
+      } else {
+        LOG.info("Backed up archive file from {} to {}.", archiveFile, backedupArchiveFile);
       }
-      LOG.debug("Backed up archive file from " + archiveFile);
     }
 
     LOG.trace("No existing file in archive for {}, free to archive original file.", archiveFile);

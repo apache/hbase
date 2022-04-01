@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -409,7 +410,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // chore for refreshing store files for secondary regions
   private StorefileRefresherChore storefileRefresher;
 
-  private RegionServerCoprocessorHost rsHost;
+  private volatile RegionServerCoprocessorHost rsHost;
 
   private RegionServerProcedureManagerHost rspmHost;
 
@@ -2239,7 +2240,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
     TableName tn = region.getTableDescriptor().getTableName();
     if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf, tn) ||
-        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf) ||
+        // If the memstore replication not setup, we do not have to wait for observing a flush event
+        // from primary before starting to serve reads, because gaps from replication is not
+        // applicable,this logic is from
+        // TableDescriptorBuilder.ModifyableTableDescriptor.setRegionMemStoreReplication by
+        // HBASE-13063
+        !region.getTableDescriptor().hasRegionMemStoreReplication()) {
       region.setReadsEnabled(true);
       return;
     }
@@ -3341,6 +3348,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       Superusers.initialize(newConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
+    }
+
+    // update region server coprocessor if the configuration has changed.
+    if (CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)) {
+      LOG.info("Update region server coprocessors because the configuration has changed");
+      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
     }
   }
 
