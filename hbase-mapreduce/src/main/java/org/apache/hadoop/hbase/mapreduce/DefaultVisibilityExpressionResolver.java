@@ -98,7 +98,9 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
       } catch (IOException e) {
         LOG.error("Error scanning 'labels' table", e);
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     } catch (IOException ioe) {
       LOG.error("Failed reading 'labels' tags", ioe);
@@ -111,12 +113,13 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
           LOG.warn("Error closing 'labels' table", ioe);
         }
       }
-      if (connection != null)
+      if (connection != null) {
         try {
           connection.close();
         } catch (IOException ioe) {
           LOG.warn("Failed close of temporary connection", ioe);
         }
+      }
     }
   }
 
