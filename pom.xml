@@ -1467,7 +1467,7 @@
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.11</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
-    <disruptor.version>3.4.2</disruptor.version>
+    <disruptor.version>3.3.6</disruptor.version>
     <!-- Updating the httpclient will break hbase-rest. It writes out URLs with '//' in it
       especially when writing out 'no column families'. Later httpclients collapse the '//'
       into single '/' as double-slash is not legal in an URL. Breaks #testDelete in
