@@ -59,6 +59,8 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
 /**
  * Run tests that use the HBase clients; {@link Table}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
@@ -1027,10 +1029,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       Scan scan = new Scan();
       scan.addFamily(CONTENTS_FAMILY);
       try (ResultScanner scanner = table.getScanner(scan)) {
-        int nbRows = 0;
-        for (@SuppressWarnings("unused") Result row : scanner) {
-          nbRows++;
-        }
+        int nbRows = Iterables.size(scanner);
         assertEquals(NB_BATCH_ROWS, nbRows);
       }
     }
@@ -1056,10 +1055,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       Scan scan = new Scan();
       scan.addFamily(CONTENTS_FAMILY);
       try (ResultScanner scanner = table.getScanner(scan)) {
-        int nbRows = 0;
-        for (@SuppressWarnings("unused") Result row : scanner) {
-          nbRows++;
-        }
+        int nbRows = Iterables.size(scanner);
         assertEquals(NB_BATCH_ROWS * 10, nbRows);
       }
     }
