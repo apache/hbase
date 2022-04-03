@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -51,6 +53,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
@@ -129,6 +133,7 @@ public class TestMultiVersions {
 
   /**
    * Verifies versions across a cluster restart.
+   * <p/>
    * Port of old TestGetRowVersions test to here so can better utilize the spun
    * up cluster running more than a single test per spin up.  Keep old tests'
    * crazyness.
@@ -170,26 +175,26 @@ public class TestMultiVersions {
     Result r = table.get(get);
     assertNotNull(r);
     assertFalse(r.isEmpty());
-    assertTrue(r.size() == 1);
+    assertEquals(1, r.size());
     byte [] value = r.getValue(contents, contents);
-    assertTrue(value.length != 0);
+    assertNotEquals(0, value.length);
     assertTrue(Bytes.equals(value, value2));
     // Now check getRow with multiple versions
     get = new Get(row);
     get.readAllVersions();
     r = table.get(get);
-    assertTrue(r.size() == 2);
+    assertEquals(2, r.size());
     value = r.getValue(contents, contents);
-    assertTrue(value.length != 0);
-    assertTrue(Bytes.equals(value, value2));
+    assertNotEquals(0, value.length);
+    assertArrayEquals(value, value2);
     NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
       r.getMap();
     NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap =
       map.get(contents);
     NavigableMap<Long, byte[]> versionMap = familyMap.get(contents);
-    assertTrue(versionMap.size() == 2);
-    assertTrue(Bytes.equals(value1, versionMap.get(timestamp1)));
-    assertTrue(Bytes.equals(value2, versionMap.get(timestamp2)));
+    assertEquals(2, versionMap.size());
+    assertArrayEquals(value1, versionMap.get(timestamp1));
+    assertArrayEquals(value2, versionMap.get(timestamp2));
     table.close();
   }
 
@@ -220,11 +225,11 @@ public class TestMultiVersions {
 
     for (int i = 0; i < startKeys.length; i++) {
       if (i == 0) {
-        assertTrue(Bytes.equals(HConstants.EMPTY_START_ROW, startKeys[i]));
-        assertTrue(Bytes.equals(endKeys[i], splitRows[0]));
+        assertArrayEquals(HConstants.EMPTY_START_ROW, startKeys[i]);
+        assertArrayEquals(endKeys[i], splitRows[0]);
       } else if (i == 1) {
-        assertTrue(Bytes.equals(splitRows[0], startKeys[i]));
-        assertTrue(Bytes.equals(endKeys[i], HConstants.EMPTY_END_ROW));
+        assertArrayEquals(splitRows[0], startKeys[i]);
+        assertArrayEquals(endKeys[i], HConstants.EMPTY_END_ROW);
       }
     }
     // Insert data
@@ -244,100 +249,59 @@ public class TestMultiVersions {
         get.addFamily(HConstants.CATALOG_FAMILY);
         get.setTimestamp(timestamp[j]);
         Result result = table.get(get);
-        int cellCount = 0;
-        for(@SuppressWarnings("unused")Cell kv : result.listCells()) {
-          cellCount++;
-        }
-        assertTrue(cellCount == 1);
+        int cellCount = result.rawCells().length;
+        assertEquals(1, cellCount);
       }
     }
 
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows
-    int count = 0;
+    int count;
     Scan scan = new Scan();
     scan.addFamily(HConstants.CATALOG_FAMILY);
-    ResultScanner s = table.getScanner(scan);
-    try {
-      for (Result rr = null; (rr = s.next()) != null;) {
-        System.out.println(rr.toString());
-        count += 1;
-      }
-      assertEquals("Number of rows should be 2", 2, count);
-    } finally {
-      s.close();
+    try (ResultScanner s = table.getScanner(scan)) {
+      count = Iterables.size(s);
     }
+    assertEquals("Number of rows should be 2", 2, count);
 
     // Case 2: Scan with a timestamp greater than most recent timestamp
     // (in this case > 1000 and < LATEST_TIMESTAMP. Should get 2 rows.
-
-    count = 0;
     scan = new Scan();
     scan.setTimeRange(1000L, Long.MAX_VALUE);
     scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = table.getScanner(scan);
-    try {
-      while (s.next() != null) {
-        count += 1;
-      }
-      assertEquals("Number of rows should be 2", 2, count);
-    } finally {
-      s.close();
+    try (ResultScanner s = table.getScanner(scan)) {
+      count = Iterables.size(s);
     }
+    assertEquals("Number of rows should be 2", 2, count);
 
     // Case 3: scan with timestamp equal to most recent timestamp
     // (in this case == 1000. Should get 2 rows.
-
-    count = 0;
     scan = new Scan();
     scan.setTimestamp(1000L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = table.getScanner(scan);
-    try {
-      while (s.next() != null) {
-        count += 1;
-      }
-      assertEquals("Number of rows should be 2", 2, count);
-    } finally {
-      s.close();
+    try (ResultScanner s = table.getScanner(scan)) {
+      count = Iterables.size(s);
     }
+    assertEquals("Number of rows should be 2", 2, count);
 
     // Case 4: scan with timestamp greater than first timestamp but less than
     // second timestamp (100 < timestamp < 1000). Should get 2 rows.
-
-    count = 0;
     scan = new Scan();
     scan.setTimeRange(100L, 1000L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = table.getScanner(scan);
-    try {
-      while (s.next() != null) {
-        count += 1;
-      }
-      assertEquals("Number of rows should be 2", 2, count);
-    } finally {
-      s.close();
+    try (ResultScanner s = table.getScanner(scan)) {
+      count = Iterables.size(s);
     }
+    assertEquals("Number of rows should be 2", 2, count);
 
     // Case 5: scan with timestamp equal to first timestamp (100)
     // Should get 2 rows.
-
-    count = 0;
     scan = new Scan();
     scan.setTimestamp(100L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = table.getScanner(scan);
-    try {
-      while (s.next() != null) {
-        count += 1;
-      }
-      assertEquals("Number of rows should be 2", 2, count);
-    } finally {
-      s.close();
+    try (ResultScanner s = table.getScanner(scan)) {
+      count = Iterables.size(s);
     }
+    assertEquals("Number of rows should be 2", 2, count);
   }
 
 }
