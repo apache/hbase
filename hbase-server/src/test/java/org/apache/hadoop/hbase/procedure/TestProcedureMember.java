@@ -48,6 +48,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 /**
  * Test the procedure member, and it's error handling mechanisms.
  */
@@ -77,14 +79,9 @@ public class TestProcedureMember {
    * Reset all the mock objects
    */
   @After
-  public void resetTest() {
+  public void resetTest() throws IOException {
     reset(mockListener, mockBuilder, mockMemberComms);
-    if (member != null)
-      try {
-        member.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    Closeables.close(member, true);
   }
 
   /**
@@ -273,7 +270,7 @@ public class TestProcedureMember {
 
   /**
    * Handle failures if a member's commit phase fails.
-   *
+   * <p/>
    * NOTE: This is the core difference that makes this different from traditional 2PC.  In true
    * 2PC the transaction is committed just before the coordinator sends commit messages to the
    * member.  Members are then responsible for reading its TX log.  This implementation actually
@@ -314,7 +311,7 @@ public class TestProcedureMember {
 
   /**
    * Handle Failures if a member's commit phase succeeds but notification to coordinator fails
-   *
+   * <p/>
    * NOTE: This is the core difference that makes this different from traditional 2PC.  In true
    * 2PC the transaction is committed just before the coordinator sends commit messages to the
    * member.  Members are then responsible for reading its TX log.  This implementation actually
