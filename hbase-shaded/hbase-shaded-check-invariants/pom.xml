@@ -51,6 +51,10 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client</artifactId>
+    </dependency>
     <!-- parent pom defines these for children. :( :( :( -->
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
@@ -176,25 +180,6 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
         <executions>
-          <!-- It's easier to have two copies of our validation
-               script than to copy it via remote-resources-plugin, but
-               we need to make sure they stay the same.
-            -->
-          <execution>
-            <id>make-sure-validation-files-are-in-sync</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>diff</executable>
-              <requiresOnline>false</requiresOnline>
-              <arguments>
-                <argument>../hbase-shaded-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh</argument>
-                <argument>../hbase-shaded-with-hadoop-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh</argument>
-              </arguments>
-            </configuration>
-          </execution>
           <!--
             Check that we actually relocated everything we included.
             It's critical that we don't ship third party dependencies that haven't
@@ -212,9 +197,6 @@
               <executable>${shell-executable}</executable>
               <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
               <requiresOnline>false</requiresOnline>
-              <!-- Important that we don't pass the 'allow-hadoop' flag here, because
-                   we allowed it as a provided dependency above.
-                -->
               <arguments>
                 <argument>ensure-jars-have-correct-contents.sh</argument>
                 <argument>${hbase-client-artifacts}</argument>
