@@ -66,10 +66,64 @@
         </plugins>
     </build>
     <dependencies>
-        <!--
-             We want to ensure needed hadoop bits are at provided scope for our shaded
-             artifact, so we list them below in hadoop specific profiles.
-          -->
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+          </dependency>
+          <!-- The below dependencies are provided by hbase-shaded-client[-byo-hadoop].
+               Set them to scope provided so they and their transitive dependencies are
+               excluded from the both the jar and the resulting dependency reduced pom. -->
+          <dependency>
+            <groupId>org.apache.hbase.thirdparty</groupId>
+            <artifactId>hbase-shaded-gson</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase.thirdparty</groupId>
+            <artifactId>hbase-shaded-miscellaneous</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase.thirdparty</groupId>
+            <artifactId>hbase-shaded-netty</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase.thirdparty</groupId>
+            <artifactId>hbase-shaded-protobuf</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase.thirdparty</groupId>
+            <artifactId>hbase-unsafe</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <scope>provided</scope>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-common</artifactId>
+           <scope>provided</scope>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-hadoop-compat</artifactId>
+           <scope>provided</scope>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-logging</artifactId>
+           <scope>provided</scope>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-metrics-api</artifactId>
+           <scope>provided</scope>
+         </dependency>
+
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-mapreduce</artifactId>

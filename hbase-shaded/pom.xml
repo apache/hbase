@@ -142,6 +142,10 @@
                 <shadeTestJar>false</shadeTestJar>
                 <artifactSet>
                   <excludes>
+                    <!-- only added in hbase-shaded-mapreduce, but easier to add here
+                         than duplicate the full exclude list again elsewhere -->
+                    <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+
                     <!-- exclude J2EE modules that come in for JDK11+ (since
                          hadoop-3.2.0) or modules that come in for JDK8+ but
                          need not be included -->
