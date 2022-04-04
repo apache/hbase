@@ -205,7 +205,7 @@ public class TransitRegionStateProcedure
       LOG.warn("No location specified for {}, jump back to state {} to get one", getRegion(),
         RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
-      return;
+      throw new HBaseIOException("Failed to open region, the location is null or bogus.");
     }
     env.getAssignmentManager().regionOpening(regionNode);
     addChildProcedure(new OpenRegionProcedure(this, getRegion(), loc));
