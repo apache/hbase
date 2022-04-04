@@ -108,10 +108,11 @@ allowed_expr+="|^jetty-dir.css$"
 function get_expected_packages() {
   # artifacts come to us with the path rooted in hbase-shaded, so go up two levels to get
   # the artifact name
-  local target_dir="$(dirname ${1})"
-  local artifact_dir="$(dirname ${target_dir})"
+  local target_dir artifact_dir artifact_name
+  target_dir=$(dirname "${1}")
+  artifact_dir=$(dirname "${target_dir}")
   # now get the basename to remove any further parent dirs
-  local artifact_name="$(basename ${artifact_dir})"
+  artifact_name=$(basename "${artifact_dir}")
 
   case "$artifact_name" in
     hbase-shaded-mapreduce         ) echo "mapreduce,server";;
@@ -131,7 +132,8 @@ function ensure_matches() {
   local artifact=$1
   local package=$2
   local pattern=$3
-  local matches=($("${JAR}" tf "${artifact}" | grep -E "${pattern}" || true))
+  local -a matches
+  matches=($("${JAR}" tf "${artifact}" | grep -E "${pattern}" || true))
 
   if [ ${#matches[@]} -eq 0 ]; then
     echo "[ERROR] Expected package '$package', but was missing matches for artifact:"
@@ -188,7 +190,8 @@ function check_packages_marker_classes() {
   disallowed_expr="${disallowed_expr:1}"
 
   if [[ -n "$disallowed_expr" ]]; then
-    local matches=($("${JAR}" tf "${artifact}" | grep -E "${disallowed_expr}" || true))
+    local -a matches
+    matches=($("${JAR}" tf "${artifact}" | grep -E "${disallowed_expr}" || true))
     if [ ${#matches[@]} -gt 0 ]; then
       echo "[ERROR] Passed expected packages [ $expected_packages ] but had unexpected matches"
       echo "    for artifact: '$artifact'. "
