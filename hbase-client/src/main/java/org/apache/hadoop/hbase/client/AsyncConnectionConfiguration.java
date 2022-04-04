@@ -111,14 +111,18 @@ class AsyncConnectionConfiguration {
     this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getOperationTimeout());
     this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getRpcTimeout());
     this.readRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, connectionConf.getReadRpcTimeout()));
+      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY,
+        connectionConf.getReadRpcTimeout()));
     this.writeRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, connectionConf.getWriteRpcTimeout()));
+      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY,
+        connectionConf.getWriteRpcTimeout()));
     this.pauseNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillis());
-    this.pauseNsForServerOverloaded = TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillisForServerOverloaded());
+    this.pauseNsForServerOverloaded = TimeUnit.MILLISECONDS.toNanos(
+      connectionConf.getPauseMillisForServerOverloaded());
     this.primaryCallTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
       connectionConf.getPrimaryCallTimeoutMicroSecond());
-    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(connectionConf.getReplicaCallTimeoutMicroSecondScan());
+    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
+      connectionConf.getReplicaCallTimeoutMicroSecondScan());
     this.primaryMetaScanTimeoutNs =
       TimeUnit.MICROSECONDS.toNanos(connectionConf.getMetaReplicaCallTimeoutMicroSecondScan());
     this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
