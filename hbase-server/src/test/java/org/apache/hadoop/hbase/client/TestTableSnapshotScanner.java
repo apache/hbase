@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,6 +75,7 @@ public class TestTableSnapshotScanner {
 
   private FileSystem fs;
   private Path rootDir;
+  private boolean clusterUp;
 
   @Rule
   public TestName name = new TestName();
@@ -89,27 +91,28 @@ public class TestTableSnapshotScanner {
     }
   }
 
+  @Before
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
         .createRootDir(true).build();
     UTIL.startMiniCluster(option);
+    clusterUp = true;
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
+  @After
   public void tearDownCluster() throws Exception {
-    UTIL.shutdownMiniCluster();
+    if (clusterUp) {
+      UTIL.shutdownMiniCluster();
+    }
   }
 
-  private static void setupConf(Configuration conf) {
+  protected void setupConf(Configuration conf) {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-  }
-
-  @After
-  public void tearDown() throws Exception {
   }
 
   public static void createTableAndSnapshot(HBaseTestingUtility util, TableName tableName,
@@ -149,7 +152,6 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testNoDuplicateResultsWhenSplitting() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
     String snapshotName = "testSnapshotBug";
     try {
@@ -195,14 +197,12 @@ public class TestTableSnapshotScanner {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
 
   @Test
   public void testScanLimit() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String snapshotName = tableName + "Snapshot";
     TableSnapshotScanner scanner = null;
@@ -227,7 +227,6 @@ public class TestTableSnapshotScanner {
       }
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -248,7 +247,6 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testScannerWithRestoreScanner() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testScanner");
     String snapshotName = "testScannerWithRestoreScanner";
     try {
@@ -288,19 +286,18 @@ public class TestTableSnapshotScanner {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions,
       boolean shutdownCluster) throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testScanner");
     try {
       createTableAndSnapshot(util, tableName, snapshotName, numRegions);
 
       if (shutdownCluster) {
         util.shutdownMiniHBaseCluster();
+        clusterUp = false;
       }
 
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
@@ -312,10 +309,9 @@ public class TestTableSnapshotScanner {
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
     } finally {
-      if (!shutdownCluster) {
+      if (clusterUp) {
         util.getAdmin().deleteSnapshot(snapshotName);
         util.deleteTable(tableName);
-        tearDownCluster();
       }
     }
   }
@@ -359,7 +355,6 @@ public class TestTableSnapshotScanner {
 
   @Test
   public void testMergeRegion() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testMergeRegion");
     String snapshotName = tableName.getNameAsString() + "_snapshot";
     Configuration conf = UTIL.getConfiguration();
@@ -385,9 +380,12 @@ public class TestTableSnapshotScanner {
           for (RegionInfo region : regions) {
             Path regionDir = new Path(tableDir, region.getEncodedName());
             for (Path familyDir : FSUtils.getFamilyDirs(fs, regionDir)) {
-              if (fs.listStatus(familyDir).length != 1) {
-                return false;
+              for (FileStatus fs : fs.listStatus(familyDir)) {
+                if(!fs.getPath().getName().equals(".filelist")) {
+                  return true;
+                }
               }
+              return false;
             }
           }
           return true;
@@ -462,17 +460,15 @@ public class TestTableSnapshotScanner {
       }
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
+      Assert.fail("Should not throw Exception: " + e.getMessage());
       Assert.fail("Should not throw FileNotFoundException");
       Assert.assertTrue(e.getCause() != null);
       Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
-    } finally {
-      tearDownCluster();
     }
   }
 
   @Test
   public void testDeleteTableWithMergedRegions() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
     String snapshotName = tableName.getNameAsString() + "_snapshot";
     Configuration conf = UTIL.getConfiguration();
