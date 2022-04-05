@@ -70,7 +70,8 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
           </dependency>
-          <!-- The below dependencies are provided by hbase-shaded-client[-byo-hadoop].
+
+          <!-- The below dependencies are directly provided by hbase-shaded-client[-byo-hadoop].
                Set them to scope provided so they and their transitive dependencies are
                excluded from the both the jar and the resulting dependency reduced pom. -->
           <dependency>
@@ -108,11 +109,31 @@
            <artifactId>hbase-common</artifactId>
            <scope>provided</scope>
          </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-protocol</artifactId>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-protocol-shaded</artifactId>
+          <scope>provided</scope>
+        </dependency>
          <dependency>
            <groupId>org.apache.hbase</groupId>
            <artifactId>hbase-hadoop-compat</artifactId>
            <scope>provided</scope>
          </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop2-compat</artifactId>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <artifactId>hbase-metrics</artifactId>
+          <groupId>org.apache.hbase</groupId>
+          <scope>provided</scope>
+        </dependency>
          <dependency>
            <groupId>org.apache.hbase</groupId>
            <artifactId>hbase-logging</artifactId>
@@ -128,6 +149,42 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-mapreduce</artifactId>
             <exclusions>
+              <!-- these transitive dependencies are already coming from
+                   hbase-shaded-client[-byo-hadoop]. we have to exclude them here,
+                   otherwise this jar and that one will have overlapping classes -->
+              <exclusion>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+              </exclusion>
+              <exclusion>
+                <artifactId>commons-crypto</artifactId>
+                <groupId>org.apache.commons</groupId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+              </exclusion>
+
               <!-- Jaxb-api is a part of Java SE now -->
               <exclusion>
                 <groupId>javax.xml.bind</groupId>
