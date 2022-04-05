@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -121,6 +122,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MetaTableMetrics;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BigDecimalComparator;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -7708,4 +7712,62 @@ public class TestHRegion {
     assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
   }
 
+  @Test
+  public void testRegionOnCoprocessorsChange() throws IOException {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+
+    Configuration conf = new Configuration(CONF);
+    region = initHRegion(tableName, method, conf, families);
+    assertNull(region.getCoprocessorHost());
+
+    // set and verify the system coprocessors for region and user region
+    Configuration newConf = new Configuration(conf);
+    newConf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MetaTableMetrics.class.getName());
+    newConf.set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
+      NoOpRegionCoprocessor.class.getName());
+    // trigger configuration change
+    region.onConfigurationChange(newConf);
+    assertTrue(region.getCoprocessorHost() != null);
+    Set<String> coprocessors = region.getCoprocessorHost().getCoprocessors();
+    assertTrue(coprocessors.size() == 2);
+    assertTrue(region.getCoprocessorHost().getCoprocessors()
+      .contains(MetaTableMetrics.class.getSimpleName()));
+    assertTrue(region.getCoprocessorHost().getCoprocessors()
+      .contains(NoOpRegionCoprocessor.class.getSimpleName()));
+
+    // remove region coprocessor and keep only user region coprocessor
+    newConf.unset(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    region.onConfigurationChange(newConf);
+    assertTrue(region.getCoprocessorHost() != null);
+    coprocessors = region.getCoprocessorHost().getCoprocessors();
+    assertTrue(coprocessors.size() == 1);
+    assertTrue(region.getCoprocessorHost().getCoprocessors()
+      .contains(NoOpRegionCoprocessor.class.getSimpleName()));
+  }
+
+  @Test
+  public void testRegionOnCoprocessorsWithoutChange() throws IOException {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+
+    Configuration conf = new Configuration(CONF);
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      MetaTableMetrics.class.getCanonicalName());
+    region = initHRegion(tableName, method, conf, families);
+    // region service is null in unit test, we need to load the coprocessor once
+    region.setCoprocessorHost(new RegionCoprocessorHost(region, null, conf));
+    RegionCoprocessor regionCoprocessor =
+      region.getCoprocessorHost().findCoprocessor(MetaTableMetrics.class.getName());
+
+    // simulate when other configuration may have changed and onConfigurationChange execute once
+    region.onConfigurationChange(conf);
+    RegionCoprocessor regionCoprocessorAfterOnConfigurationChange =
+      region.getCoprocessorHost().findCoprocessor(MetaTableMetrics.class.getName());
+    assertEquals(regionCoprocessor, regionCoprocessorAfterOnConfigurationChange);
+  }
+
+  public static class NoOpRegionCoprocessor implements RegionCoprocessor, RegionObserver {
+    // a empty region coprocessor class
+  }
 }
