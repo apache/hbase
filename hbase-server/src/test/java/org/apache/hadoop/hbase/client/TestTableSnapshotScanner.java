@@ -73,6 +73,7 @@ public class TestTableSnapshotScanner {
 
   private FileSystem fs;
   private Path rootDir;
+  private boolean clusterUp;
 
   @Rule
   public TestName name = new TestName();
@@ -95,13 +96,16 @@ public class TestTableSnapshotScanner {
         .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
         .createRootDir(true).build();
     UTIL.startMiniCluster(option);
+    clusterUp = true;
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
   @After
   public void tearDownCluster() throws Exception {
-    UTIL.shutdownMiniCluster();
+    if (clusterUp) {
+      UTIL.shutdownMiniCluster();
+    }
   }
 
   protected void setupConf(Configuration conf) {
@@ -191,7 +195,6 @@ public class TestTableSnapshotScanner {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -222,7 +225,6 @@ public class TestTableSnapshotScanner {
       }
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -282,7 +284,6 @@ public class TestTableSnapshotScanner {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -294,6 +295,7 @@ public class TestTableSnapshotScanner {
 
       if (shutdownCluster) {
         util.shutdownMiniHBaseCluster();
+        clusterUp = false;
       }
 
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
@@ -305,10 +307,9 @@ public class TestTableSnapshotScanner {
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
     } finally {
-      if (!shutdownCluster) {
+      if (clusterUp) {
         util.getAdmin().deleteSnapshot(snapshotName);
         util.deleteTable(tableName);
-        tearDownCluster();
       }
     }
   }
@@ -460,8 +461,6 @@ public class TestTableSnapshotScanner {
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
       Assert.fail("Should not throw Exception: " + e.getMessage());
-    } finally {
-      tearDownCluster();
     }
   }
 
