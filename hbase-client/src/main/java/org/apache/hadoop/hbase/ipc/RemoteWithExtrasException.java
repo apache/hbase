@@ -117,8 +117,9 @@ public class RemoteWithExtrasException extends RemoteException {
       // if an exception defaults to meaning isServerOverloaded, we use that.
       // otherwise, see if the remote exception value should mean setting to true.
       HBaseServerException serverException = (HBaseServerException) ex;
-      if (serverOverloaded && !serverException.isServerOverloaded())
-      serverException.setServerOverloaded(true);
+      if (serverOverloaded && !serverException.isServerOverloaded()) {
+        serverException.setServerOverloaded(true);
+      }
     }
 
     return ex;

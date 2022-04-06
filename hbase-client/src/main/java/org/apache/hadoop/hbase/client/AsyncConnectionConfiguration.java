@@ -68,7 +68,7 @@ class AsyncConnectionConfiguration {
     * Parameter name for client pause when server is overloaded, denoted by
     * {@link org.apache.hadoop.hbase.HBaseServerException#isServerOverloaded()}
     */
-    public static final String HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED =
+  public static final String HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED =
       "hbase.client.pause.server.overloaded";
 
   static {
