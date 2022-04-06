@@ -117,11 +117,13 @@ module IRB
           rescue Interrupt => exc
           rescue SystemExit, SignalException
             raise
-          rescue Exception
+          rescue NameError => exc
+            # HBASE-26880: Ignore NameError to prevent exiting Shell on mistyped commands.
+          rescue Exception => exc
             # HBASE-26741: Raise exception so Shell::exception_handler can catch it.
             # This modifies this copied method from JRuby so that the HBase shell can
             # manage the exception and set a proper exit code on the process.
-            raise
+            raise exc
           end
           if exc
             if exc.backtrace && exc.backtrace[0] =~ /irb(2)?(\/.*|-.*|\.rb)?:/ && exc.class.to_s !~ /^IRB/ &&
