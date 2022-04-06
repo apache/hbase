@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -105,9 +106,13 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
         return numOfReplicas;
       });
 
-    assertNotEquals(
-      metaSelector.select(TableName.valueOf("test"), EMPTY_START_ROW, RegionLocateType.CURRENT),
-      RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    // Loop for 100 times, it should cover all replica ids.
+    int[] replicaIdCount = new int[numOfMetaReplica];
+    IntStream.range(1, 100).forEach(i -> replicaIdCount[metaSelector.select(
+      TableName.valueOf("test"), EMPTY_START_ROW, RegionLocateType.CURRENT)] ++);
+
+    // Make sure each replica id is returned by select() call, including primary replica id.
+    IntStream.range(0, numOfMetaReplica).forEach(i -> assertNotEquals(replicaIdCount[i], 0));
 
     // Change to No meta replica
     HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 1);
