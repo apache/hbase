@@ -223,10 +223,12 @@ public class RowResource extends ResourceBase {
         int i = 0;
         for (CellModel cell: row.getCells()) {
           byte[] col = cell.getColumn();
-          if (col == null) try {
-            col = rowspec.getColumns()[i++];
-          } catch (ArrayIndexOutOfBoundsException e) {
-            col = null;
+          if (col == null) {
+            try {
+              col = rowspec.getColumns()[i++];
+            } catch (ArrayIndexOutOfBoundsException e) {
+              col = null;
+            }
           }
           if (col == null) {
             servlet.getMetrics().incrementFailedPutRequests(1);
@@ -263,10 +265,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table", ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table", ioe);
+        }
       }
     }
   }
@@ -334,10 +338,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table", ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table", ioe);
+        }
       }
     }
   }
@@ -399,10 +405,11 @@ public class RowResource extends ResourceBase {
         .build();
     }
     Delete delete = null;
-    if (rowspec.hasTimestamp())
+    if (rowspec.hasTimestamp()) {
       delete = new Delete(rowspec.getRow(), rowspec.getTimestamp());
-    else
+    } else {
       delete = new Delete(rowspec.getRow());
+    }
 
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = CellUtil.parseColumn(column);
@@ -440,10 +447,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table", ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table", ioe);
+        }
       }
     }
     return Response.ok().build();
@@ -557,10 +566,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table", ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table", ioe);
+        }
       }
     }
   }
@@ -687,10 +698,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table", ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table", ioe);
+        }
       }
     }
   }
@@ -781,10 +794,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedAppendRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table" + table.getName(), ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table" + table.getName(), ioe);
+        }
       }
     }
   }
@@ -878,10 +893,12 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementFailedIncrementRequests(1);
       return processException(e);
     } finally {
-      if (table != null) try {
-        table.close();
-      } catch (IOException ioe) {
-        LOG.debug("Exception received while closing the table " + table.getName(), ioe);
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ioe) {
+          LOG.debug("Exception received while closing the table " + table.getName(), ioe);
+        }
       }
     }
   }
