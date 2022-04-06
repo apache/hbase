@@ -290,14 +290,10 @@ public class TestCoprocessorEndpointTracing {
       final ConcurrentMap<byte[], EchoResponseProto> results = new ConcurrentHashMap<>();
       TraceUtil.trace(() -> {
         try {
-          table.coprocessorService(TestProtobufRpcProto.class, null, null,
-            t -> {
-              t.echo(controller, request, callback);
-              return callback.get();
-            },
-            (region, row, result) -> {
-              results.put(region, result);
-            });
+          table.coprocessorService(TestProtobufRpcProto.class, null, null, t -> {
+            t.echo(controller, request, callback);
+            return callback.get();
+          }, (region, row, result) -> results.put(region, result));
         } catch (Throwable t) {
           throw new RuntimeException(t);
         }
