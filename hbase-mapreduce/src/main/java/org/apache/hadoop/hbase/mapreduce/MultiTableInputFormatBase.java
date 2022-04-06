@@ -72,9 +72,7 @@ public abstract class MultiTableInputFormatBase extends
    * @return The newly created record reader.
    * @throws IOException When creating the reader fails.
    * @throws InterruptedException when record reader initialization fails
-   * @see org.apache.hadoop.mapreduce.InputFormat#createRecordReader(
-   *      org.apache.hadoop.mapreduce.InputSplit,
-   *      org.apache.hadoop.mapreduce.TaskAttemptContext)
+   * @see InputFormat#createRecordReader(InputSplit, TaskAttemptContext)
    */
   @Override
   public RecordReader<ImmutableBytesWritable, Result> createRecordReader(
@@ -152,7 +150,7 @@ public abstract class MultiTableInputFormatBase extends
    * @param context The current job context.
    * @return The list of input splits.
    * @throws IOException When creating the list of splits fails.
-   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(org.apache.hadoop.mapreduce.JobContext)
+   * @see InputFormat#getSplits(org.apache.hadoop.mapreduce.JobContext)
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {

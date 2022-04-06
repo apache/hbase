@@ -1616,11 +1616,13 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowCell extends EmptyCell {
+    // @formatter:off
     private static final int FIXED_HEAPSIZE =
         ClassSize.OBJECT // object
       + ClassSize.REFERENCE // row array
       + Bytes.SIZEOF_INT // row offset
       + Bytes.SIZEOF_SHORT;  // row length
+    // @formatter:on
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
@@ -1670,11 +1672,13 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowByteBufferExtendedCell extends EmptyByteBufferExtendedCell {
+    // @formatter:off
     private static final int FIXED_OVERHEAD =
         ClassSize.OBJECT // object
         + ClassSize.REFERENCE // row buffer
         + Bytes.SIZEOF_INT // row offset
         + Bytes.SIZEOF_SHORT; // row length
+    // @formatter:on
     private final ByteBuffer rowBuff;
     private final int roffset;
     private final short rlength;
@@ -1725,11 +1729,12 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowByteBufferExtendedCell extends EmptyByteBufferExtendedCell {
-    private static final int FIXED_OVERHEAD =
-        ClassSize.OBJECT // object
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = ClassSize.OBJECT // object
       + ClassSize.REFERENCE // rowBuff
       + Bytes.SIZEOF_INT // roffset
       + Bytes.SIZEOF_SHORT; // rlength
+    // @formatter:on
     private final ByteBuffer rowBuff;
     private final int roffset;
     private final short rlength;
@@ -1781,11 +1786,12 @@ public final class PrivateCellUtil {
 
   private static class FirstOnRowColByteBufferExtendedCell
       extends FirstOnRowByteBufferExtendedCell {
-    private static final int FIXED_OVERHEAD =
-        FirstOnRowByteBufferExtendedCell.FIXED_OVERHEAD
-        + ClassSize.REFERENCE * 2 // family buffer and column buffer
-        + Bytes.SIZEOF_INT * 3 // famOffset, colOffset, colLength
-        + Bytes.SIZEOF_BYTE; // famLength
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = FirstOnRowByteBufferExtendedCell.FIXED_OVERHEAD
+      + ClassSize.REFERENCE * 2 // family buffer and column buffer
+      + Bytes.SIZEOF_INT * 3 // famOffset, colOffset, colLength
+      + Bytes.SIZEOF_BYTE; // famLength
+    // @formatter:on
     private final ByteBuffer famBuff;
     private final int famOffset;
     private final byte famLength;
@@ -1850,11 +1856,12 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowColCell extends FirstOnRowCell {
-    private static final long FIXED_HEAPSIZE =
-        FirstOnRowCell.FIXED_HEAPSIZE
+    // @formatter:off
+    private static final long FIXED_HEAPSIZE = FirstOnRowCell.FIXED_HEAPSIZE
       + Bytes.SIZEOF_BYTE // flength
       + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
       + ClassSize.REFERENCE * 2; // fArray, qArray
+    // @formatter:on
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1913,10 +1920,11 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowColTSCell extends FirstOnRowColCell {
-    private static final long FIXED_HEAPSIZE =
-        FirstOnRowColCell.FIXED_HEAPSIZE
-            + Bytes.SIZEOF_LONG; // ts
+    // @formatter:off
+    private static final long FIXED_HEAPSIZE = FirstOnRowColCell.FIXED_HEAPSIZE
+      + Bytes.SIZEOF_LONG; // ts
     private long ts;
+    // @formatter:on
 
     public FirstOnRowColTSCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
         int foffset, byte flength, byte[] qArray, int qoffset, int qlength, long ts) {
@@ -1937,10 +1945,11 @@ public final class PrivateCellUtil {
 
   private static class FirstOnRowColTSByteBufferExtendedCell
       extends FirstOnRowColByteBufferExtendedCell {
-    private static final int FIXED_OVERHEAD =
-        FirstOnRowColByteBufferExtendedCell.FIXED_OVERHEAD
-            + Bytes.SIZEOF_LONG; // ts
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = FirstOnRowColByteBufferExtendedCell.FIXED_OVERHEAD
+      + Bytes.SIZEOF_LONG; // ts
     private long ts;
+    // @formatter:on
 
     public FirstOnRowColTSByteBufferExtendedCell(ByteBuffer rBuffer, int roffset, short rlength,
         ByteBuffer fBuffer, int foffset, byte flength, ByteBuffer qBuffer, int qoffset, int qlength,
@@ -1961,11 +1970,12 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowCell extends EmptyCell {
-    private static final int FIXED_OVERHEAD =
-        ClassSize.OBJECT // object
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = ClassSize.OBJECT // object
       + ClassSize.REFERENCE // row array
       + Bytes.SIZEOF_INT // row offset
       + Bytes.SIZEOF_SHORT; // row length
+    // @formatter:on
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
@@ -2015,10 +2025,12 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowColCell extends LastOnRowCell {
+    // @formatter:off
     private static final long FIXED_OVERHEAD = LastOnRowCell.FIXED_OVERHEAD
-        + ClassSize.REFERENCE * 2 // fArray and qArray
-        + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
-        + Bytes.SIZEOF_BYTE; // flength
+      + ClassSize.REFERENCE * 2 // fArray and qArray
+      + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+      + Bytes.SIZEOF_BYTE; // flength
+    // @formatter:on
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -2077,11 +2089,12 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowColByteBufferExtendedCell extends LastOnRowByteBufferExtendedCell {
-    private static final int FIXED_OVERHEAD =
-        LastOnRowByteBufferExtendedCell.FIXED_OVERHEAD
-            + ClassSize.REFERENCE * 2 // fBuffer and qBuffer
-            + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
-            + Bytes.SIZEOF_BYTE; // flength
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = LastOnRowByteBufferExtendedCell.FIXED_OVERHEAD
+      + ClassSize.REFERENCE * 2 // fBuffer and qBuffer
+      + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+      + Bytes.SIZEOF_BYTE; // flength
+    // @formatter:on
     private final ByteBuffer fBuffer;
     private final int foffset;
     private final byte flength;
@@ -2146,11 +2159,12 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowDeleteFamilyCell extends EmptyCell {
-    private static final int FIXED_OVERHEAD =
-        ClassSize.OBJECT // object
+    // @formatter:off
+    private static final int FIXED_OVERHEAD = ClassSize.OBJECT // object
       + ClassSize.REFERENCE * 2 // fBuffer and qBuffer
       + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
       + Bytes.SIZEOF_BYTE; // flength
+    // @formatter:on
     private final byte[] row;
     private final byte[] fam;
 

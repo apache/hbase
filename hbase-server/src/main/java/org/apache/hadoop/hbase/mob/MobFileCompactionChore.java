@@ -43,12 +43,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Periodic MOB compaction chore.
+ * <p/>
  * It runs MOB compaction on region servers in parallel, thus
  * utilizing distributed cluster resources. To avoid possible major
  * compaction storms, one can specify maximum number regions to be compacted
  * in parallel by setting configuration parameter: <br>
  * 'hbase.mob.major.compaction.region.batch.size', which by default is 0 (unlimited).
- *
  */
 @InterfaceAudience.Private
 public class MobFileCompactionChore extends ScheduledChore {
@@ -77,7 +77,6 @@ public class MobFileCompactionChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-
     boolean reported = false;
 
     try (Admin admin = master.getConnection().getAdmin()) {
@@ -215,7 +214,6 @@ public class MobFileCompactionChore extends ScheduledChore {
 
   private void startCompaction(Admin admin, TableName table, RegionInfo region, byte[] cf)
       throws IOException, InterruptedException {
-
     LOG.info("Started major compaction: table={} cf={} region={}", table,
       Bytes.toString(cf), region.getRegionNameAsString());
     admin.majorCompactRegion(region.getRegionName(), cf);
@@ -227,9 +225,14 @@ public class MobFileCompactionChore extends ScheduledChore {
       // Is 1 second too aggressive?
       Thread.sleep(1000);
       if (EnvironmentEdgeManager.currentTime() - startTime > waitTime) {
-        LOG.warn("Waited for {} ms to start major MOB compaction on table={} cf={} region={}."+
-          " Stopped waiting for request confirmation. This is not an ERROR, continue next region."
-          , waitTime, table.getNameAsString(), Bytes.toString(cf),region.getRegionNameAsString());
+        LOG.warn(
+          "Waited for {} ms to start major MOB compaction on table={} cf={} region={}."
+            + " Stopped waiting for request confirmation. This is not an ERROR,"
+            + " continue next region.",
+          waitTime,
+          table.getNameAsString(),
+          Bytes.toString(cf),
+          region.getRegionNameAsString());
         break;
       }
     }

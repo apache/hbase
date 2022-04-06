@@ -78,37 +78,26 @@ public class TestMetricsRegion {
     // test region with replica id > 0
     mr = new MetricsRegion(new MetricsRegionWrapperStub(1), new Configuration());
     agg = mr.getSource().getAggregateSource();
-    HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount",
-      101, agg);
-    HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeFileCount",
-      102, agg);
-    HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_memstoreSize",
-      103, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_cpRequestCount",
-      108, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_" +
-        "filteredReadRequestCount",
-      107, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid",
-      1, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_compactionsQueuedCount",
-      4, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_flushesQueuedCount",
-      6, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_maxCompactionQueueSize",
-      4, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_maxFlushQueueSize",
-      6, agg);
+    HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_storeCount", 101, agg);
+    HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_storeFileCount", 102, agg);
+    HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_memstoreSize", 103, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_cpRequestCount", 108, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_filteredReadRequestCount", 107, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_replicaid", 1, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_compactionsQueuedCount", 4, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_flushesQueuedCount", 6, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_maxCompactionQueueSize", 4, agg);
+    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
+      + "_metric_maxFlushQueueSize", 6, agg);
     mr.close();
   }
 }

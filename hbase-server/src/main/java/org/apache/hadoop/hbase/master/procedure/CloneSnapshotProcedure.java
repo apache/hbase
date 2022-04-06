@@ -64,8 +64,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreParentToChildRegionsPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
@@ -310,11 +311,10 @@ public class CloneSnapshotProcedure
       throws IOException {
     super.serializeStateData(serializer);
 
-    MasterProcedureProtos.CloneSnapshotStateData.Builder cloneSnapshotMsg =
-      MasterProcedureProtos.CloneSnapshotStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setSnapshot(this.snapshot)
-        .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
+    CloneSnapshotStateData.Builder cloneSnapshotMsg = CloneSnapshotStateData.newBuilder()
+      .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
+      .setSnapshot(this.snapshot)
+      .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
 
     cloneSnapshotMsg.setRestoreAcl(restoreAcl);
     if (newRegions != null) {
@@ -328,11 +328,11 @@ public class CloneSnapshotProcedure
       while (it.hasNext()) {
         final Map.Entry<String, Pair<String, String>> entry = it.next();
 
-        MasterProcedureProtos.RestoreParentToChildRegionsPair.Builder parentToChildrenPair =
-          MasterProcedureProtos.RestoreParentToChildRegionsPair.newBuilder()
-          .setParentRegionName(entry.getKey())
-          .setChild1RegionName(entry.getValue().getFirst())
-          .setChild2RegionName(entry.getValue().getSecond());
+        RestoreParentToChildRegionsPair.Builder parentToChildrenPair =
+          RestoreParentToChildRegionsPair.newBuilder()
+            .setParentRegionName(entry.getKey())
+            .setChild1RegionName(entry.getValue().getFirst())
+            .setChild2RegionName(entry.getValue().getSecond());
         cloneSnapshotMsg.addParentToChildRegionsPairList(parentToChildrenPair);
       }
     }
@@ -347,8 +347,7 @@ public class CloneSnapshotProcedure
       throws IOException {
     super.deserializeStateData(serializer);
 
-    MasterProcedureProtos.CloneSnapshotStateData cloneSnapshotMsg =
-        serializer.deserialize(MasterProcedureProtos.CloneSnapshotStateData.class);
+    CloneSnapshotStateData cloneSnapshotMsg = serializer.deserialize(CloneSnapshotStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo()));
     snapshot = cloneSnapshotMsg.getSnapshot();
     tableDescriptor = ProtobufUtil.toTableDescriptor(cloneSnapshotMsg.getTableSchema());
@@ -365,8 +364,8 @@ public class CloneSnapshotProcedure
     }
     if (cloneSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
       parentsToChildrenPairMap = new HashMap<>();
-      for (MasterProcedureProtos.RestoreParentToChildRegionsPair parentToChildrenPair:
-        cloneSnapshotMsg.getParentToChildRegionsPairListList()) {
+      for (RestoreParentToChildRegionsPair parentToChildrenPair : cloneSnapshotMsg
+        .getParentToChildRegionsPairListList()) {
         parentsToChildrenPairMap.put(
           parentToChildrenPair.getParentRegionName(),
           new Pair<>(

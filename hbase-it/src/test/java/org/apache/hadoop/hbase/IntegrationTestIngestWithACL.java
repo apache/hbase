@@ -86,21 +86,20 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     tmp.add(sb.toString());
     return tmp.toArray(new String[tmp.size()]);
   }
+
   @Override
   protected void addOptions() {
     super.addOptions();
-    super.addOptWithArg(OPT_SUPERUSER,
-        "Super user name used to add the ACL permissions");
+    super.addOptWithArg(OPT_SUPERUSER, "Super user name used to add the ACL permissions");
     super.addOptWithArg(OPT_USERS,
       "List of users to be added with the ACLs.  Should be comma seperated.");
-    super
-        .addOptWithArg(
-          OPT_AUTHN,
-          "The name of the properties file that contains kerberos key tab file and principal definitions. " +
-          "The principal key in the file should be of the form hbase.<username>.kerberos.principal." +
-          " The keytab key in the file should be of the form hbase.<username>.keytab.file. Example:  " +
-          "hbase.user1.kerberos.principal=user1/fully.qualified.domain.name@YOUR-REALM.COM, " +
-          "hbase.user1.keytab.file=<filelocation>.");
+    super.addOptWithArg(OPT_AUTHN,
+      "The name of the properties file that contains"
+        + " kerberos key tab file and principal definitions. The principal key in the file"
+        + " should be of the form hbase.<username>.kerberos.principal. The keytab key in the"
+        + " file should be of the form hbase.<username>.keytab.file. Example:"
+        + "  hbase.user1.kerberos.principal=user1/fully.qualified.domain.name@YOUR-REALM.COM,"
+        + " hbase.user1.keytab.file=<filelocation>.");
   }
 
   @Override
