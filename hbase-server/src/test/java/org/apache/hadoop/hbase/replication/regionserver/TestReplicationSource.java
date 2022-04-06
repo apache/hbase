@@ -587,7 +587,7 @@ public class TestReplicationSource {
 
   /**
    * Test ReplicationSource keeps retrying startup indefinitely without blocking the main thread,
-   * when <b>eplication.source.regionserver.abort</b> is set to false.
+   * when <b>replication.source.regionserver.abort</b> is set to false.
    */
   @Test
   public void testAbortFalseOnErrorDoesntBlockMainThread() throws IOException {

@@ -111,7 +111,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       for (HStore store : region.getStores()) {
         long size = store.getSize();
         if (size > sizeToCheck) {
-          LOG.debug("ShouldSplit because {} size={}, sizeToCheck={}{}",
+          LOG.debug("ShouldSplit because {} size={}, sizeToCheck={}",
             store.getColumnFamilyName(), StringUtils.humanSize(size),
             StringUtils.humanSize(sizeToCheck));
           return true;
