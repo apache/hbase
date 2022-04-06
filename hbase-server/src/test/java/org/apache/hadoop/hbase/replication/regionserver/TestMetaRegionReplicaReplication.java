@@ -395,6 +395,16 @@ public class TestMetaRegionReplicaReplication {
     }
   }
 
+  private void primaryIncreaseReplicaIncrease(final long[] before, final long[] after) {
+    // There are read requests increase for primary meta replica.
+    assertTrue(after[RegionInfo.DEFAULT_REPLICA_ID] > before[RegionInfo.DEFAULT_REPLICA_ID]);
+
+    // There are read requests incrase for meta replica regions.
+    for (int i = 1; i < after.length; i++) {
+      assertTrue(after[i] > before[i]);
+    }
+  }
+
   private void getMetaReplicaReadRequests(final Region[] metaRegions, final long[] counters) {
     int i = 0;
     for (Region r : metaRegions) {
@@ -455,9 +465,8 @@ public class TestMetaRegionReplicaReplication {
 
       getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGet);
 
-      // There is no read requests increase for primary meta replica.
-      // For rest of meta replicas, there are more reads against them.
-      primaryNoChangeReplicaIncrease(readReqsForMetaReplicas, readReqsForMetaReplicasAfterGet);
+      // There are more reads against all meta replica regions, including the primary region.
+      primaryIncreaseReplicaIncrease(readReqsForMetaReplicas, readReqsForMetaReplicasAfterGet);
 
       // move one of regions so it meta cache may be invalid.
       HTU.moveRegionAndWait(userRegion.getRegionInfo(), destRs.getServerName());
