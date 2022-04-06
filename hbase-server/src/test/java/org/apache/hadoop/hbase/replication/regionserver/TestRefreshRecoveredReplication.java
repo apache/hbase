@@ -141,9 +141,9 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     Replication replication = (Replication)otherServer.getReplicationSourceService();
     UTIL1.waitFor(60000, () -> !replication.getReplicationManager().getOldSources().isEmpty());
     // Wait on only one server being up.
-    UTIL1.waitFor(60000, () ->
-      // Have to go back to source here because getLiveRegionServerThreads makes new array each time
-      UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().size() == NUM_SLAVES1 - 1);
+    // Have to go back to source here because getLiveRegionServerThreads makes new array each time
+    UTIL1.waitFor(60000,
+      () -> UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().size() == NUM_SLAVES1 - 1);
     UTIL1.waitTableAvailable(tablename);
     LOG.info("Available {}", tablename);
 

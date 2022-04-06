@@ -497,16 +497,17 @@ public final class Encryption {
    * @return a key for the given subject
    * @throws IOException if the key is not found
    */
-  public static Key getSecretKeyForSubject(String subject, Configuration conf)
-      throws IOException {
+  public static Key getSecretKeyForSubject(String subject, Configuration conf) throws IOException {
     KeyProvider provider = getKeyProvider(conf);
-    if (provider != null) try {
-      Key[] keys = provider.getKeys(new String[] { subject });
-      if (keys != null && keys.length > 0) {
-        return keys[0];
+    if (provider != null) {
+      try {
+        Key[] keys = provider.getKeys(new String[] { subject });
+        if (keys != null && keys.length > 0) {
+          return keys[0];
+        }
+      } catch (Exception e) {
+        throw new IOException(e);
       }
-    } catch (Exception e) {
-      throw new IOException(e);
     }
     throw new IOException("No key found for subject '" + subject + "'");
   }
