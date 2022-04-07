@@ -1118,7 +1118,7 @@ module Hbase
         end
       end
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MAJOR)
-        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MAJPR).upcase.to_sym
+        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MAJOR).upcase.to_sym
         if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
           family.setMajorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         else
