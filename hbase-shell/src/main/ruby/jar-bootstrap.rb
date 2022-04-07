@@ -213,7 +213,7 @@ workspace = @shell.get_workspace
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
 if script2run
   ::Shell::Shell.exception_handler(!full_backtrace) do
-    IRB::HIRB.new(workspace, IRB::HBaseLoader.file_for_load(script2run)).run
+    IRB::HIRB.new(workspace, interactive, IRB::HBaseLoader.file_for_load(script2run)).run
   end
   exit @shell.exit_code unless @shell.exit_code.nil?
 end
@@ -222,5 +222,5 @@ if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
 end
-IRB::HIRB.new(workspace).run
+IRB::HIRB.new(workspace, interactive).run
 exit @shell.exit_code unless interactive || @shell.exit_code.nil?

@@ -23,7 +23,7 @@ module IRB
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
-    def initialize(workspace = nil, input_method = nil)
+    def initialize(workspace = nil, interactive = true, input_method = nil)
       # This is ugly.  Our 'help' method above provokes the following message
       # on irb construction: 'irb: warn: can't alias help from irb_help.'
       # Below, we reset the output so its pointed at /dev/null during irb
@@ -46,6 +46,7 @@ module IRB
       if $stdin.tty?
         `stty icrnl <&2`
       end
+      @interactive = interactive
       super(workspace, input_method)
     ensure
       f.close
@@ -118,6 +119,7 @@ module IRB
           rescue SystemExit, SignalException
             raise
           rescue NameError => exc
+            raise exc unless @interactive
             # HBASE-26880: Ignore NameError to prevent exiting Shell on mistyped commands.
           rescue Exception => exc
             # HBASE-26741: Raise exception so Shell::exception_handler can catch it.
