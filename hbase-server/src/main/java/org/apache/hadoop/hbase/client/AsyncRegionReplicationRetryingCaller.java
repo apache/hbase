@@ -53,7 +53,7 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
     AsyncClusterConnectionImpl conn, int maxAttempts, long rpcTimeoutNs, long operationTimeoutNs,
     RegionInfo replica, List<Entry> entries) {
     super(retryTimer, conn, ConnectionUtils.getPriority(replica.getTable()),
-      conn.connConf.getPauseNs(), conn.connConf.getPauseForCQTBENs(), maxAttempts,
+      conn.connConf.getPauseNs(), conn.connConf.getPauseNsForServerOverloaded(), maxAttempts,
       operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
     this.replica = replica;
     this.entries = entries.toArray(new Entry[0]);

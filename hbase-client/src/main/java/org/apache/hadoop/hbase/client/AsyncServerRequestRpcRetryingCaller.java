@@ -46,10 +46,10 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
   private ServerName serverName;
 
   public AsyncServerRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
+      long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
       long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
-    super(retryTimer, conn, HConstants.NORMAL_QOS, pauseNs, pauseForCQTBENs, maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+    super(retryTimer, conn, HConstants.NORMAL_QOS, pauseNs, pauseNsForServerOverloaded,
+      maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.serverName = serverName;
     this.callable = callable;
   }

@@ -193,7 +193,8 @@ class ConnectionOverAsyncConnection implements Connection {
           conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
             .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
             .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
-            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS).build(),
+            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS)
+            .build(),
           poolSupplier);
       }
     };

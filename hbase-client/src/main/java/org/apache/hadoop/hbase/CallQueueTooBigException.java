@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Returned to clients when their request was dropped because the call queue was too big to
+ * accept a new call. Clients should retry upon receiving it.
+ */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-public class CallQueueTooBigException extends IOException {
+public class CallQueueTooBigException extends CallDroppedException {
   public CallQueueTooBigException() {
     super();
   }

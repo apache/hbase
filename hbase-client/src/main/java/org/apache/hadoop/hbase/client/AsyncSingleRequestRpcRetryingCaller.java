@@ -56,10 +56,10 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
 
   public AsyncSingleRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
       TableName tableName, byte[] row, int replicaId, RegionLocateType locateType,
-      Callable<T> callable, int priority, long pauseNs, long pauseForCQTBENs, int maxAttempts,
-      long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
-    super(retryTimer, conn, priority, pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs,
-      rpcTimeoutNs, startLogErrorsCnt);
+      Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
+      int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxAttempts,
+      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.tableName = tableName;
     this.row = row;
     this.replicaId = replicaId;

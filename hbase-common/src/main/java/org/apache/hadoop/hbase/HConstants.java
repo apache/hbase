@@ -798,7 +798,10 @@ public final class HConstants {
 
   /**
    * Parameter name for client pause value for special case such as call queue too big, etc.
+   * @deprecated Since 2.5.0, will be removed in 4.0.0. Please use
+   *    hbase.client.pause.server.overloaded instead.
    */
+  @Deprecated
   public static final String HBASE_CLIENT_PAUSE_FOR_CQTBE = "hbase.client.pause.cqtbe";
 
   /**

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -28,14 +26,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-public class CallDroppedException extends IOException {
+public class CallDroppedException extends HBaseServerException {
   public CallDroppedException() {
-    super();
+    // For now all call drops are due to server being overloaded.
+    // We could decouple this if desired.
+    super(true);
   }
 
   // Absence of this constructor prevents proper unwrapping of
   // remote exception on the client side
   public CallDroppedException(String message) {
-    super(message);
+    super(true, message);
   }
 }
