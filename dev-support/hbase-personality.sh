@@ -500,7 +500,7 @@ function shadedjars_rebuild
 
   local -a maven_args=('clean' 'verify' '-fae' '--batch-mode'
     '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
-    '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
+    '-DskipTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
