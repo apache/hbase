@@ -534,7 +534,7 @@ public final class HFile {
   /**
    * @param fs filesystem
    * @param path Path to file to read
-   * @param cacheConf This must not be null. 
+   * @param cacheConf This must not be null.
    * @param primaryReplicaReader true if this is a reader for primary replica
    * @param conf Configuration
    * @return an active Reader instance

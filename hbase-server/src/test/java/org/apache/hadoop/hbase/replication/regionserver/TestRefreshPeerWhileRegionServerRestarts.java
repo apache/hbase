@@ -38,7 +38,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.*;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
 /**
  * This UT is used to make sure that we will not accidentally change the way to generate online
