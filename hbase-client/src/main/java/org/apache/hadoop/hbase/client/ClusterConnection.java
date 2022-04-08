@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -324,17 +323,6 @@ public interface ClusterConnection extends Connection {
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
-
-  /**
-   * Get live region servers from masters.
-   */
-  List<ServerName> getLiveRegionServers(Supplier<ServerName> masterAddrTracker, int count)
-    throws IOException;
-
-  /**
-   * Get the bootstrap node list of another region server.
-   */
-  List<ServerName> getAllBootstrapNodes(ServerName regionServer) throws IOException;
 
   /**
    * Get the {@link User} associated with this connection. May be {@code null}.

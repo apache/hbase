@@ -50,8 +50,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -109,9 +107,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Get
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.BootstrapNodeService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -146,9 +141,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -2216,36 +2208,4 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  @Override
-  public List<ServerName> getLiveRegionServers(Supplier<ServerName> masterAddrTracker, int count)
-      throws IOException {
-    RegionServerStatusService.BlockingInterface stub = RegionServerStatusService.newBlockingStub(
-      rpcClient.createBlockingRpcChannel(masterAddrTracker.get(), user, rpcTimeout));
-    GetLiveRegionServersResponse resp;
-    try {
-      resp = stub.getLiveRegionServers(null,
-        GetLiveRegionServersRequest.newBuilder().setCount(count).build());
-    } catch (ServiceException e) {
-      Throwable t = ConnectionUtils.translateException(e);
-      Throwables.propagateIfPossible(t, IOException.class);
-      throw new IOException(t);
-    }
-    return resp.getServerList().stream().map(ProtobufUtil::toServerName)
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<ServerName> getAllBootstrapNodes(ServerName regionServer) throws IOException {
-    BootstrapNodeService.BlockingInterface stub = BootstrapNodeService
-        .newBlockingStub(rpcClient.createBlockingRpcChannel(regionServer, user, rpcTimeout));
-    GetAllBootstrapNodesResponse resp;
-    try {
-      resp = stub.getAllBootstrapNodes(null, GetAllBootstrapNodesRequest.getDefaultInstance());
-    } catch (ServiceException e) {
-      Throwable t = ConnectionUtils.translateException(e);
-      Throwables.propagateIfPossible(t, IOException.class);
-      throw new IOException(t);
-    }
-    return resp.getNodeList().stream().map(ProtobufUtil::toServerName).collect(Collectors.toList());
-  }
 }

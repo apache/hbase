@@ -2891,7 +2891,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public Iterator<ServerName> getBootstrapNodes() {
+  public Iterator<ServerName> getRegionServers() {
     return regionServerTracker.getRegionServers().iterator();
   }
 
