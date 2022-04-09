@@ -34,9 +34,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-  justification="FindBugs seems confused; says bypassGlobals, namepaceLimiters, and " +
-    "tableLimiters are mostly synchronized...but to me it looks like they are totally synchronized")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "FindBugs seems confused; says bypassGlobals, namepaceLimiters, and "
+      + "tableLimiters are mostly synchronized..."
+      + "but to me it looks like they are totally synchronized")
 public class UserQuotaState extends QuotaState {
   private Map<String, QuotaLimiter> namespaceLimiters = null;
   private Map<TableName, QuotaLimiter> tableLimiters = null;

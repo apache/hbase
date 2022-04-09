@@ -193,8 +193,9 @@ public class TestFavoredNodeAssignmentHelper {
     // the primary can be assigned but the secondary/tertiary would be null
     Map<String,Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 1);
-    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-      primaryRSMapAndHelper = secondaryAndTertiaryRSPlacementHelper(1, rackToServerCount);
+    Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper,
+      List<RegionInfo>> primaryRSMapAndHelper =
+        secondaryAndTertiaryRSPlacementHelper(1, rackToServerCount);
     FavoredNodeAssignmentHelper helper = primaryRSMapAndHelper.getSecond();
     Map<RegionInfo, ServerName> primaryRSMap = primaryRSMapAndHelper.getFirst();
     List<RegionInfo> regions = primaryRSMapAndHelper.getThird();

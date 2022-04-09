@@ -231,8 +231,9 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
     }
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-      justification="Don't understand why FB is complaining about this one. We do throw exception")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
+      justification = "Don't understand why FB is complaining about this one."
+        + " We do throw exception")
   private class MapRunner implements Runnable {
     private Mapper<ImmutableBytesWritable, Result, K2,V2> mapper;
     private Context subcontext;

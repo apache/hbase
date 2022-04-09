@@ -149,11 +149,10 @@ public class HMasterCommandLine extends ServerCommandLine {
       if (shutDownCluster) {
         return stopMaster();
       }
-      System.err.println(
-        "To shutdown the master run " +
-        "hbase-daemon.sh stop master or send a kill signal to " +
-        "the HMaster pid, " +
-        "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master stop --shutDownCluster\"");
+      System.err.println("To shutdown the master run "
+        + "hbase-daemon.sh stop master or send a kill signal to the HMaster pid, "
+        + "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master "
+        + "stop --shutDownCluster\"");
       return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);

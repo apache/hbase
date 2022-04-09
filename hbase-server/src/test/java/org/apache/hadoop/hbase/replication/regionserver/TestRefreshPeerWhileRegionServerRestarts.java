@@ -38,7 +38,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
 /**
  * This UT is used to make sure that we will not accidentally change the way to generate online
@@ -95,8 +95,8 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
       UTIL1.waitFor(30000, () -> {
         for (Procedure<?> proc : UTIL1.getMiniHBaseCluster().getMaster().getProcedures()) {
           if (proc instanceof DisablePeerProcedure) {
-            return ((DisablePeerProcedure) proc).getCurrentStateId() ==
-              MasterProcedureProtos.PeerModificationState.POST_PEER_MODIFICATION_VALUE;
+            return ((DisablePeerProcedure) proc)
+              .getCurrentStateId() == PeerModificationState.POST_PEER_MODIFICATION_VALUE;
           }
         }
         return false;

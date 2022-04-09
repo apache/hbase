@@ -274,11 +274,11 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   /**
-   * @param tableRegions regions of table to normalize
+   * Also make sure tableRegions contains regions of the same table
+   * @param tableRegions    regions of table to normalize
    * @param tableDescriptor the TableDescriptor
    * @return average region size depending on
-   * @see org.apache.hadoop.hbase.client.TableDescriptor#getNormalizerTargetRegionCount()
-   * Also make sure tableRegions contains regions of the same table
+   * @see TableDescriptor#getNormalizerTargetRegionCount()
    */
   private double getAverageRegionSizeMb(final List<RegionInfo> tableRegions,
     final TableDescriptor tableDescriptor) {

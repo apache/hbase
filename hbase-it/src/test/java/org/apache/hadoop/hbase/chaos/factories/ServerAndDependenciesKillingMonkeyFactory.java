@@ -49,11 +49,12 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
     loadProperties();
 
     // Destructive actions to mess things around. Cannot run batch restart.
-    Action[] actions1 = new Action[]{
+    // @formatter:off
+    Action[] actions1 = new Action[] {
       new RestartRandomRsExceptMetaAction(60000),
       new RestartActiveMasterAction(5000),
-      new RollingBatchRestartRsAction(5000, 1.0f, 2,
-        true), // only allow 2 servers to be dead.
+      // only allow 2 servers to be dead.
+      new RollingBatchRestartRsAction(5000, 1.0f, 2, true),
       new ForceBalancerAction(),
       new RestartRandomDataNodeAction(60000),
       new RestartRandomZKNodeAction(60000),
@@ -61,6 +62,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
           rollingBatchSuspendtRSRatio)
     };
+    // @formatter:on
 
     // Action to log more info for debugging
     Action[] actions2 = new Action[]{

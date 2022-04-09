@@ -103,8 +103,8 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     }
   }
 
-  private final ConcurrentMap<TableName, ConcurrentNavigableMap<byte[], StaleLocationCacheEntry>>
-    staleCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<TableName,
+    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry>> staleCache = new ConcurrentHashMap<>();
   private volatile int numOfReplicas;
   private final ChoreService choreService;
   private final TableName tableName;
