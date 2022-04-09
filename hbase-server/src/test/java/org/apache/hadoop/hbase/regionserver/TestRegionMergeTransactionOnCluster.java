@@ -392,17 +392,30 @@ public class TestRegionMergeTransactionOnCluster {
       for (Pair<RegionInfo, ServerName> p : currentRegionToServers) {
         currentRegions.add(p.getFirst());
       }
-      assertTrue(initialRegions.contains(mergedRegions.getFirst())); //this is the first region
-      assertTrue(initialRegions.contains(RegionReplicaUtil
-        .getRegionInfoForReplica(mergedRegions.getFirst(), 1))); //this is the replica of the first region
-      assertTrue(initialRegions.contains(mergedRegions.getSecond())); //this is the second region
-      assertTrue(initialRegions.contains(RegionReplicaUtil
-        .getRegionInfoForReplica(mergedRegions.getSecond(), 1))); //this is the replica of the second region
-      assertTrue(!initialRegions.contains(currentRegions.get(0))); //this is the new region
-      assertTrue(!initialRegions.contains(RegionReplicaUtil.getRegionInfoForReplica(currentRegions.get(0), 1))); //replica of the new region
-      assertTrue(currentRegions.contains(RegionReplicaUtil.getRegionInfoForReplica(currentRegions.get(0), 1))); //replica of the new region
-      assertTrue(!currentRegions.contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getFirst(), 1))); //replica of the merged region
-      assertTrue(!currentRegions.contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getSecond(), 1))); //replica of the merged region
+      // this is the first region
+      assertTrue(initialRegions.contains(mergedRegions.getFirst()));
+      // this is the replica of the first region
+      assertTrue(initialRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getFirst(), 1)));
+      // this is the second region
+      assertTrue(initialRegions.contains(mergedRegions.getSecond()));
+      // this is the replica of the second region
+      assertTrue(initialRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getSecond(), 1)));
+      // this is the new region
+      assertTrue(!initialRegions.contains(currentRegions.get(0)));
+      // replica of the new region
+      assertTrue(!initialRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(currentRegions.get(0), 1)));
+      // replica of the new region
+      assertTrue(currentRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(currentRegions.get(0), 1)));
+      // replica of the merged region
+      assertTrue(!currentRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getFirst(), 1)));
+      // replica of the merged region
+      assertTrue(!currentRegions
+        .contains(RegionReplicaUtil.getRegionInfoForReplica(mergedRegions.getSecond(), 1)));
       table.close();
     } finally {
       TEST_UTIL.deleteTable(tableName);

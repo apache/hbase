@@ -65,10 +65,10 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Scans a given table + CF for all mob reference cells to get the list of backing mob files.
- * For each referenced file we attempt to verify that said file is on the FileSystem in a place
- * that the MOB system will look when attempting to resolve the actual value.
- *
+ * Scans a given table + CF for all mob reference cells to get the list of backing mob files. For
+ * each referenced file we attempt to verify that said file is on the FileSystem in a place that the
+ * MOB system will look when attempting to resolve the actual value.
+ * <p/>
  * The job includes counters that can help provide a rough sketch of the mob data.
  *
  * <pre>
@@ -94,31 +94,31 @@ import org.slf4j.LoggerFactory;
  *         Number of rows with total size in the 100,000s of bytes=6838
  *         Number of rows with total size in the 1,000,000s of bytes=3162
  * </pre>
- *
- *   * Map-Reduce Framework:Map input records - the number of rows with mob references
- *   * Map-Reduce Framework:Reduce output records - the number of unique hfiles referenced
- *   * MOB:NUM_CELLS - the total number of mob reference cells
- *   * PROBLEM:Affected rows - the number of rows that reference hfiles with an issue
- *   * PROBLEM:Problem MOB files - the number of unique hfiles that have an issue
- *   * CELLS PER ROW: - this counter group gives a histogram of the order of magnitude of the
- *         number of cells in a given row by grouping by the number of digits used in each count.
- *         This allows us to see more about the distribution of cells than what we can determine
- *         with just the cell count and the row count. In this particular example we can see that
- *         all of our rows have somewhere between 1 - 9 cells.
- *   * ROWS WITH PROBLEMS PER FILE: - this counter group gives a histogram of the order of
- *         magnitude of the number of rows in each of the hfiles with a problem. e.g. in the
- *         example there are 2 hfiles and they each have the same order of magnitude number of rows,
- *         specifically between 100 and 999.
- *   * SIZES OF CELLS: - this counter group gives a histogram of the order of magnitude of
- *         the size of mob values according to our reference cells. e.g. in the example above we
- *         have cell sizes that are all between 10,000 bytes and 9,999,999 bytes. From this
- *         histogram we can also see that _most_ cells are 100,000 - 999,000 bytes and the smaller
- *         and bigger ones are outliers making up less than 2% of mob cells.
- *   * SIZES OF ROWS: - this counter group gives a histogram of the order of magnitude of the
- *         size of mob values across each row according to our reference cells. In the example above
- *         we have rows that are are between 100,000 bytes and 9,999,999 bytes. We can also see that
- *         about 2/3rd of our rows are 100,000 - 999,999 bytes.
- *
+ * <ol>
+ * <li>Map-Reduce Framework:Map input records - the number of rows with mob references</li>
+ * <li>Map-Reduce Framework:Reduce output records - the number of unique hfiles referenced</li>
+ * <li>MOB:NUM_CELLS - the total number of mob reference cells</li>
+ * <li>PROBLEM:Affected rows - the number of rows that reference hfiles with an issue</li>
+ * <li>PROBLEM:Problem MOB files - the number of unique hfiles that have an issue</li>
+ * <li>CELLS PER ROW: - this counter group gives a histogram of the order of magnitude of the number
+ * of cells in a given row by grouping by the number of digits used in each count. This allows us to
+ * see more about the distribution of cells than what we can determine with just the cell count and
+ * the row count. In this particular example we can see that all of our rows have somewhere between
+ * 1 - 9 cells.</li>
+ * <li>ROWS WITH PROBLEMS PER FILE: - this counter group gives a histogram of the order of magnitude
+ * of the number of rows in each of the hfiles with a problem. e.g. in the example there are 2
+ * hfiles and they each have the same order of magnitude number of rows, specifically between 100
+ * and 999.</li>
+ * <li>SIZES OF CELLS: - this counter group gives a histogram of the order of magnitude of the size
+ * of mob values according to our reference cells. e.g. in the example above we have cell sizes that
+ * are all between 10,000 bytes and 9,999,999 bytes. From this histogram we can also see that _most_
+ * cells are 100,000 - 999,000 bytes and the smaller and bigger ones are outliers making up less
+ * than 2% of mob cells.</li>
+ * <li>SIZES OF ROWS: - this counter group gives a histogram of the order of magnitude of the size
+ * of mob values across each row according to our reference cells. In the example above we have rows
+ * that are are between 100,000 bytes and 9,999,999 bytes. We can also see that about 2/3rd of our
+ * rows are 100,000 - 999,999 bytes.</li>
+ * </ol>
  * Generates a report that gives one file status per line, with tabs dividing fields.
  *
  * <pre>
@@ -133,32 +133,31 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * Possible results are listed; the first three indicate things are working properly.
- *   * MOB DIR - the reference is in the normal MOB area for the given table and CF
- *   * HLINK TO ARCHIVE FOR SAME TABLE - the reference is present in the archive area for this
- *         table and CF
- *   * HLINK TO ARCHIVE FOR OTHER TABLE - the reference is present in a different table and CF,
- *         either in the MOB or archive areas (e.g. from a snapshot restore or clone)
- *   * ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE - the reference is currently present in the archive
- *         area for this table and CF, but it is kept there because a _different_ table has a
- *         reference to it (e.g. from a snapshot clone). If these other tables are removed then
- *         the file will likely be deleted unless there is a snapshot also referencing it.
- *   * ARCHIVE BUT NO HLINKS - the reference is currently present in the archive for this table and
- *         CF, but there are no references present to prevent its removal. Unless it is newer than
- *         the general TTL (default 5 minutes) or referenced in a snapshot it will be subject to
- *         cleaning.
- *   * ARCHIVE BUT FAILURE WHILE CHECKING HLINKS - Check the job logs to see why things failed while
- *         looking for why this file is being kept around.
- *   * MISSING FILE - We couldn't find the reference on the FileSystem. Either there is dataloss due
- *         to a bug in the MOB storage system or the MOB storage is damaged but in an edge case that
- *         allows it to work for now. You can verify which by doing a raw reference scan to get the
- *         referenced hfile and check the underlying filesystem. See the ref guide section on mob
- *         for details.
- *   * HLINK BUT POINT TO MISSING FILE - There is a pointer in our mob area for this table and CF
- *         to a file elsewhere on the FileSystem, however the file it points to no longer exists.
- *   * MISSING FILE BUT FAILURE WHILE CHECKING HLINKS - We could not find the referenced file,
- *         however you should check the job logs to see why we couldn't check to see if there is a
- *         pointer to the referenced file in our archive or another table's archive or mob area.
- *
+ * <ol>
+ * <li>MOB DIR - the reference is in the normal MOB area for the given table and CF</li>
+ * <li>HLINK TO ARCHIVE FOR SAME TABLE - the reference is present in the archive area for this table
+ * and CF</li>
+ * <li>HLINK TO ARCHIVE FOR OTHER TABLE - the reference is present in a different table and CF,
+ * either in the MOB or archive areas (e.g. from a snapshot restore or clone)</li>
+ * <li>ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE - the reference is currently present in the archive
+ * area for this table and CF, but it is kept there because a _different_ table has a reference to
+ * it (e.g. from a snapshot clone). If these other tables are removed then the file will likely be
+ * deleted unless there is a snapshot also referencing it.</li>
+ * <li>ARCHIVE BUT NO HLINKS - the reference is currently present in the archive for this table and
+ * CF, but there are no references present to prevent its removal. Unless it is newer than the
+ * general TTL (default 5 minutes) or referenced in a snapshot it will be subject to cleaning.</li>
+ * <li>ARCHIVE BUT FAILURE WHILE CHECKING HLINKS - Check the job logs to see why things failed while
+ * looking for why this file is being kept around.</li>
+ * <li>MISSING FILE - We couldn't find the reference on the FileSystem. Either there is dataloss due
+ * to a bug in the MOB storage system or the MOB storage is damaged but in an edge case that allows
+ * it to work for now. You can verify which by doing a raw reference scan to get the referenced
+ * hfile and check the underlying filesystem. See the ref guide section on mob for details.</li>
+ * <li>HLINK BUT POINT TO MISSING FILE - There is a pointer in our mob area for this table and CF to
+ * a file elsewhere on the FileSystem, however the file it points to no longer exists.</li>
+ * <li>MISSING FILE BUT FAILURE WHILE CHECKING HLINKS - We could not find the referenced file,
+ * however you should check the job logs to see why we couldn't check to see if there is a pointer
+ * to the referenced file in our archive or another table's archive or mob area.</li>
+ * </ol>
  */
 @InterfaceAudience.Private
 public class MobRefReporter extends Configured implements Tool {

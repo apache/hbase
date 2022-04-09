@@ -55,9 +55,11 @@ public abstract class AbstractMemStore implements MemStore {
 
   protected RegionServicesForStores regionServices;
 
+  // @formatter:off
   public final static long FIXED_OVERHEAD = (long) ClassSize.OBJECT
-          + (5 * ClassSize.REFERENCE)
-          + (2 * Bytes.SIZEOF_LONG); // snapshotId, timeOfOldestEdit
+    + (5 * ClassSize.REFERENCE)
+    + (2 * Bytes.SIZEOF_LONG); // snapshotId, timeOfOldestEdit
+  // @formatter:on
 
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
 

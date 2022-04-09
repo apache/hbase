@@ -2371,21 +2371,23 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * HeapSize implementation
-   *
+   * <p/>
    * We do not count the bytes in the rowCache because it should be empty for a KeyValue in the
    * MemStore.
    */
   @Override
   public long heapSize() {
-    /*
-     * Deep object overhead for this KV consists of two parts. The first part is the KV object
-     * itself, while the second part is the backing byte[]. We will only count the array overhead
-     * from the byte[] only if this is the first KV in there.
-     */
-    return ClassSize.align(FIXED_OVERHEAD) +
-        (offset == 0
-          ? ClassSize.sizeOfByteArray(length)  // count both length and object overhead
-          : length);                           // only count the number of bytes
+    // Deep object overhead for this KV consists of two parts. The first part is the KV object
+    // itself, while the second part is the backing byte[]. We will only count the array overhead
+    // from the byte[] only if this is the first KV in there.
+    int fixed = ClassSize.align(FIXED_OVERHEAD);
+    if (offset == 0) {
+      // count both length and object overhead
+      return fixed + ClassSize.sizeOfByteArray(length);
+    } else {
+      // only count the number of bytes
+      return fixed + length;
+    }
   }
 
   /**

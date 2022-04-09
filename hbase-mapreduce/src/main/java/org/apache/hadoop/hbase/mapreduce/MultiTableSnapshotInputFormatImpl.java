@@ -78,8 +78,7 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Return the list of splits extracted from the scans/snapshots pushed to conf by
-   * {@link
-   * #setInput(org.apache.hadoop.conf.Configuration, java.util.Map, org.apache.hadoop.fs.Path)}
+   * {@link #setInput(Configuration, Map, Path)}
    *
    * @param conf Configuration to determine splits from
    * @return Return the list of splits extracted from the scans/snapshots pushed to conf
@@ -115,7 +114,7 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Retrieve the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration by
-   * {@link #setSnapshotToScans(org.apache.hadoop.conf.Configuration, java.util.Map)}
+   * {@link #setSnapshotToScans(Configuration, Map)}
    *
    * @param conf Configuration to extract name -&gt; list&lt;scan&gt; mappings from.
    * @return the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration

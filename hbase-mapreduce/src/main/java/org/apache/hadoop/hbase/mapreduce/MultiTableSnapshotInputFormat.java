@@ -49,8 +49,7 @@ import java.util.Map;
  * included in each snapshot/scan
  * pair.
  * {@link TableMapReduceUtil#initMultiTableSnapshotMapperJob
- * (java.util.Map, Class, Class, Class, org.apache.hadoop.mapreduce.Job, boolean, org.apache
- * .hadoop.fs.Path)}
+ * (Map, Class, Class, Class, org.apache.hadoop.mapreduce.Job, boolean, Path)}
  * can be used to configure the job.
  * <pre>{@code
  * Job job = new Job(conf);

@@ -42,7 +42,7 @@ import org.apache.hadoop.mapred.Reporter;
  * A Base for {@link TableInputFormat}s. Receives a {@link Table}, a
  * byte[] of input columns and optionally a {@link Filter}.
  * Subclasses may use other TableRecordReader implementations.
- *
+ * <p/>
  * Subclasses MUST ensure initializeTable(Connection, TableName) is called for an instance to
  * function properly. Each of the entry points to this class used by the MapReduce framework,
  * {@link #getRecordReader(InputSplit, JobConf, Reporter)} and {@link #getSplits(JobConf, int)},
@@ -98,8 +98,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
    * the default.
    *
-   * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
-   *      JobConf, Reporter)
+   * @see InputFormat#getRecordReader(InputSplit, JobConf, Reporter)
    */
   public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter)
@@ -165,7 +164,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Calculates the splits that will serve as input for the map tasks.
-   *
+   * <p/>
    * Splits are created in number equal to the smallest between numSplits and
    * the number of {@link org.apache.hadoop.hbase.regionserver.HRegion}s in the table.
    * If the number of splits is smaller than the number of
@@ -180,7 +179,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    *
    * @return the input splits
    *
-   * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
+   * @see InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     if (this.table == null) {
@@ -282,7 +281,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * will call {@link #initialize(JobConf)} as a convenient centralized location to handle
    * retrieving the necessary configuration information and calling
    * {@link #initializeTable(Connection, TableName)}.
-   *
+   * <p/>
    * Subclasses should implement their initialize call such that it is safe to call multiple times.
    * The current TableInputFormatBase implementation relies on a non-null table reference to decide
    * if an initialize call is needed, but this behavior may change in the future. In particular,

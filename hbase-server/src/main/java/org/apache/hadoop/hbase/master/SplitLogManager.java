@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
@@ -155,10 +156,10 @@ public class SplitLogManager {
   /**
    * Get a list of paths that need to be split given a set of server-specific directories and
    * optionally  a filter.
-   *
+   * <p/>
    * See {@link AbstractFSWALProvider#getServerNameFromWALDirectoryName} for more info on directory
    * layout.
-   *
+   * <p/>
    * Should be package-private, but is needed by
    * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
    *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.

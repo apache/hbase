@@ -239,8 +239,8 @@ public class FuzzyRowFilter extends FilterBase {
 
     byte[] nextRow() {
       if (nextRows.isEmpty()) {
-        throw new IllegalStateException(
-            "NextRows should not be empty, make sure to call nextRow() after updateTracker() return true");
+        throw new IllegalStateException("NextRows should not be empty, "
+          + "make sure to call nextRow() after updateTracker() return true");
       } else {
         return nextRows.peek().getFirst();
       }

@@ -38,9 +38,9 @@ import org.apache.yetus.audience.InterfaceStability;
  * {@link BBKVComparator}. Use it when mostly {@link ByteBufferKeyValue}s.
  * </p>
  */
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="UNKNOWN",
-    justification="Findbugs doesn't like the way we are negating the result of a compare in below")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UNKNOWN",
+    justification = "Findbugs doesn't like the way we are negating the result of"
+      + " a compare in below")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CellComparatorImpl implements CellComparator {

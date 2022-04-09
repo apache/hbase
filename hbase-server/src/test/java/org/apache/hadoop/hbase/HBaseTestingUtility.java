@@ -2919,9 +2919,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();
     }
-
-    jobConf.set("mapreduce.cluster.local.dir",
-      conf.get("mapreduce.cluster.local.dir")); //Hadoop MiniMR overwrites this while it should not
+    // Hadoop MiniMR overwrites this while it should not
+    jobConf.set("mapreduce.cluster.local.dir", conf.get("mapreduce.cluster.local.dir"));
     LOG.info("Mini mapreduce cluster started");
 
     // In hadoop2, YARN/MR2 starts a mini cluster with its own conf instance and updates settings.

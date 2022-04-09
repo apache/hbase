@@ -2057,8 +2057,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         throw new ServiceException(ie);
       }
       // We are assigning meta, wait a little for regionserver to finish initialization.
-      int timeout = regionServer.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2; // Quarter of RPC timeout
+      // Default to quarter of RPC timeout
+      int timeout = regionServer.getConfiguration()
+        .getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2;
       long endTime = System.currentTimeMillis() + timeout;
       synchronized (regionServer.online) {
         try {
