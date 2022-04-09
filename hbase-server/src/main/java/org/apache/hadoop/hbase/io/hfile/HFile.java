@@ -534,13 +534,13 @@ public final class HFile {
   /**
    * @param fs filesystem
    * @param path Path to file to read
-   * @param cacheConf This must not be null. @see
-   *          {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#CacheConfig(Configuration)}
+   * @param cacheConf This must not be null.
    * @param primaryReplicaReader true if this is a reader for primary replica
    * @param conf Configuration
    * @return an active Reader instance
    * @throws IOException Will throw a CorruptHFileException (DoNotRetryIOException subtype) if hfile
    *           is corrupt/invalid.
+   * @see CacheConfig#CacheConfig(Configuration)
    */
   public static Reader createReader(FileSystem fs, Path path, CacheConfig cacheConf,
       boolean primaryReplicaReader, Configuration conf) throws IOException {

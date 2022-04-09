@@ -73,13 +73,14 @@ public interface ExtendedCell extends RawCell, HeapSize {
   }
 
   /**
-   * @param withTags Whether to write tags.
-   * @return Bytes count required to serialize this Cell in a {@link KeyValue} format.
-   * <br> KeyValue format <br>
+   * KeyValue format
+   * <p/>
    * <code>&lt;4 bytes keylength&gt; &lt;4 bytes valuelength&gt; &lt;2 bytes rowlength&gt;
    * &lt;row&gt; &lt;1 byte columnfamilylength&gt; &lt;columnfamily&gt; &lt;columnqualifier&gt;
    * &lt;8 bytes timestamp&gt; &lt;1 byte keytype&gt; &lt;value&gt; &lt;2 bytes tagslength&gt;
    * &lt;tags&gt;</code>
+   * @param withTags Whether to write tags.
+   * @return Bytes count required to serialize this Cell in a {@link KeyValue} format.
    */
   // TODO remove the boolean param once HBASE-16706 is done.
   default int getSerializedSize(boolean withTags) {

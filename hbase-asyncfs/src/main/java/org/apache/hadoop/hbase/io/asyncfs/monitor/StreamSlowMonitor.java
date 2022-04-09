@@ -69,8 +69,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
    */
   private static final String DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY =
     "hbase.regionserver.async.wal.datanode.slow.check.speed.packet.data.length.min";
-  private static final long DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH =
-    64 * 1024; //64KB
+  // 64KB
+  private static final long DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH = 64 * 1024;
 
   /**
    * Configure for the slow packet process time, a duration from send to ACK.
@@ -79,7 +79,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
    */
   public static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
     "hbase.regionserver.async.wal.datanode.slow.packet.process.time.millis";
-  private static final long DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME = 6000; // 6s in ms
+  // 6s in ms
+  private static final long DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME = 6000;
 
   /**
    * Configure for the check of large packet(which is configured by
@@ -89,7 +90,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
    */
   private static final String DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED_KEY =
     "hbase.regionserver.async.wal.datanode.slow.packet.speed.min.kbs";
-  private static final double DEFAULT_DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED = 20; // 20KB/s
+  // 20KB/s
+  private static final double DEFAULT_DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED = 20;
 
   private final String name;
   // this is a map of datanodeInfo->queued slow PacketAckData

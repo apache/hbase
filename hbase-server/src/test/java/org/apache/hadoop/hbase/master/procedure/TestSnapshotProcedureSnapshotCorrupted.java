@@ -36,7 +36,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestSnapshotProcedureSnapshotCorrupted extends TestSnapshotProcedure {
@@ -50,8 +50,9 @@ public class TestSnapshotProcedureSnapshotCorrupted extends TestSnapshotProcedur
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     SnapshotProcedure sp = new SnapshotProcedure(procExec.getEnvironment(), snapshotProto);
     procExec.submitProcedure(sp);
-    TEST_UTIL.waitFor(60000, 500, () -> sp.getCurrentStateId() >
-      MasterProcedureProtos.SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT_VALUE);
+    TEST_UTIL.waitFor(60000,
+      500,
+      () -> sp.getCurrentStateId() > SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT_VALUE);
     DistributedFileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
     Optional<HRegion> region = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .filter(r -> !r.getStoreFileList(new byte[][] { CF }).isEmpty())

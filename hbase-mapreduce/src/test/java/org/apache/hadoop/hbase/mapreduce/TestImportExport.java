@@ -298,15 +298,16 @@ public class TestImportExport {
               IMPORT_TABLE, FQ_OUTPUT_DIR
       };
       assertTrue(runImport(args));
-      /* exportedTableIn94Format contains 5 rows
-      ROW         COLUMN+CELL
-      r1          column=f1:c1, timestamp=1383766761171, value=val1
-      r2          column=f1:c1, timestamp=1383766771642, value=val2
-      r3          column=f1:c1, timestamp=1383766777615, value=val3
-      r4          column=f1:c1, timestamp=1383766785146, value=val4
-      r5          column=f1:c1, timestamp=1383766791506, value=val5
-      */
-     assertEquals(5, UTIL.countRows(t));
+      // @formatter:off
+      // exportedTableIn94Format contains 5 rows
+      // ROW         COLUMN+CELL
+      // r1          column=f1:c1, timestamp=1383766761171, value=val1
+      // r2          column=f1:c1, timestamp=1383766771642, value=val2
+      // r3          column=f1:c1, timestamp=1383766777615, value=val3
+      // r4          column=f1:c1, timestamp=1383766785146, value=val4
+      // r5          column=f1:c1, timestamp=1383766791506, value=val5
+      // @formatter:on
+      assertEquals(5, UTIL.countRows(t));
     }
   }
 
@@ -330,12 +331,9 @@ public class TestImportExport {
       p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
       t.put(p);
-
-      String[] args = new String[] {
-          "-D" + ExportUtils.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
-          name.getMethodName(),
-          FQ_OUTPUT_DIR
-      };
+      // added scanner batching arg.
+      String[] args = new String[] { "-D" + ExportUtils.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,
+        name.getMethodName(), FQ_OUTPUT_DIR };
       assertTrue(runExport(args));
 
       FileSystem fs = FileSystem.get(UTIL.getConfiguration());

@@ -762,22 +762,30 @@ public class TestStoreScanner {
 
   @Test
   public void testWildCardScannerUnderDeletes() throws IOException {
-    KeyValue [] kvs = new KeyValue [] {
-        create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"), // inc
-        // orphaned delete column.
-        create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
-        // column b
-        create("R1", "cf", "b", 2, KeyValue.Type.Put, "dont-care"), // inc
-        create("R1", "cf", "b", 1, KeyValue.Type.Put, "dont-care"), // inc
-        // column c
-        create("R1", "cf", "c", 10, KeyValue.Type.Delete, "dont-care"),
-        create("R1", "cf", "c", 10, KeyValue.Type.Put, "dont-care"), // no
-        create("R1", "cf", "c", 9, KeyValue.Type.Put, "dont-care"),  // inc
-        // column d
-        create("R1", "cf", "d", 11, KeyValue.Type.Put, "dont-care"), // inc
-        create("R1", "cf", "d", 10, KeyValue.Type.DeleteColumn, "dont-care"),
-        create("R1", "cf", "d", 9, KeyValue.Type.Put, "dont-care"),  // no
-        create("R1", "cf", "d", 8, KeyValue.Type.Put, "dont-care"),  // no
+    KeyValue[] kvs = new KeyValue[] {
+      // inc
+      create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"),
+      // orphaned delete column.
+      create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
+      // column b
+      // inc
+      create("R1", "cf", "b", 2, KeyValue.Type.Put, "dont-care"),
+      // inc
+      create("R1", "cf", "b", 1, KeyValue.Type.Put, "dont-care"),
+      // column c
+      create("R1", "cf", "c", 10, KeyValue.Type.Delete, "dont-care"),
+      // no
+      create("R1", "cf", "c", 10, KeyValue.Type.Put, "dont-care"),
+      // inc
+      create("R1", "cf", "c", 9, KeyValue.Type.Put, "dont-care"),
+      // column d
+      // inc
+      create("R1", "cf", "d", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "d", 10, KeyValue.Type.DeleteColumn, "dont-care"),
+      // no
+      create("R1", "cf", "d", 9, KeyValue.Type.Put, "dont-care"),
+      // no
+      create("R1", "cf", "d", 8, KeyValue.Type.Put, "dont-care"),
 
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
@@ -980,6 +988,7 @@ public class TestStoreScanner {
           return now;
         }
       });
+      // @formatter:off
       KeyValue[] kvs = new KeyValue[]{
         /*0*/ new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null,
         now - 100, KeyValue.Type.DeleteFamily), // live
@@ -998,22 +1007,23 @@ public class TestStoreScanner {
         /*7*/ create("R1", "cf", "a",
         now - 100, KeyValue.Type.DeleteColumn, "dont-care"), // max-version
         /*8*/ create("R1", "cf", "b", now - 600,
-        KeyValue.Type.DeleteColumn, "dont-care"), //expired
+        KeyValue.Type.DeleteColumn, "dont-care"), // expired
         /*9*/ create("R1", "cf", "b", now - 70,
-        KeyValue.Type.Put, "v2"), //live
+        KeyValue.Type.Put, "v2"), // live
         /*10*/ create("R1", "cf", "b", now - 750,
-        KeyValue.Type.Put, "v1"), //expired
+        KeyValue.Type.Put, "v1"), // expired
         /*11*/ create("R1", "cf", "c", now - 500,
-        KeyValue.Type.Delete, "dontcare"), //expired
+        KeyValue.Type.Delete, "dontcare"), // expired
         /*12*/ create("R1", "cf", "c", now - 600,
-        KeyValue.Type.Put, "v1"), //expired
+        KeyValue.Type.Put, "v1"), // expired
         /*13*/ create("R1", "cf", "c", now - 1000,
-        KeyValue.Type.Delete, "dontcare"), //expired
+        KeyValue.Type.Delete, "dontcare"), // expired
         /*14*/ create("R1", "cf", "d", now - 60,
-        KeyValue.Type.Put, "expired put"), //live
+        KeyValue.Type.Put, "expired put"), // live
         /*15*/ create("R1", "cf", "d", now - 100,
-        KeyValue.Type.Delete, "not-expired delete"), //live
+        KeyValue.Type.Delete, "not-expired delete"), // live
       };
+      // @formatter:on
       List<KeyValueScanner> scanners = scanFixture(kvs);
       ScanInfo scanInfo = new ScanInfo(CONF, Bytes.toBytes("cf"),
         0 /* minVersions */,

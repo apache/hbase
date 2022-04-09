@@ -153,8 +153,8 @@ class EntryBuffers {
       internify(entry);
       entryBuffer.add(entry);
       // TODO linkedlist entry
-      long incrHeap = entry.getEdit().heapSize() +
-          ClassSize.align(2 * ClassSize.REFERENCE); // WALKey pointers
+      // entry size plus WALKey pointers
+      long incrHeap = entry.getEdit().heapSize() + ClassSize.align(2 * ClassSize.REFERENCE);
       heapInBuffer += incrHeap;
       return incrHeap;
     }

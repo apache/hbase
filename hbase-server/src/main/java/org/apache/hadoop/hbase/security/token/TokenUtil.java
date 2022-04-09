@@ -82,7 +82,7 @@ public class TokenUtil {
 
 
   /**
-   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * See {@link ClientTokenUtil#toToken(Token)}.
    * @deprecated External users should not use this method. Please post on
    *   the HBase dev mailing list if you need this method. Internal
    *   HBase code should use {@link ClientTokenUtil} instead.
@@ -93,8 +93,7 @@ public class TokenUtil {
   }
 
   /**
-   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection,
-   * org.apache.hadoop.hbase.security.User)}.
+   * See {@link ClientTokenUtil#obtainToken(Connection, User)}.
    * @deprecated External users should not use this method. Please post on
    *   the HBase dev mailing list if you need this method. Internal
    *   HBase code should use {@link ClientTokenUtil} instead.
@@ -106,8 +105,7 @@ public class TokenUtil {
   }
 
   /**
-   * See {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection,
-   * org.apache.hadoop.hbase.security.User)}.
+   * See {@link ClientTokenUtil#obtainAndCacheToken(Connection, User)}.
    */
   public static void obtainAndCacheToken(final Connection conn,
       User user)
@@ -116,7 +114,7 @@ public class TokenUtil {
   }
 
   /**
-   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos.Token)}.
    * @deprecated External users should not use this method. Please post on
    *   the HBase dev mailing list if you need this method. Internal
    *   HBase code should use {@link ClientTokenUtil} instead.

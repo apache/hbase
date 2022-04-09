@@ -288,11 +288,15 @@ public class TestZKMulti {
     // test that, even with operations that fail, the ones that would pass will pass
     // with runSequentialOnMultiFailure
     ops = new LinkedList<>();
-    ops.add(ZKUtilOp.setData(path1, Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1)))); // pass
-    ops.add(ZKUtilOp.deleteNodeFailSilent(path2)); // pass
-    ops.add(ZKUtilOp.deleteNodeFailSilent(path3)); // fail -- node doesn't exist
-    ops.add(ZKUtilOp.createAndFailSilent(path4,
-      Bytes.add(Bytes.toBytes(path4), Bytes.toBytes(path4)))); // pass
+    // pass
+    ops.add(ZKUtilOp.setData(path1, Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1))));
+    // pass
+    ops.add(ZKUtilOp.deleteNodeFailSilent(path2));
+    // fail -- node doesn't exist
+    ops.add(ZKUtilOp.deleteNodeFailSilent(path3));
+    // pass
+    ops.add(
+      ZKUtilOp.createAndFailSilent(path4, Bytes.add(Bytes.toBytes(path4), Bytes.toBytes(path4))));
     ZKUtil.multiOrSequential(zkw, ops, true);
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path1),
       Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1))));

@@ -300,8 +300,8 @@ public class DemoClient {
       m = new Mutation();
       m.column = ByteBuffer.wrap(bytes("entry:sqr"));
       m.isDelete = true;
-      client.mutateRowTs(demoTable, ByteBuffer.wrap(row), mutations, 1,
-              dummyAttributes); // shouldn't override latest
+      // shouldn't override latest
+      client.mutateRowTs(demoTable, ByteBuffer.wrap(row), mutations, 1, dummyAttributes);
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
       List<TCell> versions = client.getVer(demoTable, ByteBuffer.wrap(row),

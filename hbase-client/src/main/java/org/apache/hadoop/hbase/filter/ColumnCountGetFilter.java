@@ -95,7 +95,6 @@ public class ColumnCountGetFilter extends FilterBase {
   /**
    * @param pbBytes A pb serialized {@link ColumnCountGetFilter} instance
    * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
   public static ColumnCountGetFilter parseFrom(final byte [] pbBytes)

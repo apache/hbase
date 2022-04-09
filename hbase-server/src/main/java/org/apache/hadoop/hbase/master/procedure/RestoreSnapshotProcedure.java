@@ -59,8 +59,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreParentToChildRegionsPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
@@ -240,11 +241,10 @@ public class RestoreSnapshotProcedure
       throws IOException {
     super.serializeStateData(serializer);
 
-    MasterProcedureProtos.RestoreSnapshotStateData.Builder restoreSnapshotMsg =
-      MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setSnapshot(this.snapshot)
-        .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
+    RestoreSnapshotStateData.Builder restoreSnapshotMsg = RestoreSnapshotStateData.newBuilder()
+      .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
+      .setSnapshot(this.snapshot)
+      .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
 
     if (regionsToRestore != null) {
       for (RegionInfo hri: regionsToRestore) {
@@ -267,11 +267,11 @@ public class RestoreSnapshotProcedure
       while (it.hasNext()) {
         final Map.Entry<String, Pair<String, String>> entry = it.next();
 
-        MasterProcedureProtos.RestoreParentToChildRegionsPair.Builder parentToChildrenPair =
-          MasterProcedureProtos.RestoreParentToChildRegionsPair.newBuilder()
-          .setParentRegionName(entry.getKey())
-          .setChild1RegionName(entry.getValue().getFirst())
-          .setChild2RegionName(entry.getValue().getSecond());
+        RestoreParentToChildRegionsPair.Builder parentToChildrenPair =
+          RestoreParentToChildRegionsPair.newBuilder()
+            .setParentRegionName(entry.getKey())
+            .setChild1RegionName(entry.getValue().getFirst())
+            .setChild2RegionName(entry.getValue().getSecond());
         restoreSnapshotMsg.addParentToChildRegionsPairList (parentToChildrenPair);
       }
     }
@@ -284,8 +284,8 @@ public class RestoreSnapshotProcedure
       throws IOException {
     super.deserializeStateData(serializer);
 
-    MasterProcedureProtos.RestoreSnapshotStateData restoreSnapshotMsg =
-        serializer.deserialize(MasterProcedureProtos.RestoreSnapshotStateData.class);
+    RestoreSnapshotStateData restoreSnapshotMsg =
+        serializer.deserialize(RestoreSnapshotStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
     modifiedTableDescriptor =
@@ -316,8 +316,8 @@ public class RestoreSnapshotProcedure
       }
     }
     if (restoreSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
-      for (MasterProcedureProtos.RestoreParentToChildRegionsPair parentToChildrenPair:
-        restoreSnapshotMsg.getParentToChildRegionsPairListList()) {
+      for (RestoreParentToChildRegionsPair parentToChildrenPair : restoreSnapshotMsg
+        .getParentToChildRegionsPairListList()) {
         parentsToChildrenPairMap.put(
           parentToChildrenPair.getParentRegionName(),
           new Pair<>(
