@@ -297,9 +297,9 @@ public class MasterWalManager {
     splitLog(serverNames, META_FILTER);
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK", justification=
-      "We only release this lock when we set it. Updates to code that uses it should verify use " +
-      "of the guard boolean.")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UL_UNRELEASED_LOCK",
+      justification = "We only release this lock when we set it. Updates to code "
+        + "that uses it should verify use of the guard boolean.")
   List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<>();
     boolean needReleaseLock = false;

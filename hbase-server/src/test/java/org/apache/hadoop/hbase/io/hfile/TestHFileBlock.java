@@ -308,28 +308,29 @@ public class TestHFileBlock {
 
   @Test
   public void testGzipCompression() throws IOException {
-    final String correctTestBlockStr =
-        "DATABLK*\\x00\\x00\\x00>\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
-            + "\\xFF\\xFF\\xFF\\xFF"
-            + "\\x0" + ChecksumType.getDefaultChecksumType().getCode()
-            + "\\x00\\x00@\\x00\\x00\\x00\\x00["
-            // gzip-compressed block: http://www.gzip.org/zlib/rfc-gzip.html
-            + "\\x1F\\x8B"  // gzip magic signature
-            + "\\x08"  // Compression method: 8 = "deflate"
-            + "\\x00"  // Flags
-            + "\\x00\\x00\\x00\\x00"  // mtime
-            + "\\x00"  // XFL (extra flags)
-            // OS (0 = FAT filesystems, 3 = Unix). However, this field
-            // sometimes gets set to 0 on Linux and Mac, so we reset it to 3.
-            // This appears to be a difference caused by the availability
-            // (and use) of the native GZ codec.
-            + "\\x03"
-            + "\\xED\\xC3\\xC1\\x11\\x00 \\x08\\xC00DD\\xDD\\x7Fa"
-            + "\\xD6\\xE8\\xA3\\xB9K\\x84`\\x96Q\\xD3\\xA8\\xDB\\xA8e\\xD4c"
-            + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\x5Cs\\xA0\\x0F\\x00\\x00"
-            + "\\x00\\x00\\x00\\x00"; //  4 byte checksum (ignored)
-    final int correctGzipBlockLength = 95;
-    final String testBlockStr = createTestBlockStr(GZ, correctGzipBlockLength, false);
+    // @formatter:off
+    String correctTestBlockStr = "DATABLK*\\x00\\x00\\x00>\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
+      + "\\xFF\\xFF\\xFF\\xFF"
+      + "\\x0" + ChecksumType.getDefaultChecksumType().getCode()
+      + "\\x00\\x00@\\x00\\x00\\x00\\x00["
+      // gzip-compressed block: http://www.gzip.org/zlib/rfc-gzip.html
+      + "\\x1F\\x8B"  // gzip magic signature
+      + "\\x08"  // Compression method: 8 = "deflate"
+      + "\\x00"  // Flags
+      + "\\x00\\x00\\x00\\x00"  // mtime
+      + "\\x00"  // XFL (extra flags)
+      // OS (0 = FAT filesystems, 3 = Unix). However, this field
+      // sometimes gets set to 0 on Linux and Mac, so we reset it to 3.
+      // This appears to be a difference caused by the availability
+      // (and use) of the native GZ codec.
+      + "\\x03"
+      + "\\xED\\xC3\\xC1\\x11\\x00 \\x08\\xC00DD\\xDD\\x7Fa"
+      + "\\xD6\\xE8\\xA3\\xB9K\\x84`\\x96Q\\xD3\\xA8\\xDB\\xA8e\\xD4c"
+      + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\x5Cs\\xA0\\x0F\\x00\\x00"
+      + "\\x00\\x00\\x00\\x00"; //  4 byte checksum (ignored)
+    // @formatter:on
+    int correctGzipBlockLength = 95;
+    String testBlockStr = createTestBlockStr(GZ, correctGzipBlockLength, false);
     // We ignore the block checksum because createTestBlockStr can change the
     // gzip header after the block is produced
     assertEquals(correctTestBlockStr.substring(0, correctGzipBlockLength - 4),

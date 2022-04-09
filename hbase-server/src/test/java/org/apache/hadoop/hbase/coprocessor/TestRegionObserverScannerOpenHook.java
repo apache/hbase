@@ -223,8 +223,9 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = region.get(get);
     assertNull(
-      "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+      "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
+      r.listCells());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -250,8 +251,9 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = region.get(get);
     assertNull(
-      "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+      "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
+      r.listCells());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -269,15 +271,19 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     public CountDownLatch getCompactionStateChangeLatch() {
-      if (compactionStateChangeLatch == null) compactionStateChangeLatch = new CountDownLatch(1);
+      if (compactionStateChangeLatch == null) {
+        compactionStateChangeLatch = new CountDownLatch(1);
+      }
       return compactionStateChangeLatch;
     }
 
     @Override
     public boolean compact(CompactionContext compaction, HStore store,
-        ThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
       boolean ret = super.compact(compaction, store, throughputController);
-      if (ret) compactionStateChangeLatch.countDown();
+      if (ret) {
+        compactionStateChangeLatch.countDown();
+      }
       return ret;
     }
 
@@ -341,14 +347,16 @@ public class TestRegionObserverScannerOpenHook {
     Get get = new Get(ROW);
     Result r = table.get(get);
     assertNull(
-      "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+      "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor. Found: " + r,
+      r.listCells());
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
     assertNull(
-      "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor Found: "
-          + r, r.listCells());
+      "Got an unexpected number of rows - "
+        + "no data should be returned with the NoDataFromScan coprocessor Found: " + r,
+      r.listCells());
 
     table.close();
     UTIL.shutdownMiniCluster();
