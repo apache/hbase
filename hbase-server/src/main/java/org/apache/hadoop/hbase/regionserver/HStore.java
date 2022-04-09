@@ -156,8 +156,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   // rows that has cells from both memstore and files (or only files)
   private LongAdder mixedRowReadsCount = new LongAdder();
 
-  private boolean cacheOnWriteLogged;
-
   /**
    * Lock specific to archiving compacted store files.  This avoids races around
    * the combination of retrieving the list of compacted files and moving them to
@@ -290,7 +288,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         this, memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
-    cacheOnWriteLogged = false;
   }
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
@@ -1157,22 +1154,27 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
     replaceStoreFiles(filesToCompact, sfs, true);
 
-    // This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
-    // CleanerChore know that compaction is done and the file can be cleaned up if compaction
-    // have failed.
-    storeEngine.resetCompactionWriter();
-
-    if (cr.isMajor()) {
-      majorCompactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
-      majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
-    } else {
-      compactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
-      compactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
+    // Compaction progress for the request will be removed after completeCompaction so be sure
+    // this code runs before you call completeCompaction.
+    CompactionProgress progress = storeEngine.getCompactor().getProgress(cr);
+    if (progress != null) {
+      if (cr.isMajor()) {
+        majorCompactedCellsCount.addAndGet(progress.getTotalCompactingKVs());
+        majorCompactedCellsSize.addAndGet(progress.totalCompactedSize);
+      } else {
+        compactedCellsCount.addAndGet(progress.getTotalCompactingKVs());
+        compactedCellsSize.addAndGet(progress.totalCompactedSize);
+      }
     }
     long outputBytes = getTotalSize(sfs);
 
     // At this point the store will use new files for all new scanners.
     refreshStoreSizeAndTotalBytes(); // update store size.
+
+    // This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
+    // CleanerChore know that compaction is done and the file can be cleaned up if compaction
+    // has failed.
+    storeEngine.completeCompaction(cr);
 
     long now = EnvironmentEdgeManager.currentTime();
     if (region.getRegionServerServices() != null

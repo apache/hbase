@@ -25,12 +25,11 @@ import static org.apache.hadoop.hbase.regionserver.ScanType.COMPACT_RETAIN_DELET
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,21 +64,23 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
  * reusable parts for implementing compactors (what is common and what isn't is evolving).
+ * <p>
+ * Compactions might be concurrent against a given store and the Compactor is shared among
+ * them. Do not put mutable state into class fields. All Compactor class fields should be
+ * final or effectively final.
+ * 'keepSeqIdPeriod' is an exception to this rule because unit tests may set it.
  */
 @InterfaceAudience.Private
 public abstract class Compactor<T extends CellSink> {
   private static final Logger LOG = LoggerFactory.getLogger(Compactor.class);
   protected static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
-  protected volatile CompactionProgress progress;
   protected final Configuration conf;
   protected final HStore store;
-
   protected final int compactionKVMax;
   protected final Compression.Algorithm majorCompactionCompression;
   protected final Compression.Algorithm minorCompactionCompression;
@@ -93,15 +94,17 @@ public abstract class Compactor<T extends CellSink> {
   protected static final String MINOR_COMPACTION_DROP_CACHE =
       "hbase.regionserver.minorcompaction.pagecache.drop";
 
-  private final boolean dropCacheMajor;
-  private final boolean dropCacheMinor;
+  protected final boolean dropCacheMajor;
+  protected final boolean dropCacheMinor;
 
-  // In compaction process only a single thread will access and write to this field, and
-  // getCompactionTargets is the only place we will access it other than the compaction thread, so
-  // make it volatile.
-  protected volatile T writer = null;
+  // We track writers per request using the CompactionRequestImpl identity as key.
+  // completeCompaction() cleans up this state.
+  protected final Map<CompactionRequestImpl, T> writerMap =
+    Collections.synchronizedMap(new IdentityHashMap<>());
+  protected final Map<CompactionRequestImpl, CompactionProgress> progressMap =
+      Collections.synchronizedMap(new IdentityHashMap<>());
 
-  //TODO: depending on Store is not good but, realistically, all compactors currently do.
+  // TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(Configuration conf, HStore store) {
     this.conf = conf;
     this.store = store;
@@ -117,15 +120,9 @@ public abstract class Compactor<T extends CellSink> {
     this.dropCacheMinor = conf.getBoolean(MINOR_COMPACTION_DROP_CACHE, true);
   }
 
-
-
   protected interface CellSinkFactory<S> {
     S createWriter(InternalScanner scanner, FileDetails fd, boolean shouldDropBehind, boolean major)
         throws IOException;
-  }
-
-  public CompactionProgress getProgress() {
-    return this.progress;
   }
 
   /** The sole reason this class exists is that java has no ref/out/pointer parameters. */
@@ -328,7 +325,6 @@ public abstract class Compactor<T extends CellSink> {
       InternalScannerFactory scannerFactory, CellSinkFactory<T> sinkFactory,
       ThroughputController throughputController, User user) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles(), request.isMajor());
-    this.progress = new CompactionProgress(fd.maxKeyCount);
 
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
@@ -344,6 +340,9 @@ public abstract class Compactor<T extends CellSink> {
     boolean finished = false;
     List<StoreFileScanner> scanners =
       createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
+    T writer = null;
+    CompactionProgress progress = new CompactionProgress(fd.maxKeyCount);
+    progressMap.put(request, progress);
     try {
       /* Include deletes, unless we are doing a major compaction */
       ScanType scanType = scannerFactory.getScanType(request);
@@ -356,14 +355,10 @@ public abstract class Compactor<T extends CellSink> {
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }
-      if (writer != null){
-        LOG.warn("Writer exists when it should not: " + getCompactionTargets().stream()
-          .map(n -> n.toString())
-          .collect(Collectors.joining(", ", "{ ", " }")));
-      }
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor());
-      finished = performCompaction(fd, scanner, smallestReadPoint, cleanSeqId,
-        throughputController, request.isAllFiles(), request.getFiles().size());
+      writerMap.put(request, writer);
+      finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
+        throughputController, request.isAllFiles(), request.getFiles().size(), progress);
       if (!finished) {
         throw new InterruptedIOException("Aborting compaction of store " + store + " in region "
             + store.getRegionInfo().getRegionNameAsString() + " because it was interrupted.");
@@ -381,34 +376,40 @@ public abstract class Compactor<T extends CellSink> {
       } else {
         Closeables.close(scanner, true);
       }
-      if (!finished && writer != null) {
-        abortWriter();
+      if (!finished) {
+        if (writer != null) {
+          abortWriter(writer);
+        }
+        // This signals that the target file is no longer written and can be cleaned up
+        completeCompaction(request);
       }
     }
     assert finished : "We should have exited the method on all error paths";
     assert writer != null : "Writer should be non-null if no error";
-    return commitWriter(fd, request);
+    return commitWriter(writer, fd, request);
   }
 
-  protected abstract List<Path> commitWriter(FileDetails fd,
+  protected abstract List<Path> commitWriter(T writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException;
 
-  protected abstract void abortWriter() throws IOException;
+  protected abstract void abortWriter(T writer) throws IOException;
 
   /**
    * Performs the compaction.
    * @param fd FileDetails of cell sink writer
    * @param scanner Where to read from.
+   * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is &lt;=
    *          smallestReadPoint
    * @param major Is a major compaction.
    * @param numofFilesToCompact the number of files to compact
+   * @param progress Progress reporter.
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
-  protected boolean performCompaction(FileDetails fd, InternalScanner scanner,
+  protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
       long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-      boolean major, int numofFilesToCompact) throws IOException {
+      boolean major, int numofFilesToCompact, CompactionProgress progress) throws IOException {
     assert writer instanceof ShipperListener;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
@@ -550,22 +551,63 @@ public abstract class Compactor<T extends CellSink> {
         dropDeletesFromRow, dropDeletesToRow);
   }
 
-  public List<Path> getCompactionTargets() {
-    T writer = this.writer;
-    if (writer == null) {
-      return Collections.emptyList();
-    }
-    if (writer instanceof StoreFileWriter) {
-      return Arrays.asList(((StoreFileWriter) writer).getPath());
-    }
-    return ((AbstractMultiFileWriter) writer).writers().stream().map(sfw -> sfw.getPath())
-      .collect(Collectors.toList());
+  /**
+   * Return the progress for a given compaction request.
+   * @param request the compaction request
+   */
+  public CompactionProgress getProgress(CompactionRequestImpl request) {
+    return progressMap.get(request);
   }
 
   /**
-   * Reset the Writer when the new storefiles were successfully added
+   * Return the aggregate progress for all currently active compactions.
    */
-  public void resetWriter(){
-    writer = null;
+  public CompactionProgress getProgress() {
+    synchronized (progressMap) {
+      long totalCompactingKVs = 0;
+      long currentCompactedKVs = 0;
+      long totalCompactedSize = 0;
+      for (CompactionProgress progress: progressMap.values()) {
+        totalCompactingKVs += progress.totalCompactingKVs;
+        currentCompactedKVs += progress.currentCompactedKVs;
+        totalCompactedSize += progress.totalCompactedSize;
+      }
+      CompactionProgress result = new CompactionProgress(totalCompactingKVs);
+      result.currentCompactedKVs = currentCompactedKVs;
+      result.totalCompactedSize = totalCompactedSize;
+      return result;
+    }
   }
+
+  public boolean isCompacting() {
+    return !progressMap.isEmpty();
+  }
+
+  /**
+   * Return the list of target files for all currently active compactions.
+   */
+  public List<Path> getCompactionTargets() {
+    // Build a list of all the compaction targets for all active writers
+    List<Path> targets = new ArrayList<>();
+    synchronized (writerMap) {
+      for (T writer: writerMap.values()) {
+        if (writer instanceof StoreFileWriter) {
+          targets.add(((StoreFileWriter) writer).getPath());
+        } else {
+          ((AbstractMultiFileWriter) writer).writers().stream()
+            .forEach(sfw -> targets.add(sfw.getPath()));
+        }
+      }
+    }
+    return targets;
+  }
+
+  /**
+   * Complete the compaction after the new storefiles are successfully added.
+   */
+  public void completeCompaction(CompactionRequestImpl request) {
+    writerMap.remove(request);
+    progressMap.remove(request);
+  }
+
 }

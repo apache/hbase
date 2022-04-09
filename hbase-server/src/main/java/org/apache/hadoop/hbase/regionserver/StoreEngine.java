@@ -94,7 +94,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Private
 public abstract class StoreEngine<SF extends StoreFlusher, CP extends CompactionPolicy,
-  C extends Compactor, SFM extends StoreFileManager> {
+  C extends Compactor<?>, SFM extends StoreFileManager> {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreEngine.class);
 
@@ -157,7 +157,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   /**
    * @return Compactor to use.
    */
-  public Compactor getCompactor() {
+  public Compactor<?> getCompactor() {
     return this.compactor;
   }
 
@@ -545,14 +545,15 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   /**
-   * Resets the compaction writer when the new file is committed and used as active storefile.
-   * This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
-   * CleanerChore know that compaction is done and the file can be cleaned up if compaction
-   * have failed. Currently called in
+   * Completes the compaction, cleaning up resources, once the new file is committed and used as
+   * active storefile. This step is necessary for the correctness of BrokenStoreFileCleanerChore.
+   * It lets the CleanerChore know that compaction is done and the file can be cleaned up if
+   * compaction has failed. Currently called in
+   * @param request the compaction request
    * @see HStore#doCompaction(CompactionRequestImpl, Collection, User, long, List)
    */
-  public void resetCompactionWriter(){
-    compactor.resetWriter();
+  public void completeCompaction(CompactionRequestImpl request) {
+    compactor.completeCompaction(request);
   }
 
   @RestrictedApi(explanation = "Should only be called in TestHStore", link = "",

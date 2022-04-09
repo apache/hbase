@@ -37,7 +37,7 @@ public class CompactionProgress {
   private static final Logger LOG = LoggerFactory.getLogger(CompactionProgress.class);
 
   /** the total compacting key values in currently running compaction */
-  private long totalCompactingKVs;
+  public long totalCompactingKVs;
   /** the completed count of key values in currently running compaction */
   public long currentCompactedKVs = 0;
   /** the total size of data processed by the currently running compaction, in bytes */

@@ -79,10 +79,11 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
+  protected List<Path> commitWriter(DateTieredMultiFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> pathList =
       writer.commitWriters(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     return pathList;
   }
+
 }
