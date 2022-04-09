@@ -355,10 +355,12 @@ public abstract class Compactor<T extends CellSink> {
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }
-      if (writer != null){
-        LOG.warn("Writer exists when it should not: " + getCompactionTargets().stream()
+      if (writer != null) {
+        String message = "Writer exists when it should not: " + getCompactionTargets().stream()
           .map(n -> n.toString())
-          .collect(Collectors.joining(", ", "{ ", " }")));
+          .collect(Collectors.joining(", ", "{ ", " }"));
+        LOG.error(message);
+        throw new IllegalStateException(message);
       }
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor());
       finished = performCompaction(fd, scanner, smallestReadPoint, cleanSeqId,
@@ -564,7 +566,7 @@ public abstract class Compactor<T extends CellSink> {
   /**
    * Reset the Writer when the new storefiles were successfully added
    */
-  public void resetWriter(){
+  public void resetWriter() {
     writer = null;
   }
 }

@@ -420,7 +420,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       throws IOException {
     // don't even select for compaction if disableCompactions is set to true
     if (!isCompactionsEnabled()) {
-      LOG.info(String.format("User has disabled compactions"));
+      LOG.info("User has disabled compactions");
+      return Optional.empty();
+    }
+    if (store.isCompacting()) {
+      // There is only one Compactor instance for a given store. We cannot concurrently compact
+      // the store.
+      LOG.debug("Store is already compacting");
       return Optional.empty();
     }
     Optional<CompactionContext> compaction = store.requestCompaction(priority, tracker, user);

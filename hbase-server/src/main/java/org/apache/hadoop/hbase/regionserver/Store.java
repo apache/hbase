@@ -54,6 +54,8 @@ public interface Store {
 
   Collection<? extends StoreFile> getCompactedFiles();
 
+  boolean isCompacting();
+
   /**
    * When was the last edit done in the memstore
    */

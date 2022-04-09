@@ -156,8 +156,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   // rows that has cells from both memstore and files (or only files)
   private LongAdder mixedRowReadsCount = new LongAdder();
 
-  private boolean cacheOnWriteLogged;
-
   /**
    * Lock specific to archiving compacted store files.  This avoids races around
    * the combination of retrieving the list of compacted files and moving them to
@@ -290,7 +288,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         this, memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
-    cacheOnWriteLogged = false;
   }
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
@@ -576,6 +573,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public Collection<HStoreFile> getCompactedFiles() {
     return this.storeEngine.getStoreFileManager().getCompactedfiles();
+  }
+
+  @Override
+  public boolean isCompacting() {
+    synchronized (filesCompacting) {
+      return !filesCompacting.isEmpty();
+    }
   }
 
   /**
@@ -2404,4 +2408,5 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       mixedRowReadsCount.increment();
     }
   }
+
 }
