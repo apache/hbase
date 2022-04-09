@@ -164,17 +164,22 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     }
 
     FileSystem fs = pathPattern.getFileSystem(conf);
-    Path pathPattern1 = fs.isDirectory(pathPattern) ?
-      new Path(pathPattern, "*.jar") : pathPattern;  // append "*.jar" if a directory is specified
-    FileStatus[] fileStatuses = fs.globStatus(pathPattern1);  // return all files that match the pattern
-    if (fileStatuses == null || fileStatuses.length == 0) {  // if no one matches
+    // append "*.jar" if a directory is specified
+    Path pathPattern1 = fs.isDirectory(pathPattern) ? new Path(pathPattern, "*.jar") : pathPattern;
+    // return all files that match the pattern
+    FileStatus[] fileStatuses = fs.globStatus(pathPattern1);
+    if (fileStatuses == null || fileStatuses.length == 0) {
+      // if no one matches
       throw new FileNotFoundException(pathPattern1.toString());
     } else {
       boolean validFileEncountered = false;
-      for (Path path : FileUtil.stat2Paths(fileStatuses)) {  // for each file that match the pattern
-        if (fs.isFile(path)) {  // only process files, skip for directories
-          File dst = new File(parentDirStr, "." + pathPrefix + "."
-            + path.getName() + "." + EnvironmentEdgeManager.currentTime() + ".jar");
+      // for each file that match the pattern
+      for (Path path : FileUtil.stat2Paths(fileStatuses)) {
+        if (fs.isFile(path)) {
+          // only process files, skip for directories
+          File dst = new File(parentDirStr,
+            "." + pathPrefix + "." + path.getName() + "." + EnvironmentEdgeManager.currentTime()
+              + ".jar");
           fs.copyToLocalFile(path, new Path(dst.toString()));
           dst.deleteOnExit();
 
@@ -182,7 +187,8 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
 
           JarFile jarFile = new JarFile(dst.toString());
           try {
-            Enumeration<JarEntry> entries = jarFile.entries();  // get entries inside a jar file
+            // get entries inside a jar file
+            Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
               JarEntry entry = entries.nextElement();
               Matcher m = libJarPattern.matcher(entry.getName());
@@ -200,11 +206,12 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
           } finally {
             jarFile.close();
           }
-
-          validFileEncountered = true;  // Set to true when encountering a file
+          // Set to true when encountering a file
+          validFileEncountered = true;
         }
       }
-      if (validFileEncountered == false) {  // all items returned by globStatus() are directories
+      if (validFileEncountered == false) {
+        // all items returned by globStatus() are directories
         throw new FileNotFoundException("No file found matching " + pathPattern1.toString());
       }
     }

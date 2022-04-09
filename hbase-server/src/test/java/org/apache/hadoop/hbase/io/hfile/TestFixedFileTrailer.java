@@ -212,9 +212,10 @@ public class TestFixedFileTrailer {
           String msg = ex.getMessage();
           String cleanMsg = msg.replaceAll(
               "^(java(\\.[a-zA-Z]+)+:\\s+)?|\\s+\\(.*\\)\\s*$", "");
-          assertEquals("Actual exception message is \"" + msg + "\".\n" +
-              "Cleaned-up message", // will be followed by " expected: ..."
-              "Invalid HFile version: " + invalidVersion, cleanMsg);
+          // will be followed by " expected: ..."
+          assertEquals("Actual exception message is \"" + msg + "\".\nCleaned-up message",
+            "Invalid HFile version: " + invalidVersion,
+            cleanMsg);
           LOG.info("Got an expected exception: " + msg);
         }
       }

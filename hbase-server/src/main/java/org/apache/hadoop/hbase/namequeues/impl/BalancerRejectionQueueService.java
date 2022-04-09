@@ -79,8 +79,8 @@ public class BalancerRejectionQueueService implements NamedQueueService {
       return;
     }
     if (!(namedQueuePayload instanceof BalancerRejectionDetails)) {
-      LOG.warn(
-        "BalancerRejectionQueueService: NamedQueuePayload is not of type BalancerRejectionDetails.");
+      LOG.warn("BalancerRejectionQueueService: NamedQueuePayload is not of type"
+        + " BalancerRejectionDetails.");
       return;
     }
     BalancerRejectionDetails balancerRejectionDetails = (BalancerRejectionDetails) namedQueuePayload;
