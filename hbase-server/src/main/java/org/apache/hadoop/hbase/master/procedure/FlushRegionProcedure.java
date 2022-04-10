@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.F
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionProcedureStateData;
 
 @InterfaceAudience.Private
-public class FlushRegionProcedure extends AbstractRegionRemoteProcedure {
+public class FlushRegionProcedure extends IdempotentRegionRemoteProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(FlushRegionProcedure.class);
 
   private byte[] columnFamily;

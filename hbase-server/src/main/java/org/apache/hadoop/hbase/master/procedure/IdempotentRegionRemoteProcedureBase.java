@@ -43,14 +43,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  *  The base class for the remote procedures for normal operations, like flush or snapshot.
  *  Normal operations do not change the region state. This is the difference between
  *  {@link org.apache.hadoop.hbase.master.assignment.RegionRemoteProcedureBase} and
- *  {@link org.apache.hadoop.hbase.master.procedure.AbstractRegionRemoteProcedure}.
+ *  {@link IdempotentRegionRemoteProcedureBase}.
  *  It requires that the state of the region must be OPEN. If region is in transition state,
  *  the procedure will suspend and retry later.
  */
 @InterfaceAudience.Private
-public abstract class AbstractRegionRemoteProcedure extends Procedure<MasterProcedureEnv>
+public abstract class IdempotentRegionRemoteProcedureBase extends Procedure<MasterProcedureEnv>
     implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractRegionRemoteProcedure.class);
+  private static final Logger LOG = LoggerFactory
+    .getLogger(IdempotentRegionRemoteProcedureBase.class);
 
   protected RegionInfo region;
 
@@ -59,10 +60,10 @@ public abstract class AbstractRegionRemoteProcedure extends Procedure<MasterProc
   private boolean succ;
   private RetryCounter retryCounter;
 
-  public AbstractRegionRemoteProcedure() {
+  public IdempotentRegionRemoteProcedureBase() {
   }
 
-  public AbstractRegionRemoteProcedure(RegionInfo region) {
+  public IdempotentRegionRemoteProcedureBase(RegionInfo region) {
     this.region = region;
   }
 

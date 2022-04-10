@@ -950,34 +950,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           // the hbase hadoop version does not match the running hadoop version.
           // if that happens, we need fall back to the old flush implementation.
           LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1", error);
-          addListener(tableExists(tableName), (exists, err) -> {
-            if (err != null) {
-              future.completeExceptionally(err);
-            } else if (!exists) {
-              future.completeExceptionally(new TableNotFoundException(tableName));
-            } else {
-              addListener(isTableEnabled(tableName), (tableEnabled, err2) -> {
-                if (err2 != null) {
-                  future.completeExceptionally(err2);
-                } else if (!tableEnabled) {
-                  future.completeExceptionally(new TableNotEnabledException(tableName));
-                } else {
-                  Map<String, String> props = new HashMap<>();
-                  if (columnFamily != null) {
-                    props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
-                  }
-                  addListener(execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE,
-                    tableName.getNameAsString(), props), (ret2, err3) -> {
-                      if (err3 != null) {
-                        future.completeExceptionally(err3);
-                      } else {
-                        future.complete(ret2);
-                      }
-                    });
-                }
-              });
-            }
-          });
+          legacyFlush(future, tableName, columnFamily);
         } else {
           future.completeExceptionally(error);
         }
@@ -986,6 +959,38 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
     });
     return future;
+  }
+
+  private void legacyFlush(CompletableFuture<Void> future,
+      TableName tableName, byte[] columnFamily) {
+    addListener(tableExists(tableName), (exists, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else if (!exists) {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      } else {
+        addListener(isTableEnabled(tableName), (tableEnabled, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else if (!tableEnabled) {
+            future.completeExceptionally(new TableNotEnabledException(tableName));
+          } else {
+            Map<String, String> props = new HashMap<>();
+            if (columnFamily != null) {
+              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            }
+            addListener(execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE,
+              tableName.getNameAsString(), props), (ret2, err3) -> {
+              if (err3 != null) {
+                future.completeExceptionally(err3);
+              } else {
+                future.complete(ret2);
+              }
+            });
+          }
+        });
+      }
+    });
   }
 
   @Override
