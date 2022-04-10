@@ -649,7 +649,7 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
-  private void addLocationToCache(HRegionLocation loc) {
+  void addLocationToCache(HRegionLocation loc) {
     addToCache(getTableCache(loc.getRegion().getTable()), createRegionLocations(loc));
   }
 

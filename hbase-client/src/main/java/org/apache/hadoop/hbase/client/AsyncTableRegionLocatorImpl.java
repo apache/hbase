@@ -62,7 +62,10 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
           .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
       }
       return ClientMetaTableAccessor
-        .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+        .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName)
+        .whenComplete((locs, error) -> {
+          locs.forEach(loc -> conn.getLocator().getNonMetaRegionLocator().addLocationToCache(loc));
+        });
     }, getClass().getSimpleName() + ".getAllRegionLocations");
   }
 
