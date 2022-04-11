@@ -193,6 +193,7 @@ public class ReplicationSink {
             for (int i = 0; i < count; i++) {
               // Throw index out of bounds if our cell count is off
               if (!cells.advance()) {
+                this.metrics.incrementFailedBatches();
                 throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
               }
             }
@@ -205,6 +206,7 @@ public class ReplicationSink {
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
           if (!cells.advance()) {
+            this.metrics.incrementFailedBatches();
             throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
           }
           Cell cell = cells.current();
@@ -279,8 +281,9 @@ public class ReplicationSink {
       this.metrics.setAgeOfLastAppliedOp(entries.get(size - 1).getKey().getWriteTime());
       this.metrics.applyBatch(size + hfilesReplicated, hfilesReplicated);
       this.totalReplicatedEdits.addAndGet(totalReplicated);
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.error("Unable to accept edit because:", ex);
+      this.metrics.incrementFailedBatches();
       throw ex;
     }
   }
