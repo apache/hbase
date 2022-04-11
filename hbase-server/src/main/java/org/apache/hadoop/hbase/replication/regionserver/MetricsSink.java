@@ -85,6 +85,13 @@ public class MetricsSink {
   }
 
   /**
+   * Convenience method to update metrics when batch of operations has failed.
+   */
+  public void incrementFailedBatches(){
+    mss.incrFailedBatches();
+  }
+
+  /**
    * Get the Age of Last Applied Op
    * @return ageOfLastAppliedOp
    */

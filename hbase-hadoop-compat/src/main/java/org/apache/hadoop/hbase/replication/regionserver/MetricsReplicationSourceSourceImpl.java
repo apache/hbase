@@ -34,6 +34,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logEditsFilteredKey;
   private final String shippedBatchesKey;
   private final String shippedOpsKey;
+  private final String failedBatchesKey;
   private String keyPrefix;
 
   private final String shippedBytesKey;
@@ -48,6 +49,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter logReadInEditsCounter;
   private final MutableFastCounter walEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
+  private final MutableFastCounter failedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
   private final MutableFastCounter shippedBytesCounter;
   private final MutableFastCounter logReadInBytesCounter;
@@ -84,6 +86,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     shippedBatchesKey = this.keyPrefix + "shippedBatches";
     shippedBatchesCounter = rms.getMetricsRegistry().getCounter(shippedBatchesKey, 0L);
+
+    failedBatchesKey = this.keyPrefix + "failedBatches";
+    failedBatchesCounter = rms.getMetricsRegistry().getCounter(failedBatchesKey, 0L);
 
     shippedOpsKey = this.keyPrefix + "shippedOps";
     shippedOpsCounter = rms.getMetricsRegistry().getCounter(shippedOpsKey, 0L);
@@ -156,6 +161,10 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public void incrBatchesShipped(int batches) {
     shippedBatchesCounter.incr(batches);
+  }
+
+  @Override public void incrFailedBatches() {
+    failedBatchesCounter.incr();
   }
 
   @Override public void incrOpsShipped(long ops) {

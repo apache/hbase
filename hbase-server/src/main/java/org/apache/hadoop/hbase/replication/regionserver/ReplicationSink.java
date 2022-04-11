@@ -279,8 +279,9 @@ public class ReplicationSink {
       this.metrics.setAgeOfLastAppliedOp(entries.get(size - 1).getKey().getWriteTime());
       this.metrics.applyBatch(size + hfilesReplicated, hfilesReplicated);
       this.totalReplicatedEdits.addAndGet(totalReplicated);
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.error("Unable to accept edit because:", ex);
+      this.metrics.incrementFailedBatches();
       throw ex;
     }
   }
