@@ -46,15 +46,15 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * balancing algorithm. It maintains a stale location cache for each table. Whenever client looks
  * up location, it first check if the row is the stale location cache. If yes, the location from
  * catalog replica is stale, it will go to the primary region to look up update-to-date location;
- * otherwise, it will randomly pick up a replica region for lookup. When clients receive
- * RegionNotServedException from region servers, it will add these region locations to the stale
- * location cache. The stale cache will be cleaned up periodically by a chore.</p>
+ * otherwise, it will randomly pick up a replica region or primary region for lookup. When clients
+ * receive RegionNotServedException from region servers, it will add these region locations to the
+ * stale location cache. The stale cache will be cleaned up periodically by a chore.</p>
  *
- * It follows a simple algorithm to choose a replica to go:
+ * It follows a simple algorithm to choose a meta replica region (including primary meta) to go:
  *
  * <ol>
  *  <li>If there is no stale location entry for rows it looks up, it will randomly
- *     pick a replica region to do lookup. </li>
+ *     pick a meta replica region (including primary meta) to do lookup. </li>
  *  <li>If the location from the replica region is stale, client gets RegionNotServedException
  *     from region server, in this case, it will create StaleLocationCacheEntry in
  *     CatalogReplicaLoadBalanceReplicaSimpleSelector.</li>
@@ -141,7 +141,7 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   }
 
   /**
-   * Select an random replica id. In case there is no replica region configured, return
+   * Select an random replica id (including the primary replica id). In case there is no replica region configured, return
    * the primary replica id.
    * @return Replica id
    */
@@ -155,7 +155,7 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     if (cachedNumOfReplicas <= 1) {
       return RegionInfo.DEFAULT_REPLICA_ID;
     }
-    return 1 + ThreadLocalRandom.current().nextInt(cachedNumOfReplicas - 1);
+    return ThreadLocalRandom.current().nextInt(cachedNumOfReplicas);
   }
 
   /**
