@@ -189,10 +189,18 @@ EOF
       if column != ""
         if column && all_version
           family, qualifier = parse_column_name(column)
-          d.addColumns(family, qualifier, timestamp)
+          if qualifier
+            d.addColumns(family, qualifier, timestamp)
+          else
+            d.addFamily(family, timestamp)
+          end
         elsif column && !all_version
           family, qualifier = parse_column_name(column)
-          d.addColumn(family, qualifier, timestamp)
+          if qualifier
+            d.addColumn(family, qualifier, timestamp)
+          else
+            d.addFamilyVersion(family, timestamp)
+          end
         end
       end
       d
