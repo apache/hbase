@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -77,7 +76,7 @@ public class HTableMultiplexer {
   private final Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap =
       new ConcurrentHashMap<>();
 
-  private final Configuration workerConf;
+  private final Configuration conf;
   private final ClusterConnection conn;
   private final ExecutorService pool;
   private final int maxAttempts;
@@ -116,11 +115,7 @@ public class HTableMultiplexer {
     this.executor =
         Executors.newScheduledThreadPool(initThreads,
           new ThreadFactoryBuilder().setDaemon(true).setNameFormat("HTableFlushWorker-%d").build());
-
-    this.workerConf = HBaseConfiguration.create(conf);
-    // We do not do the retry because we need to reassign puts to different queues if regions are
-    // moved.
-    this.workerConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    this.conf = conf;
   }
 
   /**
@@ -245,7 +240,7 @@ public class HTableMultiplexer {
         worker = serverToFlushWorkerMap.get(addr);
         if (worker == null) {
           // Create the flush worker
-          worker = new FlushWorker(workerConf, this.conn, addr, this,
+          worker = new FlushWorker(conf, this.conn, addr, this,
               perRegionServerBufferQueueSize, pool, executor);
           this.serverToFlushWorkerMap.put(addr, worker);
           executor.scheduleAtFixedRate(worker, flushPeriod, flushPeriod, TimeUnit.MILLISECONDS);
@@ -454,7 +449,9 @@ public class HTableMultiplexer {
               HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
       this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
           HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory);
+      // Specify 0 retries in AsyncProcess because we need to reassign puts to different queues
+      // if regions are moved.
+      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory, 0);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
       this.pool = pool;

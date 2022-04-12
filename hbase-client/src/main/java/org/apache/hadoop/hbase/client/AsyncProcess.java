@@ -155,8 +155,14 @@ class AsyncProcess {
   public static final String LOG_DETAILS_PERIOD = "hbase.client.log.detail.period.ms";
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
   private final int periodToLog;
+
   AsyncProcess(ClusterConnection hc, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
+    RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
+    this(hc, conf, rpcCaller, rpcFactory, hc.getConnectionConfiguration().getRetriesNumber());
+  }
+
+  AsyncProcess(ClusterConnection hc, Configuration conf,
+      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory, int retriesNumber) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
@@ -167,7 +173,7 @@ class AsyncProcess {
     this.id = COUNTER.incrementAndGet();
 
     // how many times we could try in total, one more than retry number
-    this.numTries = connectionConfiguration.getRetriesNumber() + 1;
+    this.numTries = retriesNumber + 1;
     this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
     this.startLogErrorsCnt =
         conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
