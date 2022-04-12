@@ -3208,6 +3208,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
       }
     } catch (Exception e) {
+      // Although region coprocessor is for advanced users and they should take care of the
+      // implementation to not damage the HBase system, closing the scanner on exception here does
+      // not have any bad side effect, so let's do it
       scanner.close();
       throw e;
     }
