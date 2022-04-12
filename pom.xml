@@ -1781,6 +1781,10 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <!--
+              The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
+              careful when you want to change this value. See HBASE-26947 for more details.
+            -->
             <reuseForks>false</reuseForks>
             <reportsDirectory>${surefire.reportsDirectory}</reportsDirectory>
             <tempDir>${surefire.tempDir}</tempDir>
@@ -1825,6 +1829,10 @@
               <configuration>
                 <skip>${surefire.skipSecondPart}</skip>
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
+                <!--
+                  The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
+                  careful when you want to change this value. See HBASE-26947 for more details.
+                -->
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
                 <groups>${surefire.secondPartGroups}</groups>
@@ -2331,6 +2339,10 @@
                     <bannedImport>org.apache.log4j.**</bannedImport>
                     <bannedImport>org.apache.logging.log4j.**</bannedImport>
                   </bannedImports>
+                  <exclusions>
+                    <!-- Exclude this one as it is a log4j2 appender implementation -->
+                    <exclusion>org.apache.hadoop.hbase.logging.HBaseTestAppender</exclusion>
+                  </exclusions>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>false</includeTestCode>
