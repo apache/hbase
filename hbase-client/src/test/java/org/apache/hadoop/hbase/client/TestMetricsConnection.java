@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.mockito.Mockito;
 
 @Category({ClientTests.class, MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
@@ -71,22 +74,44 @@ public class TestMetricsConnection {
   }
 
   @Test
-  public void testMetricsConnectionScope() throws IOException {
+  public void testMetricsConnectionScopeAsyncClient() throws IOException {
     Configuration conf = new Configuration();
     String clusterId = "foo";
     String scope = "testScope";
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
-    AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+    AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.get().scope);
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
-    impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+    impl = new AsyncConnectionImpl(conf, null, "foo", User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
     assertEquals(scope, metrics.get().scope);
+  }
+
+  @Test
+  public void testMetricsConnectionScopeBlockingClient() throws IOException {
+    Configuration conf = new Configuration();
+    String clusterId = "foo";
+    String scope = "testScope";
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+
+    ConnectionRegistry mockRegistry = Mockito.mock(ConnectionRegistry.class);
+    Mockito.when(mockRegistry.getClusterId()).thenReturn(CompletableFuture.completedFuture(clusterId));
+
+    ConnectionImplementation impl = new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
+    MetricsConnection metrics = impl.getConnectionMetrics();
+    assertNotNull("Metrics should be present", metrics);
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.scope);
+    conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
+    impl = new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
+
+    metrics = impl.getConnectionMetrics();
+    assertNotNull("Metrics should be present", metrics);
+    assertEquals(scope, metrics.scope);
   }
 
   @Test
