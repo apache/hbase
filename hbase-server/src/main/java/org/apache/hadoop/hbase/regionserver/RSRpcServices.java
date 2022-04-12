@@ -3203,8 +3203,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl coreScanner = region.getScanner(scan);
     Shipper shipper = coreScanner;
     RegionScanner scanner = coreScanner;
-    if (region.getCoprocessorHost() != null) {
-      scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
+    try {
+      if (region.getCoprocessorHost() != null) {
+        scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
+      }
+    } catch (Exception e) {
+      scanner.close();
+      throw e;
     }
     long scannerId = scannerIdGenerator.generateNewScannerId();
     builder.setScannerId(scannerId);
