@@ -33,14 +33,16 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class is for maintaining the various connection statistics and publishing them through
@@ -71,6 +73,19 @@ public class MetricsConnection implements StatisticTrackable {
    * unforeseen ways.
    */
   public static final String METRICS_SCOPE_KEY = "hbase.client.metrics.scope";
+
+  /**
+   * Returns the scope for a MetricsConnection based on the configured {@link #METRICS_SCOPE_KEY}
+   * or by generating a default from the passed clusterId and connectionObj's hashCode.
+   * @param conf          configuration for the connection
+   * @param clusterId     clusterId for the connection
+   * @param connectionObj either a Connection or AsyncConnectionImpl, the instance
+   *                      creating this MetricsConnection.
+   */
+  static String getScope(Configuration conf, String clusterId, Object connectionObj) {
+    return conf.get(METRICS_SCOPE_KEY,
+      clusterId + "@" + Integer.toHexString(connectionObj.hashCode()));
+  }
 
   private static final String CNT_BASE = "rpcCount_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";

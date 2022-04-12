@@ -133,8 +133,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      String scope = conf.get(METRICS_SCOPE_KEY,
-        clusterId + "@" + Integer.toHexString(hashCode()));
+      String scope = MetricsConnection.getScope(conf, clusterId, this);
       this.metrics = Optional.of(new MetricsConnection(scope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
