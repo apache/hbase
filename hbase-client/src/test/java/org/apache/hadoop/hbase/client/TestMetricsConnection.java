@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -81,9 +80,7 @@ public class TestMetricsConnection {
     AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
-    assertTrue(
-      "Metrics scope should start with " + clusterId + " but was " + metrics.get().scope,
-      metrics.get().scope.startsWith(clusterId));
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.get().scope);
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
 
