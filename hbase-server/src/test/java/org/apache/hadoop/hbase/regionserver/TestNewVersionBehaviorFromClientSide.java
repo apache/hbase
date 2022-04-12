@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -358,4 +359,14 @@ public class TestNewVersionBehaviorFromClientSide {
     }
   }
 
+  @Test
+  public void testNullColumnQualifier() throws IOException {
+    try (Table t = createTable()) {
+      Delete del = new Delete(ROW);
+      del.addColumn(FAMILY, null);
+      t.delete(del);
+      Result r = t.get(new Get(ROW)); //NPE
+      assertTrue(r.isEmpty());
+    }
+  }
 }
