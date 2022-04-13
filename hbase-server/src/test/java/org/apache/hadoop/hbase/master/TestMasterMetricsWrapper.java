@@ -59,7 +59,7 @@ public class TestMasterMetricsWrapper {
   }
 
   @Test
-  public void testInfo() {
+  public void testInfo() throws InterruptedException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
     assertEquals(

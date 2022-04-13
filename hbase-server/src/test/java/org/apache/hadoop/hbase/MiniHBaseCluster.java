@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -308,7 +309,11 @@ public class MiniHBaseCluster extends HBaseCluster {
   @Override
   public void waitForRegionServerToStop(ServerName serverName, long timeout) throws IOException {
     //ignore timeout for now
-    waitOnRegionServer(getRegionServerIndex(serverName));
+    try {
+      waitOnRegionServer(getRegionServerIndex(serverName));
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   @Override
@@ -404,7 +409,11 @@ public class MiniHBaseCluster extends HBaseCluster {
   @Override
   public void waitForMasterToStop(ServerName serverName, long timeout) throws IOException {
     //ignore timeout for now
-    waitOnMaster(getMasterIndex(serverName));
+    try {
+      waitOnMaster(getMasterIndex(serverName));
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   /**
@@ -535,7 +544,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param serverNumber
    * @return Name of region server that just went down.
    */
-  public String waitOnRegionServer(final int serverNumber) {
+  public String waitOnRegionServer(final int serverNumber) throws InterruptedException {
     return this.hbaseCluster.waitOnRegionServer(serverNumber);
   }
 
@@ -646,7 +655,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param serverNumber
    * @return Name of master that just went down.
    */
-  public String waitOnMaster(final int serverNumber) {
+  public String waitOnMaster(final int serverNumber) throws InterruptedException {
     return this.hbaseCluster.waitOnMaster(serverNumber);
   }
 
