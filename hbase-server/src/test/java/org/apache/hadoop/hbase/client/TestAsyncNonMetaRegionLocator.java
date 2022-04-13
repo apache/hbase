@@ -482,10 +482,13 @@ public class TestAsyncNonMetaRegionLocator {
     createMultiRegionTable();
     AsyncConnectionImpl conn = (AsyncConnectionImpl)
       ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    AsyncTable<AdvancedScanResultConsumer> metaTable = conn.getTable(TableName.META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> spyMetaTable = Mockito.spy(metaTable);
+    Mockito.doThrow(new MockedBadScanResultException()).when(spyMetaTable)
+      .scan(Mockito.any(Scan.class), Mockito.any(AdvancedScanResultConsumer.class));
     AsyncConnectionImpl spyConn = Mockito.spy(conn);
-    Mockito.when(spyConn.getTable(TableName.META_TABLE_NAME))
-      .thenThrow(new MockedInvalidTableRuntimeException());
-    assertThrows(MockedInvalidTableRuntimeException.class, () ->
+    Mockito.doReturn(spyMetaTable).when(spyConn).getTable(TableName.META_TABLE_NAME);
+    assertThrows(MockedBadScanResultException.class, () ->
       spyConn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get());
     List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
     for (RegionInfo region : regions) {
@@ -494,5 +497,5 @@ public class TestAsyncNonMetaRegionLocator {
   }
 
   /** This is used to mock that getting all region locations completes exceptionally. */
-  private static final class MockedInvalidTableRuntimeException extends RuntimeException {}
+  private static final class MockedBadScanResultException extends RuntimeException {}
 }

@@ -65,13 +65,17 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
       CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
       addListener(ClientMetaTableAccessor.getTableHRegionLocations(conn
           .getTable(TableName.META_TABLE_NAME), tableName), (locs, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        locs.forEach(loc -> conn.getLocator().getNonMetaRegionLocator().addLocationToCache(loc));
-        future.complete(locs);
-      });
+          if (error != null) {
+            future.completeExceptionally(error);
+            return;
+          }
+          try {
+            locs.forEach(loc -> conn.getLocator()
+              .getNonMetaRegionLocator().addLocationToCache(loc));
+          } finally {
+            future.complete(locs);
+          }
+        });
       return future;
     }, getClass().getSimpleName() + ".getAllRegionLocations");
   }
