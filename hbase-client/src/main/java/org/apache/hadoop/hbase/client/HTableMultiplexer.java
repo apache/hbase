@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttribute;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttributeUtil;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -441,6 +443,8 @@ public class HTableMultiplexer {
     private final int maxRetryInQueue;
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
     private final int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
+    private Configuration conf;
+    private List<CustomThreadAttribute> customThreadAttributes;
 
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
@@ -456,6 +460,8 @@ public class HTableMultiplexer {
       this.ap = new AsyncProcess(conn, conf, pool, rpcCallerFactory, false, rpcControllerFactory, writeRpcTimeout);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
+      this.conf = conf;
+      this.customThreadAttributes = CustomThreadAttributeUtil.getAllAttributes(conf);
     }
 
     protected LinkedBlockingQueue<PutStatus> getQueue() {
@@ -512,12 +518,14 @@ public class HTableMultiplexer {
         public void run() {
           boolean succ = false;
           try {
+            CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
             succ = FlushWorker.this.getMultiplexer().put(tableName, failedPut, retryCount);
           } finally {
             FlushWorker.this.getRetryInQueue().decrementAndGet();
             if (!succ) {
               FlushWorker.this.getTotalFailedPutCount().incrementAndGet();
             }
+            CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
           }
         }
       }, delayMs, TimeUnit.MILLISECONDS);
@@ -559,6 +567,7 @@ public class HTableMultiplexer {
     public void run() {
       int failedCount = 0;
       try {
+        CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
         long start = EnvironmentEdgeManager.currentTime();
 
         // drain all the queued puts into the tmp list
@@ -653,6 +662,7 @@ public class HTableMultiplexer {
       } finally {
         // Update the totalFailedCount
         this.totalFailedPutCount.addAndGet(failedCount);
+        CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
       }
     }
   }

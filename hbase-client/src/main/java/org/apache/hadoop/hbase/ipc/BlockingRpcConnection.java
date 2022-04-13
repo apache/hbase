@@ -43,6 +43,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,6 +71,8 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttribute;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttributeUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -93,6 +96,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "We are always under lock actually")
   private Thread thread;
+  private Configuration conf;
+  private List<CustomThreadAttribute> customThreadAttributes;
 
   // connected socket. protected for writing UT.
   protected Socket socket = null;
@@ -168,33 +173,38 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     @Override
     public void run() {
       synchronized (BlockingRpcConnection.this) {
-        while (!closed) {
-          if (callsToWrite.isEmpty()) {
-            // We should use another monitor object here for better performance since the read
-            // thread also uses ConnectionImpl.this. But this makes the locking schema more
-            // complicated, can do it later as an optimization.
+        try {
+          CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+          while (!closed) {
+            if (callsToWrite.isEmpty()) {
+              // We should use another monitor object here for better performance since the read
+              // thread also uses ConnectionImpl.this. But this makes the locking schema more
+              // complicated, can do it later as an optimization.
+              try {
+                BlockingRpcConnection.this.wait();
+              } catch (InterruptedException e) {
+              }
+              // check if we need to quit, so continue the main loop instead of fallback.
+              continue;
+            }
+            Call call = callsToWrite.poll();
+            if (call.isDone()) {
+              continue;
+            }
             try {
-              BlockingRpcConnection.this.wait();
-            } catch (InterruptedException e) {
+              tracedWriteRequest(call);
+            } catch (IOException e) {
+              // exception here means the call has not been added to the pendingCalls yet, so we need
+              // to fail it by our own.
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("call write error for call #" + call.id, e);
+              }
+              call.setException(e);
+              closeConn(e);
             }
-            // check if we need to quit, so continue the main loop instead of fallback.
-            continue;
           }
-          Call call = callsToWrite.poll();
-          if (call.isDone()) {
-            continue;
-          }
-          try {
-            tracedWriteRequest(call);
-          } catch (IOException e) {
-            // exception here means the call has not been added to the pendingCalls yet, so we need
-            // to fail it by our own.
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("call write error for call #" + call.id, e);
-            }
-            call.setException(e);
-            closeConn(e);
-          }
+        } finally {
+          CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
         }
       }
     }
@@ -237,6 +247,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     } else {
       callSender = null;
     }
+    this.conf = rpcClient.conf;
+    this.customThreadAttributes = CustomThreadAttributeUtil.getAllAttributes(rpcClient.conf);
   }
 
   // protected for write UT.
@@ -335,14 +347,19 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   @Override
   public void run() {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
-    }
-    while (waitForWork()) {
-      readResponse();
-    }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
+    try {
+      CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
+      }
+      while (waitForWork()) {
+        readResponse();
+      }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
+      }
+    } finally {
+      CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
     }
   }
 
@@ -382,39 +399,44 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException, InterruptedException {
-        if (shouldAuthenticateOverKrb()) {
-          if (currRetries < maxRetries) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Exception encountered while connecting to " + "the server : " + ex);
+        try {
+          CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+          if (shouldAuthenticateOverKrb()) {
+            if (currRetries < maxRetries) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Exception encountered while connecting to " + "the server : " + ex);
+              }
+              // try re-login
+              relogin();
+              disposeSasl();
+              // have granularity of milliseconds
+              // we are sleeping with the Connection lock held but since this
+              // connection instance is being used for connecting to the server
+              // in question, it is okay
+              Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
+              return null;
+            } else {
+              String msg = "Couldn't setup connection for " + UserGroupInformation.getLoginUser().getUserName()
+                + " to " + serverPrincipal;
+              LOG.warn(msg, ex);
+              throw new IOException(msg, ex);
             }
-            // try re-login
-            relogin();
-            disposeSasl();
-            // have granularity of milliseconds
-            // we are sleeping with the Connection lock held but since this
-            // connection instance is being used for connecting to the server
-            // in question, it is okay
-            Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
-            return null;
           } else {
-            String msg = "Couldn't setup connection for " +
-                UserGroupInformation.getLoginUser().getUserName() + " to " + serverPrincipal;
-            LOG.warn(msg, ex);
-            throw new IOException(msg, ex);
+            LOG.warn("Exception encountered while connecting to " + "the server : " + ex);
           }
-        } else {
-          LOG.warn("Exception encountered while connecting to " + "the server : " + ex);
+          if (ex instanceof RemoteException) {
+            throw (RemoteException) ex;
+          }
+          if (ex instanceof SaslException) {
+            String msg = "SASL authentication failed."
+              + " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
+            LOG.fatal(msg, ex);
+            throw new RuntimeException(msg, ex);
+          }
+          throw new IOException(ex);
+        } finally {
+          CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
         }
-        if (ex instanceof RemoteException) {
-          throw (RemoteException) ex;
-        }
-        if (ex instanceof SaslException) {
-          String msg = "SASL authentication failed." +
-              " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
-          LOG.fatal(msg, ex);
-          throw new RuntimeException(msg, ex);
-        }
-        throw new IOException(ex);
       }
     });
   }
@@ -460,7 +482,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             continueSasl = ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
               @Override
               public Boolean run() throws IOException {
-                return setupSaslConnection(in2, out2);
+                try {
+                  CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+                  return setupSaslConnection(in2, out2);
+                } finally {
+                  CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
+                }
               }
             });
           } catch (Exception ex) {

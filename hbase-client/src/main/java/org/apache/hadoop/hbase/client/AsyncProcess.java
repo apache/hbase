@@ -63,6 +63,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttribute;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttributeUtil;
 import org.apache.htrace.Trace;
 
 /**
@@ -234,6 +236,8 @@ class AsyncProcess {
       new ConcurrentHashMap<ServerName, AtomicInteger>();
   // Start configuration settings.
   private final int startLogErrorsCnt;
+  private Configuration conf;
+  private List<CustomThreadAttribute> customThreadAttributes;
 
   /**
    * The number of tasks simultaneously executed on the cluster.
@@ -318,6 +322,8 @@ class AsyncProcess {
     this.connection = hc;
     this.pool = pool;
     this.globalErrors = useGlobalErrors ? new BatchErrors() : null;
+    this.conf = conf;
+    this.customThreadAttributes = CustomThreadAttributeUtil.getAllAttributes(conf);
 
     this.id = COUNTER.incrementAndGet();
 
@@ -607,7 +613,7 @@ class AsyncProcess {
   /**
    * Helper that is used when grouping the actions per region server.
    *
-   * @param loc - the destination. Must not be null.
+   * @param server - the destination. Must not be null.
    * @param action - the action to add to the multiaction
    * @param actionsByServer the multiaction per server
    * @param nonceGroup Nonce group.
@@ -711,40 +717,46 @@ class AsyncProcess {
 
       @Override
       public void run() {
-        boolean done = false;
-        if (primaryCallTimeoutMicroseconds > 0) {
-          try {
-            done = waitUntilDone(startTime * 1000L + primaryCallTimeoutMicroseconds);
-          } catch (InterruptedException ex) {
-            LOG.error("Replica thread was interrupted - no replica calls: " + ex.getMessage());
-            return;
+        try {
+          CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+          boolean done = false;
+          if (primaryCallTimeoutMicroseconds > 0) {
+            try {
+              done = waitUntilDone(startTime * 1000L + primaryCallTimeoutMicroseconds);
+            } catch (InterruptedException ex) {
+              LOG.error("Replica thread was interrupted - no replica calls: " + ex.getMessage());
+              return;
+            }
           }
-        }
-        if (done) return; // Done within primary timeout
-        Map<ServerName, MultiAction<Row>> actionsByServer =
+          if (done) return; // Done within primary timeout
+          Map<ServerName, MultiAction<Row>> actionsByServer =
             new HashMap<ServerName, MultiAction<Row>>();
-        List<Action<Row>> unknownLocActions = new ArrayList<Action<Row>>();
-        if (replicaGetIndices == null) {
-          for (int i = 0; i < results.length; ++i) {
-            addReplicaActions(i, actionsByServer, unknownLocActions);
+          List<Action<Row>> unknownLocActions = new ArrayList<Action<Row>>();
+          if (replicaGetIndices == null) {
+            for (int i = 0; i < results.length; ++i) {
+              addReplicaActions(i, actionsByServer, unknownLocActions);
+            }
+          } else {
+            for (int replicaGetIndice : replicaGetIndices) {
+              addReplicaActions(replicaGetIndice, actionsByServer, unknownLocActions);
+            }
           }
-        } else {
-          for (int replicaGetIndice : replicaGetIndices) {
-            addReplicaActions(replicaGetIndice, actionsByServer, unknownLocActions);
-          }
-        }
-        if (!actionsByServer.isEmpty()) {
-          sendMultiAction(actionsByServer, 1, null, unknownLocActions.isEmpty());
-        }
-        if (!unknownLocActions.isEmpty()) {
-          actionsByServer = new HashMap<ServerName, MultiAction<Row>>();
-          for (Action<Row> action : unknownLocActions) {
-            addReplicaActionsAgain(action, actionsByServer);
-          }
-          // Some actions may have completely failed, they are handled inside addAgain.
           if (!actionsByServer.isEmpty()) {
-            sendMultiAction(actionsByServer, 1, null, true);
+            sendMultiAction(actionsByServer, 1, null, unknownLocActions.isEmpty());
           }
+          if (!unknownLocActions.isEmpty()) {
+            actionsByServer = new HashMap<ServerName, MultiAction<Row>>();
+            for (Action<Row> action : unknownLocActions) {
+              addReplicaActionsAgain(action, actionsByServer);
+            }
+            // Some actions may have completely failed, they are handled inside addAgain.
+            if (!actionsByServer.isEmpty()) {
+              sendMultiAction(actionsByServer, 1, null, true);
+            }
+          }
+        }
+        finally {
+          CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
         }
       }
 
@@ -819,6 +831,7 @@ class AsyncProcess {
         MultiResponse res = null;
         PayloadCarryingServerCallable callable = currentCallable;
         try {
+          CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
           // setup the callable based on the actions, if we don't have one already from the request
           if (callable == null) {
             callable = createCallable(server, tableName, multiAction);
@@ -858,6 +871,7 @@ class AsyncProcess {
           if (callsInProgress != null && callable != null && res != null) {
             callsInProgress.remove(callable);
           }
+          CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
         }
       }
     }

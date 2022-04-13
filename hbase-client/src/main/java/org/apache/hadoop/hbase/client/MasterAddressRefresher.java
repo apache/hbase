@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttribute;
+import org.apache.hadoop.hbase.util.customthreadattribute.CustomThreadAttributeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +61,8 @@ public class MasterAddressRefresher implements Closeable {
   private final long periodicRefreshMs;
   private final long timeBetweenRefreshesMs;
   private final Object refreshMasters = new Object();
+  private Configuration conf;
+  private List<CustomThreadAttribute> customThreadAttributes;
 
   @Override
   public void close() {
@@ -72,31 +77,36 @@ public class MasterAddressRefresher implements Closeable {
     @Override
     public void run() {
       long lastRpcTs = 0;
-      while (!Thread.interrupted()) {
-        try {
-          // Spurious wake ups are okay, worst case we make an extra RPC call to refresh. We won't
-          // have duplicate refreshes because once the thread is past the wait(), notify()s are
-          // ignored until the thread is back to the waiting state.
-          synchronized (refreshMasters) {
-            refreshMasters.wait(periodicRefreshMs);
+      try {
+        CustomThreadAttributeUtil.setAttributes(customThreadAttributes, conf);
+        while (!Thread.interrupted()) {
+          try {
+            // Spurious wake ups are okay, worst case we make an extra RPC call to refresh. We won't
+            // have duplicate refreshes because once the thread is past the wait(), notify()s are
+            // ignored until the thread is back to the waiting state.
+            synchronized (refreshMasters) {
+              refreshMasters.wait(periodicRefreshMs);
+            }
+            long currentTs = EnvironmentEdgeManager.currentTime();
+            if (lastRpcTs != 0 && currentTs - lastRpcTs <= timeBetweenRefreshesMs) {
+              continue;
+            }
+            lastRpcTs = currentTs;
+            LOG.debug("Attempting to refresh master address end points.");
+            Set<ServerName> newMasters = new HashSet<>(registry.getMasters());
+            registry.populateMasterStubs(newMasters);
+            LOG.debug("Finished refreshing master end points. {}", newMasters);
+          } catch (InterruptedException e) {
+            LOG.debug("Interrupted during wait, aborting refresh-masters-thread.", e);
+            break;
+          } catch (IOException e) {
+            LOG.debug("Error populating latest list of masters.", e);
           }
-          long currentTs = EnvironmentEdgeManager.currentTime();
-          if (lastRpcTs != 0 && currentTs - lastRpcTs <= timeBetweenRefreshesMs) {
-            continue;
-          }
-          lastRpcTs = currentTs;
-          LOG.debug("Attempting to refresh master address end points.");
-          Set<ServerName> newMasters = new HashSet<>(registry.getMasters());
-          registry.populateMasterStubs(newMasters);
-          LOG.debug("Finished refreshing master end points. {}", newMasters);
-        } catch (InterruptedException e) {
-          LOG.debug("Interrupted during wait, aborting refresh-masters-thread.", e);
-          break;
-        } catch (IOException e) {
-          LOG.debug("Error populating latest list of masters.", e);
         }
+        LOG.info("Master end point refresher loop exited.");
+      } finally{
+        CustomThreadAttributeUtil.clearAttributes(customThreadAttributes, conf);
       }
-      LOG.info("Master end point refresher loop exited.");
     }
   }
 
@@ -111,6 +121,8 @@ public class MasterAddressRefresher implements Closeable {
     Preconditions.checkArgument(timeBetweenRefreshesMs < periodicRefreshMs);
     this.registry = registry;
     pool.submit(new RefreshThread());
+    this.conf = conf;
+    this.customThreadAttributes = CustomThreadAttributeUtil.getAllAttributes(conf);
   }
 
   /**

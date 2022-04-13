@@ -1456,6 +1456,15 @@ public final class HConstants {
   public static final boolean DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS =
     false;
 
+  /** Configs related to Custom Thread Attributes*/
+  public static final String CUSTOM_THREAD_ATTRIBUTE_REQUEST_ID_CONTEXT_PREFIX = "thread.context.propagate.requestId";
+
+  public static final String CUSTOM_THREAD_ATTRIBUTE_ENABLED_SUFFIX = ".enabled";
+
+  public static final String CUSTOM_THREAD_ATTRIBUTE_IMPLEMENTATION_SUFFIX = ".implementation";
+
+  public static final Boolean CUSTOM_THREAD_ATTRIBUTE_DEFAULT_ENABLED = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
