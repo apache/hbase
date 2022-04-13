@@ -300,7 +300,7 @@ public class LocalHBaseCluster {
    * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @return Name of region server that just went down.
    */
-  public String waitOnRegionServer(int serverNumber) {
+  public String waitOnRegionServer(int serverNumber) throws InterruptedException {
     JVMClusterUtil.RegionServerThread regionServerThread = this.regionThreads.get(serverNumber);
     return waitOnRegionServer(regionServerThread);
   }
@@ -309,14 +309,11 @@ public class LocalHBaseCluster {
    * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @return Name of region server that just went down.
    */
-  public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
+  public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst)
+    throws InterruptedException {
     while (rst.isAlive()) {
-      try {
-        LOG.info("Waiting on " + rst.getRegionServer().toString());
-        rst.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      LOG.info("Waiting on " + rst.getRegionServer().toString());
+      rst.join();
     }
     regionThreads.remove(rst);
     return rst.getName();
@@ -372,7 +369,7 @@ public class LocalHBaseCluster {
    * Wait for the specified master to stop. Removes this thread from list of running threads.
    * @return Name of master that just went down.
    */
-  public String waitOnMaster(int serverNumber) {
+  public String waitOnMaster(int serverNumber) throws InterruptedException {
     JVMClusterUtil.MasterThread masterThread = this.masterThreads.get(serverNumber);
     return waitOnMaster(masterThread);
   }
@@ -381,14 +378,10 @@ public class LocalHBaseCluster {
    * Wait for the specified master to stop. Removes this thread from list of running threads.
    * @return Name of master that just went down.
    */
-  public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
+  public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) throws InterruptedException {
     while (masterThread.isAlive()) {
-      try {
-        LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
-        masterThread.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
+      masterThread.join();
     }
     masterThreads.remove(masterThread);
     return masterThread.getName();
