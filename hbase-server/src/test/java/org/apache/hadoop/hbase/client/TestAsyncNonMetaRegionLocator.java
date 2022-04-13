@@ -26,7 +26,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -62,6 +64,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -473,4 +476,23 @@ public class TestAsyncNonMetaRegionLocator {
       assertNotNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
     }
   }
+
+  @Test
+  public void testCacheLocationExceptionallyWhenGetAllLocations() throws Exception {
+    createMultiRegionTable();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl)
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    AsyncConnectionImpl spyConn = Mockito.spy(conn);
+    Mockito.when(spyConn.getTable(TableName.META_TABLE_NAME))
+      .thenThrow(new MockedInvalidTableRuntimeException());
+    assertThrows(MockedInvalidTableRuntimeException.class, () ->
+      spyConn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get());
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+    for (RegionInfo region : regions) {
+      assertNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+    }
+  }
+
+  /** This is used to mock that getting all region locations completes exceptionally. */
+  private static final class MockedInvalidTableRuntimeException extends RuntimeException {}
 }
