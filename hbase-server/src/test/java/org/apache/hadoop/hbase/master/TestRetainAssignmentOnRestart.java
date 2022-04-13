@@ -71,6 +71,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
             } catch (IOException e) {
               throw new UncheckedIOException(e);
             }
+            break;
           }
           try {
             Thread.sleep(1000);
