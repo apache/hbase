@@ -639,6 +639,12 @@
       <email>xiaoyt@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>bbeaudreault</id>
+      <name>Bryan Beaudreault</name>
+      <email>bbeaudreault@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
