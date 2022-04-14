@@ -728,7 +728,10 @@ class AsyncProcess {
               return;
             }
           }
-          if (done) return; // Done within primary timeout
+          if (done) {
+            // Done within primary timeout
+            return;
+          }
           Map<ServerName, MultiAction<Row>> actionsByServer =
             new HashMap<ServerName, MultiAction<Row>>();
           List<Action<Row>> unknownLocActions = new ArrayList<Action<Row>>();

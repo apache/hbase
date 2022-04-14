@@ -194,8 +194,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             try {
               tracedWriteRequest(call);
             } catch (IOException e) {
-              // exception here means the call has not been added to the pendingCalls yet, so we need
-              // to fail it by our own.
+              // exception here means the call has not been added to the pendingCalls yet, so we
+              // need to fail it by our own.
               if (LOG.isDebugEnabled()) {
                 LOG.debug("call write error for call #" + call.id, e);
               }
@@ -416,8 +416,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
               Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
               return null;
             } else {
-              String msg = "Couldn't setup connection for " + UserGroupInformation.getLoginUser().getUserName()
-                + " to " + serverPrincipal;
+              String msg =
+                "Couldn't setup connection for " + UserGroupInformation.getLoginUser().getUserName()
+                  + " to " + serverPrincipal;
               LOG.warn(msg, ex);
               throw new IOException(msg, ex);
             }

@@ -1,3 +1,21 @@
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.util.customthreadattribute;
 
 import java.lang.reflect.InvocationTargetException;
@@ -16,17 +34,18 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class CustomThreadAttributeUtil {
+public final class CustomThreadAttributeUtil {
 
   private static final Log LOG = LogFactory.getLog(CustomThreadAttributeUtil.class);
 
-  private CustomThreadAttributeUtil(){
+  private CustomThreadAttributeUtil() {
     throw new IllegalStateException("Utility class");
   }
 
   /**
    * Get all the attributes that are enabled from the current thread's context
-   * @param conf
+   *
+   * @param conf Cluster Configuration
    * @return List of {@link CustomThreadAttribute}
    */
   public static List<CustomThreadAttribute> getAllAttributes(Configuration conf) {
@@ -37,7 +56,7 @@ public class CustomThreadAttributeUtil {
           AttributeTypeHandler handler =
             getHandler(getImplementationClasspath(attributeType, conf));
           List<CustomThreadAttribute> attributesOfSameType = handler.getAllAttributes();
-          for(CustomThreadAttribute attribute:attributesOfSameType){
+          for (CustomThreadAttribute attribute : attributesOfSameType) {
             attribute.setType(attributeType);
           }
           attributes.addAll(attributesOfSameType);
@@ -51,11 +70,14 @@ public class CustomThreadAttributeUtil {
 
   /**
    * Sets the attributes into current thread's context
+   *
    * @param attributes List of {@link CustomThreadAttribute}
-   * @param conf
+   * @param conf       Cluster Configuration
    */
   public static void setAttributes(List<CustomThreadAttribute> attributes, Configuration conf) {
-    if (attributes == null || attributes.isEmpty()) return;
+    if (attributes == null || attributes.isEmpty()) {
+      return;
+    }
 
     for (CustomThreadAttribute attribute : attributes) {
       if (isEnabled(attribute.getType(), conf)) {
@@ -64,7 +86,8 @@ public class CustomThreadAttributeUtil {
             getHandler(getImplementationClasspath(attribute.getType(), conf));
           handler.setAttribute(attribute.getKey(), attribute.getValue());
         } catch (Exception exception) {
-          LOG.error("An exception occurred while setting attribute " + attribute.getKey(), exception);
+          LOG.error("An exception occurred while setting attribute " + attribute.getKey(),
+            exception);
         }
       }
     }
@@ -72,11 +95,14 @@ public class CustomThreadAttributeUtil {
 
   /**
    * Clears the attributes from the current thread's context
+   *
    * @param attributes List of {@link CustomThreadAttribute}
    * @param conf
    */
   public static void clearAttributes(List<CustomThreadAttribute> attributes, Configuration conf) {
-    if (attributes == null || attributes.isEmpty()) return;
+    if (attributes == null || attributes.isEmpty()) {
+      return;
+    }
 
     for (CustomThreadAttribute attribute : attributes) {
       if (isEnabled(attribute.getType(), conf)) {
@@ -93,6 +119,7 @@ public class CustomThreadAttributeUtil {
 
   /**
    * Get an attribute from the current thread's context
+   *
    * @param attribute {@link CustomThreadAttribute} object with key and type set
    * @param conf
    * @return {@link CustomThreadAttribute}
@@ -107,7 +134,8 @@ public class CustomThreadAttributeUtil {
         value = handler.getAttribute(attribute.getKey());
         value.setType(attribute.getType());
       } catch (Exception exception) {
-        LOG.error("An exception occurred while fetching attribute " + attribute.getKey(), exception);
+        LOG.error("An exception occurred while fetching attribute " + attribute.getKey(),
+          exception);
       }
     }
     return value;
@@ -120,16 +148,17 @@ public class CustomThreadAttributeUtil {
 
   private static String getImplementationClasspath(AttributeType attributeType,
     Configuration conf) {
-    String property = attributeType.toString() + HConstants.CUSTOM_THREAD_ATTRIBUTE_IMPLEMENTATION_SUFFIX;
+    String property =
+      attributeType.toString() + HConstants.CUSTOM_THREAD_ATTRIBUTE_IMPLEMENTATION_SUFFIX;
     return conf.get(property, null);
   }
 
   private static AttributeTypeHandler getHandler(String classpath)
     throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
     InstantiationException, IllegalAccessException {
-      Class<?> handlerClass = Class.forName(classpath);
-      handlerClass.getDeclaredConstructor().setAccessible(true);
-      return (AttributeTypeHandler) handlerClass.getDeclaredConstructor().newInstance();
+    Class<?> handlerClass = Class.forName(classpath);
+    handlerClass.getDeclaredConstructor().setAccessible(true);
+    return (AttributeTypeHandler) handlerClass.getDeclaredConstructor().newInstance();
   }
 }
 
