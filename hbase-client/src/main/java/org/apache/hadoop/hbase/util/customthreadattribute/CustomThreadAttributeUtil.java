@@ -97,7 +97,7 @@ public final class CustomThreadAttributeUtil {
    * Clears the attributes from the current thread's context
    *
    * @param attributes List of {@link CustomThreadAttribute}
-   * @param conf
+   * @param conf Cluster Configuration
    */
   public static void clearAttributes(List<CustomThreadAttribute> attributes, Configuration conf) {
     if (attributes == null || attributes.isEmpty()) {
@@ -121,7 +121,7 @@ public final class CustomThreadAttributeUtil {
    * Get an attribute from the current thread's context
    *
    * @param attribute {@link CustomThreadAttribute} object with key and type set
-   * @param conf
+   * @param conf Cluster Configuration
    * @return {@link CustomThreadAttribute}
    */
   public static CustomThreadAttribute getAttribute(CustomThreadAttribute attribute,
