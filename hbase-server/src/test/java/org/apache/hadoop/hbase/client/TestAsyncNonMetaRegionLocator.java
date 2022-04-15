@@ -28,9 +28,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -64,9 +66,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
-import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
 @Category({ MediumTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
@@ -480,22 +483,42 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testCacheLocationExceptionallyWhenGetAllLocations() throws Exception {
     createMultiRegionTable();
-    AsyncConnectionImpl conn = (AsyncConnectionImpl)
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    AsyncTable<AdvancedScanResultConsumer> metaTable = conn.getTable(TableName.META_TABLE_NAME);
-    AsyncTable<AdvancedScanResultConsumer> spyMetaTable = Mockito.spy(metaTable);
-    Mockito.doThrow(new MockedBadScanResultException()).when(spyMetaTable)
-      .scan(Mockito.any(Scan.class), Mockito.any(AdvancedScanResultConsumer.class));
-    AsyncConnectionImpl spyConn = Mockito.spy(conn);
-    Mockito.doReturn(spyMetaTable).when(spyConn).getTable(TableName.META_TABLE_NAME);
-    assertThrows(MockedBadScanResultException.class, () ->
-      spyConn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get());
+    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+    config.setClass(ConnectionFactory.HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
+      BadAsyncConnectionImpl.class, AsyncConnection.class);
+    AsyncConnectionImpl clientConn = (AsyncConnectionImpl)
+      ConnectionFactory.createAsyncConnection(config).get();
+
+    Exception ex = null;
+    try {
+      clientConn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
+    } catch (Exception e) {
+      ex = e;
+    }
+
+    assertNotNull(ex);
+    assertTrue(ex instanceof ExecutionException);
+    assertTrue(ex.getCause() != null && ex.getCause() instanceof RegionLocationResultException);
+
     List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
     for (RegionInfo region : regions) {
-      assertNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+      assertNull(clientConn.getLocator()
+        .getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
     }
   }
 
-  /** This is used to mock that getting all region locations completes exceptionally. */
-  private static final class MockedBadScanResultException extends RuntimeException {}
+  private static final class RegionLocationResultException extends DoNotRetryIOException {}
+
+  private static final class BadAsyncConnectionImpl extends AsyncConnectionImpl {
+
+    public BadAsyncConnectionImpl(Configuration conf, ConnectionRegistry registry,
+        String clusterId, SocketAddress localAddress, User user) {
+      super(conf, registry, clusterId, localAddress, user);
+    }
+
+    @Override
+    ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
+      throw new RegionLocationResultException();
+    }
+  }
 }
