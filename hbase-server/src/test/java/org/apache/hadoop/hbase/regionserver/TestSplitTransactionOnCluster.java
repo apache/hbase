@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -117,11 +116,9 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -620,17 +617,11 @@ public class TestSplitTransactionOnCluster {
     assertEquals(1, region.getStores().size());
     HStore store = region.getStores().get(0);
     while (store.hasReferences()) {
-      // Wait on any current compaction to complete first.
-      CompactionProgress progress = store.getCompactionProgress();
-      if (progress != null && progress.getProgressPct() < 1.0f) {
-        while (progress.getProgressPct() < 1.0f) {
-          LOG.info("Waiting, progress={}", progress.getProgressPct());
-          Threads.sleep(1000);
-        }
-      } else {
-        // Run new compaction. Shoudn't be any others running.
-        region.compact(true);
+      while (store.storeEngine.getCompactor().isCompacting()) {
+        Threads.sleep(100);
       }
+      // Run new compaction. Shoudn't be any others running.
+      region.compact(true);
       store.closeAndArchiveCompactedFiles();
     }
   }

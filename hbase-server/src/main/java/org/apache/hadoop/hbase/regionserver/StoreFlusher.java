@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -56,8 +56,8 @@ abstract class StoreFlusher {
    * @return List of files written. Can be empty; must not be null.
    */
   public abstract List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController,
-      FlushLifeCycleTracker tracker) throws IOException;
+    MonitoredTask status, ThroughputController throughputController, FlushLifeCycleTracker tracker,
+    Consumer<Path> writerCreationTracker) throws IOException;
 
   protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
@@ -70,13 +70,17 @@ abstract class StoreFlusher {
     writer.close();
   }
 
-  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag)
-    throws IOException {
+  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag,
+    Consumer<Path> writerCreationTracker) throws IOException {
     return store.getStoreEngine()
-      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(snapshot.getCellsCount())
-        .compression(store.getColumnFamilyDescriptor().getCompressionType()).isCompaction(false)
-        .includeMVCCReadpoint(true).includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
-        .shouldDropBehind(false));
+      .createWriter(
+        CreateStoreFileWriterParams.create()
+          .maxKeyCount(snapshot.getCellsCount())
+          .compression(store.getColumnFamilyDescriptor().getCompressionType())
+          .isCompaction(false)
+          .includeMVCCReadpoint(true)
+          .includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
+          .shouldDropBehind(false).writerCreationTracker(writerCreationTracker));
   }
 
   /**

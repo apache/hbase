@@ -48,6 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -156,8 +158,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   // rows that has cells from both memstore and files (or only files)
   private LongAdder mixedRowReadsCount = new LongAdder();
 
-  private boolean cacheOnWriteLogged;
-
   /**
    * Lock specific to archiving compacted store files.  This avoids races around
    * the combination of retrieving the list of compacted files and moving them to
@@ -215,14 +215,46 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   private final StoreContext storeContext;
 
+  // Used to track the store files which are currently being written. For compaction, if we want to
+  // compact store file [a, b, c] to [d], then here we will record 'd'. And we will also use it to
+  // track the store files being written when flushing.
+  // Notice that the creation is in the background compaction or flush thread and we will get the
+  // files in other thread, so it needs to be thread safe.
+  private static final class StoreFileWriterCreationTracker implements Consumer<Path> {
+
+    private final Set<Path> files = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    @Override
+    public void accept(Path t) {
+      files.add(t);
+    }
+
+    public Set<Path> get() {
+      return Collections.unmodifiableSet(files);
+    }
+  }
+
+  // We may have multiple compaction running at the same time, and flush can also happen at the same
+  // time, so here we need to use a collection, and the collection needs to be thread safe.
+  // The implementation of StoreFileWriterCreationTracker is very simple and we will not likely to
+  // implement hashCode or equals for it, so here we just use ConcurrentHashMap. Changed to
+  // IdentityHashMap if later we want to implement hashCode or equals.
+  private final Set<StoreFileWriterCreationTracker> storeFileWriterCreationTrackers =
+      Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+  // For the SFT implementation which we will write tmp store file first, we do not need to clean up
+  // the broken store files under the data directory, which means we do not need to track the store
+  // file writer creation. So here we abstract a factory to return different trackers for different
+  // SFT implementations.
+  private final Supplier<StoreFileWriterCreationTracker> storeFileWriterCreationTrackerFactory;
+
   /**
    * Constructor
    * @param family HColumnDescriptor for this column
-   * @param confParam configuration object failed.  Can be null.
+   * @param confParam configuration object failed. Can be null.
    */
   protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
-
     this.conf = StoreUtils.createStoreConfiguration(confParam, region.getTableDescriptor(), family);
 
     this.region = region;
@@ -267,6 +299,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
     this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
     storeEngine.initialize(warmup);
+    // if require writing to tmp dir first, then we just return null, which indicate that we do not
+    // need to track the creation of store file writer, otherwise we return a new
+    // StoreFileWriterCreationTracker.
+    this.storeFileWriterCreationTrackerFactory =
+        storeEngine.requireWritingToTmpDirFirst() ? () -> null
+            : () -> new StoreFileWriterCreationTracker();
     refreshStoreSizeAndTotalBytes();
 
     flushRetriesNumber = conf.getInt(
@@ -290,7 +328,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         this, memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
-    cacheOnWriteLogged = false;
   }
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
@@ -795,8 +832,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * @throws IOException if exception occurs during process
    */
   protected List<Path> flushCache(final long logCacheFlushId, MemStoreSnapshot snapshot,
-      MonitoredTask status, ThroughputController throughputController,
-      FlushLifeCycleTracker tracker) throws IOException {
+    MonitoredTask status, ThroughputController throughputController, FlushLifeCycleTracker tracker,
+    Consumer<Path> writerCreationTracker) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
@@ -806,8 +843,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     IOException lastException = null;
     for (int i = 0; i < flushRetriesNumber; i++) {
       try {
-        List<Path> pathNames =
-            flusher.flushSnapshot(snapshot, logCacheFlushId, status, throughputController, tracker);
+        List<Path> pathNames = flusher.flushSnapshot(
+          snapshot,
+          logCacheFlushId,
+          status,
+          throughputController,
+          tracker,
+          writerCreationTracker);
         Path lastPathName = null;
         try {
           for (Path pathName : pathNames) {
@@ -1118,6 +1160,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     ThroughputController throughputController, User user) throws IOException {
     assert compaction != null;
     CompactionRequestImpl cr = compaction.getRequest();
+    StoreFileWriterCreationTracker writerCreationTracker =
+        storeFileWriterCreationTrackerFactory.get();
+    if (writerCreationTracker != null) {
+      cr.setWriterCreationTracker(writerCreationTracker);
+      storeFileWriterCreationTrackers.add(writerCreationTracker);
+    }
     try {
       // Do all sanity checking in here if we have a valid CompactionRequestImpl
       // because we need to clean up after it on the way out in a finally
@@ -1157,18 +1205,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
     replaceStoreFiles(filesToCompact, sfs, true);
 
-    // This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
-    // CleanerChore know that compaction is done and the file can be cleaned up if compaction
-    // have failed.
-    storeEngine.resetCompactionWriter();
-
-    if (cr.isMajor()) {
-      majorCompactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
-      majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
-    } else {
-      compactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
-      compactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
-    }
     long outputBytes = getTotalSize(sfs);
 
     // At this point the store will use new files for all new scanners.
@@ -1577,6 +1613,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
+    // The tracker could be null, for example, we do not need to track the creation of store file
+    // writer due to different implementation of SFT, or the compaction is canceled.
+    if (cr.getWriterCreationTracker() != null) {
+      storeFileWriterCreationTrackers.remove(cr.getWriterCreationTracker());
+    }
   }
 
   /**
@@ -1900,6 +1941,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private final class StoreFlusherImpl implements StoreFlushContext {
 
     private final FlushLifeCycleTracker tracker;
+    private final StoreFileWriterCreationTracker writerCreationTracker;
     private final long cacheFlushSeqNum;
     private MemStoreSnapshot snapshot;
     private List<Path> tempFiles;
@@ -1911,6 +1953,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     private StoreFlusherImpl(long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
       this.tracker = tracker;
+      this.writerCreationTracker = storeFileWriterCreationTrackerFactory.get();
     }
 
     /**
@@ -1931,41 +1974,61 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     public void flushCache(MonitoredTask status) throws IOException {
       RegionServerServices rsService = region.getRegionServerServices();
       ThroughputController throughputController =
-          rsService == null ? null : rsService.getFlushThroughputController();
-      tempFiles =
-          HStore.this.flushCache(cacheFlushSeqNum, snapshot, status, throughputController, tracker);
+        rsService == null ? null : rsService.getFlushThroughputController();
+      // it could be null if we do not need to track the creation of store file writer due to
+      // different SFT implementation.
+      if (writerCreationTracker != null) {
+        HStore.this.storeFileWriterCreationTrackers.add(writerCreationTracker);
+      }
+      tempFiles = HStore.this.flushCache(
+        cacheFlushSeqNum,
+        snapshot,
+        status,
+        throughputController,
+        tracker,
+        writerCreationTracker);
     }
 
     @Override
     public boolean commit(MonitoredTask status) throws IOException {
-      if (CollectionUtils.isEmpty(this.tempFiles)) {
-        return false;
-      }
-      status.setStatus("Flushing " + this + ": reopening flushed file");
-      List<HStoreFile> storeFiles = storeEngine.commitStoreFiles(tempFiles, false);
-      for (HStoreFile sf : storeFiles) {
-        StoreFileReader r = sf.getReader();
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Added {}, entries={}, sequenceid={}, filesize={}", sf, r.getEntries(),
-            cacheFlushSeqNum, TraditionalBinaryPrefix.long2String(r.length(), "", 1));
+      try {
+        if (CollectionUtils.isEmpty(this.tempFiles)) {
+          return false;
         }
-        outputFileSize += r.length();
-        storeSize.addAndGet(r.length());
-        totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
-        committedFiles.add(sf.getPath());
-      }
+        status.setStatus("Flushing " + this + ": reopening flushed file");
+        List<HStoreFile> storeFiles = storeEngine.commitStoreFiles(tempFiles, false);
+        for (HStoreFile sf : storeFiles) {
+          StoreFileReader r = sf.getReader();
+          if (LOG.isInfoEnabled()) {
+            LOG.info(
+              "Added {}, entries={}, sequenceid={}, filesize={}",
+              sf,
+              r.getEntries(),
+              cacheFlushSeqNum,
+              TraditionalBinaryPrefix.long2String(r.length(), "", 1));
+          }
+          outputFileSize += r.length();
+          storeSize.addAndGet(r.length());
+          totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+          committedFiles.add(sf.getPath());
+        }
 
-      flushedCellsCount.addAndGet(cacheFlushCount);
-      flushedCellsSize.addAndGet(cacheFlushSize);
-      flushedOutputFileSize.addAndGet(outputFileSize);
-      // call coprocessor after we have done all the accounting above
-      for (HStoreFile sf : storeFiles) {
-        if (getCoprocessorHost() != null) {
-          getCoprocessorHost().postFlush(HStore.this, sf, tracker);
+        flushedCellsCount.addAndGet(cacheFlushCount);
+        flushedCellsSize.addAndGet(cacheFlushSize);
+        flushedOutputFileSize.addAndGet(outputFileSize);
+        // call coprocessor after we have done all the accounting above
+        for (HStoreFile sf : storeFiles) {
+          if (getCoprocessorHost() != null) {
+            getCoprocessorHost().postFlush(HStore.this, sf, tracker);
+          }
+        }
+        // Add new file to store files. Clear snapshot too while we have the Store write lock.
+        return completeFlush(storeFiles, snapshot.getId());
+      } finally {
+        if (writerCreationTracker != null) {
+          HStore.this.storeFileWriterCreationTrackers.remove(writerCreationTracker);
         }
       }
-      // Add new file to store files. Clear snapshot too while we have the Store write lock.
-      return completeFlush(storeFiles, snapshot.getId());
     }
 
     @Override
@@ -2109,6 +2172,16 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public long getMajorCompactedCellsSize() {
     return majorCompactedCellsSize.get();
+  }
+
+  public void updateCompactedMetrics(boolean isMajor, CompactionProgress progress) {
+    if (isMajor) {
+      majorCompactedCellsCount.addAndGet(progress.getTotalCompactingKVs());
+      majorCompactedCellsSize.addAndGet(progress.totalCompactedSize);
+    } else {
+      compactedCellsCount.addAndGet(progress.getTotalCompactingKVs());
+      compactedCellsSize.addAndGet(progress.totalCompactedSize);
+    }
   }
 
   /**
@@ -2405,5 +2478,16 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     } else {
       mixedRowReadsCount.increment();
     }
+  }
+
+  /**
+   * Return the storefiles which are currently being written to. Mainly used by
+   * {@link BrokenStoreFileCleaner} to prevent deleting the these files as they are not present in
+   * SFT yet.
+   */
+  Set<Path> getStoreFilesBeingWritten() {
+    return storeFileWriterCreationTrackers.stream()
+      .flatMap(t -> t.get().stream())
+      .collect(Collectors.toSet());
   }
 }

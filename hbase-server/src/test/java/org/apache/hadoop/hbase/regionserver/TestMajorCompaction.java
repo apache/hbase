@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -54,7 +53,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -211,25 +209,8 @@ public class TestMajorCompaction {
     Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertEquals(compactionThreshold, result.size());
 
-    // see if CompactionProgress is in place but null
-    for (HStore store : r.getStores()) {
-      assertNull(store.getCompactionProgress());
-    }
-
     r.flush(true);
     r.compact(true);
-
-    // see if CompactionProgress has done its thing on at least one store
-    int storeCount = 0;
-    for (HStore store : r.getStores()) {
-      CompactionProgress progress = store.getCompactionProgress();
-      if (progress != null) {
-        ++storeCount;
-        assertTrue(progress.currentCompactedKVs > 0);
-        assertTrue(progress.getTotalCompactingKVs() > 0);
-      }
-      assertTrue(storeCount > 0);
-    }
 
     // look at the second row
     // Increment the least significant character so we get to next row.

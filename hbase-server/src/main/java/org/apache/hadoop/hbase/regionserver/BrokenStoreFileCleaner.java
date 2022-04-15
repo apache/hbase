@@ -152,7 +152,7 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
   }
 
   private boolean isCompactionResultFile(FileStatus file, HStore store) {
-    return store.getStoreEngine().getCompactor().getCompactionTargets().contains(file.getPath());
+    return store.getStoreFilesBeingWritten().contains(file.getPath());
   }
 
   // Compacted files can still have readers and are cleaned by a separate chore, so they have to

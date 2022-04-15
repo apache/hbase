@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -47,10 +48,11 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   private final CellSinkFactory<StoreFileWriter> writerFactory =
     new CellSinkFactory<StoreFileWriter>() {
       @Override
-      public StoreFileWriter createWriter(InternalScanner scanner,
-        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-        boolean shouldDropBehind, boolean major) throws IOException {
-        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major);
+      public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
+        boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
+        throws IOException {
+        return DefaultCompactor.this
+          .createWriter(fd, shouldDropBehind, major, writerCreationTracker);
       }
     };
 
@@ -63,7 +65,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
+  protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
@@ -72,12 +74,6 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   @Override
-  protected void abortWriter() throws IOException {
-    abortWriter(writer);
-    // this step signals that the target file is no longer written and can be cleaned up
-    writer = null;
-  }
-
   protected final void abortWriter(StoreFileWriter writer) throws IOException {
     Path leftoverFile = writer.getPath();
     try {
@@ -92,4 +88,5 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
         leftoverFile, e);
     }
   }
+
 }

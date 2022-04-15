@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,19 +46,21 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
     super(conf, store);
   }
 
-  protected void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
-      final FileDetails fd, final boolean shouldDropBehind, boolean major) {
+  protected final void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
+    final FileDetails fd, final boolean shouldDropBehind, boolean major,
+    Consumer<Path> writerCreationTracker) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind, major);
+        return AbstractMultiOutputCompactor.this
+          .createWriter(fd, shouldDropBehind, major, writerCreationTracker);
       }
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
         throws IOException {
-        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
-          fileStoragePolicy, major);
+        return AbstractMultiOutputCompactor.this
+          .createWriter(fd, shouldDropBehind, fileStoragePolicy, major, writerCreationTracker);
       }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.
@@ -68,7 +70,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   @Override
-  protected void abortWriter() throws IOException {
+  protected void abortWriter(AbstractMultiFileWriter writer) throws IOException {
     FileSystem fs = store.getFileSystem();
     for (Path leftoverFile : writer.abortWriters()) {
       try {
@@ -79,7 +81,6 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
           e);
       }
     }
-    //this step signals that the target file is no longer writen and can be cleaned up
-    writer = null;
   }
+
 }
