@@ -310,16 +310,20 @@ public class LocalHBaseCluster {
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
+    boolean interrupted = false;
     while (rst.isAlive()) {
       try {
         LOG.info("Waiting on " + rst.getRegionServer().toString());
         rst.join();
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for {} to finish. Retrying join", rst.getName(), e);
-        Thread.currentThread().interrupt();
+        interrupted = true;
       }
     }
     regionThreads.remove(rst);
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
     return rst.getName();
   }
 
@@ -383,6 +387,7 @@ public class LocalHBaseCluster {
    * @return Name of master that just went down.
    */
   public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
+    boolean interrupted = false;
     while (masterThread.isAlive()) {
       try {
         LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
@@ -390,10 +395,13 @@ public class LocalHBaseCluster {
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for {} to finish. Retrying join",
             masterThread.getName(), e);
-        Thread.currentThread().interrupt();
+        interrupted = true;
       }
     }
     masterThreads.remove(masterThread);
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
     return masterThread.getName();
   }
 
