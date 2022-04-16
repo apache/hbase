@@ -72,10 +72,9 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
           try {
             locs.forEach(loc -> conn.getLocator()
               .getNonMetaRegionLocator().addLocationToCache(loc));
+            future.complete(locs);
           } catch (Exception e) {
             future.completeExceptionally(e);
-          } finally {
-            future.complete(locs);
           }
         });
       return future;
