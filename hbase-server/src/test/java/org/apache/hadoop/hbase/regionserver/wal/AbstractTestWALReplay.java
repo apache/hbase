@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -67,8 +68,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -654,11 +653,12 @@ public abstract class AbstractTestWALReplay {
     @Override
     public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
         MonitoredTask status, ThroughputController throughputController,
-        FlushLifeCycleTracker tracker) throws IOException {
+        FlushLifeCycleTracker tracker, Consumer<Path> writerCreationTracker) throws IOException {
       if (throwExceptionWhenFlushing.get()) {
         throw new IOException("Simulated exception by tests");
       }
-      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker);
+      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker,
+        writerCreationTracker);
     }
   };
 

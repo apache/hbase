@@ -67,7 +67,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
    * comments in HBASE-15400 for more details.
    */
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction) throws IOException {
-    return commitWriters(maxSeqId, majorCompaction, Collections.EMPTY_SET);
+    return commitWriters(maxSeqId, majorCompaction, Collections.emptyList());
   }
 
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction,
@@ -110,11 +110,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
     return paths;
   }
 
-  /**
-   * Returns all writers. This is used to prevent deleting currently writen storefiles
-   * during cleanup.
-   */
-  public abstract Collection<StoreFileWriter> writers();
+  protected abstract Collection<StoreFileWriter> writers();
 
   /**
    * Subclasses override this method to be called at the end of a successful sequence of append; all

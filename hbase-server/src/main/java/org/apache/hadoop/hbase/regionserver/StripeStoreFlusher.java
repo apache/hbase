@@ -23,7 +23,7 @@ import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_K
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
@@ -54,11 +54,14 @@ public class StripeStoreFlusher extends StoreFlusher {
 
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController,
-      FlushLifeCycleTracker tracker) throws IOException {
+    MonitoredTask status, ThroughputController throughputController, FlushLifeCycleTracker tracker,
+    Consumer<Path> writerCreationTracker) throws IOException {
     List<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
-    if (cellsCount == 0) return result; // don't flush if there are no entries
+    if (cellsCount == 0) {
+      // don't flush if there are no entries
+      return result;
+    }
 
     InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
 
@@ -70,8 +73,9 @@ public class StripeStoreFlusher extends StoreFlusher {
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(snapshot);
-      StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
+      StripeMultiFileWriter.WriterFactory factory =
+        createWriterFactory(snapshot, writerCreationTracker);
+      StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner) scanner : null;
       mw.init(storeScanner, factory);
 
       synchronized (flushLock) {
@@ -98,12 +102,13 @@ public class StripeStoreFlusher extends StoreFlusher {
     return result;
   }
 
-  private StripeMultiFileWriter.WriterFactory createWriterFactory(MemStoreSnapshot snapshot) {
+  private StripeMultiFileWriter.WriterFactory createWriterFactory(MemStoreSnapshot snapshot,
+    Consumer<Path> writerCreationTracker) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
         // XXX: it used to always pass true for includesTag, re-consider?
-        return StripeStoreFlusher.this.createWriter(snapshot, true);
+        return StripeStoreFlusher.this.createWriter(snapshot, true, writerCreationTracker);
       }
     };
   }

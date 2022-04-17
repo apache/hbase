@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.function.Consumer;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +41,8 @@ public final class CreateStoreFileWriterParams {
   private long totalCompactedFilesSize = -1;
 
   private String fileStoragePolicy = HConstants.EMPTY_STRING;
+
+  private Consumer<Path> writerCreationTracker;
 
   private CreateStoreFileWriterParams() {
   }
@@ -127,8 +131,16 @@ public final class CreateStoreFileWriterParams {
     return this;
   }
 
+  public Consumer<Path> writerCreationTracker() {
+    return writerCreationTracker;
+  }
+
+  public CreateStoreFileWriterParams writerCreationTracker(Consumer<Path> writerCreationTracker) {
+    this.writerCreationTracker = writerCreationTracker;
+    return this;
+  }
+
   public static CreateStoreFileWriterParams create() {
     return new CreateStoreFileWriterParams();
   }
-
 }

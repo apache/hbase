@@ -165,11 +165,15 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     }
     StoreFileWriter.Builder builder =
       new StoreFileWriter.Builder(conf, writerCacheConf, ctx.getRegionFileSystem().getFileSystem())
-        .withOutputDir(outputDir).withBloomType(ctx.getBloomFilterType())
-        .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
-        .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
+        .withOutputDir(outputDir)
+        .withBloomType(ctx.getBloomFilterType())
+        .withMaxKeyCount(params.maxKeyCount())
+        .withFavoredNodes(ctx.getFavoredNodes())
+        .withFileContext(hFileContext)
+        .withShouldDropCacheBehind(params.shouldDropBehind())
         .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
-        .withFileStoragePolicy(params.fileStoragePolicy());
+        .withFileStoragePolicy(params.fileStoragePolicy())
+        .withWriterCreationTracker(params.writerCreationTracker());
     return builder.build();
   }
 
