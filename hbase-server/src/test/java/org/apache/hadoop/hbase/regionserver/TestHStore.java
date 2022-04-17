@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.function.IntBinaryOperator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -97,6 +98,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.quotas.RegionSizeStoreImpl;
 import org.apache.hadoop.hbase.regionserver.MemStoreCompactionStrategy.Action;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
@@ -2494,9 +2496,10 @@ public class TestHStore {
     @Override
     public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
         MonitoredTask status, ThroughputController throughputController,
-        FlushLifeCycleTracker tracker) throws IOException {
+        FlushLifeCycleTracker tracker, Consumer<Path> writerCreationTracker) throws IOException {
       counter.incrementAndGet();
-      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker);
+      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker,
+        writerCreationTracker);
     }
 
     @Override
