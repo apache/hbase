@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -439,9 +440,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private boolean shouldDropCacheBehind;
     private Supplier<Collection<HStoreFile>> compactedFilesSupplier = () -> Collections.emptySet();
     private String fileStoragePolicy;
+    // this is used to track the creation of the StoreFileWriter, mainly used for the SFT
+    // implementation where we will write store files directly to the final place, instead of
+    // writing a tmp file first. Under this scenario, we will have a background task to purge the
+    // store files which are not recorded in the SFT, but for the newly created store file writer,
+    // they are not tracked in SFT, so here we need to record them and treat them specially.
+    private Consumer<Path> writerCreationTracker;
 
-    public Builder(Configuration conf, CacheConfig cacheConf,
-        FileSystem fs) {
+    public Builder(Configuration conf, CacheConfig cacheConf, FileSystem fs) {
       this.conf = conf;
       this.cacheConf = cacheConf;
       this.fs = fs;
@@ -525,6 +531,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       return this;
     }
 
+    public Builder withWriterCreationTracker(Consumer<Path> writerCreationTracker) {
+      this.writerCreationTracker = writerCreationTracker;
+      return this;
+    }
+
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -573,8 +584,21 @@ public class StoreFileWriter implements CellSink, ShipperListener {
           bloomType = BloomType.NONE;
         }
       }
-
-      return new StoreFileWriter(fs, filePath, conf, cacheConf, bloomType, maxKeyCount,
+      // make sure we call this before actually create the writer
+      // in fact, it is not a big deal to even add an inexistent file to the track, as we will never
+      // try to delete it and finally we will clean the tracker up after compaction. But if the file
+      // cleaner find the file but we haven't recorded it yet, it may accidentally delete the file
+      // and cause problem.
+      if (writerCreationTracker != null) {
+        writerCreationTracker.accept(filePath);
+      }
+      return new StoreFileWriter(
+        fs,
+        filePath,
+        conf,
+        cacheConf,
+        bloomType,
+        maxKeyCount,
           favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
     }
   }

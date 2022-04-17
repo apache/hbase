@@ -42,11 +42,9 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -94,7 +92,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Private
 public abstract class StoreEngine<SF extends StoreFlusher, CP extends CompactionPolicy,
-  C extends Compactor, SFM extends StoreFileManager> {
+  C extends Compactor<?>, SFM extends StoreFileManager> {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreEngine.class);
 
@@ -157,7 +155,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   /**
    * @return Compactor to use.
    */
-  public Compactor getCompactor() {
+  public Compactor<?> getCompactor() {
     return this.compactor;
   }
 
@@ -542,17 +540,6 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    */
   public boolean requireWritingToTmpDirFirst() {
     return storeFileTracker.requireWritingToTmpDirFirst();
-  }
-
-  /**
-   * Resets the compaction writer when the new file is committed and used as active storefile.
-   * This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
-   * CleanerChore know that compaction is done and the file can be cleaned up if compaction
-   * have failed. Currently called in
-   * @see HStore#doCompaction(CompactionRequestImpl, Collection, User, long, List)
-   */
-  public void resetCompactionWriter(){
-    compactor.resetWriter();
   }
 
   @RestrictedApi(explanation = "Should only be called in TestHStore", link = "",

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
@@ -68,21 +68,26 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
         @Override
         public DateTieredMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
-          DateTieredMultiFileWriter writer = new DateTieredMultiFileWriter(lowerBoundaries,
-              lowerBoundariesPolicies,
-              needEmptyFile(request));
-          initMultiWriter(writer, scanner, fd, shouldDropBehind, major);
+          boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
+          throws IOException {
+          DateTieredMultiFileWriter writer = new DateTieredMultiFileWriter(
+            lowerBoundaries,
+            lowerBoundariesPolicies,
+            needEmptyFile(request));
+          initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
           return writer;
         }
-      }, throughputController, user);
+      },
+      throughputController,
+      user);
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
+  protected List<Path> commitWriter(DateTieredMultiFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> pathList =
       writer.commitWriters(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     return pathList;
   }
+
 }
