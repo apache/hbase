@@ -71,7 +71,7 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  public Collection<StoreFileWriter> writers() {
+  protected Collection<StoreFileWriter> writers() {
     return lowerBoundary2Writer.values();
   }
 

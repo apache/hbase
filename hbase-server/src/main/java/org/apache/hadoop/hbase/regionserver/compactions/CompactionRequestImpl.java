@@ -22,8 +22,9 @@ import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -51,6 +52,7 @@ public class CompactionRequestImpl implements CompactionRequest {
   private String storeName = "";
   private long totalSize = -1L;
   private CompactionLifeCycleTracker tracker = CompactionLifeCycleTracker.DUMMY;
+  private Consumer<Path> writerCreationTracker;
 
   public CompactionRequestImpl(Collection<HStoreFile> files) {
     this.selectionTime = EnvironmentEdgeManager.currentTime();
@@ -135,6 +137,14 @@ public class CompactionRequestImpl implements CompactionRequest {
 
   public CompactionLifeCycleTracker getTracker() {
     return tracker;
+  }
+
+  public Consumer<Path> getWriterCreationTracker() {
+    return writerCreationTracker;
+  }
+
+  public void setWriterCreationTracker(Consumer<Path> writerCreationTracker) {
+    this.writerCreationTracker = writerCreationTracker;
   }
 
   public boolean isAfterSplit() {
