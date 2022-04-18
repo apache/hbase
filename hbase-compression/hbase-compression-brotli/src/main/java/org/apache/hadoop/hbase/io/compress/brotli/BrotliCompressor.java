@@ -69,7 +69,6 @@ public class BrotliCompressor implements CanReinit, Compressor {
       return n;
     }
     // We don't actually begin compression until our caller calls finish().
-    // The aircompressor compressors operate over a range of input in one shot.
     if (finish) {
       if (inBuf.position() > 0) {
         inBuf.flip();
