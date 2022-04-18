@@ -26,12 +26,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -40,7 +37,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -68,8 +64,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
 @Category({ MediumTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
@@ -477,48 +471,6 @@ public class TestAsyncNonMetaRegionLocator {
     List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
     for (RegionInfo region : regions) {
       assertNotNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
-    }
-  }
-
-  @Test
-  public void testCacheLocationExceptionallyWhenGetAllLocations() throws Exception {
-    createMultiRegionTable();
-    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
-    config.setClass(ConnectionFactory.HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
-      BadAsyncConnectionImpl.class, AsyncConnection.class);
-    AsyncConnectionImpl clientConn = (AsyncConnectionImpl)
-      ConnectionFactory.createAsyncConnection(config).get();
-
-    Exception ex = null;
-    try {
-      clientConn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
-    } catch (Exception e) {
-      ex = e;
-    }
-
-    assertNotNull(ex);
-    assertTrue(ex instanceof ExecutionException);
-    assertTrue(ex.getCause() != null && ex.getCause() instanceof RegionLocationResultException);
-
-    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
-    for (RegionInfo region : regions) {
-      assertNull(clientConn.getLocator()
-        .getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
-    }
-  }
-
-  private static final class RegionLocationResultException extends DoNotRetryIOException {}
-
-  private static final class BadAsyncConnectionImpl extends AsyncConnectionImpl {
-
-    public BadAsyncConnectionImpl(Configuration conf, ConnectionRegistry registry,
-        String clusterId, SocketAddress localAddress, User user) {
-      super(conf, registry, clusterId, localAddress, user);
-    }
-
-    @Override
-    ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
-      throw new RegionLocationResultException();
     }
   }
 }
