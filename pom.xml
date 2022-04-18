@@ -1222,6 +1222,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-brotli</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-compression-lz4</artifactId>
         <version>${project.version}</version>
       </dependency>
