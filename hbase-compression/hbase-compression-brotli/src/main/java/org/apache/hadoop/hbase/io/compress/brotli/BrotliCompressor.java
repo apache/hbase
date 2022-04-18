@@ -38,7 +38,6 @@ public class BrotliCompressor implements CanReinit, Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(BrotliCompressor.class);
   protected ByteBuffer inBuf, outBuf;
-  protected int level;
   protected int bufferSize;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
@@ -48,14 +47,14 @@ public class BrotliCompressor implements CanReinit, Compressor {
     Brotli4jLoader.ensureAvailability();
   }
 
-  BrotliCompressor(int level, int bufferSize) {
-    this.level = level;
+  BrotliCompressor(int level, int window, int bufferSize) {
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocate(bufferSize);
     this.outBuf = ByteBuffer.allocate(bufferSize);
     this.outBuf.position(bufferSize);
     params = new Encoder.Parameters();
     params.setQuality(level);
+    params.setWindow(window);
   }
 
   @Override
@@ -156,12 +155,9 @@ public class BrotliCompressor implements CanReinit, Compressor {
   public void reinit(Configuration conf) {
     LOG.trace("reinit");
     if (conf != null) {
-      // Quality might have changed
-      int newLevel = BrotliCodec.getLevel(conf);
-      if (level != newLevel) {
-        params.setQuality(newLevel);
-        level = newLevel;
-      }
+      // Quality or window settings might have changed
+      params.setQuality(BrotliCodec.getLevel(conf));
+      params.setWindow(BrotliCodec.getWindow(conf));
       // Buffer size might have changed
       int newBufferSize = BrotliCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {

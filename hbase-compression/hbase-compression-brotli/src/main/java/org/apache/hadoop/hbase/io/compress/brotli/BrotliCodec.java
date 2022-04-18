@@ -39,6 +39,8 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   public static final String BROTLI_LEVEL_KEY = "hbase.io.compress.brotli.level";
   // Our default is 6, based on https://blog.cloudflare.com/results-experimenting-brotli/
   public static final int BROTLI_LEVEL_DEFAULT = 6; // [0,11] or -1
+  public static final String BROTLI_WINDOW_KEY = "hbase.io.compress.brotli.window";
+  public static final int BROTLI_WINDOW_DEFAULT = -1; // [10-24] or -1
   public static final String BROTLI_BUFFERSIZE_KEY = "hbase.io.compress.brotli.buffersize";
   public static final int BROTLI_BUFFERSIZE_DEFAULT = 256 * 1024;
 
@@ -60,7 +62,7 @@ public class BrotliCodec implements Configurable, CompressionCodec {
 
   @Override
   public Compressor createCompressor() {
-    return new BrotliCompressor(getLevel(conf), getBufferSize(conf));
+    return new BrotliCompressor(getLevel(conf), getWindow(conf), getBufferSize(conf));
   }
 
   @Override
@@ -111,6 +113,10 @@ public class BrotliCodec implements Configurable, CompressionCodec {
 
   static int getLevel(Configuration conf) {
     return conf.getInt(BROTLI_LEVEL_KEY, BROTLI_LEVEL_DEFAULT);
+  }
+
+  static int getWindow(Configuration conf) {
+    return conf.getInt(BROTLI_WINDOW_KEY, BROTLI_WINDOW_DEFAULT);
   }
 
   static int getBufferSize(Configuration conf) {
