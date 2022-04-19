@@ -634,7 +634,13 @@ public class MemStoreFlusher implements FlushRequester {
     final CompactSplit compactSplitThread = server.getCompactSplitThread();
     try {
       notifyFlushRequest(region, emergencyFlush);
-      FlushResult flushResult = region.flushcache(families, false, tracker);
+      /**
+       * The writeFlushRequestWalMarker parameter only determines whether writing the
+       * {@link FlushAction#CANNOT_FLUSH} flush marker to WAL when the memstore is empty, for
+       * replication for secondary region replica could use {@link FlushAction#CANNOT_FLUSH} to
+       * recover, we set it to true.
+       */
+      FlushResult flushResult = region.flushcache(families, true, tracker);
       boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
       boolean shouldSplit = region.checkSplit().isPresent();
