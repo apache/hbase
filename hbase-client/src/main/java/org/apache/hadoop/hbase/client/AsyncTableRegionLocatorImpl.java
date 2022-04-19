@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -58,8 +60,11 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
       return conn.registry.getMetaRegionLocations()
         .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
     }
-    return AsyncMetaTableAccessor.getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME),
-      tableName);
+    CompletableFuture<List<HRegionLocation>> future = AsyncMetaTableAccessor
+            .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+    addListener(future, (locs, error) -> locs.forEach(loc -> conn.getLocator()
+      .getNonMetaRegionLocator().addLocationToCache(loc)));
+    return future;
   }
 
   @Override
