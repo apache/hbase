@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -90,6 +91,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   // shutdown. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
+
+  // Only for testing
+  private boolean isShutdownHookInstalled = false;
 
   /**
    * This servers startcode.
@@ -445,6 +449,22 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       LOG.info("Close zookeeper");
       this.zooKeeper.close();
     }
+  }
+
+  /**
+   * In order to register ShutdownHook, this method is called
+   * when HMaster and HRegionServer are started.
+   * For details, please refer to HBASE-26951
+   */
+  protected void intallShutdownHook() {
+    ShutdownHook.install(conf, dataFs, this, Thread.currentThread());
+    isShutdownHookInstalled = true;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public boolean isShutdownHookInstalled() {
+    return isShutdownHookInstalled;
   }
 
   @Override
