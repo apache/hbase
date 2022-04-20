@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
+import com.github.luben.zstd.Zstd;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,8 +34,6 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.github.luben.zstd.Zstd;
 
 /**
  * Hadoop ZStandard codec implemented with zstd-jni.
