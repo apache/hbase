@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -90,8 +91,8 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
       throws IOException {
     int bufferSize = getBufferSize(conf);
-    int compressionOverhead = (bufferSize / 6) + 32;
-    return new BlockCompressorStream(out, c, bufferSize, compressionOverhead);
+    return new BlockCompressorStream(out, c, bufferSize,
+      CompressionUtil.compressionOverhead(bufferSize));
   }
 
   @Override
@@ -120,8 +121,7 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   }
 
   static int getBufferSize(Configuration conf) {
-    int size = conf.getInt(BROTLI_BUFFERSIZE_KEY, BROTLI_BUFFERSIZE_DEFAULT);
-    return size > 0 ? size : 256 * 1024; // Don't change this default
+    return conf.getInt(BROTLI_BUFFERSIZE_KEY, BROTLI_BUFFERSIZE_DEFAULT);
   }
 
 }

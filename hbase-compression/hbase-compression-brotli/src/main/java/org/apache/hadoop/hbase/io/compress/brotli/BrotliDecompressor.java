@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.io.compress.brotli;
 
 import com.aayushatharva.brotli4j.Brotli4jLoader;
 import com.aayushatharva.brotli4j.decoder.Decoder;
-import com.aayushatharva.brotli4j.decoder.Decoders;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,7 +53,7 @@ public class BrotliDecompressor implements Decompressor {
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("decompress: {} bytes from outBuf", n);
+      LOG.trace("decompress: read {} remaining bytes from outBuf", n);
       return n;
     }
     if (inBuf.position() > 0) {
@@ -130,7 +129,6 @@ public class BrotliDecompressor implements Decompressor {
 
   @Override
   public void setDictionary(byte[] b, int off, int len) {
-    // TODO: Brotli4j supports custom dictionaries, but this usage is not expected
     throw new UnsupportedOperationException("setDictionary is not supported");
   }
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.xerial.snappy.Snappy;
 
 /**
  * Hadoop Snappy codec implemented with Xerial Snappy.
@@ -87,8 +88,8 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
       throws IOException {
     int bufferSize = getBufferSize(conf);
-    int compressionOverhead = (bufferSize / 6) + 32;
-    return new BlockCompressorStream(out, c, bufferSize, compressionOverhead);
+    return new BlockCompressorStream(out, c, bufferSize,
+      Snappy.maxCompressedLength(bufferSize) - bufferSize); // overhead only
   }
 
   @Override
@@ -109,10 +110,9 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   // Package private
 
   static int getBufferSize(Configuration conf) {
-    int size = conf.getInt(SNAPPY_BUFFER_SIZE_KEY,
+    return conf.getInt(SNAPPY_BUFFER_SIZE_KEY,
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT));
-    return size > 0 ? size : 256 * 1024; // Don't change this default
   }
 
 }

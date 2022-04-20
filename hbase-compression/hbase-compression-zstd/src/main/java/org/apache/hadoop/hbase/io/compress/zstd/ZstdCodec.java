@@ -34,6 +34,8 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.github.luben.zstd.Zstd;
+
 /**
  * Hadoop ZStandard codec implemented with zstd-jni.
  * <p>
@@ -44,6 +46,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
+  public static final int ZSTD_BUFFER_SIZE_DEFAULT = 256 * 1024;
   public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
 
   private Configuration conf;
@@ -92,8 +95,8 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
       throws IOException {
     int bufferSize = getBufferSize(conf);
-    int compressionOverhead = (bufferSize / 6) + 32;
-    return new BlockCompressorStream(out, c, bufferSize, compressionOverhead);
+    return new BlockCompressorStream(out, c, bufferSize,
+      (int)Zstd.compressBound(bufferSize) - bufferSize); // overhead only
   }
 
   @Override
@@ -121,10 +124,10 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   }
 
   static int getBufferSize(Configuration conf) {
-    int size = conf.getInt(ZSTD_BUFFER_SIZE_KEY,
+    return conf.getInt(ZSTD_BUFFER_SIZE_KEY,
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_KEY,
-        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT));
-    return size > 0 ? size : 256 * 1024; // Don't change this default
+        // IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT is 0! We can't allow that.
+        ZSTD_BUFFER_SIZE_DEFAULT));
   }
 
   static byte[] getDictionary(final Configuration conf) {

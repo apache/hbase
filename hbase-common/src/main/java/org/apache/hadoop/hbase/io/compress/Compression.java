@@ -154,6 +154,7 @@ public final class Compression {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="SE_TRANSIENT_FIELD_NOT_RESTORED",
       justification="We are not serializing so doesn't apply (not sure why transient though)")
+  @SuppressWarnings("ImmutableEnumChecker")
   @InterfaceAudience.Public
   public static enum Algorithm {
     // LZO is GPL and requires extra install to setup. See
@@ -359,6 +360,7 @@ public final class Compression {
         }
       }
     },
+
     BROTLI("brotli", BROTLI_CODEC_CLASS_KEY, BROTLI_CODEC_CLASS_DEFAULT) {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec brotliCodec;
