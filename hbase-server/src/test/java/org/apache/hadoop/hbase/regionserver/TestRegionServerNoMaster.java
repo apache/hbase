@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -298,5 +299,11 @@ public class TestRegionServerNoMaster {
     } finally {
       openRegion(HTU, getRS(), hri);
     }
+  }
+
+  @Test
+  public void testInstallShutdownHook() throws IOException {
+    // Test for HBASE-26951
+    assertTrue(HTU.getHBaseCluster().getRegionServer(0).isShutdownHookInstalled());
   }
 }

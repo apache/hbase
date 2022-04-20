@@ -760,7 +760,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     try {
       if (!isStopped() && !isAborted()) {
-        ShutdownHook.install(conf, dataFs, this, Thread.currentThread());
+        installShutdownHook();
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
