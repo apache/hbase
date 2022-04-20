@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -37,7 +38,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 
 @Category({ MediumTests.class, ClientTests.class})
 public class TestBadReplicationPeer {
@@ -51,9 +51,6 @@ public class TestBadReplicationPeer {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
@@ -80,7 +77,9 @@ public class TestBadReplicationPeer {
       rpcBuilder.setClusterKey(quorum + ":/1");
       ReplicationPeerConfig rpc = rpcBuilder.build();
       admin.addReplicationPeer(peerId, rpc);
+      LOG.info("Added replication peer with peer id: {}", peerId);
     } finally {
+      LOG.info("Removing replication peer with peer id: {}", peerId);
       cleanPeer(peerId);
     }
   }
