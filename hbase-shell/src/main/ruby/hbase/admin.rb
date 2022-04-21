@@ -27,6 +27,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
 java_import org.apache.hadoop.hbase.HConstants
 
