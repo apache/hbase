@@ -483,6 +483,10 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
+add_jdk11_jvm_flags() {
+  HBASE_OPTS="$HBASE_OPTS -Dio.netty.tryReflectionSetAccessible=true --illegal-access=permit --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED"
+}
+
 #Add the development env class path stuff
 if $in_dev_env; then
   add_maven_deps_to_classpath "cached_classpath.txt"
@@ -754,11 +758,14 @@ fi
 
 if [ "${addJDK11Jars}" = "true" ]; then
   add_jdk11_deps_to_classpath
+  add_jdk11_jvm_flags
   if [ "${DEBUG}" = "true" ]; then
-      echo "Added JDK11 jars to classpath."
-    fi
+     echo "Added JDK11 jars to classpath."
+     echo "Added JDK11 JVM flags too."
+  fi
 elif [ "${DEBUG}" = "true" ]; then
   echo "JDK11 jars skipped from classpath."
+  echo "Skipped adding JDK11 JVM flags."
 fi
 
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
