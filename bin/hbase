@@ -492,6 +492,10 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
+add_jdk11_jvm_flags() {
+  HBASE_OPTS="$HBASE_OPTS -Dio.netty.tryReflectionSetAccessible=true --illegal-access=permit --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED"
+}
+
 add_opentelemetry_agent() {
   if [ -e "${OPENTELEMETRY_JAVAAGENT_PATH}" ] ; then
     agent_jar="${OPENTELEMETRY_JAVAAGENT_PATH}"
@@ -811,11 +815,14 @@ fi
 
 if [ "${addJDK11Jars}" = "true" ]; then
   add_jdk11_deps_to_classpath
+  add_jdk11_jvm_flags
   if [ "${DEBUG}" = "true" ]; then
-      echo "Added JDK11 jars to classpath."
-    fi
+     echo "Added JDK11 jars to classpath."
+     echo "Added JDK11 JVM flags too."
+  fi
 elif [ "${DEBUG}" = "true" ]; then
   echo "JDK11 jars skipped from classpath."
+  echo "Skipped adding JDK11 JVM flags."
 fi
 
 if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
