@@ -21,8 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Factory to create an {@link RpcRetryingCaller}
@@ -32,12 +30,8 @@ public class RpcRetryingCallerFactory {
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */
   public static final String CUSTOM_CALLER_CONF_KEY = "hbase.rpc.callerfactory.class";
-  private static final Logger LOG = LoggerFactory.getLogger(RpcRetryingCallerFactory.class);
   protected final Configuration conf;
-  private final long pause;
-  private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
-  private final int retries;
-  private final int rpcTimeout;
+  private final ConnectionConfiguration connectionConf;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
   /* These below data members are UNUSED!!!*/
@@ -50,25 +44,12 @@ public class RpcRetryingCallerFactory {
 
   public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
     this.conf = conf;
-    pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
-    if (configuredPauseForCQTBE < pause) {
-      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
-          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
-          + ", will use " + pause + " instead.");
-      this.pauseForCQTBE = pause;
-    } else {
-      this.pauseForCQTBE = configuredPauseForCQTBE;
-    }
-    retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.connectionConf = new ConnectionConfiguration(conf);
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
         AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
     enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
         HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-    rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
   }
 
   /**
@@ -84,9 +65,11 @@ public class RpcRetryingCallerFactory {
   public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
-        interceptor, startLogErrorsCnt, rpcTimeout);
-    return caller;
+    return new RpcRetryingCallerImpl<>(
+      connectionConf.getPauseMillis(),
+      connectionConf.getPauseMillisForServerOverloaded(),
+      connectionConf.getRetriesNumber(),
+      interceptor, startLogErrorsCnt, rpcTimeout);
   }
 
   /**
@@ -95,9 +78,12 @@ public class RpcRetryingCallerFactory {
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
-        interceptor, startLogErrorsCnt, rpcTimeout);
-    return caller;
+    return new RpcRetryingCallerImpl<>(
+      connectionConf.getPauseMillis(),
+      connectionConf.getPauseMillisForServerOverloaded(),
+      connectionConf.getRetriesNumber(),
+      interceptor, startLogErrorsCnt,
+      connectionConf.getRpcTimeout());
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {

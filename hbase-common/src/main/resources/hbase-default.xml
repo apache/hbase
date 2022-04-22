@@ -493,12 +493,14 @@ possible configurations would overwhelm and obscure the important.
     this initial pause amount and how this pause works w/ retries.</description>
   </property>
   <property>
-    <name>hbase.client.pause.cqtbe</name>
+    <name>hbase.client.pause.server.overloaded</name>
     <value></value>
-    <description>Whether or not to use a special client pause for
-    CallQueueTooBigException (cqtbe). Set this property to a higher value
-    than hbase.client.pause if you observe frequent CQTBE from the same
-    RegionServer and the call queue there keeps full</description>
+    <description>Pause time when encountering an exception indicating a
+    server is overloaded, CallQueueTooBigException or CallDroppedException.
+    Set this property to a higher value than hbase.client.pause if you
+    observe frequent CallQueueTooBigException or CallDroppedException from the same
+    RegionServer and the call queue there keeps filling up. This config used to be
+    called hbase.client.pause.cqtbe, which has been deprecated as of 2.5.0.</description>
   </property>
   <property>
     <name>hbase.client.retries.number</name>

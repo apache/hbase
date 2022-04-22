@@ -33,7 +33,7 @@ abstract class AsyncAdminBuilderBase implements AsyncAdminBuilder {
 
   protected long pauseNs;
 
-  protected long pauseForCQTBENs;
+  protected long pauseNsForServerOverloaded;
 
   protected int maxAttempts;
 
@@ -43,7 +43,7 @@ abstract class AsyncAdminBuilderBase implements AsyncAdminBuilder {
     this.rpcTimeoutNs = connConf.getRpcTimeoutNs();
     this.operationTimeoutNs = connConf.getOperationTimeoutNs();
     this.pauseNs = connConf.getPauseNs();
-    this.pauseForCQTBENs = connConf.getPauseForCQTBENs();
+    this.pauseNsForServerOverloaded = connConf.getPauseNsForServerOverloaded();
     this.maxAttempts = connConf.getMaxRetries();
     this.startLogErrorsCnt = connConf.getStartLogErrorsCnt();
   }
@@ -67,8 +67,8 @@ abstract class AsyncAdminBuilderBase implements AsyncAdminBuilder {
   }
 
   @Override
-  public AsyncAdminBuilder setRetryPauseForCQTBE(long timeout, TimeUnit unit) {
-    this.pauseForCQTBENs = unit.toNanos(timeout);
+  public AsyncAdminBuilder setRetryPauseForServerOverloaded(long timeout, TimeUnit unit) {
+    this.pauseNsForServerOverloaded = unit.toNanos(timeout);
     return this;
   }
 

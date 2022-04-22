@@ -22,9 +22,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -41,8 +41,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallDroppedException;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -79,7 +82,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
@@ -1083,6 +1085,100 @@ public class TestConnectionImplementation {
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testLocateRegionsRetrySpecialPauseCQTBE() throws IOException {
+    testLocateRegionsRetrySpecialPause(CallQueueTooBigException.class);
+  }
+
+  @Test
+  public void testLocateRegionsRetrySpecialPauseCDE() throws IOException {
+    testLocateRegionsRetrySpecialPause(CallDroppedException.class);
+  }
+
+  private void testLocateRegionsRetrySpecialPause(
+    Class<? extends HBaseServerException> exceptionClass) throws IOException {
+
+    int regionReplication = 3;
+    byte[] family = Bytes.toBytes("cf");
+    TableName tableName = TableName.valueOf(name.getMethodName());
+
+    // Create a table with region replicas
+    TableDescriptorBuilder builder = TableDescriptorBuilder
+      .newBuilder(tableName)
+      .setRegionReplication(regionReplication)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+    TEST_UTIL.getAdmin().createTable(builder.build());
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+
+    conf.setClass(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY,
+      ThrowingCallerFactory.class, RpcRetryingCallerFactory.class);
+    conf.setClass("testSpecialPauseException", exceptionClass, HBaseServerException.class);
+
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    // normal pause very short, 10 millis
+    conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 10);
+
+    // special pause 10x longer, so we can detect it
+    long specialPauseMillis = 1000;
+    conf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
+      specialPauseMillis);
+
+    try (ConnectionImplementation con =
+      (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
+      // Get locations of the regions of the table
+
+      long start = System.nanoTime();
+      try {
+        con.locateRegion(tableName, new byte[0], false, true, 0);
+      } catch (HBaseServerException e) {
+        assertTrue(e.isServerOverloaded());
+        // pass: expected
+      }
+      assertTrue(System.nanoTime() - start > TimeUnit.MILLISECONDS.toNanos(specialPauseMillis));
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  private static class ThrowingCallerFactory extends RpcRetryingCallerFactory {
+
+    private final Class<? extends HBaseServerException> exceptionClass;
+
+    public ThrowingCallerFactory(Configuration conf) {
+      super(conf);
+      this.exceptionClass = conf.getClass("testSpecialPauseException",
+        null, HBaseServerException.class);
+    }
+
+    @Override public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
+      return newCaller();
+    }
+
+    @Override public <T> RpcRetryingCaller<T> newCaller() {
+      return new RpcRetryingCaller<T>() {
+        @Override public void cancel() {
+
+        }
+
+        @Override public T callWithRetries(RetryingCallable<T> callable, int callTimeout)
+          throws IOException, RuntimeException {
+          return callWithoutRetries(null, 0);
+        }
+
+        @Override public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
+          throws IOException, RuntimeException {
+          try {
+            throw exceptionClass.getConstructor().newInstance();
+          } catch (IllegalAccessException | InstantiationException
+            | InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
     }
   }
 

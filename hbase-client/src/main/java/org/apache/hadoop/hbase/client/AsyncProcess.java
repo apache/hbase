@@ -134,14 +134,13 @@ class AsyncProcess {
   final long id;
 
   final ClusterConnection connection;
+  final ConnectionConfiguration connectionConfiguration;
   private final RpcRetryingCallerFactory rpcCallerFactory;
   final RpcControllerFactory rpcFactory;
 
   // Start configuration settings.
   final int startLogErrorsCnt;
 
-  final long pause;
-  final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   final int numTries;
   long serverTrackerTimeout;
   final long primaryCallTimeoutMicroseconds;
@@ -156,30 +155,25 @@ class AsyncProcess {
   public static final String LOG_DETAILS_PERIOD = "hbase.client.log.detail.period.ms";
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
   private final int periodToLog;
+
   AsyncProcess(ClusterConnection hc, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
+    RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
+    this(hc, conf, rpcCaller, rpcFactory, hc.getConnectionConfiguration().getRetriesNumber());
+  }
+
+  AsyncProcess(ClusterConnection hc, Configuration conf,
+      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory, int retriesNumber) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
 
     this.connection = hc;
+    this.connectionConfiguration = connection.getConnectionConfiguration();
 
     this.id = COUNTER.incrementAndGet();
 
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
-    if (configuredPauseForCQTBE < pause) {
-      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
-          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
-          + ", will use " + pause + " instead.");
-      this.pauseForCQTBE = pause;
-    } else {
-      this.pauseForCQTBE = configuredPauseForCQTBE;
-    }
     // how many times we could try in total, one more than retry number
-    this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
+    this.numTries = retriesNumber + 1;
     this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
     this.startLogErrorsCnt =
         conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
@@ -193,7 +187,8 @@ class AsyncProcess {
     // we will do more retries in aggregate, but the user will be none the wiser.
     this.serverTrackerTimeout = 0L;
     for (int i = 0; i < this.numTries; ++i) {
-      serverTrackerTimeout = serverTrackerTimeout + ConnectionUtils.getPauseTime(this.pause, i);
+      serverTrackerTimeout = serverTrackerTimeout
+        + ConnectionUtils.getPauseTime(connectionConfiguration.getPauseMillis(), i);
     }
 
     this.rpcCallerFactory = rpcCaller;

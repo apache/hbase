@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -36,9 +37,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CallRunner;
+import org.apache.hadoop.hbase.ipc.PluggableBlockingQueue;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
+import org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
@@ -56,31 +59,46 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncClientPauseForCallQueueTooBig {
+public class TestAsyncClientPauseForServerOverloaded {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClientPauseForCallQueueTooBig.class);
+    HBaseClassTestRule.forClass(TestAsyncClientPauseForServerOverloaded.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static TableName TABLE_NAME = TableName.valueOf("CQTBE");
+  private static TableName TABLE_NAME = TableName.valueOf("ServerOverloaded");
 
   private static byte[] FAMILY = Bytes.toBytes("Family");
 
   private static byte[] QUALIFIER = Bytes.toBytes("Qualifier");
 
-  private static long PAUSE_FOR_CQTBE_NS = TimeUnit.SECONDS.toNanos(1);
+  private static long PAUSE_FOR_SERVER_OVERLOADED_NANOS = TimeUnit.SECONDS.toNanos(1);
+  private static long PAUSE_FOR_SERVER_OVERLOADED_MILLIS = TimeUnit.NANOSECONDS.toMillis(
+    PAUSE_FOR_SERVER_OVERLOADED_NANOS);
 
   private static AsyncConnection CONN;
 
-  private static boolean FAIL = false;
+  private static volatile FailMode MODE = null;
 
-  private static ConcurrentMap<MethodDescriptor, AtomicInteger> INVOKED = new ConcurrentHashMap<>();
+  enum FailMode {
+    CALL_QUEUE_TOO_BIG,
+    CALL_DROPPED;
 
-  public static final class CQTBERpcScheduler extends SimpleRpcScheduler {
+    private ConcurrentMap<MethodDescriptor, AtomicInteger> invoked = new ConcurrentHashMap<>();
 
-    public CQTBERpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
+    // this is for test scan, where we will send a open scanner first and then a next, and we
+    // expect that we hit CQTBE two times.
+    private boolean shouldFail(CallRunner callRunner) {
+      MethodDescriptor method = callRunner.getRpcCall().getMethod();
+      return invoked.computeIfAbsent(method,
+        k -> new AtomicInteger(0)).getAndIncrement() % 2 == 0;
+    }
+  }
+
+  public static final class OverloadedRpcScheduler extends SimpleRpcScheduler {
+
+    public OverloadedRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
         int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
         Abortable server, int highPriorityLevel) {
       super(conf, handlerCount, priorityHandlerCount, replicationHandlerCount,
@@ -89,25 +107,36 @@ public class TestAsyncClientPauseForCallQueueTooBig {
 
     @Override
     public boolean dispatch(CallRunner callTask) {
-      if (FAIL) {
-        MethodDescriptor method = callTask.getRpcCall().getMethod();
-        // this is for test scan, where we will send a open scanner first and then a next, and we
-        // expect that we hit CQTBE two times.
-        if (INVOKED.computeIfAbsent(method, k -> new AtomicInteger(0)).getAndIncrement() % 2 == 0) {
-          return false;
-        }
+      if (MODE == FailMode.CALL_QUEUE_TOO_BIG && MODE.shouldFail(callTask)) {
+        return false;
       }
       return super.dispatch(callTask);
     }
   }
 
-  public static final class CQTBERpcSchedulerFactory extends SimpleRpcSchedulerFactory {
+  public static final class OverloadedQueue extends TestPluggableQueueImpl {
+
+    public OverloadedQueue(int maxQueueLength, PriorityFunction priority, Configuration conf) {
+      super(maxQueueLength, priority, conf);
+    }
+
+    @Override
+    public boolean offer(CallRunner callRunner) {
+      if (MODE == FailMode.CALL_DROPPED && MODE.shouldFail(callRunner)) {
+        callRunner.drop();
+        return true;
+      }
+      return super.offer(callRunner);
+    }
+  }
+
+  public static final class OverloadedRpcSchedulerFactory extends SimpleRpcSchedulerFactory {
 
     @Override
     public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
       int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
         HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-      return new CQTBERpcScheduler(conf, handlerCount,
+      return new OverloadedRpcScheduler(conf, handlerCount,
         conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
         conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
@@ -122,12 +151,16 @@ public class TestAsyncClientPauseForCallQueueTooBig {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_PAUSE, 10);
-    UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE,
-      TimeUnit.NANOSECONDS.toMillis(PAUSE_FOR_CQTBE_NS));
+    UTIL.getConfiguration().set("hbase.ipc.server.callqueue.type", "pluggable");
+    UTIL.getConfiguration().setClass("hbase.ipc.server.callqueue.pluggable.queue.class.name",
+      OverloadedQueue.class, PluggableBlockingQueue.class);
     UTIL.getConfiguration().setClass(RSRpcServices.REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
-      CQTBERpcSchedulerFactory.class, RpcSchedulerFactory.class);
+      OverloadedRpcSchedulerFactory.class, RpcSchedulerFactory.class);
     UTIL.startMiniCluster(1);
-    CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    conf.setLong(HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, PAUSE_FOR_SERVER_OVERLOADED_MILLIS);
+    CONN = ConnectionFactory.createAsyncConnection(conf).get();
   }
 
   @AfterClass
@@ -143,22 +176,28 @@ public class TestAsyncClientPauseForCallQueueTooBig {
         table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i)));
       }
     }
-    FAIL = true;
+    MODE = FailMode.CALL_QUEUE_TOO_BIG;
   }
 
   @After
   public void tearDownAfterTest() throws IOException {
-    FAIL = false;
-    INVOKED.clear();
+    for (FailMode mode : FailMode.values()) {
+      mode.invoked.clear();
+    }
+    MODE = null;
     UTIL.getAdmin().disableTable(TABLE_NAME);
     UTIL.getAdmin().deleteTable(TABLE_NAME);
   }
 
   private void assertTime(Callable<Void> callable, long time) throws Exception {
-    long startNs = System.nanoTime();
-    callable.call();
-    long costNs = System.nanoTime() - startNs;
-    assertTrue(costNs > time);
+    for (FailMode mode : FailMode.values()) {
+      MODE = mode;
+
+      long startNs = System.nanoTime();
+      callable.call();
+      long costNs = System.nanoTime() - startNs;
+      assertTrue(costNs > time);
+    }
   }
 
   @Test
@@ -167,7 +206,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
       Result result = CONN.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).get();
       assertArrayEquals(Bytes.toBytes(0), result.getValue(FAMILY, QUALIFIER));
       return null;
-    }, PAUSE_FOR_CQTBE_NS);
+    }, PAUSE_FOR_SERVER_OVERLOADED_NANOS);
   }
 
   @Test
@@ -181,7 +220,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
         }
       }
       return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-    }, PAUSE_FOR_CQTBE_NS);
+    }, PAUSE_FOR_SERVER_OVERLOADED_NANOS);
   }
 
   @Test
@@ -197,6 +236,6 @@ public class TestAsyncClientPauseForCallQueueTooBig {
         assertNull(scanner.next());
       }
       return null;
-    }, PAUSE_FOR_CQTBE_NS * 2);
+    }, PAUSE_FOR_SERVER_OVERLOADED_NANOS * 2);
   }
 }

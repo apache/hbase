@@ -40,14 +40,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.FastThreadLocal;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -140,11 +138,13 @@ class IPCUtil {
   static RemoteException createRemoteException(final ExceptionResponse e) {
     String innerExceptionClassName = e.getExceptionClassName();
     boolean doNotRetry = e.getDoNotRetry();
+    boolean serverOverloaded = e.hasServerOverloaded() && e.getServerOverloaded();
     return e.hasHostname() ?
-    // If a hostname then add it to the RemoteWithExtrasException
-        new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), e.getHostname(),
-            e.getPort(), doNotRetry)
-        : new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry);
+      // If a hostname then add it to the RemoteWithExtrasException
+      new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), e.getHostname(),
+        e.getPort(), doNotRetry, serverOverloaded) :
+      new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry,
+        serverOverloaded);
   }
 
   /**
