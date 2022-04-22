@@ -58,7 +58,7 @@ public class LzmaDecompressor implements Decompressor {
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("decompress: {} bytes from outBuf", n);
+      LOG.trace("decompress: read {} remaining bytes from outBuf", n);
       return n;
     }
     if (inBuf.position() > 0) {

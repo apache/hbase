@@ -55,7 +55,7 @@ public abstract class HadoopCompressor<T extends Compressor>
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("compress: {} bytes from outBuf", n);
+      LOG.trace("compress: read {} remaining bytes from outBuf", n);
       return n;
     }
     // We don't actually begin compression until our caller calls finish().

@@ -35,4 +35,16 @@ public final class CompressionUtil {
     return v;
   }
 
+  /**
+   * Most compression algorithms can be presented with pathological input that causes an
+   * expansion rather than a compression. Hadoop's compression API requires that we calculate
+   * additional buffer space required for the worst case. There is a formula developed for
+   * gzip that applies as a ballpark to all LZ variants. It should be good enough for now and
+   * has been tested as such with a range of different inputs.
+   */
+  public static int compressionOverhead(int bufferSize) {
+    // Given an input buffer of 'buffersize' bytes we presume a worst case expansion of
+    // 32 bytes (block header) and addition 1/6th of the input size.
+    return (bufferSize / 6) + 32;
+  }
 }

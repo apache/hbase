@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.io.compress.xz;
+package org.apache.hadoop.hbase.io.compress.brotli;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,19 +32,22 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop lzma codec implemented with XZ for Java.
+ * Hadoop brotli codec implemented with Brotli4j
  */
 @InterfaceAudience.Private
-public class LzmaCodec implements Configurable, CompressionCodec {
+public class BrotliCodec implements Configurable, CompressionCodec {
 
-  public static final String LZMA_LEVEL_KEY = "hbase.io.compress.lzma.level";
-  public static final int LZMA_LEVEL_DEFAULT = 6;
-  public static final String LZMA_BUFFERSIZE_KEY = "hbase.io.compress.lzma.buffersize";
-  public static final int LZMA_BUFFERSIZE_DEFAULT = 256 * 1024;
+  public static final String BROTLI_LEVEL_KEY = "hbase.io.compress.brotli.level";
+  // Our default is 6, based on https://blog.cloudflare.com/results-experimenting-brotli/
+  public static final int BROTLI_LEVEL_DEFAULT = 6; // [0,11] or -1
+  public static final String BROTLI_WINDOW_KEY = "hbase.io.compress.brotli.window";
+  public static final int BROTLI_WINDOW_DEFAULT = -1; // [10-24] or -1
+  public static final String BROTLI_BUFFERSIZE_KEY = "hbase.io.compress.brotli.buffersize";
+  public static final int BROTLI_BUFFERSIZE_DEFAULT = 256 * 1024;
 
   private Configuration conf;
 
-  public LzmaCodec() {
+  public BrotliCodec() {
     conf = new Configuration();
   }
 
@@ -60,12 +63,12 @@ public class LzmaCodec implements Configurable, CompressionCodec {
 
   @Override
   public Compressor createCompressor() {
-    return new LzmaCompressor(getLevel(conf), getBufferSize(conf));
+    return new BrotliCompressor(getLevel(conf), getWindow(conf), getBufferSize(conf));
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new LzmaDecompressor(getBufferSize(conf));
+    return new BrotliDecompressor(getBufferSize(conf));
   }
 
   @Override
@@ -94,27 +97,31 @@ public class LzmaCodec implements Configurable, CompressionCodec {
 
   @Override
   public Class<? extends Compressor> getCompressorType() {
-    return LzmaCompressor.class;
+    return BrotliCompressor.class;
   }
 
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
-    return LzmaDecompressor.class;
+    return BrotliDecompressor.class;
   }
 
   @Override
   public String getDefaultExtension() {
-    return ".lzma";
+    return ".br";
   }
 
   // Package private
 
   static int getLevel(Configuration conf) {
-    return conf.getInt(LZMA_LEVEL_KEY, LZMA_LEVEL_DEFAULT);
+    return conf.getInt(BROTLI_LEVEL_KEY, BROTLI_LEVEL_DEFAULT);
+  }
+
+  static int getWindow(Configuration conf) {
+    return conf.getInt(BROTLI_WINDOW_KEY, BROTLI_WINDOW_DEFAULT);
   }
 
   static int getBufferSize(Configuration conf) {
-    return conf.getInt(LZMA_BUFFERSIZE_KEY, LZMA_BUFFERSIZE_DEFAULT);
+    return conf.getInt(BROTLI_BUFFERSIZE_KEY, BROTLI_BUFFERSIZE_DEFAULT);
   }
 
 }

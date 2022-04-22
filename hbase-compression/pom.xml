@@ -33,6 +33,7 @@
 
   <modules>
     <module>hbase-compression-aircompressor</module>
+    <module>hbase-compression-brotli</module>
     <module>hbase-compression-lz4</module>
     <module>hbase-compression-snappy</module>
     <module>hbase-compression-xz</module>
