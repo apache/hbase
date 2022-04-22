@@ -18,11 +18,13 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.net.URLEncoder"
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
   import="org.apache.hadoop.fs.FileStatus"
   import="org.apache.hadoop.fs.Path"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
   import="org.apache.hadoop.hbase.mob.MobUtils"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
@@ -108,10 +110,12 @@
              mobCnt += fileNames.size();
              for (String fileName : fileNames) {
                Path mobPath = new Path(((HMobStore) store).getPath(), fileName);
-               FileStatus status = rs.getFileSystem().getFileStatus(mobPath); %>
+               FileStatus status = rs.getFileSystem().getFileStatus(mobPath);
+               String mobPathStr = mobPath.toString();
+               String encodedStr = URLEncoder.encode(mobPathStr, HConstants.UTF8_ENCODING); %>
 
                <tr>
-                 <td><a href="storeFile.jsp?name=<%= mobPath%>"><%= mobPath %></a></td>
+                 <td><a href="storeFile.jsp?name=<%= encodedStr%>"><%= mobPathStr%></a></td>
                  <td><%= status.getLen() / 1024 / 1024 %></td>
                  <td><%= new Date(status.getModificationTime()) %></td>
                </tr>
