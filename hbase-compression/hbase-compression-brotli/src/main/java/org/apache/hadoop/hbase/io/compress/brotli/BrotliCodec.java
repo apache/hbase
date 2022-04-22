@@ -14,15 +14,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.io.compress.aircompressor;
+package org.apache.hadoop.hbase.io.compress.brotli;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
@@ -33,22 +31,23 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import io.airlift.compress.snappy.SnappyCompressor;
-import io.airlift.compress.snappy.SnappyDecompressor;
-
 /**
- * Hadoop snappy codec implemented with aircompressor.
- * <p>
- * This is data format compatible with Hadoop's native snappy codec.
+ * Hadoop brotli codec implemented with Brotli4j
  */
 @InterfaceAudience.Private
-public class SnappyCodec implements Configurable, CompressionCodec {
+public class BrotliCodec implements Configurable, CompressionCodec {
 
-  public static final String SNAPPY_BUFFER_SIZE_KEY = "hbase.io.compress.snappy.buffersize";
+  public static final String BROTLI_LEVEL_KEY = "hbase.io.compress.brotli.level";
+  // Our default is 6, based on https://blog.cloudflare.com/results-experimenting-brotli/
+  public static final int BROTLI_LEVEL_DEFAULT = 6; // [0,11] or -1
+  public static final String BROTLI_WINDOW_KEY = "hbase.io.compress.brotli.window";
+  public static final int BROTLI_WINDOW_DEFAULT = -1; // [10-24] or -1
+  public static final String BROTLI_BUFFERSIZE_KEY = "hbase.io.compress.brotli.buffersize";
+  public static final int BROTLI_BUFFERSIZE_DEFAULT = 256 * 1024;
 
   private Configuration conf;
 
-  public SnappyCodec() {
+  public BrotliCodec() {
     conf = new Configuration();
   }
 
@@ -64,12 +63,12 @@ public class SnappyCodec implements Configurable, CompressionCodec {
 
   @Override
   public Compressor createCompressor() {
-    return new HadoopSnappyCompressor();
+    return new BrotliCompressor(getLevel(conf), getWindow(conf), getBufferSize(conf));
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new HadoopSnappyDecompressor();
+    return new BrotliDecompressor(getBufferSize(conf));
   }
 
   @Override
@@ -98,61 +97,31 @@ public class SnappyCodec implements Configurable, CompressionCodec {
 
   @Override
   public Class<? extends Compressor> getCompressorType() {
-    return HadoopSnappyCompressor.class;
+    return BrotliCompressor.class;
   }
 
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
-    return HadoopSnappyDecompressor.class;
+    return BrotliDecompressor.class;
   }
 
   @Override
   public String getDefaultExtension() {
-    return ".snappy";
-  }
-
-  @InterfaceAudience.Private
-  public class HadoopSnappyCompressor extends HadoopCompressor<SnappyCompressor> {
-
-    HadoopSnappyCompressor(SnappyCompressor compressor) {
-      super(compressor, SnappyCodec.getBufferSize(conf));
-    }
-
-    HadoopSnappyCompressor() {
-      this(new SnappyCompressor());
-    }
-
-    @Override
-    int getLevel(Configuration conf) {
-      return 0;
-    }
-
-    @Override
-    int getBufferSize(Configuration conf) {
-      return SnappyCodec.getBufferSize(conf);
-    }
-
-  }
-
-  @InterfaceAudience.Private
-  public class HadoopSnappyDecompressor extends HadoopDecompressor<SnappyDecompressor> {
-
-    HadoopSnappyDecompressor(SnappyDecompressor decompressor) {
-      super(decompressor, getBufferSize(conf));
-    }
-
-    HadoopSnappyDecompressor() {
-      this(new SnappyDecompressor());
-    }
-
+    return ".br";
   }
 
   // Package private
 
+  static int getLevel(Configuration conf) {
+    return conf.getInt(BROTLI_LEVEL_KEY, BROTLI_LEVEL_DEFAULT);
+  }
+
+  static int getWindow(Configuration conf) {
+    return conf.getInt(BROTLI_WINDOW_KEY, BROTLI_WINDOW_DEFAULT);
+  }
+
   static int getBufferSize(Configuration conf) {
-    return conf.getInt(SNAPPY_BUFFER_SIZE_KEY,
-      conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
-        CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT));
+    return conf.getInt(BROTLI_BUFFERSIZE_KEY, BROTLI_BUFFERSIZE_DEFAULT);
   }
 
 }
