@@ -25,6 +25,7 @@ import java.security.PrivilegedAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,6 +42,7 @@ public class RemoteWithExtrasException extends RemoteException {
   private final String hostname;
   private final int port;
   private final boolean doNotRetry;
+  private final boolean serverOverloaded;
 
   /**
    * Dynamic class loader to load filter/comparators
@@ -58,15 +60,26 @@ public class RemoteWithExtrasException extends RemoteException {
   }
 
   public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry) {
-    this(className, msg, null, -1, doNotRetry);
+    this(className, msg, doNotRetry, false);
+  }
+
+  public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry,
+    final boolean serverOverloaded) {
+    this(className, msg, null, -1, doNotRetry, serverOverloaded);
   }
 
   public RemoteWithExtrasException(String className, String msg, final String hostname,
-      final int port, final boolean doNotRetry) {
+    final int port, final boolean doNotRetry) {
+    this(className, msg, hostname, port, doNotRetry, false);
+  }
+
+  public RemoteWithExtrasException(String className, String msg, final String hostname,
+      final int port, final boolean doNotRetry, final boolean serverOverloaded) {
     super(className, msg);
     this.hostname = hostname;
     this.port = port;
     this.doNotRetry = doNotRetry;
+    this.serverOverloaded = serverOverloaded;
   }
 
   @Override
@@ -98,6 +111,17 @@ public class RemoteWithExtrasException extends RemoteException {
     cn.setAccessible(true);
     IOException ex = cn.newInstance(this.getMessage());
     ex.initCause(this);
+
+    if (ex instanceof HBaseServerException) {
+      // this is a newly constructed exception.
+      // if an exception defaults to meaning isServerOverloaded, we use that.
+      // otherwise, see if the remote exception value should mean setting to true.
+      HBaseServerException serverException = (HBaseServerException) ex;
+      if (serverOverloaded && !serverException.isServerOverloaded()) {
+        serverException.setServerOverloaded(true);
+      }
+    }
+
     return ex;
   }
 
@@ -120,5 +144,12 @@ public class RemoteWithExtrasException extends RemoteException {
    */
   public boolean isDoNotRetry() {
     return this.doNotRetry;
+  }
+
+  /**
+   * @return True if the server was considered overloaded when the exception was thrown.
+   */
+  public boolean isServerOverloaded() {
+    return serverOverloaded;
   }
 }

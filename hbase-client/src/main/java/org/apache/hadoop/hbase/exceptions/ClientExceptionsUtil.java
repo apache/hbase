@@ -111,28 +111,6 @@ public final class ClientExceptionsUtil {
     return null;
   }
 
-  /**
-   * Checks if the exception is CallQueueTooBig exception (maybe wrapped
-   * into some RemoteException).
-   * @param t exception to check
-   * @return true if it's a CQTBE, false otherwise
-   */
-  public static boolean isCallQueueTooBigException(Throwable t) {
-    t = findException(t);
-    return (t instanceof CallQueueTooBigException);
-  }
-
-  /**
-   * Checks if the exception is CallDroppedException (maybe wrapped
-   * into some RemoteException).
-   * @param t exception to check
-   * @return true if it's a CQTBE, false otherwise
-   */
-  public static boolean isCallDroppedException(Throwable t) {
-    t = findException(t);
-    return (t instanceof CallDroppedException);
-  }
-
   // This list covers most connectivity exceptions but not all.
   // For example, in SocketOutputStream a plain IOException is thrown at times when the channel is
   // closed.

@@ -45,7 +45,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   protected long pauseNs;
 
-  protected long pauseForCQTBENs;
+  protected long pauseNsForServerOverloaded;
 
   protected int maxAttempts;
 
@@ -60,7 +60,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
     this.readRpcTimeoutNs = connConf.getReadRpcTimeoutNs();
     this.writeRpcTimeoutNs = connConf.getWriteRpcTimeoutNs();
     this.pauseNs = connConf.getPauseNs();
-    this.pauseForCQTBENs = connConf.getPauseForCQTBENs();
+    this.pauseNsForServerOverloaded = connConf.getPauseNsForServerOverloaded();
     this.maxAttempts = retries2Attempts(connConf.getMaxRetries());
     this.startLogErrorsCnt = connConf.getStartLogErrorsCnt();
   }
@@ -102,8 +102,8 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   }
 
   @Override
-  public AsyncTableBuilderBase<C> setRetryPauseForCQTBE(long pause, TimeUnit unit) {
-    this.pauseForCQTBENs = unit.toNanos(pause);
+  public AsyncTableBuilderBase<C> setRetryPauseForServerOverloaded(long pause, TimeUnit unit) {
+    this.pauseNsForServerOverloaded = unit.toNanos(pause);
     return this;
   }
 

@@ -44,10 +44,10 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
   private final Callable<T> callable;
 
   public AsyncMasterRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      Callable<T> callable, int priority, long pauseNs, long pauseForCQTBENs, int maxRetries,
-      long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
-    super(retryTimer, conn, priority, pauseNs, pauseForCQTBENs, maxRetries, operationTimeoutNs,
-      rpcTimeoutNs, startLogErrorsCnt);
+      Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
+      int maxRetries, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxRetries,
+      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.callable = callable;
   }
 

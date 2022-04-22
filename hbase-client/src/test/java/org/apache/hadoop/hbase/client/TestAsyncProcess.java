@@ -48,9 +48,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -1038,7 +1040,12 @@ public class TestAsyncProcess {
   }
 
   private ClusterConnection createHConnection() throws IOException {
-    ClusterConnection hc = createHConnectionCommon();
+    return createHConnection(CONNECTION_CONFIG);
+  }
+
+  private ClusterConnection createHConnection(ConnectionConfiguration configuration)
+    throws IOException {
+    ClusterConnection hc = createHConnectionCommon(configuration);
     setMockLocation(hc, DUMMY_BYTES_1, new RegionLocations(loc1));
     setMockLocation(hc, DUMMY_BYTES_2, new RegionLocations(loc2));
     setMockLocation(hc, DUMMY_BYTES_3, new RegionLocations(loc3));
@@ -1048,8 +1055,9 @@ public class TestAsyncProcess {
     return hc;
   }
 
-  private ClusterConnection createHConnectionWithReplicas() throws IOException {
-    ClusterConnection hc = createHConnectionCommon();
+  private ClusterConnection createHConnectionWithReplicas(ConnectionConfiguration configuration)
+    throws IOException {
+    ClusterConnection hc = createHConnectionCommon(configuration);
     setMockLocation(hc, DUMMY_BYTES_1, hrls1);
     setMockLocation(hc, DUMMY_BYTES_2, hrls2);
     setMockLocation(hc, DUMMY_BYTES_3, hrls3);
@@ -1076,13 +1084,14 @@ public class TestAsyncProcess {
         Mockito.anyBoolean(), Mockito.anyBoolean())).thenReturn(result);
   }
 
-  private ClusterConnection createHConnectionCommon() {
+  private ClusterConnection createHConnectionCommon(
+    ConnectionConfiguration connectionConfiguration) {
     ClusterConnection hc = Mockito.mock(ClusterConnection.class);
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(ng.getNonceGroup()).thenReturn(HConstants.NO_NONCE);
     Mockito.when(hc.getNonceGenerator()).thenReturn(ng);
     Mockito.when(hc.getConfiguration()).thenReturn(CONF);
-    Mockito.when(hc.getConnectionConfiguration()).thenReturn(CONNECTION_CONFIG);
+    Mockito.when(hc.getConnectionConfiguration()).thenReturn(connectionConfiguration);
     return hc;
   }
 
@@ -1608,11 +1617,11 @@ public class TestAsyncProcess {
     // TODO: this is kind of timing dependent... perhaps it should detect from createCaller
     //       that the replica call has happened and that way control the ordering.
     Configuration conf = new Configuration();
-    ClusterConnection conn = createHConnectionWithReplicas();
     conf.setInt(AsyncProcess.PRIMARY_CALL_TIMEOUT_KEY, replicaAfterMs * 1000);
     if (retries >= 0) {
       conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     }
+    ClusterConnection conn = createHConnectionWithReplicas(new ConnectionConfiguration(conf));
     MyAsyncProcessWithReplicas ap = new MyAsyncProcessWithReplicas(conn, conf);
     ap.setCallDelays(primaryMs, replicaMs);
     return ap;
@@ -1736,20 +1745,31 @@ public class TestAsyncProcess {
   }
 
   /**
-   * Test and make sure we could use a special pause setting when retry with
-   * CallQueueTooBigException, see HBASE-17114
-   * @throws Exception if unexpected error happened during test
+   * Below tests make sure we could use a special pause setting when retry an exception
+   * where {@link HBaseServerException#isServerOverloaded(Throwable)} is true, see HBASE-17114
    */
+
   @Test
-  public void testRetryPauseWithCallQueueTooBigException() throws Exception {
-    Configuration myConf = new Configuration(CONF);
+  public void testRetryPauseWhenServerOverloadedDueToCQTBE() throws Exception {
+    testRetryPauseWhenServerIsOverloaded(new CallQueueTooBigException());
+  }
+
+  @Test
+  public void testRetryPauseWhenServerOverloadedDueToCDE() throws Exception {
+    testRetryPauseWhenServerIsOverloaded(new CallDroppedException());
+  }
+
+  private void testRetryPauseWhenServerIsOverloaded(
+    HBaseServerException exception) throws IOException {
+    Configuration conf = new Configuration(CONF);
     final long specialPause = 500L;
     final int retries = 1;
-    myConf.setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, specialPause);
-    myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
-    ClusterConnection conn = new MyConnectionImpl(myConf);
+    conf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, specialPause);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+
+    ClusterConnection conn = new MyConnectionImpl(conf);
     AsyncProcessWithFailure ap =
-        new AsyncProcessWithFailure(conn, myConf, new CallQueueTooBigException());
+      new AsyncProcessWithFailure(conn, conf, exception);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
@@ -1779,8 +1799,8 @@ public class TestAsyncProcess {
 
     // check and confirm normal IOE will use the normal pause
     final long normalPause =
-        myConf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    ap = new AsyncProcessWithFailure(conn, myConf, new IOException());
+      conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    ap = new AsyncProcessWithFailure(conn, conf, new IOException());
     bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
     Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
@@ -1806,9 +1826,9 @@ public class TestAsyncProcess {
 
   @Test
   public void testRetryWithExceptionClearsMetaCache() throws Exception {
-    ClusterConnection conn = createHConnection();
-    Configuration myConf = conn.getConfiguration();
+    Configuration myConf = new Configuration(CONF);
     myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    ClusterConnection conn = createHConnection(new ConnectionConfiguration(myConf));
 
     AsyncProcessWithFailure ap =
         new AsyncProcessWithFailure(conn, myConf, new RegionOpeningException("test"));

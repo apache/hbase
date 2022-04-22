@@ -52,9 +52,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -168,8 +168,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
-  private final long pause;
-  private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   // The mode tells if HedgedRead, LoadBalance mode is supported.
   // The default mode is CatalogReplicaMode.None.
   private CatalogReplicaMode metaReplicaMode;
@@ -267,16 +265,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     this.batchPool = (ThreadPoolExecutor) pool;
     this.connectionConfig = new ConnectionConfiguration(conf);
     this.closed = false;
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
-    if (configuredPauseForCQTBE < pause) {
-      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
-          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
-          + ", will use " + pause + " instead.");
-      this.pauseForCQTBE = pause;
-    } else {
-      this.pauseForCQTBE = configuredPauseForCQTBE;
-    }
     this.metaReplicaCallTimeoutScanInMicroSecond =
         connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
 
@@ -946,7 +934,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         metaCache.clearCache(tableName, row, replicaId);
       }
       // Query the meta region
-      long pauseBase = this.pause;
+      long pauseBase = connectionConfig.getPauseMillis();
       takeUserRegionLock();
       try {
         // We don't need to check if useCache is enabled or not. Even if useCache is false
@@ -1036,9 +1024,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         if (e instanceof RemoteException) {
           e = ((RemoteException) e).unwrapRemoteException();
         }
-        if (e instanceof CallQueueTooBigException) {
-          // Give a special check on CallQueueTooBigException, see #HBASE-17114
-          pauseBase = this.pauseForCQTBE;
+        if (HBaseServerException.isServerOverloaded(e)) {
+          // Give a special pause when encountering an exception indicating the server
+          // is overloaded. see #HBASE-17114 and HBASE-26807
+          pauseBase = connectionConfig.getPauseMillisForServerOverloaded();
         }
         if (tries < maxAttempts - 1) {
           LOG.debug(

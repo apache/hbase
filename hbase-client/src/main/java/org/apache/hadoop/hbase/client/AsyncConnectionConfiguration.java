@@ -17,46 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_META_SCANNER_CACHING;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_CACHING;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.HConstants.HBASE_META_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
-import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY;
-import static org.apache.hadoop.hbase.client.AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT;
-import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.MAX_KEYVALUE_SIZE_DEFAULT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_SCAN_TIMEOUT_MICROSECOND;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_SIZE_DEFAULT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_SIZE_KEY;
-
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Timeout configs.
@@ -64,7 +33,15 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 class AsyncConnectionConfiguration {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionConfiguration.class);
+  /**
+   * Configure the number of failures after which the client will start logging. A few failures
+   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
+   * this stage.
+   */
+  public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
+      "hbase.client.start.log.errors.counter";
+  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   private final long metaOperationTimeoutNs;
 
@@ -84,7 +61,7 @@ class AsyncConnectionConfiguration {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxRetries;
 
@@ -118,50 +95,45 @@ class AsyncConnectionConfiguration {
   private final int maxKeyValueSize;
 
   AsyncConnectionConfiguration(Configuration conf) {
+    ConnectionConfiguration connectionConf = new ConnectionConfiguration(conf);
+
+    // fields we can pull directly from connection configuration
+    this.scannerCaching = connectionConf.getScannerCaching();
+    this.scannerMaxResultSize = connectionConf.getScannerMaxResultSize();
+    this.writeBufferSize = connectionConf.getWriteBufferSize();
+    this.writeBufferPeriodicFlushTimeoutNs = connectionConf.getWriteBufferPeriodicFlushTimeoutMs();
+    this.maxKeyValueSize = connectionConf.getMaxKeyValueSize();
+    this.maxRetries = connectionConf.getRetriesNumber();
+
+    // fields from connection configuration that need to be converted to nanos
     this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      conf.getLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
-    this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      conf.getLong(HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
-    long rpcTimeoutMs = conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
-    this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(rpcTimeoutMs);
+      connectionConf.getMetaOperationTimeout());
+    this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getOperationTimeout());
+    this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getRpcTimeout());
     this.readRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeoutMs));
+      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY,
+        connectionConf.getReadRpcTimeout()));
     this.writeRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, rpcTimeoutMs));
-    long pauseMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
-    long pauseForCQTBEMs = conf.getLong(HBASE_CLIENT_PAUSE_FOR_CQTBE, pauseMs);
-    if (pauseForCQTBEMs < pauseMs) {
-      LOG.warn(
-        "The {} setting: {} ms is less than the {} setting: {} ms, use the greater one instead",
-        HBASE_CLIENT_PAUSE_FOR_CQTBE, pauseForCQTBEMs, HBASE_CLIENT_PAUSE, pauseMs);
-      pauseForCQTBEMs = pauseMs;
-    }
-    this.pauseNs = TimeUnit.MILLISECONDS.toNanos(pauseMs);
-    this.pauseForCQTBENs = TimeUnit.MILLISECONDS.toNanos(pauseForCQTBEMs);
-    this.maxRetries = conf.getInt(HBASE_CLIENT_RETRIES_NUMBER, DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY,
+        connectionConf.getWriteRpcTimeout()));
+    this.pauseNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillis());
+    this.pauseNsForServerOverloaded = TimeUnit.MILLISECONDS.toNanos(
+      connectionConf.getPauseMillisForServerOverloaded());
+    this.primaryCallTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
+      connectionConf.getPrimaryCallTimeoutMicroSecond());
+    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
+      connectionConf.getReplicaCallTimeoutMicroSecondScan());
+    this.primaryMetaScanTimeoutNs =
+      TimeUnit.MICROSECONDS.toNanos(connectionConf.getMetaReplicaCallTimeoutMicroSecondScan());
+    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
+      conf.getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+        DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
+
+    // fields not in connection configuration
     this.startLogErrorsCnt =
       conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
-    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-        conf.getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-            DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
-    this.scannerCaching =
-      conf.getInt(HBASE_CLIENT_SCANNER_CACHING, DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
     this.metaScannerCaching =
       conf.getInt(HBASE_META_SCANNER_CACHING, DEFAULT_HBASE_META_SCANNER_CACHING);
-    this.scannerMaxResultSize = conf.getLong(HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-      DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
-    this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
-    this.writeBufferPeriodicFlushTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS,
-        WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT));
-    this.primaryCallTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
-      conf.getLong(PRIMARY_CALL_TIMEOUT_MICROSECOND, PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT));
-    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
-      conf.getLong(PRIMARY_SCAN_TIMEOUT_MICROSECOND, PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT));
-    this.primaryMetaScanTimeoutNs =
-      TimeUnit.MICROSECONDS.toNanos(conf.getLong(HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
-        HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT));
-    this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
   }
 
   long getMetaOperationTimeoutNs() {
@@ -188,8 +160,8 @@ class AsyncConnectionConfiguration {
     return pauseNs;
   }
 
-  long getPauseForCQTBENs() {
-    return pauseForCQTBENs;
+  long getPauseNsForServerOverloaded() {
+    return pauseNsForServerOverloaded;
   }
 
   int getMaxRetries() {
