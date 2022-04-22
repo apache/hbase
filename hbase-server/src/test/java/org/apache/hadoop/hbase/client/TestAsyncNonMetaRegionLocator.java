@@ -25,6 +25,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
@@ -459,5 +460,17 @@ public class TestAsyncNonMetaRegionLocator {
       getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get();
     IntStream.range(0, 100).parallel()
       .forEach(i -> locator.updateCachedLocationOnError(loc, new NotServingRegionException()));
+  }
+
+  @Test
+  public void testCacheLocationWhenGetAllLocations() throws Exception {
+    createMultiRegionTable();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl)
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    conn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+    for (RegionInfo region : regions) {
+      assertNotNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+    }
   }
 }
