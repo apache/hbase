@@ -33,14 +33,16 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class is for maintaining the various connection statistics and publishing them through
@@ -56,6 +58,34 @@ public class MetricsConnection implements StatisticTrackable {
 
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
+
+  /**
+   * Set to specify a custom scope for the metrics published through {@link MetricsConnection}.
+   * The scope is added to JMX MBean objectName, and defaults to a combination of the Connection's
+   * clusterId and hashCode. For example, a default value for a connection to cluster "foo" might
+   * be "foo-7d9d0818", where "7d9d0818" is the hashCode of the underlying AsyncConnectionImpl.
+   * Users may set this key to give a more contextual name for this scope. For example, one might
+   * want to differentiate a read connection from a write connection by setting the scopes to
+   * "foo-read" and "foo-write" respectively.
+   *
+   * Scope is the only thing that lends any uniqueness to the metrics. Care should be taken to
+   * avoid using the same scope for multiple Connections, otherwise the metrics may aggregate in
+   * unforeseen ways.
+   */
+  public static final String METRICS_SCOPE_KEY = "hbase.client.metrics.scope";
+
+  /**
+   * Returns the scope for a MetricsConnection based on the configured {@link #METRICS_SCOPE_KEY}
+   * or by generating a default from the passed clusterId and connectionObj's hashCode.
+   * @param conf          configuration for the connection
+   * @param clusterId     clusterId for the connection
+   * @param connectionObj either a Connection or AsyncConnectionImpl, the instance
+   *                      creating this MetricsConnection.
+   */
+  static String getScope(Configuration conf, String clusterId, Object connectionObj) {
+    return conf.get(METRICS_SCOPE_KEY,
+      clusterId + "@" + Integer.toHexString(connectionObj.hashCode()));
+  }
 
   private static final String CNT_BASE = "rpcCount_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
@@ -251,7 +281,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   private final MetricRegistry registry;
   private final JmxReporter reporter;
-  private final String scope;
+  protected final String scope;
 
   private final NewMetric<Timer> timerFactory = new NewMetric<Timer>() {
     @Override public Timer newMetric(Class<?> clazz, String name, String scope) {
