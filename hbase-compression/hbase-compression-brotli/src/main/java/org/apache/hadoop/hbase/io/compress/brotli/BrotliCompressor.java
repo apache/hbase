@@ -14,11 +14,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.io.compress.xerial;
+package org.apache.hadoop.hbase.io.compress.brotli;
+
+import com.aayushatharva.brotli4j.Brotli4jLoader;
+import com.aayushatharva.brotli4j.encoder.Encoder;
+import com.aayushatharva.brotli4j.encoder.Encoders;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
@@ -27,25 +30,31 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.xerial.snappy.Snappy;
-
 /**
- * Hadoop compressor glue for Xerial Snappy.
+ * Hadoop compressor glue for Brotli4j
  */
 @InterfaceAudience.Private
-public class SnappyCompressor implements CanReinit, Compressor {
+public class BrotliCompressor implements CanReinit, Compressor {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(SnappyCompressor.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(BrotliCompressor.class);
   protected ByteBuffer inBuf, outBuf;
   protected int bufferSize;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
+  protected Encoder.Parameters params;
 
-  SnappyCompressor(int bufferSize) {
+  static {
+    Brotli4jLoader.ensureAvailability();
+  }
+
+  BrotliCompressor(int level, int window, int bufferSize) {
     this.bufferSize = bufferSize;
-    this.inBuf = ByteBuffer.allocateDirect(bufferSize);
-    this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+    this.inBuf = ByteBuffer.allocate(bufferSize);
+    this.outBuf = ByteBuffer.allocate(bufferSize);
     this.outBuf.position(bufferSize);
+    params = new Encoder.Parameters();
+    params.setQuality(level);
+    params.setWindow(window);
   }
 
   @Override
@@ -66,22 +75,39 @@ public class SnappyCompressor implements CanReinit, Compressor {
         // If we don't have enough capacity in our currently allocated output buffer,
         // allocate a new one which does.
         int needed = maxCompressedLength(uncompressed);
-        if (outBuf.capacity() < needed) {
-          needed = CompressionUtil.roundInt2(needed);
-          LOG.trace("setInput: resize inBuf {}", needed);
-          outBuf = ByteBuffer.allocateDirect(needed);
+        // Can we compress directly into the provided array?
+        boolean direct = false;
+        ByteBuffer writeBuf;
+        if (len <= needed) {
+          direct = true;
+          writeBuf = ByteBuffer.wrap(b, off, len);
         } else {
-          outBuf.clear();
+          if (outBuf.capacity() < needed) {
+            needed = CompressionUtil.roundInt2(needed);
+            LOG.trace("compress: resize outBuf {}", needed);
+            outBuf = ByteBuffer.allocate(needed);
+          } else {
+            outBuf.clear();
+          }
+          writeBuf = outBuf;
         }
-        int written = Snappy.compress(inBuf, outBuf);
+        final int oldPos = writeBuf.position();
+        Encoders.compress(inBuf, writeBuf, params);
+        final int written = writeBuf.position() - oldPos;
         bytesWritten += written;
         inBuf.clear();
         LOG.trace("compress: compressed {} -> {}", uncompressed, written);
         finished = true;
-        int n = Math.min(written, len);
-        outBuf.get(b, off, n);
-        LOG.trace("compress: {} bytes", n);
-        return n;
+        if (!direct) {
+          outBuf.flip();
+          int n = Math.min(written, len);
+          outBuf.get(b, off, n);
+          LOG.trace("compress: {} bytes", n);
+          return n;
+        } else {
+          LOG.trace("compress: {} bytes direct", written);
+          return written;
+        }
       } else {
         finished = true;
       }
@@ -129,8 +155,11 @@ public class SnappyCompressor implements CanReinit, Compressor {
   public void reinit(Configuration conf) {
     LOG.trace("reinit");
     if (conf != null) {
+      // Quality or window settings might have changed
+      params.setQuality(BrotliCodec.getLevel(conf));
+      params.setWindow(BrotliCodec.getWindow(conf));
       // Buffer size might have changed
-      int newBufferSize = SnappyCodec.getBufferSize(conf);
+      int newBufferSize = BrotliCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
@@ -166,7 +195,7 @@ public class SnappyCompressor implements CanReinit, Compressor {
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
       LOG.trace("setInput: resize inBuf {}", needed);
-      ByteBuffer newBuf = ByteBuffer.allocateDirect(needed);
+      ByteBuffer newBuf = ByteBuffer.allocate(needed);
       inBuf.flip();
       newBuf.put(inBuf);
       inBuf = newBuf;
@@ -179,7 +208,7 @@ public class SnappyCompressor implements CanReinit, Compressor {
   // Package private
 
   int maxCompressedLength(int len) {
-    return Snappy.maxCompressedLength(len);
+    return len + CompressionUtil.compressionOverhead(len);
   }
 
 }

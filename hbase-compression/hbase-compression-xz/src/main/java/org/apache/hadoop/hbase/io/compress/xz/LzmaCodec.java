@@ -22,6 +22,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -88,8 +89,8 @@ public class LzmaCodec implements Configurable, CompressionCodec {
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
       throws IOException {
     int bufferSize = getBufferSize(conf);
-    int compressionOverhead = (bufferSize / 6) + 32;
-    return new BlockCompressorStream(out, c, bufferSize, compressionOverhead);
+    return new BlockCompressorStream(out, c, bufferSize,
+      CompressionUtil.compressionOverhead(bufferSize));
   }
 
   @Override

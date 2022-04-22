@@ -633,6 +633,7 @@
     <spotless.version>2.21.0</spotless.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
+    <brotli4j.version>1.7.1</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
@@ -1009,6 +1010,11 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-compression-aircompressor</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-brotli</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

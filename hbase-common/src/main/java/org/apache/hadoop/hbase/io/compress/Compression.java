@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 public final class Compression {
   private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
 
-
   // LZO
 
   public static final String LZO_CODEC_CLASS_KEY =
@@ -96,6 +95,13 @@ public final class Compression {
       "hbase.io.compress.lzma.codec";
   public static final String LZMA_CODEC_CLASS_DEFAULT =
       "org.apache.hadoop.hbase.io.compress.xz.LzmaCodec";
+
+  // Brotli
+
+  public static final String BROTLI_CODEC_CLASS_KEY =
+      "hbase.io.compress.brotli.codec";
+  public static final String BROTLI_CODEC_CLASS_DEFAULT =
+      "org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec";
 
   /**
    * Prevent the instantiation of class.
@@ -148,6 +154,7 @@ public final class Compression {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="SE_TRANSIENT_FIELD_NOT_RESTORED",
       justification="We are not serializing so doesn't apply (not sure why transient though)")
+  @SuppressWarnings("ImmutableEnumChecker")
   @InterfaceAudience.Public
   public static enum Algorithm {
     // LZO is GPL and requires extra install to setup. See
@@ -350,6 +357,31 @@ public final class Compression {
           lzmaCodec = buildCodec(conf, this);
           LOG.warn("Reloaded configuration for {}", name());
           return lzmaCodec;
+        }
+      }
+    },
+
+    BROTLI("brotli", BROTLI_CODEC_CLASS_KEY, BROTLI_CODEC_CLASS_DEFAULT) {
+      // Use base type to avoid compile-time dependencies.
+      private volatile transient CompressionCodec brotliCodec;
+      private final transient Object lock = new Object();
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (brotliCodec == null) {
+          synchronized (lock) {
+            if (brotliCodec == null) {
+              brotliCodec = buildCodec(conf, this);
+            }
+          }
+        }
+        return brotliCodec;
+      }
+      @Override
+      public CompressionCodec reload(Configuration conf) {
+        synchronized (lock) {
+          brotliCodec = buildCodec(conf, this);
+          LOG.warn("Reloaded configuration for {}", name());
+          return brotliCodec;
         }
       }
     };
