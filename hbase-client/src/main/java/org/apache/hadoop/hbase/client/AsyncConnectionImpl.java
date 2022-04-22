@@ -24,7 +24,6 @@ import static org.apache.hadoop.hbase.client.ClusterStatusListener.STATUS_LISTEN
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
-import static org.apache.hadoop.hbase.client.MetricsConnection.METRICS_SCOPE_KEY;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;

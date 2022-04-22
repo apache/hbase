@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
@@ -40,9 +39,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.mockito.Mockito;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
@@ -52,7 +50,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.mockito.Mockito;
 
 @Category({ClientTests.class, MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
@@ -100,9 +97,11 @@ public class TestMetricsConnection {
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
     ConnectionRegistry mockRegistry = Mockito.mock(ConnectionRegistry.class);
-    Mockito.when(mockRegistry.getClusterId()).thenReturn(CompletableFuture.completedFuture(clusterId));
+    Mockito.when(mockRegistry.getClusterId())
+      .thenReturn(CompletableFuture.completedFuture(clusterId));
 
-    ConnectionImplementation impl = new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
+    ConnectionImplementation impl = new ConnectionImplementation(conf, null,
+      User.getCurrent(), mockRegistry);
     MetricsConnection metrics = impl.getConnectionMetrics();
     assertNotNull("Metrics should be present", metrics);
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.scope);
