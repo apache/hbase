@@ -296,13 +296,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
-    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      this.metrics =
-          new MetricsConnection(this.toString(), this::getBatchPool, this::getMetaLookupPool);
-    } else {
-      this.metrics = null;
-    }
-    this.metaCache = new MetaCache(this.metrics);
 
     boolean shouldListen =
         conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
@@ -320,6 +313,15 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         this.registry = registry;
       }
       retrieveClusterId();
+
+      if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+        String scope = MetricsConnection.getScope(conf, clusterId, this);
+        this.metrics =
+          new MetricsConnection(scope, this::getBatchPool, this::getMetaLookupPool);
+      } else {
+        this.metrics = null;
+      }
+      this.metaCache = new MetaCache(this.metrics);
 
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
 
