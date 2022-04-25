@@ -77,6 +77,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long walFileSize = 0;
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
+  private volatile long onHeapMemstoreSize = 0;
+  private volatile long offHeapMemstoreSize = 0;
   private volatile long storeFileSize = 0;
   private volatile double storeFileSizeGrowthRate = 0;
   private volatile long maxStoreFileAge = 0;
@@ -283,6 +285,16 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getOnHeapMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalOnHeapMemStoreLimit();
+  }
+
+  @Override
+  public long getOffHeapMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalOffHeapMemStoreLimit();
+  }
+
+  @Override
   public long getBlockCacheSize() {
     return this.blockCache != null ? this.blockCache.getCurrentSize() : 0L;
   }
@@ -448,6 +460,16 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getMemStoreSize() {
     return memstoreSize;
+  }
+
+  @Override
+  public long getOnHeapMemStoreSize() {
+    return onHeapMemstoreSize;
+  }
+
+  @Override
+  public long getOffHeapMemStoreSize() {
+    return offHeapMemstoreSize;
   }
 
   @Override
@@ -695,7 +717,8 @@ class MetricsRegionServerWrapperImpl
         HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
             new HDFSBlocksDistribution();
 
-        long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
+        long tempNumStores = 0, tempNumStoreFiles = 0, tempStoreFileSize = 0;
+        long tempMemstoreSize = 0, tempOnHeapMemstoreSize = 0, tempOffHeapMemstoreSize = 0;
         long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
@@ -776,6 +799,8 @@ class MetricsRegionServerWrapperImpl
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();
             tempMemstoreSize += store.getMemStoreSize().getDataSize();
+            tempOnHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
+            tempOffHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
             tempStoreFileSize += store.getStorefilesSize();
 
             OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
@@ -877,6 +902,8 @@ class MetricsRegionServerWrapperImpl
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
         memstoreSize = tempMemstoreSize;
+        onHeapMemstoreSize = tempOnHeapMemstoreSize;
+        offHeapMemstoreSize = tempOffHeapMemstoreSize;
         storeFileSize = tempStoreFileSize;
         maxStoreFileAge = tempMaxStoreFileAge;
         if (regionCount > 0) {

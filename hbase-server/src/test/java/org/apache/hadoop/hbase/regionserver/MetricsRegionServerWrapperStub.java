@@ -69,6 +69,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getOnHeapMemStoreSize() {
+    return 500;
+  }
+
+  @Override
+  public long getOffHeapMemStoreSize() {
+    return 600;
+  }
+
+  @Override
   public long getStoreFileSize() {
     return 1900;
   }
@@ -260,6 +270,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public long getMemStoreLimit() {
+    return 419;
+  }
+
+  @Override
+  public long getOnHeapMemStoreLimit() {
+    return 311;
+  }
+
+  @Override
+  public long getOffHeapMemStoreLimit() {
     return 419;
   }
 

@@ -81,6 +81,14 @@ public class RegionServerAccounting {
     return this.globalMemStoreLimit;
   }
 
+  long getGlobalOffHeapMemStoreLimit() {
+    if (isOffheap()) {
+      return this.globalMemStoreLimit;
+    } else {
+      return 0;
+    }
+  }
+
   long getGlobalOnHeapMemStoreLimit() {
     return this.globalOnHeapMemstoreLimit;
   }
