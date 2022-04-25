@@ -68,7 +68,7 @@
 </jsp:include>
 
 <div class="container-fluid content">
-  <div class="row">
+  <div class="row top_header">
     <div class="page-header">
       <h1>Procedure Time Statistics</h1>
     </div>
