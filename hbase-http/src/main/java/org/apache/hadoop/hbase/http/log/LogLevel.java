@@ -396,7 +396,7 @@ public final class LogLevel {
     }
 
     static final String FORMS = "<div class='container-fluid content'>\n"
-        + "<div class='row inner_header'>\n" + "<div class='page-header'>\n"
+        + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
         + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "Actions:" + "<p>"
         + "<center>\n" + "<table class='table' style='border: 0;' width='95%' >\n" + "<tr>\n"
         + "<form>\n" + "<td class='centered'>\n"
