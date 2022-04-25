@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +44,12 @@ import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.AlreadySelectedException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.MissingOptionException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,17 +75,25 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotInfo.class);
 
   static final class Options {
-    static final Option SNAPSHOT = new Option(null, "snapshot", true, "Snapshot to examine.");
+    static final Option SNAPSHOT = new Option(null, "snapshot", true,
+      "The name of the snapshot to be detailed.");
     static final Option REMOTE_DIR = new Option(null, "remote-dir", true,
-        "Root directory that contains the snapshots.");
+        "A custom root directory where snapshots are stored. "
+          + "Use it together with the --snapshot option.");
     static final Option LIST_SNAPSHOTS = new Option(null, "list-snapshots", false,
         "List all the available snapshots and exit.");
-    static final Option FILES = new Option(null, "files", false, "Files and logs list.");
-    static final Option STATS = new Option(null, "stats", false, "Files and logs stats.");
+    static final Option FILES = new Option(null, "files", false,
+      "The list of files retained by the specified snapshot. "
+        + "Use it together with the --snapshot option.");
+    static final Option STATS = new Option(null, "stats", false,
+      "Additional information about the specified snapshot. "
+        + "Use it together with the --snapshot option.");
     static final Option SCHEMA = new Option(null, "schema", false,
-        "Describe the snapshotted table.");
+        "Show the descriptor of the table for the specified snapshot. "
+          + "Use it together with the --snapshot option.");
     static final Option SIZE_IN_BYTES = new Option(null, "size-in-bytes", false,
-        "Print the size of the files in bytes.");
+        "Print the size of the files in bytes. "
+          + "Use it together with the --snapshot and --files options.");
   }
 
   /**
@@ -396,7 +411,9 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     }
 
     printInfo();
-    if (showSchema) printSchema();
+    if (showSchema) {
+      printSchema();
+    }
     printFiles(showFiles, showStats);
 
     return 0;
@@ -516,13 +533,31 @@ public final class SnapshotInfo extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
-    addRequiredOption(Options.SNAPSHOT);
+    addOption(Options.SNAPSHOT);
     addOption(Options.REMOTE_DIR);
     addOption(Options.LIST_SNAPSHOTS);
     addOption(Options.FILES);
     addOption(Options.STATS);
     addOption(Options.SCHEMA);
     addOption(Options.SIZE_IN_BYTES);
+  }
+
+
+  @Override
+  protected CommandLineParser newParser() {
+    // Commons-CLI lacks the capability to handle combinations of options, so we do it ourselves
+    // Validate in parse() to get helpful error messages instead of exploding in processOptions()
+    return new DefaultParser() {
+      @Override
+      public CommandLine parse(org.apache.hbase.thirdparty.org.apache.commons.cli.Options opts, String[] args, Properties props, boolean stop)
+        throws ParseException {
+        CommandLine cl = super.parse(opts, args, props, stop);
+        if(!cmd.hasOption(Options.LIST_SNAPSHOTS.getLongOpt()) && !cmd.hasOption(Options.SNAPSHOT.getLongOpt())) {
+          throw new ParseException("Missing required snapshot option!");
+        }
+        return cl;
+      }
+    };
   }
 
   @Override
