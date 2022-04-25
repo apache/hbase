@@ -743,6 +743,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
       .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+      .maxAttempts(maxAttempts)
       .startLogErrorsCnt(startLogErrorsCnt).call();
   }
 
