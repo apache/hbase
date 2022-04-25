@@ -91,7 +91,8 @@ public class MetricsSink {
     mss.incrFailedBatches();
   }
 
-  /** Get the count of the failed bathes
+  /**
+   * Get the count of the failed bathes
    * @return failedBatches
    */
   protected long getFailedBatches() {
