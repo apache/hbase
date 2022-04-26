@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -36,22 +36,24 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * Handles everything on master-side related to master election. Keeps track of
- * currently active master and registered backup masters.
- *
- * <p>Listens and responds to ZooKeeper notifications on the master znodes,
- * both <code>nodeCreated</code> and <code>nodeDeleted</code>.
- *
- * <p>Contains blocking methods which will hold up backup masters, waiting
- * for the active master to fail.
- *
- * <p>This class is instantiated in the HMaster constructor and the method
- * #blockUntilBecomingActiveMaster() is called to wait until becoming
- * the active master of the cluster.
+ * Handles everything on master-side related to master election. Keeps track of currently active
+ * master and registered backup masters.
+ * <p>
+ * Listens and responds to ZooKeeper notifications on the master znodes, both
+ * <code>nodeCreated</code> and <code>nodeDeleted</code>.
+ * <p>
+ * Contains blocking methods which will hold up backup masters, waiting for the active master to
+ * fail.
+ * <p>
+ * This class is instantiated in the HMaster constructor and the method
+ * #blockUntilBecomingActiveMaster() is called to wait until becoming the active master of the
+ * cluster.
  */
 @InterfaceAudience.Private
 public class ActiveMasterManager extends ZKListener {
@@ -75,11 +77,11 @@ public class ActiveMasterManager extends ZKListener {
 
   /**
    * @param watcher ZK watcher
-   * @param sn ServerName
-   * @param master In an instance of a Master.
+   * @param sn      ServerName
+   * @param master  In an instance of a Master.
    */
   ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master)
-      throws InterruptedIOException {
+    throws InterruptedIOException {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
@@ -117,7 +119,7 @@ public class ActiveMasterManager extends ZKListener {
     // shut down, so that state is now irrelevant. This means that the shutdown
     // state must be set while we wait on the active master in order
     // to shutdown this master. See HBASE-8519.
-    if(path.equals(watcher.getZNodePaths().clusterStateZNode) && !master.isStopped()) {
+    if (path.equals(watcher.getZNodePaths().clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
     handle(path);
@@ -131,7 +133,7 @@ public class ActiveMasterManager extends ZKListener {
 
   private void updateBackupMasters() throws InterruptedIOException {
     backupMasters =
-        ImmutableList.copyOf(MasterAddressTracker.getBackupMastersAndRenewWatch(watcher));
+      ImmutableList.copyOf(MasterAddressTracker.getBackupMastersAndRenewWatch(watcher));
   }
 
   /**
@@ -177,22 +179,21 @@ public class ActiveMasterManager extends ZKListener {
   }
 
   /**
-   * Handle a change in the master node.  Doesn't matter whether this was called
-   * from a nodeCreated or nodeDeleted event because there are no guarantees
-   * that the current state of the master node matches the event at the time of
-   * our next ZK request.
-   *
-   * <p>Uses the watchAndCheckExists method which watches the master address node
-   * regardless of whether it exists or not.  If it does exist (there is an
-   * active master), it returns true.  Otherwise it returns false.
-   *
-   * <p>A watcher is set which guarantees that this method will get called again if
-   * there is another change in the master node.
+   * Handle a change in the master node. Doesn't matter whether this was called from a nodeCreated
+   * or nodeDeleted event because there are no guarantees that the current state of the master node
+   * matches the event at the time of our next ZK request.
+   * <p>
+   * Uses the watchAndCheckExists method which watches the master address node regardless of whether
+   * it exists or not. If it does exist (there is an active master), it returns true. Otherwise it
+   * returns false.
+   * <p>
+   * A watcher is set which guarantees that this method will get called again if there is another
+   * change in the master node.
    */
   private void handleMasterNodeChange() {
     // Watch the node and check if it exists.
     try {
-      synchronized(clusterHasActiveMaster) {
+      synchronized (clusterHasActiveMaster) {
         if (ZKUtil.watchAndCheckExists(watcher, watcher.getZNodePaths().masterAddressZNode)) {
           // A master node exists, there is an active master
           LOG.trace("A master is now available");
@@ -214,30 +215,26 @@ public class ActiveMasterManager extends ZKListener {
   }
 
   /**
-   * Block until becoming the active master.
-   *
-   * Method blocks until there is not another active master and our attempt
-   * to become the new active master is successful.
-   *
-   * This also makes sure that we are watching the master znode so will be
-   * notified if another master dies.
+   * Block until becoming the active master. Method blocks until there is not another active master
+   * and our attempt to become the new active master is successful. This also makes sure that we are
+   * watching the master znode so will be notified if another master dies.
    * @param checkInterval the interval to check if the master is stopped
    * @param startupStatus the monitor status to track the progress
-   * @return True if no issue becoming active master else false if another
-   *   master was running or if some other problem (zookeeper, stop flag has been
-   *   set on this Master)
+   * @return True if no issue becoming active master else false if another master was running or if
+   *         some other problem (zookeeper, stop flag has been set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster(
-      int checkInterval, MonitoredTask startupStatus) {
-    String backupZNode = ZNodePaths.joinZNode(
-      this.watcher.getZNodePaths().backupMasterAddressesZNode, this.sn.toString());
+  boolean blockUntilBecomingActiveMaster(int checkInterval, MonitoredTask startupStatus) {
+    String backupZNode = ZNodePaths
+      .joinZNode(this.watcher.getZNodePaths().backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
-        if (MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.getZNodePaths().masterAddressZNode, this.sn, infoPort)) {
+        if (
+          MasterAddressTracker.setMasterAddress(this.watcher,
+            this.watcher.getZNodePaths().masterAddressZNode, this.sn, infoPort)
+        ) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)
@@ -267,30 +264,30 @@ public class ActiveMasterManager extends ZKListener {
         byte[] bytes =
           ZKUtil.getDataAndWatch(this.watcher, this.watcher.getZNodePaths().masterAddressZNode);
         if (bytes == null) {
-          msg = ("A master was detected, but went down before its address " +
-            "could be read.  Attempting to become the next active master");
+          msg = ("A master was detected, but went down before its address "
+            + "could be read.  Attempting to become the next active master");
         } else {
           ServerName currentMaster;
           try {
             currentMaster = ProtobufUtil.parseServerNameFrom(bytes);
           } catch (DeserializationException e) {
             LOG.warn("Failed parse", e);
-            // Hopefully next time around we won't fail the parse.  Dangerous.
+            // Hopefully next time around we won't fail the parse. Dangerous.
             continue;
           }
           if (ServerName.isSameAddress(currentMaster, this.sn)) {
-            msg = ("Current master has this master's address, " +
-              currentMaster + "; master was restarted? Deleting node.");
+            msg = ("Current master has this master's address, " + currentMaster
+              + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.
             ZKUtil.deleteNode(this.watcher, this.watcher.getZNodePaths().masterAddressZNode);
 
             // We may have failed to delete the znode at the previous step, but
-            //  we delete the file anyway: a second attempt to delete the znode is likely to fail
-            //  again.
+            // we delete the file anyway: a second attempt to delete the znode is likely to fail
+            // again.
             ZNodeClearer.deleteMyEphemeralNodeOnDisk();
           } else {
-            msg = "Another master is the active master, " + currentMaster +
-              "; waiting to become the next active master";
+            msg = "Another master is the active master, " + currentMaster
+              + "; waiting to become the next active master";
           }
         }
         LOG.info(msg);
@@ -305,13 +302,12 @@ public class ActiveMasterManager extends ZKListener {
             clusterHasActiveMaster.wait(checkInterval);
           } catch (InterruptedException e) {
             // We expect to be interrupted when a master dies,
-            //  will fall out if so
+            // will fall out if so
             LOG.debug("Interrupted waiting for master to die", e);
           }
         }
         if (clusterShutDown.get()) {
-          this.master.stop(
-            "Cluster went down before this master became active");
+          this.master.stop("Cluster went down before this master became active");
         }
       }
     }
@@ -326,10 +322,8 @@ public class ActiveMasterManager extends ZKListener {
       if (ZKUtil.checkExists(watcher, watcher.getZNodePaths().masterAddressZNode) >= 0) {
         return true;
       }
-    }
-    catch (KeeperException ke) {
-      LOG.info("Received an unexpected KeeperException when checking " +
-          "isActiveMaster : "+ ke);
+    } catch (KeeperException ke) {
+      LOG.info("Received an unexpected KeeperException when checking " + "isActiveMaster : " + ke);
     }
     return false;
   }
@@ -348,15 +342,14 @@ public class ActiveMasterManager extends ZKListener {
       } catch (IOException e) {
         LOG.warn("Failed get of master address: " + e.toString());
       }
-      if (activeMaster != null &&  activeMaster.equals(this.sn)) {
+      if (activeMaster != null && activeMaster.equals(this.sn)) {
         ZKUtil.deleteNode(watcher, watcher.getZNodePaths().masterAddressZNode);
         // We may have failed to delete the znode at the previous step, but
-        //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+        // we delete the file anyway: a second attempt to delete the znode is likely to fail again.
         ZNodeClearer.deleteMyEphemeralNodeOnDisk();
       }
     } catch (KeeperException e) {
-      LOG.debug(this.watcher.prefix("Failed delete of our master address node; " +
-          e.getMessage()));
+      LOG.debug(this.watcher.prefix("Failed delete of our master address node; " + e.getMessage()));
     }
   }
 

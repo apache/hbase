@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
 
   @Override
   public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Increment increment, final Result result) throws IOException {
+    final Increment increment, final Result result) throws IOException {
     if (ct.incrementAndGet() == 1) {
       Threads.sleep(sleepTime.get());
     }
@@ -62,7 +62,7 @@ public class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
 
   @Override
   public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Append append, final Result result) throws IOException {
+    final Append append, final Result result) throws IOException {
     if (ct.incrementAndGet() == 1) {
       Threads.sleep(sleepTime.get());
     }

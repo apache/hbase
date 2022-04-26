@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferAllocator;
@@ -34,8 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * IO engine that stores data to a file on the specified file system using memory mapping
- * mechanism
+ * IO engine that stores data to a file on the specified file system using memory mapping mechanism
  */
 @InterfaceAudience.Private
 public abstract class FileMmapIOEngine extends PersistentIOEngine {
@@ -93,12 +91,11 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   @Override
   public String toString() {
     return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path + ", size="
-        + String.format("%,d", this.size);
+      + String.format("%,d", this.size);
   }
 
   /**
-   * File IO engine is always able to support persistent storage for the cache
-   * @return true
+   * File IO engine is always able to support persistent storage for the cache n
    */
   @Override
   public boolean isPersistent() {
@@ -112,8 +109,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   /**
    * Transfers data from the given byte buffer to file
    * @param srcBuffer the given byte buffer from which bytes are to be read
-   * @param offset The offset in the file where the first byte to be written
-   * @throws IOException
+   * @param offset    The offset in the file where the first byte to be written n
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
@@ -126,8 +122,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * Sync the data to file after writing
-   * @throws IOException
+   * Sync the data to file after writing n
    */
   @Override
   public void sync() throws IOException {

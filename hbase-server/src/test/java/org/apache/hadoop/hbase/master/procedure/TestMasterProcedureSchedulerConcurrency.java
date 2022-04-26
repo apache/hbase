@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,15 +40,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterProcedureSchedulerConcurrency {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterProcedureSchedulerConcurrency.class);
+    HBaseClassTestRule.forClass(TestMasterProcedureSchedulerConcurrency.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestMasterProcedureSchedulerConcurrency.class);
+    LoggerFactory.getLogger(TestMasterProcedureSchedulerConcurrency.class);
 
   private MasterProcedureScheduler queue;
 
@@ -109,12 +109,14 @@ public class TestMasterProcedureSchedulerConcurrency {
               try {
                 long procId = proc.getProcId();
                 int concurrent = concurrentCount.incrementAndGet();
-                assertTrue("inc-concurrent="+ concurrent +" 1 <= concurrent <= "+ NUM_PEERS,
+                assertTrue("inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_PEERS,
                   concurrent >= 1 && concurrent <= NUM_PEERS);
-                LOG.debug("[S] peerId="+ peerId +" procId="+ procId +" concurrent="+ concurrent);
+                LOG.debug(
+                  "[S] peerId=" + peerId + " procId=" + procId + " concurrent=" + concurrent);
                 Thread.sleep(2000);
                 concurrent = concurrentCount.decrementAndGet();
-                LOG.debug("[E] peerId="+ peerId +" procId="+ procId +" concurrent="+ concurrent);
+                LOG.debug(
+                  "[E] peerId=" + peerId + " procId=" + procId + " concurrent=" + concurrent);
                 assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_PEERS);
               } finally {
                 synchronized (concurrentPeers) {
@@ -145,8 +147,8 @@ public class TestMasterProcedureSchedulerConcurrency {
   }
 
   /**
-   * Verify that "write" operations for a single table are serialized,
-   * but different tables can be executed in parallel.
+   * Verify that "write" operations for a single table are serialized, but different tables can be
+   * executed in parallel.
    */
   @Test
   public void testConcurrentWriteOps() throws Exception {
@@ -192,12 +194,14 @@ public class TestMasterProcedureSchedulerConcurrency {
               try {
                 long procId = proc.getProcId();
                 int concurrent = concurrentCount.incrementAndGet();
-                assertTrue("inc-concurrent="+ concurrent +" 1 <= concurrent <= "+ NUM_TABLES,
+                assertTrue("inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_TABLES,
                   concurrent >= 1 && concurrent <= NUM_TABLES);
-                LOG.debug("[S] tableId="+ tableId +" procId="+ procId +" concurrent="+ concurrent);
+                LOG.debug(
+                  "[S] tableId=" + tableId + " procId=" + procId + " concurrent=" + concurrent);
                 Thread.sleep(2000);
                 concurrent = concurrentCount.decrementAndGet();
-                LOG.debug("[E] tableId="+ tableId +" procId="+ procId +" concurrent="+ concurrent);
+                LOG.debug(
+                  "[E] tableId=" + tableId + " procId=" + procId + " concurrent=" + concurrent);
                 assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_TABLES);
               } finally {
                 synchronized (concurrentTables) {
@@ -227,8 +231,8 @@ public class TestMasterProcedureSchedulerConcurrency {
 
     for (int i = 1; i <= NUM_TABLES; ++i) {
       final TableName table = TableName.valueOf(String.format("testtb-%04d", i));
-      final TestTableProcedure dummyProc = new TestTableProcedure(100, table,
-        TableProcedureInterface.TableOperationType.DELETE);
+      final TestTableProcedure dummyProc =
+        new TestTableProcedure(100, table, TableProcedureInterface.TableOperationType.DELETE);
       assertTrue("queue should be deleted, table=" + table,
         queue.markTableAsDeleted(table, dummyProc));
     }
@@ -237,9 +241,7 @@ public class TestMasterProcedureSchedulerConcurrency {
   @Test
   public void testMasterProcedureSchedulerPerformanceEvaluation() throws Exception {
     // Make sure the tool does not get stuck
-    MasterProcedureSchedulerPerformanceEvaluation.main(new String[] {
-      "-num_ops", "1000"
-    });
+    MasterProcedureSchedulerPerformanceEvaluation.main(new String[] { "-num_ops", "1000" });
   }
 
   public static class TestTableProcSet {
@@ -295,11 +297,11 @@ public class TestMasterProcedureSchedulerConcurrency {
     }
 
     public TableName getTableName(Procedure proc) {
-      return ((TableProcedureInterface)proc).getTableName();
+      return ((TableProcedureInterface) proc).getTableName();
     }
 
     public TableProcedureInterface.TableOperationType getTableOperationType(Procedure proc) {
-      return ((TableProcedureInterface)proc).getTableOperationType();
+      return ((TableProcedureInterface) proc).getTableOperationType();
     }
   }
 

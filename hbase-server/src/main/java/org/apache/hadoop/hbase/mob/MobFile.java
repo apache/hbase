@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,25 +49,22 @@ public class MobFile {
 
   /**
    * Internal use only. This is used by the sweeper.
-   *
-   * @return The store file scanner.
-   * @throws IOException
+   * @return The store file scanner. n
    */
   public StoreFileScanner getScanner() throws IOException {
     List<HStoreFile> sfs = new ArrayList<>();
     sfs.add(sf);
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, false, sf.getMaxMemStoreTS());
+      false, false, sf.getMaxMemStoreTS());
 
     return sfScanners.get(0);
   }
 
   /**
    * Reads a cell from the mob file.
-   * @param search The cell need to be searched in the mob file.
+   * @param search         The cell need to be searched in the mob file.
    * @param cacheMobBlocks Should this scanner cache blocks.
-   * @return The cell in the mob file.
-   * @throws IOException
+   * @return The cell in the mob file. n
    */
   public MobCell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
     return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
@@ -77,11 +72,10 @@ public class MobFile {
 
   /**
    * Reads a cell from the mob file.
-   * @param search The cell need to be searched in the mob file.
+   * @param search         The cell need to be searched in the mob file.
    * @param cacheMobBlocks Should this scanner cache blocks.
-   * @param readPt the read point.
-   * @return The cell in the mob file.
-   * @throws IOException
+   * @param readPt         the read point.
+   * @return The cell in the mob file. n
    */
   public MobCell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
     StoreFileScanner scanner = null;
@@ -114,18 +108,15 @@ public class MobFile {
   }
 
   /**
-   * Opens the underlying reader.
-   * It's not thread-safe. Use MobFileCache.openFile() instead.
-   * @throws IOException
+   * Opens the underlying reader. It's not thread-safe. Use MobFileCache.openFile() instead. n
    */
   public void open() throws IOException {
     sf.initReader();
   }
 
   /**
-   * Closes the underlying reader, but do no evict blocks belonging to this file.
-   * It's not thread-safe. Use MobFileCache.closeFile() instead.
-   * @throws IOException
+   * Closes the underlying reader, but do no evict blocks belonging to this file. It's not
+   * thread-safe. Use MobFileCache.closeFile() instead. n
    */
   public void close() throws IOException {
     if (sf != null) {
@@ -136,15 +127,14 @@ public class MobFile {
 
   /**
    * Creates an instance of the MobFile.
-   * @param fs The file system.
-   * @param path The path of the underlying StoreFile.
-   * @param conf The configuration.
+   * @param fs        The file system.
+   * @param path      The path of the underlying StoreFile.
+   * @param conf      The configuration.
    * @param cacheConf The CacheConfig.
-   * @return An instance of the MobFile.
-   * @throws IOException
+   * @return An instance of the MobFile. n
    */
   public static MobFile create(FileSystem fs, Path path, Configuration conf, CacheConfig cacheConf)
-      throws IOException {
+    throws IOException {
     // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
     // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
     HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);

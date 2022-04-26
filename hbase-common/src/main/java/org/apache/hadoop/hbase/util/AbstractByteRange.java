@@ -14,39 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The portion of this file denoted by 'Copied from com.google.protobuf.CodedInputStream'
- * is from Protocol Buffers v2.5.0 under the following license
- *
- * Copyright 2008 Google Inc.  All rights reserved.
- * http://code.google.com/p/protobuf/
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 package org.apache.hadoop.hbase.util;
 
@@ -70,8 +37,7 @@ public abstract class AbstractByteRange implements ByteRange {
   protected byte[] bytes;
 
   /**
-   * The index of the first byte in this range. {@code ByteRange.get(0)} will
-   * return bytes[offset].
+   * The index of the first byte in this range. {@code ByteRange.get(0)} will return bytes[offset].
    */
   protected int offset;
 
@@ -81,8 +47,8 @@ public abstract class AbstractByteRange implements ByteRange {
   protected int length;
 
   /**
-   * Variable for lazy-caching the hashCode of this range. Useful for frequently
-   * used ranges, long-lived ranges, or long ranges.
+   * Variable for lazy-caching the hashCode of this range. Useful for frequently used ranges,
+   * long-lived ranges, or long ranges.
    */
   protected int hash = UNSET_HASH_VALUE;
 
@@ -265,7 +231,7 @@ public abstract class AbstractByteRange implements ByteRange {
 
   @Override
   public void deepCopySubRangeTo(int innerOffset, int copyLength, byte[] destination,
-      int destinationOffset) {
+    int destinationOffset) {
     System.arraycopy(bytes, offset + innerOffset, destination, destinationOffset, copyLength);
   }
 
@@ -313,13 +279,13 @@ public abstract class AbstractByteRange implements ByteRange {
   }
 
   /**
-   * Bitwise comparison of each byte in the array. Unsigned comparison, not
-   * paying attention to java's signed bytes.
+   * Bitwise comparison of each byte in the array. Unsigned comparison, not paying attention to
+   * java's signed bytes.
    */
   @Override
   public int compareTo(ByteRange other) {
     return Bytes.compareTo(bytes, offset, length, other.getBytes(), other.getOffset(),
-        other.getLength());
+      other.getLength());
   }
 
   @Override

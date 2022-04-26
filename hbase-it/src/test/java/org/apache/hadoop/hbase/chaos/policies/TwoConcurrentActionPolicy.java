@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.policies;
-
-import org.apache.hadoop.hbase.chaos.actions.Action;
-import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.apache.hadoop.hbase.chaos.actions.Action;
+import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * Chaos Monkey policy that will run two different actions at the same time.
- * A random action from each array of actions will be chosen and then run in parallel.
+ * Chaos Monkey policy that will run two different actions at the same time. A random action from
+ * each array of actions will be chosen and then run in parallel.
  */
 public class TwoConcurrentActionPolicy extends PeriodicPolicy {
   private final Action[] actionsOne;
@@ -59,11 +58,10 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
       fOne.get();
       fTwo.get();
     } catch (InterruptedException e) {
-      LOG.warn("Exception occurred during performing action: "
-          + StringUtils.stringifyException(e));
+      LOG.warn("Exception occurred during performing action: " + StringUtils.stringifyException(e));
     } catch (ExecutionException ex) {
-      LOG.warn("Exception occurred during performing action: "
-          + StringUtils.stringifyException(ex));
+      LOG
+        .warn("Exception occurred during performing action: " + StringUtils.stringifyException(ex));
     }
   }
 
@@ -87,12 +85,13 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
       this.action = action;
     }
 
-    @Override public void run() {
+    @Override
+    public void run() {
       try {
         action.perform();
       } catch (Exception ex) {
-        LOG.warn("Exception occurred during performing action: "
-            + StringUtils.stringifyException(ex));
+        LOG.warn(
+          "Exception occurred during performing action: " + StringUtils.stringifyException(ex));
       }
     }
   }

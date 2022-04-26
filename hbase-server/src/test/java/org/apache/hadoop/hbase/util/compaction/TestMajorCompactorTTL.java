@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -44,7 +43,7 @@ import org.junit.rules.TestName;
 public class TestMajorCompactorTTL extends TestMajorCompactor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMajorCompactorTTL.class);
+    HBaseClassTestRule.forClass(TestMajorCompactorTTL.class);
 
   @Rule
   public TestName name = new TestName();
@@ -77,8 +76,8 @@ public class TestMajorCompactorTTL extends TestMajorCompactor {
     assertTrue(numberOfRegions < numHFiles);
     modifyTTL(tableName);
 
-    MajorCompactorTTL compactor = new MajorCompactorTTL(utility.getConfiguration(),
-        admin.getDescriptor(tableName), 1, 200);
+    MajorCompactorTTL compactor =
+      new MajorCompactorTTL(utility.getConfiguration(), admin.getDescriptor(tableName), 1, 200);
     compactor.initializeWorkQueues();
     compactor.compactAllRegions();
     compactor.shutdown();

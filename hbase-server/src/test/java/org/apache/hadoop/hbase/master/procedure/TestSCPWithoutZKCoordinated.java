@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,12 +25,12 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestSCPWithoutZKCoordinated extends TestSCP {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSCPWithoutZKCoordinated.class);
+    HBaseClassTestRule.forClass(TestSCPWithoutZKCoordinated.class);
 
   @Override
   protected void setupConf(Configuration conf) {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +22,9 @@ import java.util.Optional;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * CoprocessorDescriptor contains the details about how to build a coprocessor.
- * This class is a pojo so there are no checks for the details carried by this class.
- * Use {@link CoprocessorDescriptorBuilder} to instantiate a CoprocessorDescriptor
+ * CoprocessorDescriptor contains the details about how to build a coprocessor. This class is a pojo
+ * so there are no checks for the details carried by this class. Use
+ * {@link CoprocessorDescriptorBuilder} to instantiate a CoprocessorDescriptor
  */
 @InterfaceAudience.Public
 public interface CoprocessorDescriptor {
@@ -45,7 +44,7 @@ public interface CoprocessorDescriptor {
   int getPriority();
 
   /**
-   * @return Arbitrary key-value parameter pairs passed into the  coprocessor.
+   * @return Arbitrary key-value parameter pairs passed into the coprocessor.
    */
   Map<String, String> getProperties();
 }

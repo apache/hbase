@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.BackupInfo.Builder;
@@ -59,7 +59,10 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Backup session states
    */
   public enum BackupState {
-    RUNNING, COMPLETE, FAILED, ANY
+    RUNNING,
+    COMPLETE,
+    FAILED,
+    ANY
   }
 
   /**
@@ -67,7 +70,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * BackupState.RUNNING
    */
   public enum BackupPhase {
-    REQUEST, SNAPSHOT, PREPARE_INCREMENTAL, SNAPSHOTCOPY, INCREMENTAL_COPY, STORE_MANIFEST
+    REQUEST,
+    SNAPSHOT,
+    PREPARE_INCREMENTAL,
+    SNAPSHOTCOPY,
+    INCREMENTAL_COPY,
+    STORE_MANIFEST
   }
 
   /**
@@ -137,8 +145,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private Map<TableName, Map<String, Long>> tableSetTimestampMap;
 
   /**
-   * Previous Region server log timestamps for table set after distributed log roll key -
-   * table name, value - map of RegionServer hostname -> last log rolled timestamp
+   * Previous Region server log timestamps for table set after distributed log roll key - table
+   * name, value - map of RegionServer hostname -> last log rolled timestamp
    */
   private Map<TableName, Map<String, Long>> incrTimestampMap;
 
@@ -198,8 +206,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     return tableSetTimestampMap;
   }
 
-  public void setTableSetTimestampMap(Map<TableName,
-          Map<String, Long>> tableSetTimestampMap) {
+  public void setTableSetTimestampMap(Map<TableName, Map<String, Long>> tableSetTimestampMap) {
     this.tableSetTimestampMap = tableSetTimestampMap;
   }
 
@@ -357,8 +364,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Set the new region server log timestamps after distributed log roll
    * @param prevTableSetTimestampMap table timestamp map
    */
-  public void setIncrTimestampMap(Map<TableName,
-          Map<String, Long>> prevTableSetTimestampMap) {
+  public void setIncrTimestampMap(Map<TableName, Map<String, Long>> prevTableSetTimestampMap) {
     this.incrTimestampMap = prevTableSetTimestampMap;
   }
 
@@ -482,8 +488,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
       context.setState(BackupInfo.BackupState.valueOf(proto.getBackupState().name()));
     }
 
-    context.setHLogTargetDir(BackupUtils.getLogBackupDir(proto.getBackupRootDir(),
-      proto.getBackupId()));
+    context
+      .setHLogTargetDir(BackupUtils.getLogBackupDir(proto.getBackupRootDir(), proto.getBackupId()));
 
     if (proto.hasBackupPhase()) {
       context.setPhase(BackupPhase.valueOf(proto.getBackupPhase().name()));
@@ -507,12 +513,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
     return map;
   }
 
-  private static Map<TableName, Map<String, Long>> getTableSetTimestampMap(
-    Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
+  private static Map<TableName, Map<String, Long>>
+    getTableSetTimestampMap(Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
     Map<TableName, Map<String, Long>> tableSetTimestampMap = new HashMap<>();
     for (Entry<String, BackupProtos.BackupInfo.RSTimestampMap> entry : map.entrySet()) {
-      tableSetTimestampMap
-        .put(TableName.valueOf(entry.getKey()), entry.getValue().getRsTimestampMap());
+      tableSetTimestampMap.put(TableName.valueOf(entry.getKey()),
+        entry.getValue().getRsTimestampMap());
     }
 
     return tableSetTimestampMap;
@@ -549,7 +555,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   public String getStatusAndProgressAsString() {
     StringBuilder sb = new StringBuilder();
     sb.append("id: ").append(getBackupId()).append(" state: ").append(getState())
-        .append(" progress: ").append(getProgress());
+      .append(" progress: ").append(getProgress());
     return sb.toString();
   }
 
@@ -567,7 +573,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   @Override
   public int compareTo(BackupInfo o) {
     Long thisTS =
-        Long.valueOf(this.getBackupId().substring(this.getBackupId().lastIndexOf("_") + 1));
+      Long.valueOf(this.getBackupId().substring(this.getBackupId().lastIndexOf("_") + 1));
     Long otherTS = Long.valueOf(o.getBackupId().substring(o.getBackupId().lastIndexOf("_") + 1));
     return thisTS.compareTo(otherTS);
   }

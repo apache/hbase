@@ -24,30 +24,29 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
-
 /**
- * Test of the HBCK-version of SCP.
- * The HBCKSCP is an SCP only it reads hbase:meta for list of Regions that were
- * on the server-to-process rather than consult Master in-memory-state.
+ * Test of the HBCK-version of SCP. The HBCKSCP is an SCP only it reads hbase:meta for list of
+ * Regions that were on the server-to-process rather than consult Master in-memory-state.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestHBCKSCPUnknown extends TestHBCKSCP {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBCKSCPUnknown.class);
+    HBaseClassTestRule.forClass(TestHBCKSCPUnknown.class);
 
   @Override
   protected long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
     MasterProtos.ScheduleSCPsForUnknownServersResponse response =
-        master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
-            MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
+      master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
+        MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
     assertEquals(1, response.getPidCount());
     long pid = response.getPid(0);
     return pid;

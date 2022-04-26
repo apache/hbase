@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.lang.reflect.Method;
 import java.security.KeyPair;
@@ -42,12 +43,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestRESTServerSSL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRESTServerSSL.class);
+    HBaseClassTestRule.forClass(TestRESTServerSSL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRESTServerSSL.class);
 
@@ -79,8 +80,8 @@ public class TestRESTServerSSL {
     initializeAlgorithmId();
     keyDir = initKeystoreDir();
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    X509Certificate serverCertificate = KeyStoreTestUtil.generateCertificate(
-      "CN=localhost, O=server", keyPair, 30, "SHA1withRSA");
+    X509Certificate serverCertificate =
+      KeyStoreTestUtil.generateCertificate("CN=localhost, O=server", keyPair, 30, "SHA1withRSA");
 
     generateTrustStore("jks", serverCertificate);
     generateTrustStore("jceks", serverCertificate);
@@ -162,8 +163,6 @@ public class TestRESTServerSSL {
     assertEquals(200, response.getCode());
   }
 
-
-
   private static File initKeystoreDir() {
     String dataTestDir = TEST_UTIL.getDataTestDir().toString();
     File keystoreDir = new File(dataTestDir, TestRESTServerSSL.class.getSimpleName() + "_keys");
@@ -213,7 +212,7 @@ public class TestRESTServerSSL {
     REST_TEST_UTIL.startServletContainer(conf);
     Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
     sslClient = new Client(localCluster, getTruststoreFilePath(storeType),
-                           Optional.of(TRUST_STORE_PASSWORD), Optional.of(storeType));
+      Optional.of(TRUST_STORE_PASSWORD), Optional.of(storeType));
   }
 
 }

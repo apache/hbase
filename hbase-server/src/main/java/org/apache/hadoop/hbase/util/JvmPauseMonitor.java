@@ -23,12 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
-import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -38,16 +37,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * Class which sets up a simple thread which runs in a loop sleeping
- * for a short interval of time. If the sleep takes significantly longer
- * than its target time, it implies that the JVM or host machine has
- * paused processing, which may cause other problems. If such a pause is
- * detected, the thread logs a message.
- * The original JvmPauseMonitor is:
- * ${hadoop-common-project}/hadoop-common/src/main/java/org/apache/hadoop/util/
- * JvmPauseMonitor.java
- * r1503806 | cmccabe | 2013-07-17 01:48:24 +0800 (Wed, 17 Jul 2013) | 1 line
- * HADOOP-9618.  thread which detects GC pauses(Todd Lipcon)
+ * Class which sets up a simple thread which runs in a loop sleeping for a short interval of time.
+ * If the sleep takes significantly longer than its target time, it implies that the JVM or host
+ * machine has paused processing, which may cause other problems. If such a pause is detected, the
+ * thread logs a message. The original JvmPauseMonitor is:
+ * ${hadoop-common-project}/hadoop-common/src/main/java/org/apache/hadoop/util/ JvmPauseMonitor.java
+ * r1503806 | cmccabe | 2013-07-17 01:48:24 +0800 (Wed, 17 Jul 2013) | 1 line HADOOP-9618. thread
+ * which detects GC pauses(Todd Lipcon)
  */
 @InterfaceAudience.Private
 public class JvmPauseMonitor {
@@ -55,17 +51,15 @@ public class JvmPauseMonitor {
 
   /** The target sleep time */
   private static final long SLEEP_INTERVAL_MS = 500;
-  
+
   /** log WARN if we detect a pause longer than this threshold */
   private final long warnThresholdMs;
-  public static final String WARN_THRESHOLD_KEY =
-      "jvm.pause.warn-threshold.ms";
+  public static final String WARN_THRESHOLD_KEY = "jvm.pause.warn-threshold.ms";
   private static final long WARN_THRESHOLD_DEFAULT = 10000;
-  
+
   /** log INFO if we detect a pause longer than this threshold */
   private final long infoThresholdMs;
-  public static final String INFO_THRESHOLD_KEY =
-      "jvm.pause.info-threshold.ms";
+  public static final String INFO_THRESHOLD_KEY = "jvm.pause.info-threshold.ms";
   private static final long INFO_THRESHOLD_DEFAULT = 1000;
 
   private Thread monitorThread;
@@ -81,7 +75,7 @@ public class JvmPauseMonitor {
     this.infoThresholdMs = conf.getLong(INFO_THRESHOLD_KEY, INFO_THRESHOLD_DEFAULT);
     this.metricsSource = metricsSource;
   }
-  
+
   public void start() {
     Preconditions.checkState(monitorThread == null, "Already started");
     monitorThread = new Thread(new Monitor(), "JvmPauseMonitor");
@@ -98,10 +92,10 @@ public class JvmPauseMonitor {
       Thread.currentThread().interrupt();
     }
   }
-  
+
   private String formatMessage(long extraSleepTime, List<String> gcDiffs) {
     String ret = "Detected pause in JVM or host machine (eg GC): " + "pause of approximately "
-        + extraSleepTime + "ms\n";
+      + extraSleepTime + "ms\n";
     if (gcDiffs.isEmpty()) {
       ret += "No GCs detected";
     } else {
@@ -109,7 +103,7 @@ public class JvmPauseMonitor {
     }
     return ret;
   }
-  
+
   private Map<String, GcTimes> getGcTimes() {
     Map<String, GcTimes> map = Maps.newHashMap();
     List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
@@ -160,8 +154,8 @@ public class JvmPauseMonitor {
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
         if (extraSleepTime > infoThresholdMs) {
-          Set<String> gcBeanNames = Sets.intersection(gcTimesAfterSleep.keySet(),
-            gcTimesBeforeSleep.keySet());
+          Set<String> gcBeanNames =
+            Sets.intersection(gcTimesAfterSleep.keySet(), gcTimesBeforeSleep.keySet());
           List<String> gcDiffs = Lists.newArrayList();
           for (String name : gcBeanNames) {
             GcTimes diff = gcTimesAfterSleep.get(name).subtract(gcTimesBeforeSleep.get(name));
@@ -207,13 +201,11 @@ public class JvmPauseMonitor {
   }
 
   /**
-   * Simple 'main' to facilitate manual testing of the pause monitor.
-   * 
-   * This main function just leaks memory into a list. Running this class
-   * with a 1GB heap will very quickly go into "GC hell" and result in
-   * log messages about the GC pauses.
+   * Simple 'main' to facilitate manual testing of the pause monitor. This main function just leaks
+   * memory into a list. Running this class with a 1GB heap will very quickly go into "GC hell" and
+   * result in log messages about the GC pauses.
    */
-  public static void main(String []args) throws Exception {
+  public static void main(String[] args) throws Exception {
     new JvmPauseMonitor(new Configuration()).start();
     List<String> list = Lists.newArrayList();
     int i = 0;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,17 +31,17 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
- * Implementation of a log cleaner that checks if a log is still scheduled for
- * replication before deleting it when its TTL is over.
+ * Implementation of a log cleaner that checks if a log is still scheduled for replication before
+ * deleting it when its TTL is over.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
@@ -128,7 +128,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk,
-      ReplicationQueueStorage replicationQueueStorage) {
+    ReplicationQueueStorage replicationQueueStorage) {
     super.setConf(conf);
     this.zkw = zk;
     this.queueStorage = replicationQueueStorage;

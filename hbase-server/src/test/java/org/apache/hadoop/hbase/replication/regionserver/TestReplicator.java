@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestReplicator extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicator.class);
+    HBaseClassTestRule.forClass(TestReplicator.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
@@ -72,7 +72,7 @@ public class TestReplicator extends TestReplicationBase {
     // Replace the peer set up for us by the base class with a wrapper for this test
     hbaseAdmin.addReplicationPeer("testReplicatorBatching",
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()).build());
+        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()).build());
 
     ReplicationEndpointForTest.setBatchCount(0);
     ReplicationEndpointForTest.setEntriesCount(0);
@@ -241,7 +241,7 @@ public class TestReplicator extends TestReplicationBase {
   }
 
   public static class FailureInjectingReplicationEndpointForTest
-      extends ReplicationEndpointForTest {
+    extends ReplicationEndpointForTest {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override

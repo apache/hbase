@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Implementation for {@link ModeStrategy} for Region Mode.
  */
@@ -47,29 +45,22 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class RegionModeStrategy implements ModeStrategy {
 
   private final List<FieldInfo> fieldInfos = Arrays.asList(
-    new FieldInfo(Field.REGION_NAME, 0, false),
-    new FieldInfo(Field.NAMESPACE, 0, true),
-    new FieldInfo(Field.TABLE, 0,  true),
-    new FieldInfo(Field.START_CODE, 13, false),
-    new FieldInfo(Field.REPLICA_ID, 5, false),
-    new FieldInfo(Field.REGION, 32, true),
-    new FieldInfo(Field.REGION_SERVER, 0, true),
-    new FieldInfo(Field.LONG_REGION_SERVER, 0, false),
+    new FieldInfo(Field.REGION_NAME, 0, false), new FieldInfo(Field.NAMESPACE, 0, true),
+    new FieldInfo(Field.TABLE, 0, true), new FieldInfo(Field.START_CODE, 13, false),
+    new FieldInfo(Field.REPLICA_ID, 5, false), new FieldInfo(Field.REGION, 32, true),
+    new FieldInfo(Field.REGION_SERVER, 0, true), new FieldInfo(Field.LONG_REGION_SERVER, 0, false),
     new FieldInfo(Field.REQUEST_COUNT_PER_SECOND, 8, true),
     new FieldInfo(Field.READ_REQUEST_COUNT_PER_SECOND, 8, true),
     new FieldInfo(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND, 8, true),
     new FieldInfo(Field.WRITE_REQUEST_COUNT_PER_SECOND, 8, true),
     new FieldInfo(Field.STORE_FILE_SIZE, 10, true),
     new FieldInfo(Field.UNCOMPRESSED_STORE_FILE_SIZE, 12, false),
-    new FieldInfo(Field.NUM_STORE_FILES,4, true),
-    new FieldInfo(Field.MEM_STORE_SIZE, 8, true),
-    new FieldInfo(Field.LOCALITY, 8, true),
-    new FieldInfo(Field.START_KEY, 0, false),
+    new FieldInfo(Field.NUM_STORE_FILES, 4, true), new FieldInfo(Field.MEM_STORE_SIZE, 8, true),
+    new FieldInfo(Field.LOCALITY, 8, true), new FieldInfo(Field.START_KEY, 0, false),
     new FieldInfo(Field.COMPACTING_CELL_COUNT, 12, false),
     new FieldInfo(Field.COMPACTED_CELL_COUNT, 12, false),
     new FieldInfo(Field.COMPACTION_PROGRESS, 7, false),
-    new FieldInfo(Field.LAST_MAJOR_COMPACTION_TIME, 19, false)
-  );
+    new FieldInfo(Field.LAST_MAJOR_COMPACTION_TIME, 19, false));
 
   private final Map<String, RequestCountPerSecond> requestCountPerSecondMap = new HashMap<>();
 
@@ -86,8 +77,9 @@ public final class RegionModeStrategy implements ModeStrategy {
     return Field.REQUEST_COUNT_PER_SECOND;
   }
 
-  @Override public List<Record> getRecords(ClusterMetrics clusterMetrics,
-      List<RecordFilter> pushDownFilters) {
+  @Override
+  public List<Record> getRecords(ClusterMetrics clusterMetrics,
+    List<RecordFilter> pushDownFilters) {
     List<Record> ret = new ArrayList<>();
     for (ServerMetrics sm : clusterMetrics.getLiveServerMetrics().values()) {
       long lastReportTimestamp = sm.getLastReportTimestamp();
@@ -119,8 +111,8 @@ public final class RegionModeStrategy implements ModeStrategy {
       tableName = tn.getQualifierAsString();
       startKey = Bytes.toStringBinary(elements[1]);
       startCode = Bytes.toString(elements[2]);
-      replicaId = elements.length == 4 ?
-        Integer.valueOf(Bytes.toString(elements[3])).toString() : "";
+      replicaId =
+        elements.length == 4 ? Integer.valueOf(Bytes.toString(elements[3])).toString() : "";
       region = RegionInfo.encodeRegionName(regionMetrics.getRegionName());
     } catch (IOException ignored) {
     }
@@ -145,11 +137,10 @@ public final class RegionModeStrategy implements ModeStrategy {
     builder.put(Field.READ_REQUEST_COUNT_PER_SECOND,
       requestCountPerSecond.getReadRequestCountPerSecond());
     builder.put(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND,
-        requestCountPerSecond.getFilteredReadRequestCountPerSecond());
+      requestCountPerSecond.getFilteredReadRequestCountPerSecond());
     builder.put(Field.WRITE_REQUEST_COUNT_PER_SECOND,
       requestCountPerSecond.getWriteRequestCountPerSecond());
-    builder.put(Field.REQUEST_COUNT_PER_SECOND,
-      requestCountPerSecond.getRequestCountPerSecond());
+    builder.put(Field.REQUEST_COUNT_PER_SECOND, requestCountPerSecond.getRequestCountPerSecond());
 
     builder.put(Field.STORE_FILE_SIZE, regionMetrics.getStoreFileSize());
     builder.put(Field.UNCOMPRESSED_STORE_FILE_SIZE, regionMetrics.getUncompressedStoreFileSize());
@@ -160,7 +151,7 @@ public final class RegionModeStrategy implements ModeStrategy {
     long compactingCellCount = regionMetrics.getCompactingCellCount();
     long compactedCellCount = regionMetrics.getCompactedCellCount();
     float compactionProgress = 0;
-    if  (compactedCellCount > 0) {
+    if (compactedCellCount > 0) {
       compactionProgress = 100 * ((float) compactedCellCount / compactingCellCount);
     }
 
@@ -178,24 +169,22 @@ public final class RegionModeStrategy implements ModeStrategy {
   }
 
   /**
-   * Form new record list with records formed by only fields provided through fieldInfo and
-   * add a count field for each record with value 1
-   * We are doing two operation of selecting and adding new field
-   * because of saving some CPU cycles on rebuilding the record again
-   *
+   * Form new record list with records formed by only fields provided through fieldInfo and add a
+   * count field for each record with value 1 We are doing two operation of selecting and adding new
+   * field because of saving some CPU cycles on rebuilding the record again
    * @param fieldInfos List of FieldInfos required in the record
    * @param records    List of records which needs to be processed
    * @param countField Field which needs to be added with value 1 for each record
    * @return records after selecting required fields and adding count field
    */
   List<Record> selectModeFieldsAndAddCountField(List<FieldInfo> fieldInfos, List<Record> records,
-      Field countField) {
+    Field countField) {
 
-    return records.stream().map(record -> Record.ofEntries(
-        fieldInfos.stream().filter(fi -> record.containsKey(fi.getField()))
-            .map(fi -> Record.entry(fi.getField(), record.get(fi.getField())))))
-        .map(record -> Record.builder().putAll(record).put(countField, 1).build())
-        .collect(Collectors.toList());
+    return records.stream().map(
+      record -> Record.ofEntries(fieldInfos.stream().filter(fi -> record.containsKey(fi.getField()))
+        .map(fi -> Record.entry(fi.getField(), record.get(fi.getField())))))
+      .map(record -> Record.builder().putAll(record).put(countField, 1).build())
+      .collect(Collectors.toList());
   }
 
   @Nullable

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -83,35 +82,35 @@ public interface MetricsTableSource extends Comparable<MetricsTableSource>, Clos
   /**
    * Update the compaction time histogram, both major and minor
    * @param isMajor whether compaction is a major compaction
-   * @param t time it took, in milliseconds
+   * @param t       time it took, in milliseconds
    */
   void updateCompactionTime(boolean isMajor, long t);
 
   /**
    * Update the compaction input number of files histogram
    * @param isMajor whether compaction is a major compaction
-   * @param c number of files
+   * @param c       number of files
    */
   void updateCompactionInputFileCount(boolean isMajor, long c);
 
   /**
    * Update the compaction total input file size histogram
    * @param isMajor whether compaction is a major compaction
-   * @param bytes the number of bytes of the compaction input file
+   * @param bytes   the number of bytes of the compaction input file
    */
   void updateCompactionInputSize(boolean isMajor, long bytes);
 
   /**
    * Update the compaction output number of files histogram
    * @param isMajor whether compaction is a major compaction
-   * @param c number of files
+   * @param c       number of files
    */
   void updateCompactionOutputFileCount(boolean isMajor, long c);
 
   /**
    * Update the compaction total output file size
    * @param isMajor whether compaction is a major compaction
-   * @param bytes the number of bytes of the compaction input file
+   * @param bytes   the number of bytes of the compaction input file
    */
   void updateCompactionOutputSize(boolean isMajor, long bytes);
 

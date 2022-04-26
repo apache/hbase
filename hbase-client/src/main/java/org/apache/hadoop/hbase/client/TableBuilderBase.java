@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,8 +41,9 @@ abstract class TableBuilderBase implements TableBuilder {
       throw new IllegalArgumentException("Given table name is null");
     }
     this.tableName = tableName;
-    this.operationTimeout = tableName.isSystemTable() ? connConf.getMetaOperationTimeout()
-        : connConf.getOperationTimeout();
+    this.operationTimeout = tableName.isSystemTable()
+      ? connConf.getMetaOperationTimeout()
+      : connConf.getOperationTimeout();
     this.rpcTimeout = connConf.getRpcTimeout();
     this.readRpcTimeout = connConf.getReadRpcTimeout();
     this.writeRpcTimeout = connConf.getWriteRpcTimeout();

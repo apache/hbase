@@ -50,7 +50,7 @@ public class ReplicationSourceLogQueue {
   private ReplicationSource source;
 
   public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics,
-      ReplicationSource source) {
+    ReplicationSource source) {
     this.conf = conf;
     this.metrics = metrics;
     this.source = source;
@@ -60,7 +60,7 @@ public class ReplicationSourceLogQueue {
 
   /**
    * Enqueue the wal
-   * @param wal wal to be enqueued
+   * @param wal        wal to be enqueued
    * @param walGroupId Key for the wal in @queues map
    * @return boolean whether this is the first time we are seeing this walGroupId.
    */
@@ -85,9 +85,9 @@ public class ReplicationSourceLogQueue {
     // This will wal a warning for each new wal that gets created above the warn threshold
     int queueSize = queue.size();
     if (queueSize > this.logQueueWarnThreshold) {
-      LOG.warn("{} WAL group {} queue size: {} exceeds value of " +
-          "replication.source.log.queue.warn {}", source.logPeerId(), walGroupId, queueSize,
-        logQueueWarnThreshold);
+      LOG.warn(
+        "{} WAL group {} queue size: {} exceeds value of " + "replication.source.log.queue.warn {}",
+        source.logPeerId(), walGroupId, queueSize, logQueueWarnThreshold);
     }
     return exists;
   }
@@ -116,9 +116,8 @@ public class ReplicationSourceLogQueue {
   }
 
   /**
-   * Return queue for the given walGroupId
-   * Please don't add or remove elements from the returned queue.
-   * Use @enqueueLog and @remove methods respectively.
+   * Return queue for the given walGroupId Please don't add or remove elements from the returned
+   * queue. Use @enqueueLog and @remove methods respectively.
    * @param walGroupId walGroupId
    */
   public PriorityBlockingQueue<Path> getQueue(String walGroupId) {
@@ -156,7 +155,7 @@ public class ReplicationSourceLogQueue {
   }
 
   /*
-    Returns the age of oldest wal.
+   * Returns the age of oldest wal.
    */
   long getOldestWalAge() {
     long now = EnvironmentEdgeManager.currentTime();
@@ -171,8 +170,8 @@ public class ReplicationSourceLogQueue {
   }
 
   /*
-  Get the oldest wal timestamp from all the queues.
-  */
+   * Get the oldest wal timestamp from all the queues.
+   */
   private long getOldestWalTimestamp() {
     long oldestWalTimestamp = Long.MAX_VALUE;
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
@@ -180,8 +179,8 @@ public class ReplicationSourceLogQueue {
       Path path = queue.peek();
       // Can path ever be null ?
       if (path != null) {
-        oldestWalTimestamp = Math.min(oldestWalTimestamp,
-          AbstractFSWALProvider.WALStartTimeComparator.getTS(path));
+        oldestWalTimestamp =
+          Math.min(oldestWalTimestamp, AbstractFSWALProvider.WALStartTimeComparator.getTS(path));
       }
     }
     return oldestWalTimestamp;

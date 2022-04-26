@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,9 +33,8 @@ public class CallTimeoutException extends HBaseIOException {
 
   /**
    * CallTimeoutException with cause
-   *
    * @param message the message for this exception
-   * @param cause the cause for this exception
+   * @param cause   the cause for this exception
    */
   public CallTimeoutException(final String message, final Throwable cause) {
     super(message, cause);

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -24,8 +22,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public interface ReplicationPeerConfigListener {
-  /** Callback method for when users update the ReplicationPeerConfig for this peer
-   *
+  /**
+   * Callback method for when users update the ReplicationPeerConfig for this peer
    * @param rpc The updated ReplicationPeerConfig
    */
   void peerConfigUpdated(ReplicationPeerConfig rpc);

@@ -53,7 +53,7 @@ runAllTests=0
 
 #set to 1 to replay the failed tests. Previous reports are kept in
 # fail_ files
-replayFailed=0 
+replayFailed=0
 
 #set to 0 to run all medium & large tests in a single maven operation
 # instead of two
@@ -85,10 +85,10 @@ mvnCommand="mvn "
 function createListDeadProcess {
   id=$$
   listDeadProcess=""
-  
+
   #list of the process with a ppid of 1
   sonProcess=`ps -o pid= --ppid 1`
-  
+
   #then the process with a pgid of the script
   for pId in $sonProcess
   do
@@ -119,32 +119,32 @@ function cleanProcess {
       jstack -F -l $pId
       kill $pId
       echo "kill sent, waiting for 30 seconds"
-      sleep 30      
+      sleep 30
       son=`ps -o pid= --pid $pId | wc -l`
       if (test $son -gt 0)
-      then 
+      then
         echo "$pId, java sub process of $id, is still running after a standard kill, using kill -9 now"
         echo "Stack for $pId before kill -9:"
         jstack -F -l $pId
         kill -9 $pId
         echo "kill sent, waiting for 2 seconds"
-        sleep 2           
-        echo "Process $pId killed by kill -9" 
+        sleep 2
+        echo "Process $pId killed by kill -9"
       else
-        echo "Process $pId killed by standard kill -15" 
+        echo "Process $pId killed by standard kill -15"
       fi
     else
       echo "$pId is not a java process (it's $name), I don't kill it."
     fi
   done
-  
+
   createListDeadProcess
   if (test ${#listDeadProcess} -gt 0)
   then
     echo "There are still $sonProcess for process $id left."
   else
-    echo "Process $id clean, no son process left"      
-  fi  
+    echo "Process $id clean, no son process left"
+  fi
 }
 
 #count the number of ',' in a string
@@ -155,7 +155,7 @@ function countClasses {
   count=$((cars - 1))
 }
 
-  
+
 ######################################### script
 echo "Starting Script. Possible parameters are: runAllTests, replayFailed, nonParallelMaven"
 echo "Other parameters are sent to maven"
@@ -177,11 +177,11 @@ do
       if [ $arg == "nonParallelMaven" ]
       then
         parallelMaven=0
-      else  
-         args=$args" $arg"        
+      else
+         args=$args" $arg"
       fi
     fi
-  fi   
+  fi
 done
 
 
@@ -195,24 +195,24 @@ for testFile in $testsList
 do
   lenPath=$((${#rootTestClassDirectory}))
   len=$((${#testFile} - $lenPath - 5))  # len(".java") == 5
-  
-  shortTestFile=${testFile:lenPath:$len}  
+
+  shortTestFile=${testFile:lenPath:$len}
   testName=$(echo $shortTestFile | sed 's/\//\./g')
-  
+
   #The ',' is used in the grep pattern as we don't want to catch
   # partial name
   isFlaky=$((`echo $flakyTests | grep "$testName," | wc -l`))
-  
+
   if (test $isFlaky -eq 0)
-  then    
+  then
     isSmall=0
     isMedium=0
     isLarge=0
-  
-    # determine the category of the test by greping into the source code 
+
+    # determine the category of the test by greping into the source code
     isMedium=`grep "@Category" $testFile | grep "MediumTests.class" | wc -l`
-    if (test $isMedium -eq 0) 
-    then 
+    if (test $isMedium -eq 0)
+    then
       isLarge=`grep "@Category" $testFile | grep "LargeTests.class" | wc -l`
       if (test $isLarge -eq 0)
       then
@@ -230,22 +230,22 @@ do
         fi
       fi
     fi
-    
+
     #put the test in the right list
-    if (test $isSmall -gt 0) 
-    then 
+    if (test $isSmall -gt 0)
+    then
       smallList="$smallList,$testName"
-    fi    
-    if (test $isMedium -gt 0) 
-    then 
+    fi
+    if (test $isMedium -gt 0)
+    then
       mediumList="$mediumList,$testName"
-    fi    
-    if (test $isLarge -gt 0) 
-    then 
+    fi
+    if (test $isLarge -gt 0)
+    then
       largeList="$largeList,$testName"
-    fi        
-    
-  fi   
+    fi
+
+  fi
 done
 
 #remove the ',' at the beginning
@@ -285,7 +285,7 @@ do
     nextList=2
     runList1=$runList1,$testClass
   else
-    nextList=1 
+    nextList=1
     runList2=$runList2,$testClass
   fi
 done
@@ -297,27 +297,27 @@ runList2=${runList2:1:${#runList2}}
 #now we can run the tests, at last!
 
 echo "Running small tests with one maven instance, in parallel"
-#echo Small tests are $smallList 
-$mvnCommand -P singleJVMTests test -Dtest=$smallList  $args 
+#echo Small tests are $smallList
+$mvnCommand -P singleJVMTests test -Dtest=$smallList  $args
 cleanProcess
 
 exeTime=$(((`date +%s` - $startTime)/60))
 echo "Small tests executed after $exeTime minutes"
 
 if (test $parallelMaven -gt 0)
-then 
+then
   echo "Running tests with two maven instances in parallel"
   $mvnCommand -P localTests test -Dtest=$runList1  $args &
-  
+
   #give some time  to the fist process if there is anything to compile
   sleep 30
   $mvnCommand -P localTests test -Dtest=$runList2  $args
 
   #wait for forked process to finish
   wait
-  
+
   cleanProcess
-  
+
   exeTime=$(((`date +%s` - $startTime)/60))
   echo "Medium and large (if selected) tests executed after $exeTime minutes"
 
@@ -329,14 +329,14 @@ then
     $mvnCommand -P localTests test -Dtest=$flakyTests $args
     cleanProcess
     exeTime=$(((`date +%s` - $startTime)/60))
-    echo "Flaky tests executed after $exeTime minutes"    
+    echo "Flaky tests executed after $exeTime minutes"
   fi
 else
   echo "Running tests with a single maven instance, no parallelization"
   $mvnCommand -P localTests test -Dtest=$runList1,$runList2,$flakyTests $args
-  cleanProcess  
+  cleanProcess
   exeTime=$(((`date +%s` - $startTime)/60))
-  echo "Single maven instance tests executed after $exeTime minutes"     
+  echo "Single maven instance tests executed after $exeTime minutes"
 fi
 
 #let's analyze the results
@@ -360,7 +360,7 @@ for testClass in `echo $fullRunList | sed 's/,/ /g'`
 do
   reportFile=$surefireReportDirectory/$testClass.txt
   outputReportFile=$surefireReportDirectory/$testClass-output.txt
-  
+
   if [ -s $reportFile ];
   then
     isError=`grep FAILURE $reportFile | wc -l`
@@ -368,22 +368,22 @@ do
     then
       errorList="$errorList,$testClass"
       errorCounter=$(($errorCounter + 1))
-      
-      #let's copy the files if we want to use it later      
+
+      #let's copy the files if we want to use it later
       cp $reportFile "$surefireReportDirectory/fail_$timestamp.$testClass.txt"
       if [ -s $reportFile ];
       then
         cp $outputReportFile "$surefireReportDirectory/fail_$timestamp.$testClass"-output.txt""
       fi
     else
-     
+
       sucessCounter=$(($sucessCounter +1))
-    fi  
+    fi
   else
      #report file does not exist or is empty => the test didn't finish
      notFinishedCounter=$(($notFinishedCounter + 1))
      notFinishedList="$notFinishedList,$testClass"
-  fi  
+  fi
 done
 
 #list of all tests that failed
@@ -411,7 +411,7 @@ echo
 echo "Tests in error are: $errorPresList"
 echo "Tests that didn't finish are: $notFinishedPresList"
 echo
-echo "Execution time in minutes: $exeTime" 
+echo "Execution time in minutes: $exeTime"
 echo "##########################"
 
 

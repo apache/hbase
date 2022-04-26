@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return null;
   }
 
@@ -81,7 +81,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return null;
   }
 
@@ -121,13 +121,13 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
-      boolean writeFlushWALMarker) {
+    boolean writeFlushWALMarker) {
     return null;
   }
 
   @Override
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      boolean reload) {
+    boolean reload) {
     return null;
   }
 
@@ -165,9 +165,8 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public CompletableFuture<Void> replicate(RegionInfo replica,
-    List<Entry> entries, int numRetries, long rpcTimeoutNs,
-    long operationTimeoutNs) {
+  public CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int numRetries,
+    long rpcTimeoutNs, long operationTimeoutNs) {
     return null;
   }
 }

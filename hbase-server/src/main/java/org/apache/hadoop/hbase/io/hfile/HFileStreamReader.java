@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,13 +22,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Implementation of {@link HFile.Reader} to deal with stream read
- * do not perform any prefetch operations (HFilePreadReader will do this).
+ * Implementation of {@link HFile.Reader} to deal with stream read do not perform any prefetch
+ * operations (HFilePreadReader will do this).
  */
 @InterfaceAudience.Private
 public class HFileStreamReader extends HFileReaderImpl {
   public HFileStreamReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
-      Configuration conf) throws IOException {
+    Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
   }
 

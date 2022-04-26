@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertArrayEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ FilterTests.class, MediumTests.class }) public class TestSeekHints {
+@Category({ FilterTests.class, MediumTests.class })
+public class TestSeekHints {
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static String cf = "f";
@@ -55,12 +57,15 @@ import org.junit.rules.TestName;
   private static String table = "t";
   private static Table ht;
 
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSeekHints.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
-  @BeforeClass public static void setUpBeforeClass() throws Exception {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.client.scanner.caching", 1000);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -71,8 +76,7 @@ import org.junit.rules.TestName;
     TEST_UTIL.startMiniCluster();
 
     // load the mini cluster with a single table with 20 rows, with rowkeys of a single byte, 0-19.
-    ht = TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf),
-      Integer.MAX_VALUE);
+    ht = TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
     for (byte b = 0; b < 20; b++) {
       Put put = new Put(new byte[] { b }).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
         Bytes.toBytes("value"));
@@ -81,7 +85,8 @@ import org.junit.rules.TestName;
     TEST_UTIL.flush();
   }
 
-  @AfterClass public static void tearDownAfterClass() throws Exception {
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -154,11 +159,13 @@ import org.junit.rules.TestName;
       this.seekTargetRow = seekTargetRow;
     }
 
-    /* We return SEEK_NEXT_USING_HINT when we hit the specified row, but we return INCLUDE for all
+    /*
+     * We return SEEK_NEXT_USING_HINT when we hit the specified row, but we return INCLUDE for all
      * other rows. This will wind up including the rows between our "seek" row and our "hint" row
      * only if we don't seek past them.
      */
-    @Override public ReturnCode filterCell(final Cell c) throws IOException {
+    @Override
+    public ReturnCode filterCell(final Cell c) throws IOException {
       byte rowKeyPrefix = CellUtil.cloneRow(c)[0];
       if (rowKeyPrefix == seekStartRow) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
@@ -166,11 +173,13 @@ import org.junit.rules.TestName;
       return ReturnCode.INCLUDE;
     }
 
-    @Override public Cell getNextCellHint(Cell currentCell) {
+    @Override
+    public Cell getNextCellHint(Cell currentCell) {
       return PrivateCellUtil.createFirstOnRow(new byte[] { seekTargetRow });
     }
 
-    @Override public byte[] toByteArray() {
+    @Override
+    public byte[] toByteArray() {
       return new byte[] { seekStartRow, seekTargetRow };
     }
 

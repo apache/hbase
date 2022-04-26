@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ public class TestCachedBlockQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCachedBlockQueue.class);
+    HBaseClassTestRule.forClass(TestCachedBlockQueue.class);
 
   @Test
   public void testQueue() throws Exception {
@@ -47,7 +47,7 @@ public class TestCachedBlockQueue {
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
 
-    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000,1000);
+    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000, 1000);
 
     queue.add(cb1);
     queue.add(cb2);
@@ -61,14 +61,13 @@ public class TestCachedBlockQueue {
     queue.add(cb10);
 
     // We expect cb1 through cb8 to be in the queue
-    long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() +
-      cb4.heapSize() + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() +
-      cb8.heapSize();
+    long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() + cb4.heapSize()
+      + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() + cb8.heapSize();
 
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 1; i <= 8; i++) {
-      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb" + i);
     }
   }
 
@@ -85,7 +84,7 @@ public class TestCachedBlockQueue {
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
 
-    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000,1000);
+    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000, 1000);
 
     queue.add(cb1);
     queue.add(cb2);
@@ -106,14 +105,13 @@ public class TestCachedBlockQueue {
     // and we must always maintain heapSize >= maxSize once we achieve it.
 
     // We expect cb0 through cb8 to be in the queue
-    long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() +
-      cb4.heapSize() + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() +
-      cb8.heapSize() + cb0.heapSize();
+    long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() + cb4.heapSize()
+      + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() + cb8.heapSize() + cb0.heapSize();
 
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 0; i <= 8; i++) {
-      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb" + i);
     }
   }
 
@@ -148,4 +146,3 @@ public class TestCachedBlockQueue {
     }
   }
 }
-

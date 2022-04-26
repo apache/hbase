@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestLoadTestKVGenerator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLoadTestKVGenerator.class);
+    HBaseClassTestRule.forClass(TestLoadTestKVGenerator.class);
 
   private static final int MIN_LEN = 10;
   private static final int MAX_LEN = 20;
@@ -47,7 +47,7 @@ public class TestLoadTestKVGenerator {
   public void testValueLength() {
     for (int i = 0; i < 1000; ++i) {
       byte[] v = gen.generateRandomSizeValue(Bytes.toBytes(Integer.toString(i)),
-          Bytes.toBytes(String.valueOf(rand.nextInt())));
+        Bytes.toBytes(String.valueOf(rand.nextInt())));
       assertTrue(MIN_LEN <= v.length);
       assertTrue(v.length <= MAX_LEN);
     }

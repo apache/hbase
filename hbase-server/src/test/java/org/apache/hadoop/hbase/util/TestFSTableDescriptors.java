@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,12 +57,12 @@ import org.slf4j.LoggerFactory;
  * Tests for {@link FSTableDescriptors}.
  */
 // Do not support to be executed in he same JVM as other tests
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestFSTableDescriptors {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSTableDescriptors.class);
+    HBaseClassTestRule.forClass(TestFSTableDescriptors.class);
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestFSTableDescriptors.class);
@@ -121,8 +121,7 @@ public class TestFSTableDescriptors {
     int previousSeqId = -1;
     for (int i = 0; i < 10; i++) {
       Path path = fstd.updateTableDescriptor(htd);
-      int seqId =
-        FSTableDescriptors.getTableInfoSequenceIdAndFileLength(path).sequenceId;
+      int seqId = FSTableDescriptors.getTableInfoSequenceIdAndFileLength(path).sequenceId;
       if (previousPath != null) {
         // Assert we cleaned up the old file.
         assertTrue(!fs.exists(previousPath));
@@ -282,8 +281,8 @@ public class TestFSTableDescriptors {
     // add hbase:meta
     htds
       .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
-    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) +
-      " got: " + htds.getAll().size(), count + 1, htds.getAll().size());
+    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
+      + htds.getAll().size(), count + 1, htds.getAll().size());
   }
 
   @Test
@@ -410,8 +409,8 @@ public class TestFSTableDescriptors {
         .get(TableName.valueOf(HConstants.HBASE_TEMP_DIRECTORY));
       fail("Shouldn't be able to read a table descriptor for the archive directory.");
     } catch (Exception e) {
-      LOG.debug("Correctly got error when reading a table descriptor from the archive directory: " +
-        e.getMessage());
+      LOG.debug("Correctly got error when reading a table descriptor from the archive directory: "
+        + e.getMessage());
     }
   }
 
@@ -470,10 +469,9 @@ public class TestFSTableDescriptors {
 
     @Override
     public TableDescriptor get(TableName tablename) {
-      LOG.info((super.isUsecache() ? "Cached" : "Non-Cached") +
-                 " TableDescriptor.get() on " + tablename + ", cachehits=" + this.cachehits);
+      LOG.info((super.isUsecache() ? "Cached" : "Non-Cached") + " TableDescriptor.get() on "
+        + tablename + ", cachehits=" + this.cachehits);
       return super.get(tablename);
     }
   }
 }
-

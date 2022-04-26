@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
@@ -35,28 +34,24 @@ public interface MetricsRegionServerWrapper {
 
   /**
    * Get the Cluster ID
-   *
    * @return Cluster ID
    */
   String getClusterId();
 
   /**
    * Get the ZooKeeper Quorum Info
-   *
    * @return ZooKeeper Quorum Info
    */
   String getZookeeperQuorum();
 
   /**
    * Get the co-processors
-   *
    * @return Co-processors
    */
   String getCoprocessors();
 
   /**
    * Get HRegionServer start time
-   *
    * @return Start time of RegionServer in milliseconds
    */
   long getStartCode();
@@ -91,9 +86,9 @@ public interface MetricsRegionServerWrapper {
    */
   long getNumWALSlowAppend();
 
-    /**
-     * Get the number of store files hosted on this region server.
-     */
+  /**
+   * Get the number of store files hosted on this region server.
+   */
   long getNumStoreFiles();
 
   /**
@@ -122,12 +117,12 @@ public interface MetricsRegionServerWrapper {
   long getMinStoreFileAge();
 
   /**
-   *  @return Average age of store files hosted on this region server
+   * @return Average age of store files hosted on this region server
    */
   long getAvgStoreFileAge();
 
   /**
-   *  @return Number of reference files on this region server
+   * @return Number of reference files on this region server
    */
   long getNumReferenceFiles();
 
@@ -202,8 +197,8 @@ public interface MetricsRegionServerWrapper {
   long getNumMutationsWithoutWAL();
 
   /**
-   * Ammount of data in the memstore but not in the WAL because mutations explicitly had their
-   * WAL turned off.
+   * Ammount of data in the memstore but not in the WAL because mutations explicitly had their WAL
+   * turned off.
    */
   long getDataInMemoryWithoutWAL();
 
@@ -237,6 +232,7 @@ public interface MetricsRegionServerWrapper {
   int getFlushQueueSize();
 
   long getMemStoreLimit();
+
   /**
    * Get the size (in bytes) of the block cache that is free.
    */
@@ -281,7 +277,6 @@ public interface MetricsRegionServerWrapper {
    * Get the number of items evicted from primary replica in the block cache.
    */
   long getBlockCachePrimaryEvictedCount();
-
 
   /**
    * Get the percent of all requests that hit the block cache.

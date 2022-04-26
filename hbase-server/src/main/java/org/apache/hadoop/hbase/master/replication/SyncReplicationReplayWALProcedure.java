@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
  */
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALProcedure
-    extends AbstractPeerNoLockProcedure<SyncReplicationReplayWALState> {
+  extends AbstractPeerNoLockProcedure<SyncReplicationReplayWALState> {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
@@ -57,7 +57,7 @@ public class SyncReplicationReplayWALProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
-      throws ProcedureSuspendedException {
+    throws ProcedureSuspendedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
       env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
@@ -75,8 +75,8 @@ public class SyncReplicationReplayWALProcedure
           finished = syncReplicationReplayWALManager.isReplayWALFinished(wals.get(0));
         } catch (IOException e) {
           throw suspend(env.getMasterConfiguration(),
-            backoff -> LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
-              ", sleep {} secs and retry", wals, peerId, backoff / 1000, e));
+            backoff -> LOG.warn("Failed to check whether replay wals {} finished for peer id={}"
+              + ", sleep {} secs and retry", wals, peerId, backoff / 1000, e));
         }
         syncReplicationReplayWALManager.releasePeerWorker(peerId, worker,
           env.getProcedureScheduler());
@@ -93,7 +93,7 @@ public class SyncReplicationReplayWALProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     if (state == getInitialState()) {
       return;
     }

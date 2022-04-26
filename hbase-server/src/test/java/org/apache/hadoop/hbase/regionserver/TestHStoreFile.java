@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -169,9 +169,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
-   * @param writer
-   * @throws IOException
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {
@@ -433,12 +431,16 @@ public class TestHStoreFile {
       boolean first = true;
       ByteBuffer key = null;
       HFileScanner topScanner = top.getScanner(false, false);
-      while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
-        (topScanner.isSeeked() && topScanner.next())) {
+      while (
+        (!topScanner.isSeeked() && topScanner.seekTo())
+          || (topScanner.isSeeked() && topScanner.next())
+      ) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
-        if ((PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
-          key.arrayOffset(), key.limit())) > 0) {
+        if (
+          (PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
+            key.arrayOffset(), key.limit())) > 0
+        ) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" + midkey);
         }
         if (first) {
@@ -535,8 +537,9 @@ public class TestHStoreFile {
       keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength())
-          .charAt(i) == 'z');
+        assertTrue(
+          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i)
+              == 'z');
       }
     } finally {
       if (top != null) {
@@ -605,8 +608,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos + ")", falsePos <= maxFalsePos);
   }
 
   private static final int BLOCKSIZE_SMALL = 8192;
@@ -681,8 +684,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos, falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos, falsePos <= maxFalsePos);
   }
 
   /**
@@ -849,8 +852,8 @@ public class TestHStoreFile {
     Mockito.doReturn(OptionalLong.of(bulkTimestamp)).when(mock).getBulkLoadTimestamp();
     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
     Mockito.doReturn(new Path(path)).when(mock).getPath();
-    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp +
-      " seqId=" + seqId + " path=" + path;
+    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp
+      + " seqId=" + seqId + " path=" + path;
     Mockito.doReturn(name).when(mock).toString();
     return mock;
   }

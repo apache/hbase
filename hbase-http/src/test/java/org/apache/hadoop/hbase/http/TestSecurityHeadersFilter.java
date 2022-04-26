@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,14 +37,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({HttpServerFunctionalTest.class, MediumTests.class})
+@Category({ HttpServerFunctionalTest.class, MediumTests.class })
 public class TestSecurityHeadersFilter {
   private static URL baseUrl;
   private HttpServer http;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecurityHeadersFilter.class);
+    HBaseClassTestRule.forClass(TestSecurityHeadersFilter.class);
 
   @After
   public void tearDown() throws Exception {
@@ -62,28 +62,27 @@ public class TestSecurityHeadersFilter {
     assertThat(conn.getResponseCode(), equalTo(HttpURLConnection.HTTP_OK));
 
     assertThat("Header 'X-Content-Type-Options' is missing",
-        conn.getHeaderField("X-Content-Type-Options"), is(not((String)null)));
+      conn.getHeaderField("X-Content-Type-Options"), is(not((String) null)));
     assertThat(conn.getHeaderField("X-Content-Type-Options"), equalTo("nosniff"));
-    assertThat("Header 'X-XSS-Protection' is missing",
-        conn.getHeaderField("X-XSS-Protection"), is(not((String)null)));
+    assertThat("Header 'X-XSS-Protection' is missing", conn.getHeaderField("X-XSS-Protection"),
+      is(not((String) null)));
     assertThat("Header 'X-XSS-Protection' has invalid value",
-        conn.getHeaderField("X-XSS-Protection"), equalTo("1; mode=block"));
+      conn.getHeaderField("X-XSS-Protection"), equalTo("1; mode=block"));
 
-    assertThat("Header 'Strict-Transport-Security' should be missing from response," +
-            "but it's present",
-        conn.getHeaderField("Strict-Transport-Security"), is((String)null));
-    assertThat("Header 'Content-Security-Policy' should be missing from response," +
-            "but it's present",
-        conn.getHeaderField("Content-Security-Policy"), is((String)null));
+    assertThat(
+      "Header 'Strict-Transport-Security' should be missing from response," + "but it's present",
+      conn.getHeaderField("Strict-Transport-Security"), is((String) null));
+    assertThat(
+      "Header 'Content-Security-Policy' should be missing from response," + "but it's present",
+      conn.getHeaderField("Content-Security-Policy"), is((String) null));
   }
 
   @Test
   public void testHstsAndCspSettings() throws IOException {
     Configuration conf = new Configuration();
-    conf.set("hbase.http.filter.hsts.value",
-        "max-age=63072000;includeSubDomains;preload");
+    conf.set("hbase.http.filter.hsts.value", "max-age=63072000;includeSubDomains;preload");
     conf.set("hbase.http.filter.csp.value",
-        "default-src https: data: 'unsafe-inline' 'unsafe-eval'");
+      "default-src https: data: 'unsafe-inline' 'unsafe-eval'");
     http = createTestServer(conf);
     http.start();
     baseUrl = getServerURL(http);
@@ -93,15 +92,15 @@ public class TestSecurityHeadersFilter {
     assertThat(conn.getResponseCode(), equalTo(HttpURLConnection.HTTP_OK));
 
     assertThat("Header 'Strict-Transport-Security' is missing from Rest response",
-        conn.getHeaderField("Strict-Transport-Security"), Is.is(not((String)null)));
+      conn.getHeaderField("Strict-Transport-Security"), Is.is(not((String) null)));
     assertThat("Header 'Strict-Transport-Security' has invalid value",
-        conn.getHeaderField("Strict-Transport-Security"),
-        IsEqual.equalTo("max-age=63072000;includeSubDomains;preload"));
+      conn.getHeaderField("Strict-Transport-Security"),
+      IsEqual.equalTo("max-age=63072000;includeSubDomains;preload"));
 
     assertThat("Header 'Content-Security-Policy' is missing from Rest response",
-        conn.getHeaderField("Content-Security-Policy"), Is.is(not((String)null)));
+      conn.getHeaderField("Content-Security-Policy"), Is.is(not((String) null)));
     assertThat("Header 'Content-Security-Policy' has invalid value",
-        conn.getHeaderField("Content-Security-Policy"),
-        IsEqual.equalTo("default-src https: data: 'unsafe-inline' 'unsafe-eval'"));
+      conn.getHeaderField("Content-Security-Policy"),
+      IsEqual.equalTo("default-src https: data: 'unsafe-inline' 'unsafe-eval'"));
   }
 }

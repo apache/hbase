@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +19,25 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public final class CompactionThroughputControllerFactory {
   private static final Logger LOG =
-      LoggerFactory.getLogger(CompactionThroughputControllerFactory.class);
+    LoggerFactory.getLogger(CompactionThroughputControllerFactory.class);
 
   public static final String HBASE_THROUGHPUT_CONTROLLER_KEY =
-      "hbase.regionserver.throughput.controller";
+    "hbase.regionserver.throughput.controller";
 
   private CompactionThroughputControllerFactory() {
   }
 
-  private static final Class<? extends ThroughputController>
-      DEFAULT_THROUGHPUT_CONTROLLER_CLASS = PressureAwareCompactionThroughputController.class;
+  private static final Class<? extends ThroughputController> DEFAULT_THROUGHPUT_CONTROLLER_CLASS =
+    PressureAwareCompactionThroughputController.class;
 
   // for backward compatibility and may not be supported in the future
   private static final String DEPRECATED_NAME_OF_PRESSURE_AWARE_THROUGHPUT_CONTROLLER_CLASS =
@@ -45,26 +45,24 @@ public final class CompactionThroughputControllerFactory {
   private static final String DEPRECATED_NAME_OF_NO_LIMIT_THROUGHPUT_CONTROLLER_CLASS =
     "org.apache.hadoop.hbase.regionserver.compactions.NoLimitThroughputController";
 
-  public static ThroughputController create(RegionServerServices server,
-      Configuration conf) {
+  public static ThroughputController create(RegionServerServices server, Configuration conf) {
     Class<? extends ThroughputController> clazz = getThroughputControllerClass(conf);
     ThroughputController controller = ReflectionUtils.newInstance(clazz, conf);
     controller.setup(server);
     return controller;
   }
 
-  public static Class<? extends ThroughputController> getThroughputControllerClass(
-      Configuration conf) {
+  public static Class<? extends ThroughputController>
+    getThroughputControllerClass(Configuration conf) {
     String className =
-        conf.get(HBASE_THROUGHPUT_CONTROLLER_KEY, DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName());
+      conf.get(HBASE_THROUGHPUT_CONTROLLER_KEY, DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName());
     className = resolveDeprecatedClassName(className);
     try {
       return Class.forName(className).asSubclass(ThroughputController.class);
     } catch (Exception e) {
-      LOG.warn(
-        "Unable to load configured throughput controller '" + className
-            + "', load default throughput controller "
-            + DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName() + " instead", e);
+      LOG.warn("Unable to load configured throughput controller '" + className
+        + "', load default throughput controller " + DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName()
+        + " instead", e);
       return DEFAULT_THROUGHPUT_CONTROLLER_CLASS;
     }
   }

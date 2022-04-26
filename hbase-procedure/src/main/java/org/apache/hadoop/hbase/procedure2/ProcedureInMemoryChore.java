@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
@@ -23,13 +22,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Special procedure used as a chore.
- * Instead of bringing the Chore class in (dependencies reason),
- * we reuse the executor timeout thread for this special case.
- *
- * The assumption is that procedure is used as hook to dispatch other procedures
- * or trigger some cleanups. It does not store state in the ProcedureStore.
- * this is just for in-memory chore executions.
+ * Special procedure used as a chore. Instead of bringing the Chore class in (dependencies reason),
+ * we reuse the executor timeout thread for this special case. The assumption is that procedure is
+ * used as hook to dispatch other procedures or trigger some cleanups. It does not store state in
+ * the ProcedureStore. this is just for in-memory chore executions.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -56,12 +52,10 @@ public abstract class ProcedureInMemoryChore<TEnvironment> extends Procedure<TEn
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
   }
 }

@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class SimpleSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
-  public static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "SIMPLE", (byte)80, "", AuthenticationMethod.SIMPLE);
+  public static final SaslAuthMethod SASL_AUTH_METHOD =
+    new SaslAuthMethod("SIMPLE", (byte) 80, "", AuthenticationMethod.SIMPLE);
 
   @Override
   public SaslAuthMethod getSaslAuthMethod() {

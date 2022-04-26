@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestDefaultStoreEngine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultStoreEngine.class);
+    HBaseClassTestRule.forClass(TestDefaultStoreEngine.class);
 
   public static class DummyStoreFlusher extends DefaultStoreFlusher {
     public DummyStoreFlusher(Configuration conf, HStore store) {
@@ -62,16 +62,14 @@ public class TestDefaultStoreEngine {
     Configuration conf = HBaseConfiguration.create();
     conf.set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY, DummyCompactor.class.getName());
     conf.set(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-        DummyCompactionPolicy.class.getName());
-    conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
-        DummyStoreFlusher.class.getName());
+      DummyCompactionPolicy.class.getName());
+    conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY, DummyStoreFlusher.class.getName());
     HRegion mockRegion = Mockito.mock(HRegion.class);
     HStore mockStore = Mockito.mock(HStore.class);
     mockStore.conf = conf;
     Mockito.when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     Mockito.when(mockStore.getHRegion()).thenReturn(mockRegion);
-    StoreEngine<?, ?, ?, ?> se =
-      StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
+    StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
     Assert.assertTrue(se instanceof DefaultStoreEngine);
     Assert.assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
     Assert.assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);

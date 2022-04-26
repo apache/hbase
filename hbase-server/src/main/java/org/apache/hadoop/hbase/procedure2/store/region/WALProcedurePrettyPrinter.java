@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,15 +102,17 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
           String.format(KEY_TMPL, sequenceId, FORMATTER.format(Instant.ofEpochMilli(writeTime))));
         for (Cell cell : edit.getCells()) {
           Map<String, Object> op = WALPrettyPrinter.toStringMap(cell);
-          if (!Bytes.equals(PROC_FAMILY, 0, PROC_FAMILY.length, cell.getFamilyArray(),
-            cell.getFamilyOffset(), cell.getFamilyLength())) {
+          if (
+            !Bytes.equals(PROC_FAMILY, 0, PROC_FAMILY.length, cell.getFamilyArray(),
+              cell.getFamilyOffset(), cell.getFamilyLength())
+          ) {
             // We could have cells other than procedure edits, for example, a flush marker
             WALPrettyPrinter.printCell(out, op, false, false);
             continue;
           }
           long procId = Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-          out.println("pid=" + procId + ", type=" + op.get("type") + ", column=" +
-            op.get("family") + ":" + op.get("qualifier"));
+          out.println("pid=" + procId + ", type=" + op.get("type") + ", column=" + op.get("family")
+            + ":" + op.get("qualifier"));
           if (cell.getType() == Cell.Type.Put) {
             if (cell.getValueLength() > 0) {
               // should be a normal put

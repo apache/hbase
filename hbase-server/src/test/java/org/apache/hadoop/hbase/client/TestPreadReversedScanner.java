@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestPreadReversedScanner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPreadReversedScanner.class);
+    HBaseClassTestRule.forClass(TestPreadReversedScanner.class);
 
   public static final Logger LOG = LoggerFactory.getLogger(TestPreadReversedScanner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -78,8 +78,8 @@ public class TestPreadReversedScanner {
    */
   @Test
   public void testPreadReversedScan01() throws IOException {
-    String[][] keysCases = new String[][] {
-      { "d0", "d1", "d2", "d3" }, // all rowKeys fit in the last region.
+    String[][] keysCases = new String[][] { { "d0", "d1", "d2", "d3" }, // all rowKeys fit in the
+                                                                        // last region.
       { "a0", "a1", "a2", "a3" }, // all rowKeys fit in the first region.
       { "a0", "b1", "c2", "d3" }, // each region with a rowKey
     };

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotRegionParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -68,9 +68,8 @@ public class SnapshotRegionCallable extends BaseRSProcedureCallable {
           }
         }
         if (!succeeded) {
-          throw new IOException(
-            "Unable to complete flush " + regionInfo.getRegionNameAsString() +
-              " after " + retryTimes + " attempts");
+          throw new IOException("Unable to complete flush " + regionInfo.getRegionNameAsString()
+            + " after " + retryTimes + " attempts");
         }
       }
       LOG.debug("Snapshotting region {} for {} completed.", region, snapshot.getName());

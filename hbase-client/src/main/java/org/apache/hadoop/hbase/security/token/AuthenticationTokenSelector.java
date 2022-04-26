@@ -15,22 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
 import java.util.Collection;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class AuthenticationTokenSelector
-    implements TokenSelector<AuthenticationTokenIdentifier> {
+public class AuthenticationTokenSelector implements TokenSelector<AuthenticationTokenIdentifier> {
   private static final Logger LOG = LoggerFactory.getLogger(AuthenticationTokenSelector.class);
 
   public AuthenticationTokenSelector() {
@@ -38,15 +35,17 @@ public class AuthenticationTokenSelector
 
   @Override
   public Token<AuthenticationTokenIdentifier> selectToken(Text serviceName,
-      Collection<Token<? extends TokenIdentifier>> tokens) {
+    Collection<Token<? extends TokenIdentifier>> tokens) {
     if (serviceName != null) {
       for (Token ident : tokens) {
-        if (serviceName.equals(ident.getService()) &&
-            AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE.equals(ident.getKind())) {
+        if (
+          serviceName.equals(ident.getService())
+            && AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE.equals(ident.getKind())
+        ) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Returning token "+ident);
+            LOG.debug("Returning token " + ident);
           }
-          return (Token<AuthenticationTokenIdentifier>)ident;
+          return (Token<AuthenticationTokenIdentifier>) ident;
         }
       }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,8 +44,10 @@ public class ServerStatisticTracker implements StatisticTrackable {
   }
 
   public static ServerStatisticTracker create(Configuration conf) {
-    if (!conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
-        HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE)) {
+    if (
+      !conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
+        HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE)
+    ) {
       return null;
     }
     return new ServerStatisticTracker();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -25,9 +24,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop Two implementation of a metrics2 source that will export metrics from the Rest server to
- * the hadoop metrics2 subsystem.
- *
- * Implements BaseSource through BaseSourceImpl, following the pattern
+ * the hadoop metrics2 subsystem. Implements BaseSource through BaseSourceImpl, following the
+ * pattern
  */
 @InterfaceAudience.Private
 public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsRESTSource {
@@ -55,17 +53,15 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
     this(METRICS_NAME, METRICS_DESCRIPTION, CONTEXT, JMX_CONTEXT);
   }
 
-  public MetricsRESTSourceImpl(String metricsName,
-                               String metricsDescription,
-                               String metricsContext,
-                               String metricsJmxContext) {
+  public MetricsRESTSourceImpl(String metricsName, String metricsDescription, String metricsContext,
+    String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // pause monitor metrics
-    infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
-      INFO_THRESHOLD_COUNT_DESC, 0L);
-    warnPauseThresholdExceeded = getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY,
-      WARN_THRESHOLD_COUNT_DESC, 0L);
+    infoPauseThresholdExceeded =
+      getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY, INFO_THRESHOLD_COUNT_DESC, 0L);
+    warnPauseThresholdExceeded =
+      getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY, WARN_THRESHOLD_COUNT_DESC, 0L);
     pausesWithGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITH_GC_KEY);
     pausesWithoutGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITHOUT_GC_KEY);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,15 +28,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests to make sure that the default environment edge conforms to appropriate
- * behaviour.
+ * Tests to make sure that the default environment edge conforms to appropriate behaviour.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestDefaultEnvironmentEdge {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultEnvironmentEdge.class);
+    HBaseClassTestRule.forClass(TestDefaultEnvironmentEdge.class);
 
   @Test
   public void testGetCurrentTimeUsesSystemClock() {
@@ -51,7 +50,6 @@ public class TestDefaultEnvironmentEdge {
       fail(e.getMessage());
     }
     long secondEdgeTime = edge.currentTime();
-    assertTrue("Second time must be greater than the first",
-      secondEdgeTime > edgeTime);
+    assertTrue("Second time must be greater than the first", secondEdgeTime > edgeTime);
   }
 }

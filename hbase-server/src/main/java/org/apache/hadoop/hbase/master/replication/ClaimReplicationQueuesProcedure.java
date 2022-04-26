@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,8 +89,8 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
       for (Iterator<String> iter = queues.iterator(); iter.hasNext();) {
         ReplicationQueueInfo queue = new ReplicationQueueInfo(iter.next());
         if (queue.getPeerId().equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER)) {
-          LOG.info("Found replication queue {} for legacy region replication peer, " +
-            "skipping claiming and removing...", queue.getQueueId());
+          LOG.info("Found replication queue {} for legacy region replication peer, "
+            + "skipping claiming and removing...", queue.getQueueId());
           iter.remove();
           storage.removeQueue(crashedServer, queue.getQueueId());
         }
@@ -101,8 +101,7 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
         // we are done
         return null;
       }
-      LOG.debug(
-        "There are {} replication queues need to be claimed for {}", queues.size(),
+      LOG.debug("There are {} replication queues need to be claimed for {}", queues.size(),
         crashedServer);
       List<ServerName> targetServers =
         env.getMasterServices().getServerManager().getOnlineServersList();

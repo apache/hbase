@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.io.InterruptedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -41,39 +40,37 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
   private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureCoordinator.class);
   private ZKProcedureUtil zkProc = null;
-  protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
+  protected ProcedureCoordinator coordinator = null; // if started this should be non-null
 
   ZKWatcher watcher;
   String procedureType;
   String coordName;
 
   /**
-   * @param watcher zookeeper watcher. Owned by <tt>this</tt> and closed via {@link #close()}
+   * @param watcher        zookeeper watcher. Owned by <tt>this</tt> and closed via {@link #close()}
    * @param procedureClass procedure type name is a category for when there are multiple kinds of
-   *    procedures.-- this becomes a znode so be aware of the naming restrictions
-   * @param coordName name of the node running the coordinator
+   *                       procedures.-- this becomes a znode so be aware of the naming restrictions
+   * @param coordName      name of the node running the coordinator
    * @throws KeeperException if an unexpected zk error occurs
    */
-  public ZKProcedureCoordinator(ZKWatcher watcher,
-      String procedureClass, String coordName) {
+  public ZKProcedureCoordinator(ZKWatcher watcher, String procedureClass, String coordName) {
     this.watcher = watcher;
     this.procedureType = procedureClass;
     this.coordName = coordName;
   }
 
   /**
-   * The "acquire" phase.  The coordinator creates a new procType/acquired/ znode dir. If znodes
-   * appear, first acquire to relevant listener or sets watch waiting for notification of
-   * the acquire node
-   *
-   * @param proc the Procedure
-   * @param info data to be stored in the acquire node
+   * The "acquire" phase. The coordinator creates a new procType/acquired/ znode dir. If znodes
+   * appear, first acquire to relevant listener or sets watch waiting for notification of the
+   * acquire node
+   * @param proc      the Procedure
+   * @param info      data to be stored in the acquire node
    * @param nodeNames children of the acquire phase
    * @throws IOException if any failure occurs.
    */
   @Override
   final public void sendGlobalBarrierAcquire(Procedure proc, byte[] info, List<String> nodeNames)
-      throws IOException, IllegalArgumentException {
+    throws IOException, IllegalArgumentException {
     String procName = proc.getName();
     // start watching for the abort node
     String abortNode = zkProc.getAbortZNode(procName);
@@ -153,7 +150,6 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
     }
   }
 
-
   /**
    * Delete znodes that are no longer in use.
    */
@@ -214,14 +210,13 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
               if (dataFromMember != null && dataFromMember.length > 0) {
                 if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
                   ForeignException ee = new ForeignException(coordName,
-                    "Failed to get data from finished node or data is illegally formatted:"
-                        + path);
+                    "Failed to get data from finished node or data is illegally formatted:" + path);
                   coordinator.abortProcedure(procName, ee);
                 } else {
-                  dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
-                    dataFromMember.length);
+                  dataFromMember = Arrays.copyOfRange(dataFromMember,
+                    ProtobufUtil.lengthOfPBMagic(), dataFromMember.length);
                   LOG.debug("Finished data from procedure '{}' member '{}': {}", procName, member,
-                      new String(dataFromMember, StandardCharsets.UTF_8));
+                    new String(dataFromMember, StandardCharsets.UTF_8));
                   coordinator.memberFinishedBarrier(procName, member, dataFromMember);
                 }
               } else {
@@ -252,10 +247,8 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
   }
 
   /**
-   * This is the abort message being sent by the coordinator to member
-   *
-   * TODO this code isn't actually used but can be used to issue a cancellation from the
-   * coordinator.
+   * This is the abort message being sent by the coordinator to member TODO this code isn't actually
+   * used but can be used to issue a cancellation from the coordinator.
    */
   @Override
   final public void sendAbortToMembers(Procedure proc, ForeignException ee) {
@@ -273,8 +266,9 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       // possible that we get this error for the procedure if we already reset the zk state, but in
       // that case we should still get an error for that procedure anyways
       zkProc.logZKTree(zkProc.baseZNode);
-      coordinator.rpcConnectionFailure("Failed to post zk node:" + procAbortNode
-          + " to abort procedure '" + procName + "'", new IOException(e));
+      coordinator.rpcConnectionFailure(
+        "Failed to post zk node:" + procAbortNode + " to abort procedure '" + procName + "'",
+        new IOException(e));
     }
   }
 
@@ -292,7 +286,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
         return;
       } else if (!ProtobufUtil.isPBMagicPrefix(data)) {
         LOG.warn("Got an error notification for op:" + abortNode
-            + " but we can't read the information. Killing the procedure.");
+          + " but we can't read the information. Killing the procedure.");
         // we got a remote exception, but we can't describe it
         ee = new ForeignException(coordName,
           "Data in abort node is illegally formatted.  ignoring content.");
@@ -303,15 +297,17 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       }
     } catch (IOException e) {
       LOG.warn("Got an error notification for op:" + abortNode
-          + " but we can't read the information. Killing the procedure.");
+        + " but we can't read the information. Killing the procedure.");
       // we got a remote exception, but we can't describe it
       ee = new ForeignException(coordName, e);
     } catch (KeeperException e) {
-      coordinator.rpcConnectionFailure("Failed to get data for abort node:" + abortNode
-          + zkProc.getAbortZnode(), new IOException(e));
+      coordinator.rpcConnectionFailure(
+        "Failed to get data for abort node:" + abortNode + zkProc.getAbortZnode(),
+        new IOException(e));
     } catch (InterruptedException e) {
-      coordinator.rpcConnectionFailure("Failed to get data for abort node:" + abortNode
-          + zkProc.getAbortZnode(), new IOException(e));
+      coordinator.rpcConnectionFailure(
+        "Failed to get data for abort node:" + abortNode + zkProc.getAbortZnode(),
+        new IOException(e));
       Thread.currentThread().interrupt();
     }
     coordinator.abortProcedure(procName, ee);

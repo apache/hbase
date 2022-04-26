@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -228,8 +228,9 @@ public final class ProcedureTestingUtility {
       return;
     }
 
-    if (procExecutor.testing.killBeforeStoreUpdate ||
-      procExecutor.testing.toggleKillBeforeStoreUpdate) {
+    if (
+      procExecutor.testing.killBeforeStoreUpdate || procExecutor.testing.toggleKillBeforeStoreUpdate
+    ) {
       assertEquals("expected only one executor running during test with kill/restart", 1,
         procExecutor.getCorePoolSize());
     }

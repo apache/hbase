@@ -43,7 +43,8 @@ public class TestRegionSplitRestriction {
     HBaseClassTestRule.forClass(TestRegionSplitRestriction.class);
 
   Configuration conf;
-  @Mock TableDescriptor tableDescriptor;
+  @Mock
+  TableDescriptor tableDescriptor;
 
   @Before
   public void setup() {
@@ -57,8 +58,7 @@ public class TestRegionSplitRestriction {
     when(tableDescriptor.getValue(RegionSplitRestriction.RESTRICTION_TYPE_KEY))
       .thenReturn(RegionSplitRestriction.RESTRICTION_TYPE_NONE);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof NoRegionSplitRestriction);
   }
 
@@ -67,8 +67,7 @@ public class TestRegionSplitRestriction {
     when(tableDescriptor.getValue(RegionSplitRestriction.RESTRICTION_TYPE_KEY))
       .thenReturn(RegionSplitRestriction.RESTRICTION_TYPE_KEY_PREFIX);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof KeyPrefixRegionSplitRestriction);
   }
 
@@ -77,8 +76,7 @@ public class TestRegionSplitRestriction {
     when(tableDescriptor.getValue(RegionSplitRestriction.RESTRICTION_TYPE_KEY))
       .thenReturn(RegionSplitRestriction.RESTRICTION_TYPE_DELIMITED_KEY_PREFIX);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof DelimitedKeyPrefixRegionSplitRestriction);
   }
 
@@ -87,8 +85,7 @@ public class TestRegionSplitRestriction {
     conf.set(RegionSplitRestriction.RESTRICTION_TYPE_KEY,
       RegionSplitRestriction.RESTRICTION_TYPE_NONE);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof NoRegionSplitRestriction);
   }
 
@@ -97,8 +94,7 @@ public class TestRegionSplitRestriction {
     conf.set(RegionSplitRestriction.RESTRICTION_TYPE_KEY,
       RegionSplitRestriction.RESTRICTION_TYPE_KEY_PREFIX);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof KeyPrefixRegionSplitRestriction);
   }
 
@@ -107,15 +103,13 @@ public class TestRegionSplitRestriction {
     conf.set(RegionSplitRestriction.RESTRICTION_TYPE_KEY,
       RegionSplitRestriction.RESTRICTION_TYPE_DELIMITED_KEY_PREFIX);
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof DelimitedKeyPrefixRegionSplitRestriction);
   }
 
   @Test
   public void testWhenTableDescriptorAndConfigurationReturnNull() throws IOException {
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof NoRegionSplitRestriction);
   }
 
@@ -124,8 +118,7 @@ public class TestRegionSplitRestriction {
     when(tableDescriptor.getValue(RegionSplitRestriction.RESTRICTION_TYPE_KEY))
       .thenReturn("Invalid");
 
-    RegionSplitRestriction splitRestriction =
-      RegionSplitRestriction.create(tableDescriptor, conf);
+    RegionSplitRestriction splitRestriction = RegionSplitRestriction.create(tableDescriptor, conf);
     assertTrue(splitRestriction instanceof NoRegionSplitRestriction);
   }
 
@@ -150,15 +143,13 @@ public class TestRegionSplitRestriction {
       .thenReturn("2");
 
     KeyPrefixRegionSplitRestriction keyPrefixRegionSplitRestriction =
-      (KeyPrefixRegionSplitRestriction) RegionSplitRestriction.create(
-        tableDescriptor, conf);
+      (KeyPrefixRegionSplitRestriction) RegionSplitRestriction.create(tableDescriptor, conf);
 
     byte[] restrictedSplit =
       keyPrefixRegionSplitRestriction.getRestrictedSplitPoint(Bytes.toBytes("abcd"));
     assertEquals("ab", Bytes.toString(restrictedSplit));
 
-    restrictedSplit =
-      keyPrefixRegionSplitRestriction.getRestrictedSplitPoint(Bytes.toBytes("a"));
+    restrictedSplit = keyPrefixRegionSplitRestriction.getRestrictedSplitPoint(Bytes.toBytes("a"));
     assertEquals("a", Bytes.toString(restrictedSplit));
   }
 
@@ -170,15 +161,15 @@ public class TestRegionSplitRestriction {
       .thenReturn(",");
 
     DelimitedKeyPrefixRegionSplitRestriction delimitedKeyPrefixRegionSplitRestriction =
-      (DelimitedKeyPrefixRegionSplitRestriction) RegionSplitRestriction.create(
-        tableDescriptor, conf);
+      (DelimitedKeyPrefixRegionSplitRestriction) RegionSplitRestriction.create(tableDescriptor,
+        conf);
 
-    byte[] restrictedSplit = delimitedKeyPrefixRegionSplitRestriction
-      .getRestrictedSplitPoint(Bytes.toBytes("ab,cd"));
+    byte[] restrictedSplit =
+      delimitedKeyPrefixRegionSplitRestriction.getRestrictedSplitPoint(Bytes.toBytes("ab,cd"));
     assertEquals("ab", Bytes.toString(restrictedSplit));
 
-    restrictedSplit = delimitedKeyPrefixRegionSplitRestriction
-      .getRestrictedSplitPoint(Bytes.toBytes("ijk"));
+    restrictedSplit =
+      delimitedKeyPrefixRegionSplitRestriction.getRestrictedSplitPoint(Bytes.toBytes("ijk"));
     assertEquals("ijk", Bytes.toString(restrictedSplit));
   }
 }

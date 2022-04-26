@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +19,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,14 +29,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class NoOpRegionSizeStore implements RegionSizeStore {
   private static final NoOpRegionSizeStore INSTANCE = new NoOpRegionSizeStore();
 
-  private NoOpRegionSizeStore() {}
+  private NoOpRegionSizeStore() {
+  }
 
   public static NoOpRegionSizeStore getInstance() {
     return INSTANCE;
   }
 
   @Override
-  public Iterator<Entry<RegionInfo,RegionSize>> iterator() {
+  public Iterator<Entry<RegionInfo, RegionSize>> iterator() {
     return null;
   }
 
@@ -51,10 +52,12 @@ public final class NoOpRegionSizeStore implements RegionSizeStore {
   }
 
   @Override
-  public void put(RegionInfo regionInfo, long size) {}
+  public void put(RegionInfo regionInfo, long size) {
+  }
 
   @Override
-  public void incrementRegionSize(RegionInfo regionInfo, long delta) {}
+  public void incrementRegionSize(RegionInfo regionInfo, long delta) {
+  }
 
   @Override
   public RegionSize remove(RegionInfo regionInfo) {
@@ -72,5 +75,6 @@ public final class NoOpRegionSizeStore implements RegionSizeStore {
   }
 
   @Override
-  public void clear() {}
+  public void clear() {
+  }
 }

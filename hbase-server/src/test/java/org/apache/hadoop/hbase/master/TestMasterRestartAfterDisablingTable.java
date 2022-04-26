@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,22 +45,21 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterRestartAfterDisablingTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterRestartAfterDisablingTable.class);
+    HBaseClassTestRule.forClass(TestMasterRestartAfterDisablingTable.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestMasterRestartAfterDisablingTable.class);
+    LoggerFactory.getLogger(TestMasterRestartAfterDisablingTable.class);
 
   @Rule
   public TestName name = new TestName();
 
   @Test
-  public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch()
-      throws Exception {
+  public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch() throws Exception {
     final int NUM_MASTERS = 2;
     final int NUM_REGIONS_TO_CREATE = 4;
 
@@ -68,8 +67,8 @@ public class TestMasterRestartAfterDisablingTable {
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil(conf);
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(NUM_MASTERS).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(NUM_MASTERS).build();
     TEST_UTIL.startMiniCluster(option);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
@@ -91,8 +90,8 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.getAdmin().disableTable(tableName);
 
     NavigableSet<String> regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
-    assertEquals("The number of regions for the table tableRestart should be 0 and only" +
-      "the catalog table should be present.", 1, regions.size());
+    assertEquals("The number of regions for the table tableRestart should be 0 and only"
+      + "the catalog table should be present.", 1, regions.size());
 
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
@@ -101,13 +100,13 @@ public class TestMasterRestartAfterDisablingTable {
     } else {
       activeMaster = masterThreads.get(1);
     }
-    activeMaster.getMaster().stop(
-        "stopping the active master so that the backup can become active");
+    activeMaster.getMaster()
+      .stop("stopping the active master so that the backup can become active");
     cluster.hbaseCluster.waitOnMaster(activeMaster);
     cluster.waitForActiveAndReadyMaster();
 
     assertTrue("The table should not be in enabled state",
-        cluster.getMaster().getTableStateManager().isTableState(
+      cluster.getMaster().getTableStateManager().isTableState(
         TableName.valueOf(name.getMethodName()), TableState.State.DISABLED,
         TableState.State.DISABLING));
     log("Enabling table\n");
@@ -119,8 +118,8 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
-    assertEquals("The assigned regions were not onlined after master" +
-      " switch except for the catalog table.", 5, regions.size());
+    assertEquals("The assigned regions were not onlined after master"
+      + " switch except for the catalog table.", 5, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster().getTableStateManager()
       .isTableState(TableName.valueOf(name.getMethodName()), TableState.State.ENABLED));
     ht.close();
@@ -131,4 +130,3 @@ public class TestMasterRestartAfterDisablingTable {
     LOG.debug("\n\nTRR: " + msg + "\n");
   }
 }
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 class CallEvent {
 
   public enum Type {
-    TIMEOUT, CANCELLED
+    TIMEOUT,
+    CANCELLED
   }
 
   final Type type;

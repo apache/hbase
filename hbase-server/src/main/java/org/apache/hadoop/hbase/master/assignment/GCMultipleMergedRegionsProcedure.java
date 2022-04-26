@@ -36,21 +36,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.G
 
 /**
  * GC regions that have been Merged. Caller determines if it is GC time. This Procedure does not
- * check. This is a Table Procedure. We take a read lock on the Table. We do NOT keep a lock for
- * the life of this procedure. The sub-procedures take locks on the Regions they are purging.
- * Replaces a Procedure that did two regions only at a time instead doing multiple merges in the
- * one go; only difference from the old {@link GCMergedRegionsState} is the serialization; this
- * class has a different serialization profile writing out more than just two regions.
+ * check. This is a Table Procedure. We take a read lock on the Table. We do NOT keep a lock for the
+ * life of this procedure. The sub-procedures take locks on the Regions they are purging. Replaces a
+ * Procedure that did two regions only at a time instead doing multiple merges in the one go; only
+ * difference from the old {@link GCMergedRegionsState} is the serialization; this class has a
+ * different serialization profile writing out more than just two regions.
  */
 @org.apache.yetus.audience.InterfaceAudience.Private
-public class GCMultipleMergedRegionsProcedure extends
-    AbstractStateMachineTableProcedure<GCMergedRegionsState> {
+public class GCMultipleMergedRegionsProcedure
+  extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   private static final Logger LOG = LoggerFactory.getLogger(GCMultipleMergedRegionsProcedure.class);
   private List<RegionInfo> parents;
   private RegionInfo mergedChild;
 
   public GCMultipleMergedRegionsProcedure(final MasterProcedureEnv env,
-      final RegionInfo mergedChild, final List<RegionInfo> parents) {
+    final RegionInfo mergedChild, final List<RegionInfo> parents) {
     super(env);
     this.parents = parents;
     this.mergedChild = mergedChild;
@@ -61,7 +61,8 @@ public class GCMultipleMergedRegionsProcedure extends
     super();
   }
 
-  @Override protected boolean holdLock(MasterProcedureEnv env) {
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
     return true;
   }
 
@@ -88,7 +89,7 @@ public class GCMultipleMergedRegionsProcedure extends
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCMergedRegionsState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -101,7 +102,8 @@ public class GCMultipleMergedRegionsProcedure extends
           List<RegionInfo> parents =
             env.getAssignmentManager().getRegionStateStore().getMergeRegions(mergedChild);
           if (parents == null || parents.isEmpty()) {
-            LOG.info("{} mergeXXX qualifiers have ALL been deleted", mergedChild.getShortNameToLog());
+            LOG.info("{} mergeXXX qualifiers have ALL been deleted",
+              mergedChild.getShortNameToLog());
             return Flow.NO_MORE_STATE;
           }
           setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
@@ -118,18 +120,16 @@ public class GCMultipleMergedRegionsProcedure extends
       }
     } catch (IOException ioe) {
       // TODO: This is going to spew log?
-      LOG.warn("Error trying to GC merged regions {}; retrying...",
-          this.parents.stream().map(r -> RegionInfo.getShortNameToLog(r)).
-              collect(Collectors.joining(", ")),
-          ioe);
+      LOG.warn("Error trying to GC merged regions {}; retrying...", this.parents.stream()
+        .map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")), ioe);
     }
     return Flow.HAS_MORE_STATE;
   }
 
   private GCRegionProcedure[] createGCRegionProcedures(final MasterProcedureEnv env) {
-    GCRegionProcedure [] procs = new GCRegionProcedure[this.parents.size()];
+    GCRegionProcedure[] procs = new GCRegionProcedure[this.parents.size()];
     int index = 0;
-    for (RegionInfo ri: this.parents) {
+    for (RegionInfo ri : this.parents) {
       GCRegionProcedure proc = new GCRegionProcedure(env, ri);
       proc.setOwner(env.getRequestUser().getShortName());
       procs[index++] = proc;
@@ -139,7 +139,7 @@ public class GCMultipleMergedRegionsProcedure extends
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, GCMergedRegionsState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // no-op
   }
 
@@ -159,25 +159,23 @@ public class GCMultipleMergedRegionsProcedure extends
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     final GCMultipleMergedRegionsStateData.Builder msg =
-        GCMultipleMergedRegionsStateData.newBuilder().
-            addAllParents(this.parents.stream().map(ProtobufUtil::toRegionInfo).
-                collect(Collectors.toList())).
-            setMergedChild(ProtobufUtil.toRegionInfo(this.mergedChild));
+      GCMultipleMergedRegionsStateData.newBuilder()
+        .addAllParents(
+          this.parents.stream().map(ProtobufUtil::toRegionInfo).collect(Collectors.toList()))
+        .setMergedChild(ProtobufUtil.toRegionInfo(this.mergedChild));
     serializer.serialize(msg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     final GCMultipleMergedRegionsStateData msg =
-        serializer.deserialize(GCMultipleMergedRegionsStateData.class);
-    this.parents = msg.getParentsList().stream().map(ProtobufUtil::toRegionInfo).
-        collect(Collectors.toList());
+      serializer.deserialize(GCMultipleMergedRegionsStateData.class);
+    this.parents =
+      msg.getParentsList().stream().map(ProtobufUtil::toRegionInfo).collect(Collectors.toList());
     this.mergedChild = ProtobufUtil.toRegionInfo(msg.getMergedChild());
   }
 
@@ -187,8 +185,8 @@ public class GCMultipleMergedRegionsProcedure extends
     sb.append(" child=");
     sb.append(this.mergedChild.getShortNameToLog());
     sb.append(", parents:");
-    sb.append(this.parents.stream().map(r -> RegionInfo.getShortNameToLog(r)).
-        collect(Collectors.joining(", ")));
+    sb.append(this.parents.stream().map(r -> RegionInfo.getShortNameToLog(r))
+      .collect(Collectors.joining(", ")));
   }
 
   @Override

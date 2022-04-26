@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncNamespaceAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncNamespaceAdminApi.class);
 
   private String prefix = "TestNamespace";
 
@@ -119,8 +119,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
       @Override
       public Void call() throws Exception {
         TableDescriptorBuilder tableDescriptorBuilder =
-          TableDescriptorBuilder.newBuilder(TableName.valueOf("non_existing_namespace",
-            "table1"));
+          TableDescriptorBuilder.newBuilder(TableName.valueOf("non_existing_namespace", "table1"));
         ColumnFamilyDescriptor columnFamilyDescriptor =
           ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1")).build();
         tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -172,7 +171,8 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     admin.deleteNamespace(prefix + "ns1").join();
   }
 
-  private static <V, E> void runWithExpectedException(Callable<V> callable, Class<E> exceptionClass) {
+  private static <V, E> void runWithExpectedException(Callable<V> callable,
+    Class<E> exceptionClass) {
     try {
       callable.call();
     } catch (Exception ex) {

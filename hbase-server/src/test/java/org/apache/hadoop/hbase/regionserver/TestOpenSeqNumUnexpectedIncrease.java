@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestOpenSeqNumUnexpectedIncrease {
 
     @SuppressWarnings("deprecation")
     public MockHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
@@ -78,7 +78,7 @@ public class TestOpenSeqNumUnexpectedIncrease {
     }
 
     public Map<byte[], List<HStoreFile>> close() throws IOException {
-      //skip close
+      // skip close
       return null;
     }
   }

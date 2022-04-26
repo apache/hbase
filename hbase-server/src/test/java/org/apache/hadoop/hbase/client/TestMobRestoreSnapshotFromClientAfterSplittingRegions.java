@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestMobRestoreSnapshotFromClientAfterSplittingRegions
-    extends RestoreSnapshotFromClientAfterSplittingRegionsTestBase {
+  extends RestoreSnapshotFromClientAfterSplittingRegionsTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -56,7 +56,7 @@ public class TestMobRestoreSnapshotFromClientAfterSplittingRegions
 
   @Override
   protected void verifyRowCount(HBaseTestingUtil util, TableName tableName, long expectedRows)
-      throws IOException {
+    throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }
 

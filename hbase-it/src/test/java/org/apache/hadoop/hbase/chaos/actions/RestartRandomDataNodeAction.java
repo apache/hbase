@@ -6,16 +6,15 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -41,7 +40,8 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -53,11 +53,11 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   }
 
   public ServerName[] getDataNodes() throws IOException {
-    DistributedFileSystem fs = (DistributedFileSystem) CommonFSUtils.getRootDir(getConf())
-        .getFileSystem(getConf());
+    DistributedFileSystem fs =
+      (DistributedFileSystem) CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf());
     DFSClient dfsClient = fs.getClient();
     List<ServerName> hosts = new LinkedList<>();
-    for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
+    for (DatanodeInfo dataNode : dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
       hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
     }
     return hosts.toArray(new ServerName[0]);

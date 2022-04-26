@@ -79,10 +79,8 @@ public final class TraceUtil {
   /**
    * Trace an asynchronous operation for a table.
    */
-  public static <T> CompletableFuture<T> tracedFuture(
-    Supplier<CompletableFuture<T>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
+    Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
@@ -108,10 +106,8 @@ public final class TraceUtil {
    * Trace an asynchronous operation, and finish the create {@link Span} when all the given
    * {@code futures} are completed.
    */
-  public static <T> List<CompletableFuture<T>> tracedFutures(
-    Supplier<List<CompletableFuture<T>>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> List<CompletableFuture<T>>
+    tracedFutures(Supplier<List<CompletableFuture<T>>> action, Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       List<CompletableFuture<T>> futures = action.get();
@@ -148,16 +144,13 @@ public final class TraceUtil {
     void run() throws T;
   }
 
-  public static <T extends Throwable> void trace(
-    final ThrowingRunnable<T> runnable,
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
     final String spanName) throws T {
     trace(runnable, () -> createSpan(spanName));
   }
 
-  public static <T extends Throwable> void trace(
-    final ThrowingRunnable<T> runnable,
-    final Supplier<Span> spanSupplier
-  ) throws T {
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
+    final Supplier<Span> spanSupplier) throws T {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       runnable.run();
@@ -180,17 +173,13 @@ public final class TraceUtil {
     R call() throws T;
   }
 
-  public static <R, T extends Throwable> R trace(
-    final ThrowingCallable<R, T> callable,
-    final String spanName
-  ) throws T {
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final String spanName) throws T {
     return trace(callable, () -> createSpan(spanName));
   }
 
-  public static <R, T extends Throwable> R trace(
-    final ThrowingCallable<R, T> callable,
-    final Supplier<Span> spanSupplier
-  ) throws T {
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final Supplier<Span> spanSupplier) throws T {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       final R ret = callable.call();

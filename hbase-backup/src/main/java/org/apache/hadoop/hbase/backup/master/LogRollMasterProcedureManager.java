@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
@@ -61,7 +59,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
   public static final String BACKUP_WAKE_MILLIS_KEY = "hbase.backup.logroll.wake.millis";
   public static final String BACKUP_TIMEOUT_MILLIS_KEY = "hbase.backup.logroll.timeout.millis";
   public static final String BACKUP_POOL_THREAD_NUMBER_KEY =
-          "hbase.backup.logroll.pool.thread.number";
+    "hbase.backup.logroll.pool.thread.number";
 
   public static final int BACKUP_WAKE_MILLIS_DEFAULT = 500;
   public static final int BACKUP_TIMEOUT_MILLIS_DEFAULT = 180000;
@@ -82,26 +80,24 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
 
   @Override
   public void initialize(MasterServices master, MetricsMaster metricsMaster)
-      throws IOException, UnsupportedOperationException {
+    throws IOException, UnsupportedOperationException {
     this.master = master;
     this.done = false;
 
     // setup the default procedure coordinator
     String name = master.getServerName().toString();
 
-
     // get the configuration for the coordinator
     Configuration conf = master.getConfiguration();
     long wakeFrequency = conf.getInt(BACKUP_WAKE_MILLIS_KEY, BACKUP_WAKE_MILLIS_DEFAULT);
-    long timeoutMillis = conf.getLong(BACKUP_TIMEOUT_MILLIS_KEY,BACKUP_TIMEOUT_MILLIS_DEFAULT);
-    int opThreads = conf.getInt(BACKUP_POOL_THREAD_NUMBER_KEY,
-                                    BACKUP_POOL_THREAD_NUMBER_DEFAULT);
+    long timeoutMillis = conf.getLong(BACKUP_TIMEOUT_MILLIS_KEY, BACKUP_TIMEOUT_MILLIS_DEFAULT);
+    int opThreads = conf.getInt(BACKUP_POOL_THREAD_NUMBER_KEY, BACKUP_POOL_THREAD_NUMBER_DEFAULT);
 
     // setup the default procedure coordinator
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, opThreads);
     ProcedureCoordinationManager coordManager = new ZKProcedureCoordinationManager(master);
     ProcedureCoordinatorRpcs comms =
-        coordManager.getProcedureCoordinatorRpcs(getProcedureSignature(), name);
+      coordManager.getProcedureCoordinatorRpcs(getProcedureSignature(), name);
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
 
   }
@@ -115,7 +111,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
   public void execProcedure(ProcedureDescription desc) throws IOException {
     if (!isBackupEnabled()) {
       LOG.warn("Backup is not enabled. Check your " + BackupRestoreConstants.BACKUP_ENABLE_KEY
-          + " setting");
+        + " setting");
       return;
     }
     this.done = false;
@@ -149,12 +145,12 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
       this.done = true;
     } catch (InterruptedException e) {
       ForeignException ee =
-          new ForeignException("Interrupted while waiting for roll log procdure to finish", e);
+        new ForeignException("Interrupted while waiting for roll log procdure to finish", e);
       monitor.receive(ee);
       Thread.currentThread().interrupt();
     } catch (ForeignException e) {
       ForeignException ee =
-          new ForeignException("Exception while waiting for roll log procdure to finish", e);
+        new ForeignException("Exception while waiting for roll log procdure to finish", e);
       monitor.receive(ee);
     }
     monitor.rethrowException();
@@ -162,7 +158,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
 
   @Override
   public void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker, User user)
-      throws IOException {
+    throws IOException {
     // TODO: what permissions checks are needed here?
   }
 

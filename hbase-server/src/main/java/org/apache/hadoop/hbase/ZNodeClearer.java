@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.BufferedReader;
@@ -33,22 +32,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <p>Contains a set of methods for the collaboration between the start/stop scripts and the
- * servers. It allows to delete immediately the znode when the master or the regions server crashes.
- * The region server / master writes a specific file when it starts / becomes main master. When they
- * end properly, they delete the file.</p>
- * <p>In the script, we check for the existence of these files when the program ends. If they still
+ * <p>
+ * Contains a set of methods for the collaboration between the start/stop scripts and the servers.
+ * It allows to delete immediately the znode when the master or the regions server crashes. The
+ * region server / master writes a specific file when it starts / becomes main master. When they end
+ * properly, they delete the file.
+ * </p>
+ * <p>
+ * In the script, we check for the existence of these files when the program ends. If they still
  * exist we conclude that the server crashed, likely without deleting their znode. To have a faster
- * recovery we delete immediately the znode.</p>
- * <p>The strategy depends on the server type. For a region server we store the znode path in the
- * file, and use it to delete it. for a master, as the znode path constant whatever the server, we
- * check its content to make sure that the backup server is not now in charge.</p>
+ * recovery we delete immediately the znode.
+ * </p>
+ * <p>
+ * The strategy depends on the server type. For a region server we store the znode path in the file,
+ * and use it to delete it. for a master, as the znode path constant whatever the server, we check
+ * its content to make sure that the backup server is not now in charge.
+ * </p>
  */
 @InterfaceAudience.Private
 public final class ZNodeClearer {
   private static final Logger LOG = LoggerFactory.getLogger(ZNodeClearer.class);
 
-  private ZNodeClearer() {}
+  private ZNodeClearer() {
+  }
 
   /**
    * Logs the errors without failing on exception.
@@ -56,8 +62,8 @@ public final class ZNodeClearer {
   public static void writeMyEphemeralNodeOnDisk(String fileContent) {
     String fileName = ZNodeClearer.getMyEphemeralNodeFileName();
     if (fileName == null) {
-      LOG.warn("Environment variable HBASE_ZNODE_FILE not set; znodes will not be cleared " +
-          "on crash by start scripts (Longer MTTR!)");
+      LOG.warn("Environment variable HBASE_ZNODE_FILE not set; znodes will not be cleared "
+        + "on crash by start scripts (Longer MTTR!)");
       return;
     }
 
@@ -65,7 +71,7 @@ public final class ZNodeClearer {
     try {
       fstream = new FileWriter(fileName);
     } catch (IOException e) {
-      LOG.warn("Can't write znode file "+fileName, e);
+      LOG.warn("Can't write znode file " + fileName, e);
       return;
     }
 
@@ -82,7 +88,7 @@ public final class ZNodeClearer {
         }
       }
     } catch (IOException e) {
-      LOG.warn("Can't write znode file "+fileName, e);
+      LOG.warn("Can't write znode file " + fileName, e);
     }
   }
 
@@ -91,7 +97,7 @@ public final class ZNodeClearer {
    */
   public static String readMyEphemeralNodeOnDisk() throws IOException {
     String fileName = getMyEphemeralNodeFileName();
-    if (fileName == null){
+    if (fileName == null) {
       throw new FileNotFoundException("No filename; set environment variable HBASE_ZNODE_FILE");
     }
     FileReader znodeFile = new FileReader(fileName);
@@ -113,7 +119,7 @@ public final class ZNodeClearer {
   }
 
   /**
-   *  delete the znode file
+   * delete the znode file
    */
   public static void deleteMyEphemeralNodeOnDisk() {
     String fileName = getMyEphemeralNodeFileName();
@@ -124,8 +130,8 @@ public final class ZNodeClearer {
   }
 
   /**
-   * See HBASE-14861. We are extracting master ServerName from rsZnodePath
-   * example: "/hbase/rs/server.example.com,16020,1448266496481"
+   * See HBASE-14861. We are extracting master ServerName from rsZnodePath example:
+   * "/hbase/rs/server.example.com,16020,1448266496481"
    * @param rsZnodePath from HBASE_ZNODE_FILE
    * @return String representation of ServerName or null if fails
    */
@@ -134,7 +140,7 @@ public final class ZNodeClearer {
     String masterServerName = null;
     try {
       String[] rsZnodeParts = rsZnodePath.split("/");
-      masterServerName = rsZnodeParts[rsZnodeParts.length -1];
+      masterServerName = rsZnodeParts[rsZnodeParts.length - 1];
     } catch (IndexOutOfBoundsException e) {
       LOG.warn("String " + rsZnodePath + " has wrong format", e);
     }
@@ -142,9 +148,9 @@ public final class ZNodeClearer {
   }
 
   /**
-   * Delete the master znode if its content (ServerName string) is the same
-   *  as the one in the znode file. (env: HBASE_ZNODE_FILE). I case of master-rs
-   *  colloaction we extract ServerName string from rsZnode path.(HBASE-14861)
+   * Delete the master znode if its content (ServerName string) is the same as the one in the znode
+   * file. (env: HBASE_ZNODE_FILE). I case of master-rs colloaction we extract ServerName string
+   * from rsZnode path.(HBASE-14861)
    * @return true on successful deletion, false otherwise.
    */
   public static boolean clear(Configuration conf) {
@@ -153,11 +159,16 @@ public final class ZNodeClearer {
 
     ZKWatcher zkw;
     try {
-      zkw = new ZKWatcher(tempConf, "clean znode for master",
-          new Abortable() {
-            @Override public void abort(String why, Throwable e) {}
-            @Override public boolean isAborted() { return false; }
-          });
+      zkw = new ZKWatcher(tempConf, "clean znode for master", new Abortable() {
+        @Override
+        public void abort(String why, Throwable e) {
+        }
+
+        @Override
+        public boolean isAborted() {
+          return false;
+        }
+      });
     } catch (IOException e) {
       LOG.warn("Can't connect to zookeeper to read the master znode", e);
       return false;

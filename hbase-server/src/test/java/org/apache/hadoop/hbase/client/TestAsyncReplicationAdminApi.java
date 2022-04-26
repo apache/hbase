@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -141,11 +141,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testPeerConfig() throws Exception {
-    ReplicationPeerConfig config = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(KEY_ONE)
-      .putConfiguration("key1", "value1")
-      .putConfiguration("key2", "value2")
-      .build();
+    ReplicationPeerConfig config = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE)
+      .putConfiguration("key1", "value1").putConfiguration("key2", "value2").build();
     admin.addReplicationPeer(ID_ONE, config).join();
 
     List<ReplicationPeerDescription> peers = admin.listReplicationPeers().get();
@@ -309,8 +306,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
       tableCFs.clear();
       tableCFs.put(tableName3, null);
       admin.removeReplicationPeerTableCFs(ID_ONE, tableCFs).join();
-      fail("Test case should fail as removing table-cfs from a peer whose" +
-        " table-cfs didn't contain t3");
+      fail("Test case should fail as removing table-cfs from a peer whose"
+        + " table-cfs didn't contain t3");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof ReplicationException);
     }
@@ -448,7 +445,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     ReplicationPeerConfigBuilder rpcBuilder =
       ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE);
 
-    admin.addReplicationPeer(ID_ONE, rpcBuilder.build()).join();;
+    admin.addReplicationPeer(ID_ONE, rpcBuilder.build()).join();
+    ;
     assertEquals(0, admin.getReplicationPeerConfig(ID_ONE).get().getBandwidth());
 
     rpcBuilder.setBandwidth(2097152);

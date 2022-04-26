@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestCreateTableNoRegionServer {
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("test");
-  
+
   private static byte[] FAMILY = Bytes.toBytes("f1");
 
   private static CountDownLatch ARRIVE;
@@ -78,12 +78,16 @@ public class TestCreateTableNoRegionServer {
     private boolean isInAssignRegionsState() {
       try {
         for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
-          if (e.getClassName().equals(CreateTableProcedure.class.getName()) &&
-            e.getMethodName().equals("executeFromState")) {
+          if (
+            e.getClassName().equals(CreateTableProcedure.class.getName())
+              && e.getMethodName().equals("executeFromState")
+          ) {
             for (Procedure<?> proc : getProcedures()) {
-              if (proc instanceof CreateTableProcedure && !proc.isFinished() &&
-                ((CreateTableProcedure) proc)
-                  .getCurrentStateId() == CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE) {
+              if (
+                proc instanceof CreateTableProcedure && !proc.isFinished()
+                  && ((CreateTableProcedure) proc).getCurrentStateId()
+                      == CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE
+              ) {
                 return true;
               }
             }
@@ -148,9 +152,11 @@ public class TestCreateTableNoRegionServer {
     // the procedure should still be in the CREATE_TABLE_ASSIGN_REGIONS state, but here, we just
     // warn it as it may cause more serious problem later.
     for (Procedure<?> proc : UTIL.getMiniHBaseCluster().getMaster().getProcedures()) {
-      if (proc instanceof CreateTableProcedure && !proc.isFinished() &&
-        ((CreateTableProcedure) proc)
-          .getCurrentStateId() != CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE) {
+      if (
+        proc instanceof CreateTableProcedure && !proc.isFinished()
+          && ((CreateTableProcedure) proc).getCurrentStateId()
+              != CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE
+      ) {
         LOG.warn("Create table procedure {} assigned regions without a region server!", proc);
       }
     }
@@ -158,10 +164,9 @@ public class TestCreateTableNoRegionServer {
     // the creation should finally be done
     future.get(30, TimeUnit.SECONDS);
     // make sure we could put to the table
-    try (Table table = UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
-      .setOperationTimeout(5000).build()) {
-      table.put(new Put(Bytes.toBytes(0)).addColumn(FAMILY,
-        Bytes.toBytes("q"), Bytes.toBytes(0)));
+    try (Table table =
+      UTIL.getConnection().getTableBuilder(TABLE_NAME, null).setOperationTimeout(5000).build()) {
+      table.put(new Put(Bytes.toBytes(0)).addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes(0)));
     }
   }
 }

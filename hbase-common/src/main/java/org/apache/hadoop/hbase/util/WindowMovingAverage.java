@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Instead of calculate a whole time average, this class focus on the last N.
- * The last N is stored in a circle array.
+ * Instead of calculate a whole time average, this class focus on the last N. The last N is stored
+ * in a circle array.
  */
 @InterfaceAudience.Private
 public class WindowMovingAverage extends MovingAverage {
@@ -54,9 +53,9 @@ public class WindowMovingAverage extends MovingAverage {
 
   @Override
   public double getAverageTime() {
-    return enoughStatistics() ?
-      (double) sum(getNumberOfStatistics()) / getNumberOfStatistics() :
-      (double) sum(getMostRecentPosistion() + 1) / (getMostRecentPosistion() + 1);
+    return enoughStatistics()
+      ? (double) sum(getNumberOfStatistics()) / getNumberOfStatistics()
+      : (double) sum(getMostRecentPosistion() + 1) / (getMostRecentPosistion() + 1);
   }
 
   /**
@@ -76,8 +75,7 @@ public class WindowMovingAverage extends MovingAverage {
 
   /**
    * Get statistics at index.
-   * @param index index of bar
-   * @return statistics
+   * @param index index of bar n
    */
   protected long getStatisticsAtIndex(int index) {
     if (index < 0 || index >= getNumberOfStatistics()) {

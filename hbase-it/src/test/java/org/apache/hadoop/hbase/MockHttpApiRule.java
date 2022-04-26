@@ -42,8 +42,8 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.AbstractHand
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.RegexSet;
 
 /**
- * A {@link org.junit.Rule} that manages a simple http server. The caller registers request
- * handlers to URI path regexp.
+ * A {@link org.junit.Rule} that manages a simple http server. The caller registers request handlers
+ * to URI path regexp.
  */
 public class MockHttpApiRule extends ExternalResource {
   private static final Logger LOG = LoggerFactory.getLogger(MockHttpApiRule.class);
@@ -54,10 +54,8 @@ public class MockHttpApiRule extends ExternalResource {
   /**
    * Register a callback handler for the specified path target.
    */
-  public MockHttpApiRule addRegistration(
-    final String pathRegex,
-    final BiConsumer<String, HttpServletResponse> responder
-  ) {
+  public MockHttpApiRule addRegistration(final String pathRegex,
+    final BiConsumer<String, HttpServletResponse> responder) {
     handler.register(pathRegex, responder);
     return this;
   }
@@ -130,10 +128,7 @@ public class MockHttpApiRule extends ExternalResource {
       new HashMap<>();
     private final RegexSet regexSet = new RegexSet();
 
-    void register(
-      final String pathRegex,
-      final BiConsumer<String, HttpServletResponse> responder
-    ) {
+    void register(final String pathRegex, final BiConsumer<String, HttpServletResponse> responder) {
       LOG.debug("Registering responder to '{}'", pathRegex);
       responseMappingLock.writeLock().lock();
       try {
@@ -156,24 +151,16 @@ public class MockHttpApiRule extends ExternalResource {
     }
 
     @Override
-    public void handle(
-      final String target,
-      final Request baseRequest,
-      final HttpServletRequest request,
-      final HttpServletResponse response
-    ) {
+    public void handle(final String target, final Request baseRequest,
+      final HttpServletRequest request, final HttpServletResponse response) {
       responseMappingLock.readLock().lock();
       try {
         if (!regexSet.matches(target)) {
           response.setStatus(HttpServletResponse.SC_NOT_FOUND);
           return;
         }
-        responseMapping.entrySet()
-          .stream()
-          .filter(e -> Pattern.matches(e.getKey(), target))
-          .findAny()
-          .map(Map.Entry::getValue)
-          .orElseThrow(() -> noMatchFound(target))
+        responseMapping.entrySet().stream().filter(e -> Pattern.matches(e.getKey(), target))
+          .findAny().map(Map.Entry::getValue).orElseThrow(() -> noMatchFound(target))
           .accept(target, response);
       } finally {
         responseMappingLock.readLock().unlock();

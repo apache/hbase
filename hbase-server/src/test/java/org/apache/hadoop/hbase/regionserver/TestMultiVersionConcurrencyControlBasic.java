@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.junit.experimental.categories.Category;
  * Very basic tests.
  * @see TestMultiVersionConcurrencyControl for more.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMultiVersionConcurrencyControlBasic {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiVersionConcurrencyControlBasic.class);
+    HBaseClassTestRule.forClass(TestMultiVersionConcurrencyControlBasic.class);
 
   @Test
   public void testSimpleMvccOps() {

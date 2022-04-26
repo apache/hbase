@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,9 +33,11 @@ public final class OOMEChecker {
   public static boolean exitIfOOME(Throwable e, String service) {
     boolean stop = false;
     try {
-      if (e instanceof OutOfMemoryError ||
-        (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
-        (e.getMessage() != null && e.getMessage().contains("java.lang.OutOfMemoryError"))) {
+      if (
+        e instanceof OutOfMemoryError
+          || (e.getCause() != null && e.getCause() instanceof OutOfMemoryError)
+          || (e.getMessage() != null && e.getMessage().contains("java.lang.OutOfMemoryError"))
+      ) {
         stop = true;
         LOG.error(HBaseMarkers.FATAL, "Run out of memory; {} will abort itself immediately",
           service, e);

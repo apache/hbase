@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -141,8 +141,10 @@ public class SyncReplicationTestBase {
     }
     Admin admin = util.getAdmin();
     if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
-      if (admin
-        .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
+      if (
+        admin.getReplicationPeerSyncReplicationState(PEER_ID)
+            != SyncReplicationState.DOWNGRADE_ACTIVE
+      ) {
         admin.transitReplicationPeerSyncReplicationState(PEER_ID,
           SyncReplicationState.DOWNGRADE_ACTIVE);
       }
@@ -175,23 +177,22 @@ public class SyncReplicationTestBase {
   }
 
   protected final void verifyThroughRegion(HBaseTestingUtil util, int start, int end)
-      throws IOException {
+    throws IOException {
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     for (int i = start; i < end; i++) {
       assertEquals(i, Bytes.toInt(region.get(new Get(Bytes.toBytes(i))).getValue(CF, CQ)));
     }
   }
 
-  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtil util, int start,
-      int end) throws IOException {
+  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtil util, int start, int end)
+    throws IOException {
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     for (int i = start; i < end; i++) {
       assertTrue(region.get(new Get(Bytes.toBytes(i))).isEmpty());
     }
   }
 
-  protected final void waitUntilReplicationDone(HBaseTestingUtil util, int end)
-      throws Exception {
+  protected final void waitUntilReplicationDone(HBaseTestingUtil util, int end) throws Exception {
     // The reject check is in RSRpcService so we can still read through HRegion
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
@@ -208,8 +209,8 @@ public class SyncReplicationTestBase {
     });
   }
 
-  protected final void writeAndVerifyReplication(HBaseTestingUtil util1,
-      HBaseTestingUtil util2, int start, int end) throws Exception {
+  protected final void writeAndVerifyReplication(HBaseTestingUtil util1, HBaseTestingUtil util2,
+    int start, int end) throws Exception {
     write(util1, start, end);
     waitUntilReplicationDone(util2, end);
     verifyThroughRegion(util2, start, end);
@@ -228,8 +229,8 @@ public class SyncReplicationTestBase {
     return new Path(remoteWALDir, peerId + "-replay");
   }
 
-  protected final void verifyRemovedPeer(String peerId, Path remoteWALDir,
-      HBaseTestingUtil utility) throws Exception {
+  protected final void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtil utility)
+    throws Exception {
     ReplicationPeerStorage rps = ReplicationStorageFactory
       .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
@@ -257,7 +258,7 @@ public class SyncReplicationTestBase {
   }
 
   protected final void verifyReplicationRequestRejection(HBaseTestingUtil utility,
-      boolean expectedRejection) throws Exception {
+    boolean expectedRejection) throws Exception {
     HRegionServer regionServer = utility.getRSForFirstRegionInTable(TABLE_NAME);
     AsyncClusterConnection connection = regionServer.getAsyncClusterConnection();
     Entry[] entries = new Entry[10];

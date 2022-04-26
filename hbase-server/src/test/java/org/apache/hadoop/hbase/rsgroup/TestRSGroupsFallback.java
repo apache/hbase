@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -53,7 +52,7 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsFallback.class);
+    HBaseClassTestRule.forClass(TestRSGroupsFallback.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsFallback.class);
 
@@ -92,8 +91,7 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     addGroup(groupName, 1);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
-      .setRegionServerGroup(groupName)
-      .build();
+      .setRegionServerGroup(groupName).build();
     ADMIN.createTable(desc, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     // server of test group crash, regions move to default group
@@ -121,12 +119,12 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
   }
 
   private void assertRegionsInGroup(TableName table, String group) throws IOException {
-    ProcedureTestingUtility.waitAllProcedures(
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
+    ProcedureTestingUtility
+      .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     RSGroupInfo rsGroup = ADMIN.getRSGroup(group);
     MASTER.getAssignmentManager().getRegionStates().getRegionsOfTable(table).forEach(region -> {
       Address regionOnServer = MASTER.getAssignmentManager().getRegionStates()
-          .getRegionAssignments().get(region).getAddress();
+        .getRegionAssignments().get(region).getAddress();
       assertTrue(rsGroup.getServers().contains(regionOnServer));
     });
   }

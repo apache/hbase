@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ class RegionLocatorOverAsyncTableRegionLocator implements RegionLocator {
 
   @Override
   public HRegionLocation getRegionLocation(byte[] row, int replicaId, boolean reload)
-      throws IOException {
+    throws IOException {
     return get(locator.getRegionLocation(row, replicaId, reload));
   }
 

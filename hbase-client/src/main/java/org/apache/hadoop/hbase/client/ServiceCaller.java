@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,8 +53,8 @@ public interface ServiceCaller<S, R> {
 
   /**
    * Represent the actual protobuf rpc call.
-   * @param stub the asynchronous stub
-   * @param controller the rpc controller, has already been prepared for you
+   * @param stub        the asynchronous stub
+   * @param controller  the rpc controller, has already been prepared for you
    * @param rpcCallback the rpc callback, has already been prepared for you
    */
   void call(S stub, RpcController controller, RpcCallback<R> rpcCallback);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestHBaseFsckReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckReplication.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckReplication.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -62,9 +62,9 @@ public class TestHBaseFsckReplication {
   @Test
   public void test() throws Exception {
     ReplicationPeerStorage peerStorage = ReplicationStorageFactory
-        .getReplicationPeerStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
+      .getReplicationPeerStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
-        .getReplicationQueueStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
+      .getReplicationQueueStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
 
     String peerId1 = "1";
     String peerId2 = "2";

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,24 +25,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestQuotaFilter {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaFilter.class);
+    HBaseClassTestRule.forClass(TestQuotaFilter.class);
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
-    /* ReplicationPeerConfig should have a builder style setup where setXXX/addXXX methods
-     * can be chainable together:
-     * . For example:
-     * QuotaFilter qf
-     *   = new QuotaFilter()
-     *     .setFoo(foo)
-     *     .setBar(bar)
-     *     .setBuz(buz)
-     *
-     * This test ensures that all methods starting with "set" returns the declaring object
+    /*
+     * ReplicationPeerConfig should have a builder style setup where setXXX/addXXX methods can be
+     * chainable together: . For example: QuotaFilter qf = new QuotaFilter() .setFoo(foo)
+     * .setBar(bar) .setBuz(buz) This test ensures that all methods starting with "set" returns the
+     * declaring object
      */
 
     BuilderStyleTest.assertClassesAreBuilderStyle(QuotaFilter.class);

@@ -26,44 +26,40 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Interner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Interners;
 import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 /**
- * Name of a particular incarnation of an HBase Server.
- * A {@link ServerName} is used uniquely identifying a server instance in a cluster and is made
- * of the combination of hostname, port, and startcode.  The startcode distinguishes restarted
- * servers on same hostname and port (startcode is usually timestamp of server startup). The
- * {@link #toString()} format of ServerName is safe to use in the  filesystem and as znode name
- * up in ZooKeeper.  Its format is:
+ * Name of a particular incarnation of an HBase Server. A {@link ServerName} is used uniquely
+ * identifying a server instance in a cluster and is made of the combination of hostname, port, and
+ * startcode. The startcode distinguishes restarted servers on same hostname and port (startcode is
+ * usually timestamp of server startup). The {@link #toString()} format of ServerName is safe to use
+ * in the filesystem and as znode name up in ZooKeeper. Its format is:
  * <code>&lt;hostname&gt; '{@link #SERVERNAME_SEPARATOR}' &lt;port&gt;
- * '{@link #SERVERNAME_SEPARATOR}' &lt;startcode&gt;</code>.
- * For example, if hostname is <code>www.example.org</code>, port is <code>1234</code>,
- * and the startcode for the regionserver is <code>1212121212</code>, then
- * the {@link #toString()} would be <code>www.example.org,1234,1212121212</code>.
- *
- * <p>You can obtain a versioned serialized form of this class by calling
- * {@link #getVersionedBytes()}.  To deserialize, call
- * {@link #parseVersionedServerName(byte[])}.
- *
- * <p>Use {@link #getAddress()} to obtain the Server hostname + port
- * (Endpoint/Socket Address).
- *
- * <p>Immutable.
+ * '{@link #SERVERNAME_SEPARATOR}' &lt;startcode&gt;</code>. For example, if hostname is
+ * <code>www.example.org</code>, port is <code>1234</code>, and the startcode for the regionserver
+ * is <code>1212121212</code>, then the {@link #toString()} would be
+ * <code>www.example.org,1234,1212121212</code>.
+ * <p>
+ * You can obtain a versioned serialized form of this class by calling {@link #getVersionedBytes()}.
+ * To deserialize, call {@link #parseVersionedServerName(byte[])}.
+ * <p>
+ * Use {@link #getAddress()} to obtain the Server hostname + port (Endpoint/Socket Address).
+ * <p>
+ * Immutable.
  */
 @InterfaceAudience.Public
 public class ServerName implements Comparable<ServerName>, Serializable {
   private static final long serialVersionUID = 1367463982557264981L;
 
   /**
-   * Version for this class.
-   * Its a short rather than a byte so I can for sure distinguish between this
-   * version of this class and the version previous to this which did not have
-   * a version.
+   * Version for this class. Its a short rather than a byte so I can for sure distinguish between
+   * this version of this class and the version previous to this which did not have a version.
    */
   private static final short VERSION = 0;
-  static final byte [] VERSION_BYTES = Bytes.toBytes(VERSION);
+  static final byte[] VERSION_BYTES = Bytes.toBytes(VERSION);
 
   /**
    * What to use if no startcode supplied.
@@ -71,15 +67,13 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   public static final int NON_STARTCODE = -1;
 
   /**
-   * This character is used as separator between server hostname, port and
-   * startcode.
+   * This character is used as separator between server hostname, port and startcode.
    */
   public static final String SERVERNAME_SEPARATOR = ",";
 
   public static final Pattern SERVERNAME_PATTERN =
-    Pattern.compile("[^" + SERVERNAME_SEPARATOR + "]+" +
-      SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX +
-      SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "$");
+    Pattern.compile("[^" + SERVERNAME_SEPARATOR + "]+" + SERVERNAME_SEPARATOR
+      + Addressing.VALID_PORT_REGEX + SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "$");
 
   /**
    * What to use if server name is unknown.
@@ -94,13 +88,12 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * Cached versioned bytes of this ServerName instance.
    * @see #getVersionedBytes()
    */
-  private byte [] bytes;
+  private byte[] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<>(0);
 
   /**
-   * Intern ServerNames. The Set of ServerNames is mostly-fixed changing slowly as Servers
-   * restart. Rather than create a new instance everytime, try and return existing instance
-   * if there is one.
+   * Intern ServerNames. The Set of ServerNames is mostly-fixed changing slowly as Servers restart.
+   * Rather than create a new instance everytime, try and return existing instance if there is one.
    */
   private static final Interner<ServerName> INTERN_POOL = Interners.newWeakInterner();
 
@@ -112,8 +105,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     // Use HostAndPort to host port and hostname. Does validation and can do ipv6
     this.address = address;
     this.startcode = startcode;
-    this.servername = getServerName(this.address.getHostname(),
-        this.address.getPort(), startcode);
+    this.servername = getServerName(this.address.getHostname(), this.address.getPort(), startcode);
   }
 
   private ServerName(final String hostAndPort, final long startCode) {
@@ -137,18 +129,16 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * Retrieve an instance of ServerName.
-   * Callers should use the equals method to compare returned instances, though we may return
-   * a shared immutable object as an internal optimization.
+   * Retrieve an instance of ServerName. Callers should use the equals method to compare returned
+   * instances, though we may return a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostname, final int port, final long startcode) {
     return INTERN_POOL.intern(new ServerName(hostname, port, startcode));
   }
 
   /**
-   * Retrieve an instance of ServerName.
-   * Callers should use the equals method to compare returned instances, though we may return
-   * a shared immutable object as an internal optimization.
+   * Retrieve an instance of ServerName. Callers should use the equals method to compare returned
+   * instances, though we may return a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String serverName) {
     final String hostname = serverName.substring(0, serverName.indexOf(SERVERNAME_SEPARATOR));
@@ -159,9 +149,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * Retrieve an instance of ServerName.
-   * Callers should use the equals method to compare returned instances, though we may return
-   * a shared immutable object as an internal optimization.
+   * Retrieve an instance of ServerName. Callers should use the equals method to compare returned
+   * instances, though we may return a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostAndPort, final long startCode) {
     return INTERN_POOL.intern(new ServerName(hostAndPort, startCode));
@@ -171,8 +160,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * Retrieve an instance of {@link ServerName}. Callers should use the {@link #equals(Object)}
    * method to compare returned instances, though we may return a shared immutable object as an
    * internal optimization.
-   *
-   * @param address the {@link Address} to use for getting the {@link ServerName}
+   * @param address   the {@link Address} to use for getting the {@link ServerName}
    * @param startcode the startcode to use for getting the {@link ServerName}
    * @return the constructed {@link ServerName}
    * @see #valueOf(String, int, long)
@@ -187,22 +175,21 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * @return Return a SHORT version of {@link #toString()}, one that has the host only,
-   *   minus the domain, and the port only -- no start code; the String is for us internally mostly
-   *   tying threads to their server.  Not for external use.  It is lossy and will not work in
-   *   in compares, etc.
+   * @return Return a SHORT version of {@link #toString()}, one that has the host only, minus the
+   *         domain, and the port only -- no start code; the String is for us internally mostly
+   *         tying threads to their server. Not for external use. It is lossy and will not work in
+   *         in compares, etc.
    */
   public String toShortString() {
-    return Addressing.createHostAndPortStr(
-      getHostNameMinusDomain(this.address.getHostname()),
+    return Addressing.createHostAndPortStr(getHostNameMinusDomain(this.address.getHostname()),
       this.address.getPort());
   }
 
   /**
-   * @return {@link #getServerName()} as bytes with a short-sized prefix with
-   *   the {@link #VERSION} of this class.
+   * @return {@link #getServerName()} as bytes with a short-sized prefix with the {@link #VERSION}
+   *         of this class.
    */
-  public synchronized byte [] getVersionedBytes() {
+  public synchronized byte[] getVersionedBytes() {
     if (this.bytes == null) {
       this.bytes = Bytes.add(VERSION_BYTES, Bytes.toBytes(getServerName()));
     }
@@ -231,15 +218,15 @@ public class ServerName implements Comparable<ServerName>, Serializable {
 
   /**
    * For internal use only.
-   * @param hostName the name of the host to use
-   * @param port the port on the host to use
+   * @param hostName  the name of the host to use
+   * @param port      the port on the host to use
    * @param startcode the startcode to use for formatting
-   * @return Server name made of the concatenation of hostname, port and
-   *   startcode formatted as <code>&lt;hostname&gt; ',' &lt;port&gt; ',' &lt;startcode&gt;</code>
+   * @return Server name made of the concatenation of hostname, port and startcode formatted as
+   *         <code>&lt;hostname&gt; ',' &lt;port&gt; ',' &lt;startcode&gt;</code>
    */
   private static String getServerName(String hostName, int port, long startcode) {
-    return hostName.toLowerCase(Locale.ROOT) + SERVERNAME_SEPARATOR + port
-      + SERVERNAME_SEPARATOR + startcode;
+    return hostName.toLowerCase(Locale.ROOT) + SERVERNAME_SEPARATOR + port + SERVERNAME_SEPARATOR
+      + startcode;
   }
 
   public Address getAddress() {
@@ -288,11 +275,11 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     if (!(o instanceof ServerName)) {
       return false;
     }
-    return this.compareTo((ServerName)o) == 0;
+    return this.compareTo((ServerName) o) == 0;
   }
 
   /**
-   * @param left the first server address to compare
+   * @param left  the first server address to compare
    * @param right the second server address to compare
    * @return {@code true} if {@code left} and {@code right} have the same hostname and port.
    */
@@ -301,14 +288,14 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * Use this method instantiating a {@link ServerName} from bytes
-   * gotten from a call to {@link #getVersionedBytes()}.  Will take care of the
-   * case where bytes were written by an earlier version of hbase.
+   * Use this method instantiating a {@link ServerName} from bytes gotten from a call to
+   * {@link #getVersionedBytes()}. Will take care of the case where bytes were written by an earlier
+   * version of hbase.
    * @param versionedBytes Pass bytes gotten from a call to {@link #getVersionedBytes()}
    * @return A ServerName instance.
    * @see #getVersionedBytes()
    */
-  public static ServerName parseVersionedServerName(final byte [] versionedBytes) {
+  public static ServerName parseVersionedServerName(final byte[] versionedBytes) {
     // Version is a short.
     short version = Bytes.toShort(versionedBytes);
     if (version == VERSION) {
@@ -321,21 +308,19 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * @param str Either an instance of {@link #toString()} or a
-   *   "'&lt;hostname&gt;' ':' '&lt;port&gt;'".
+   * @param str Either an instance of {@link #toString()} or a "'&lt;hostname&gt;' ':'
+   *            '&lt;port&gt;'".
    * @return A ServerName instance.
    */
   public static ServerName parseServerName(final String str) {
-    return SERVERNAME_PATTERN.matcher(str).matches()? valueOf(str) :
-        valueOf(str, NON_STARTCODE);
+    return SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
   }
 
   /**
-   * @return true if the String follows the pattern of {@link #toString()}, false
-   *   otherwise.
+   * @return true if the String follows the pattern of {@link #toString()}, false otherwise.
    */
-  public static boolean isFullServerName(final String str){
-    if (str == null ||str.isEmpty()) {
+  public static boolean isFullServerName(final String str) {
+    if (str == null || str.isEmpty()) {
       return false;
     }
     return SERVERNAME_PATTERN.matcher(str).matches();

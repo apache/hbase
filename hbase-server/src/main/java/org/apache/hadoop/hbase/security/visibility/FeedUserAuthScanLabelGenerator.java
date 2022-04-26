@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,22 +21,18 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.User;
 
 /**
- * If the passed in authorization is null, then this ScanLabelGenerator
- * feeds the set of predefined authorization labels for the given user. That is
- * the set defined by the admin using the VisibilityClient admin interface
- * or the set_auths shell command.
- * Otherwise the passed in authorization labels are returned with no change.
- *
- * Note: This SLG should not be used alone because it does not check
- * the passed in authorization labels against what the user is authorized for.
+ * If the passed in authorization is null, then this ScanLabelGenerator feeds the set of predefined
+ * authorization labels for the given user. That is the set defined by the admin using the
+ * VisibilityClient admin interface or the set_auths shell command. Otherwise the passed in
+ * authorization labels are returned with no change. Note: This SLG should not be used alone because
+ * it does not check the passed in authorization labels against what the user is authorized for.
  */
 @InterfaceAudience.Private
 public class FeedUserAuthScanLabelGenerator implements ScanLabelGenerator {
@@ -62,8 +58,10 @@ public class FeedUserAuthScanLabelGenerator implements ScanLabelGenerator {
 
   @Override
   public List<String> getLabels(User user, Authorizations authorizations) {
-    if (authorizations == null || authorizations.getLabels() == null
-        || authorizations.getLabels().isEmpty()) {
+    if (
+      authorizations == null || authorizations.getLabels() == null
+        || authorizations.getLabels().isEmpty()
+    ) {
       String userName = user.getShortName();
       Set<String> auths = new HashSet<>();
       auths.addAll(this.labelsCache.getUserAuths(userName));

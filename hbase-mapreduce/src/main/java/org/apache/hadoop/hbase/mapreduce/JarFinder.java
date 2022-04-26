@@ -7,14 +7,13 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.mapreduce;
 
@@ -38,18 +37,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Finds the Jar for a class. If the class is in a directory in the
- * classpath, it creates a Jar on the fly with the contents of the directory
- * and returns the path to that Jar. If a Jar is created, it is created in
- * the system temporary directory.
- *
- * This file was forked from hadoop/common/branches/branch-2@1377176.
+ * Finds the Jar for a class. If the class is in a directory in the classpath, it creates a Jar on
+ * the fly with the contents of the directory and returns the path to that Jar. If a Jar is created,
+ * it is created in the system temporary directory. This file was forked from
+ * hadoop/common/branches/branch-2@1377176.
  */
 @InterfaceAudience.Private
 public final class JarFinder {
 
-  private static void copyToZipStream(File file, ZipEntry entry,
-                              ZipOutputStream zos) throws IOException {
+  private static void copyToZipStream(File file, ZipEntry entry, ZipOutputStream zos)
+    throws IOException {
     InputStream is = new FileInputStream(file);
     try {
       zos.putNextEntry(entry);
@@ -68,8 +65,7 @@ public final class JarFinder {
     }
   }
 
-  public static void jarDir(File dir, String relativePath, ZipOutputStream zos)
-    throws IOException {
+  public static void jarDir(File dir, String relativePath, ZipOutputStream zos) throws IOException {
     Preconditions.checkNotNull(relativePath, "relativePath");
     Preconditions.checkNotNull(zos, "zos");
 
@@ -89,8 +85,8 @@ public final class JarFinder {
     zos.close();
   }
 
-  private static void zipDir(File dir, String relativePath, ZipOutputStream zos,
-                             boolean start) throws IOException {
+  private static void zipDir(File dir, String relativePath, ZipOutputStream zos, boolean start)
+    throws IOException {
     String[] dirList = dir.list();
     if (dirList == null) {
       return;
@@ -107,8 +103,7 @@ public final class JarFinder {
           String filePath = f.getPath();
           File file = new File(filePath);
           zipDir(file, relativePath + f.getName() + "/", zos, false);
-        }
-        else {
+        } else {
           String path = relativePath + f.getName();
           if (!path.equals(JarFile.MANIFEST_NAME)) {
             ZipEntry anEntry = new ZipEntry(path);
@@ -125,22 +120,18 @@ public final class JarFinder {
     File jarDir = jarFile.getParentFile();
     if (!jarDir.exists()) {
       if (!jarDir.mkdirs()) {
-        throw new IOException(MessageFormat.format("could not create dir [{0}]",
-                                                   jarDir));
+        throw new IOException(MessageFormat.format("could not create dir [{0}]", jarDir));
       }
     }
     try (FileOutputStream fos = new FileOutputStream(jarFile);
-         JarOutputStream jos = new JarOutputStream(fos)) {
+      JarOutputStream jos = new JarOutputStream(fos)) {
       jarDir(dir, "", jos);
     }
   }
 
   /**
-   * Returns the full path to the Jar containing the class. It always return a
-   * JAR.
-   *
+   * Returns the full path to the Jar containing the class. It always return a JAR.
    * @param klass class.
-   *
    * @return path to the Jar containing the class.
    */
   public static String getJar(Class klass) {
@@ -149,8 +140,7 @@ public final class JarFinder {
     if (loader != null) {
       String class_file = klass.getName().replaceAll("\\.", "/") + ".class";
       try {
-        for (Enumeration itr = loader.getResources(class_file);
-             itr.hasMoreElements(); ) {
+        for (Enumeration itr = loader.getResources(class_file); itr.hasMoreElements();) {
           URL url = (URL) itr.nextElement();
           String path = url.getPath();
           if (path.startsWith("file:")) {
@@ -160,8 +150,7 @@ public final class JarFinder {
           if ("jar".equals(url.getProtocol())) {
             path = URLDecoder.decode(path, "UTF-8");
             return path.replaceAll("!.*$", "");
-          }
-          else if ("file".equals(url.getProtocol())) {
+          } else if ("file".equals(url.getProtocol())) {
             String klassName = klass.getName();
             klassName = klassName.replace(".", "/") + ".class";
             path = path.substring(0, path.length() - klassName.length());
@@ -178,13 +167,13 @@ public final class JarFinder {
             return tempJar.getAbsolutePath();
           }
         }
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
     return null;
   }
 
-  private JarFinder() {}
+  private JarFinder() {
+  }
 }

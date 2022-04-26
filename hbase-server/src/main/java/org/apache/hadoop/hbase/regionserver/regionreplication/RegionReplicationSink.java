@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -204,8 +204,7 @@ public class RegionReplicationSink {
     this.failedReplicas = new IntHashSet(regionReplication - 1);
   }
 
-  void onComplete(List<SinkEntry> sent,
-    Map<Integer, MutableObject<Throwable>> replica2Error) {
+  void onComplete(List<SinkEntry> sent, Map<Integer, MutableObject<Throwable>> replica2Error) {
     long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
     for (SinkEntry entry : sent) {
@@ -224,16 +223,16 @@ public class RegionReplicationSink {
           if (maxSequenceId > lastFlushedSequenceId) {
             LOG.warn(
               "Failed to replicate to secondary replica {} for {}, since the max sequence"
-                  + " id of sunk entris is {}, which is greater than the last flush SN {},"
-                  + " we will stop replicating for a while and trigger a flush",
+                + " id of sunk entris is {}, which is greater than the last flush SN {},"
+                + " we will stop replicating for a while and trigger a flush",
               replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
             failedReplicas.add(replicaId);
             addFailedReplicas = true;
           } else {
             LOG.warn(
               "Failed to replicate to secondary replica {} for {}, since the max sequence"
-                  + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
-                  + " we will not stop replicating",
+                + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
+                + " we will not stop replicating",
               replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
           }
         }
@@ -380,8 +379,8 @@ public class RegionReplicationSink {
             long clearedSize = clearAllEntries();
             if (LOG.isDebugEnabled()) {
               LOG.debug(
-                "Got a flush all request with sequence id {}, clear {} pending" +
-                  " entries with size {}, clear failed replicas {}",
+                "Got a flush all request with sequence id {}, clear {} pending"
+                  + " entries with size {}, clear failed replicas {}",
                 flushSequenceNumber, clearedCount,
                 StringUtils.TraditionalBinaryPrefix.long2String(clearedSize, "", 1),
                 failedReplicas);

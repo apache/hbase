@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,19 +23,19 @@ import org.apache.yetus.audience.InterfaceAudience;
  * This extension to ConfigurationObserver allows the configuration to propagate to the children of
  * the current {@link ConfigurationObserver}. This is the preferred way to make a class online
  * configurable because it allows the user to configure the children in a recursive manner
- * automatically. 
+ * automatically.
  */
 @InterfaceAudience.Private
 public interface PropagatingConfigurationObserver extends ConfigurationObserver {
 
   /**
-   * Needs to be called to register the children to the manager. 
+   * Needs to be called to register the children to the manager.
    * @param manager : to register to
    */
   void registerChildren(ConfigurationManager manager);
 
   /**
-   * Needs to be called to deregister the children from the manager. 
+   * Needs to be called to deregister the children from the manager.
    * @param manager : to deregister from
    */
   void deregisterChildren(ConfigurationManager manager);

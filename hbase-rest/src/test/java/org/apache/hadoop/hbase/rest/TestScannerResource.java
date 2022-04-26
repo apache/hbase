@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -68,12 +67,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestScannerResource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerResource.class);
+    HBaseClassTestRule.forClass(TestScannerResource.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerResource.class);
   private static final TableName TABLE = TableName.valueOf("TestScannerResource");
@@ -85,8 +84,7 @@ public class TestScannerResource {
   private static final String COLUMN_2 = CFB + ":2";
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Marshaller marshaller;
@@ -96,10 +94,10 @@ public class TestScannerResource {
   private static Configuration conf;
 
   static int insertData(Configuration conf, TableName tableName, String column, double prob)
-      throws IOException {
+    throws IOException {
     Random rng = ThreadLocalRandom.current();
     byte[] k = new byte[3];
-    byte [][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
+    byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
     List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {
@@ -117,7 +115,7 @@ public class TestScannerResource {
       }
     }
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        Table table = conn.getTable(tableName)) {
+      Table table = conn.getTable(tableName)) {
       table.put(puts);
     }
     return puts.size();
@@ -139,8 +137,8 @@ public class TestScannerResource {
 
   private static int fullTableScan(ScannerModel model) throws IOException {
     model.setBatch(100);
-    Response response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
     assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
@@ -176,12 +174,8 @@ public class TestScannerResource {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
-    context = JAXBContext.newInstance(
-      CellModel.class,
-      CellSetModel.class,
-      RowModel.class,
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
+    context = JAXBContext.newInstance(CellModel.class, CellSetModel.class, RowModel.class,
       ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
@@ -189,25 +183,21 @@ public class TestScannerResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TABLE);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(TABLE);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
     admin.createTable(tableDescriptorBuilder.build());
     expectedRows1 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_2, 0.5);
 
-    tableDescriptorBuilder=TableDescriptorBuilder.newBuilder(TABLE_TO_BE_DISABLED);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(TABLE_TO_BE_DISABLED);
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
     admin.createTable(tableDescriptorBuilder.build());
@@ -232,16 +222,14 @@ public class TestScannerResource {
 
     // test put operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
-    Response response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_XML, body);
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
     assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
-    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML,
-      body);
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
     assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
@@ -250,8 +238,8 @@ public class TestScannerResource {
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    CellSetModel cellSet = (CellSetModel)
-      unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     // confirm batch size conformance
     assertEquals(BATCH_SIZE, countCellSet(cellSet));
 
@@ -276,16 +264,16 @@ public class TestScannerResource {
 
     // test put operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
-    Response response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
     assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
-    response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
     assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
@@ -319,16 +307,16 @@ public class TestScannerResource {
 
     // test put operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
-    Response response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
     assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
-    response = client.put("/" + TABLE + "/scanner",
-      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
     assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
@@ -340,9 +328,8 @@ public class TestScannerResource {
     // verify that data was returned
     assertTrue(response.getBody().length > 0);
     // verify that the expected X-headers are present
-    boolean foundRowHeader = false, foundColumnHeader = false,
-      foundTimestampHeader = false;
-    for (Header header: response.getHeaders()) {
+    boolean foundRowHeader = false, foundColumnHeader = false, foundTimestampHeader = false;
+    for (Header header : response.getHeaders()) {
       if (header.getName().equals("X-Row")) {
         foundRowHeader = true;
       } else if (header.getName().equals("X-Column")) {
@@ -383,8 +370,8 @@ public class TestScannerResource {
     StringWriter writer = new StringWriter();
     marshaller.marshal(model, writer);
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + NONEXISTENT_TABLE +
-      "/scanner", Constants.MIMETYPE_XML, body);
+    Response response =
+      client.put("/" + NONEXISTENT_TABLE + "/scanner", Constants.MIMETYPE_XML, body);
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
@@ -407,4 +394,3 @@ public class TestScannerResource {
     assertEquals(410, response.getCode());
   }
 }
-

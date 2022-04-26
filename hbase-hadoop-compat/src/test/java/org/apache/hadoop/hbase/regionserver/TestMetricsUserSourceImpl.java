@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -30,18 +29,18 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsUserSourceImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsUserSourceImpl.class);
+    HBaseClassTestRule.forClass(TestMetricsUserSourceImpl.class);
 
   @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareToHashCodeEquals() throws Exception {
-    MetricsRegionServerSourceFactory fact
-      = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
+    MetricsRegionServerSourceFactory fact =
+      CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
     MetricsUserSource one = fact.createUser("ONE");
     MetricsUserSource oneClone = fact.createUser("ONE");
@@ -57,8 +56,7 @@ public class TestMetricsUserSourceImpl {
     assertTrue(two.compareTo(two) == 0);
   }
 
-
-  @Test (expected = RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testNoGetRegionServerMetricsSourceImpl() throws Exception {
     // This should throw an exception because MetricsUserSourceImpl should only
     // be created by a factory.
@@ -67,8 +65,8 @@ public class TestMetricsUserSourceImpl {
 
   @Test
   public void testGetUser() {
-    MetricsRegionServerSourceFactory fact
-      = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
+    MetricsRegionServerSourceFactory fact =
+      CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
     MetricsUserSource one = fact.createUser("ONE");
     assertEquals("ONE", one.getUser());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +21,8 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * The presentation logic for the message mode.
- *
- * Exit after 2 seconds or if any key is pressed.
+ * The presentation logic for the message mode. Exit after 2 seconds or if any key is pressed.
  */
 @InterfaceAudience.Private
 public class MessageModeScreenPresenter {

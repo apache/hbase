@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableInfoModel.class);
+    HBaseClassTestRule.forClass(TestTableInfoModel.class);
 
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
@@ -44,22 +44,19 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
 
   public TestTableInfoModel() throws Exception {
     super(TableInfoModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableInfo " +
-      "name=\"testtable\"><Region endKey=\"enp5eng=\" id=\"8731042424\" " +
-      "location=\"testhost:9876\" " +
-      "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" " +
-      "startKey=\"YWJyYWNhZGJyYQ==\"/></TableInfo>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableInfo "
+      + "name=\"testtable\"><Region endKey=\"enp5eng=\" id=\"8731042424\" "
+      + "location=\"testhost:9876\" "
+      + "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" "
+      + "startKey=\"YWJyYWNhZGJyYQ==\"/></TableInfo>";
 
-    AS_PB =
-      "Cgl0ZXN0dGFibGUSSQofdGVzdHRhYmxlLGFicmFjYWRicmEsODczMTA0MjQyNBIKYWJyYWNhZGJy" +
-      "YRoFenp5engg+MSkwyAqDXRlc3Rob3N0Ojk4NzY=";
+    AS_PB = "Cgl0ZXN0dGFibGUSSQofdGVzdHRhYmxlLGFicmFjYWRicmEsODczMTA0MjQyNBIKYWJyYWNhZGJy"
+      + "YRoFenp5engg+MSkwyAqDXRlc3Rob3N0Ojk4NzY=";
 
-    AS_JSON =
-      "{\"name\":\"testtable\",\"Region\":[{\"endKey\":\"enp5eng=\",\"id\":8731042424," +
-      "\"location\":\"testhost:9876\",\"" +
-      "name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\"" +
-      "startKey\":\"YWJyYWNhZGJyYQ==\"}]}";
+    AS_JSON = "{\"name\":\"testtable\",\"Region\":[{\"endKey\":\"enp5eng=\",\"id\":8731042424,"
+      + "\"location\":\"testhost:9876\",\""
+      + "name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\""
+      + "startKey\":\"YWJyYWNhZGJyYQ==\"}]}";
   }
 
   @Override
@@ -98,4 +95,3 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
   }
 
 }
-

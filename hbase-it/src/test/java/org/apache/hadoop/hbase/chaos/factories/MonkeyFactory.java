@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.factories;
 
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Base class of the factory that will create a ChaosMonkey.
@@ -81,21 +79,19 @@ public abstract class MonkeyFactory {
   public static final String DATA_ISSUES = "dataIssues";
   public static final String CONFIGURABLE_SLOW_DETERMINISTIC = "configurableSlowDeterministic";
 
-  public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
-    .put(CALM, new CalmMonkeyFactory())
+  public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap
+    .<String, MonkeyFactory> builder().put(CALM, new CalmMonkeyFactory())
     .put(SLOW_DETERMINISTIC, new SlowDeterministicMonkeyFactory())
     .put(UNBALANCE, new UnbalanceMonkeyFactory())
     .put(SERVER_KILLING, new ServerKillingMonkeyFactory())
     .put(STRESS_AM, new StressAssignmentManagerMonkeyFactory())
-    .put(NO_KILL, new NoKillMonkeyFactory())
-    .put(MASTER_KILLING, new MasterKillingMonkeyFactory())
+    .put(NO_KILL, new NoKillMonkeyFactory()).put(MASTER_KILLING, new MasterKillingMonkeyFactory())
     .put(MOB_NO_KILL, new MobNoKillMonkeyFactory())
     .put(MOB_SLOW_DETERMINISTIC, new MobNoKillMonkeyFactory())
     .put(SERVER_AND_DEPENDENCIES_KILLING, new ServerAndDependenciesKillingMonkeyFactory())
     .put(DISTRIBUTED_ISSUES, new DistributedIssuesMonkeyFactory())
     .put(DATA_ISSUES, new DataIssuesMonkeyFactory())
-    .put(CONFIGURABLE_SLOW_DETERMINISTIC, new ConfigurableSlowDeterministicMonkeyFactory())
-    .build();
+    .put(CONFIGURABLE_SLOW_DETERMINISTIC, new ConfigurableSlowDeterministicMonkeyFactory()).build();
 
   public static MonkeyFactory getFactory(String factoryName) {
     MonkeyFactory fact = FACTORIES.get(factoryName);

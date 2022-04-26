@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public class TestDateTieredCompactionPolicyOverflow extends AbstractTestDateTier
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDateTieredCompactionPolicyOverflow.class);
+    HBaseClassTestRule.forClass(TestDateTieredCompactionPolicyOverflow.class);
 
   @Override
   protected void config() {
@@ -70,6 +70,7 @@ public class TestDateTieredCompactionPolicyOverflow extends AbstractTestDateTier
 
     compactEquals(Long.MAX_VALUE, sfCreate(minTimestamps, maxTimestamps, sizes),
       new long[] { 0, 1 }, new long[] { Long.MIN_VALUE, -4611686018427387903L, 0,
-          4611686018427387903L, 9223372036854775806L }, true, true);
+        4611686018427387903L, 9223372036854775806L },
+      true, true);
   }
 }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,19 +19,16 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Iterator;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public abstract class ResultGenerator implements Iterator<Cell> {
 
-  public static ResultGenerator fromRowSpec(final String table, 
-      final RowSpec rowspec, final Filter filter, final boolean cacheBlocks)
-      throws IOException {
+  public static ResultGenerator fromRowSpec(final String table, final RowSpec rowspec,
+    final Filter filter, final boolean cacheBlocks) throws IOException {
     if (rowspec.isSingleRow()) {
       return new RowResultGenerator(table, rowspec, filter, cacheBlocks);
     } else {

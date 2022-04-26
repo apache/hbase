@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,12 +36,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test TestDynamicClassLoader
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestDynamicClassLoader {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDynamicClassLoader.class);
+    HBaseClassTestRule.forClass(TestDynamicClassLoader.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDynamicClassLoader.class);
 
@@ -49,8 +49,8 @@ public class TestDynamicClassLoader {
   private Configuration conf;
 
   static {
-    TEST_UTIL.getConfiguration().set(
-        "hbase.dynamic.jars.dir", TEST_UTIL.getDataTestDir().toString());
+    TEST_UTIL.getConfiguration().set("hbase.dynamic.jars.dir",
+      TEST_UTIL.getDataTestDir().toString());
   }
 
   @Before
@@ -74,8 +74,8 @@ public class TestDynamicClassLoader {
 
     try {
       String folder = TEST_UTIL.getDataTestDir().toString();
-      ClassLoaderTestHelper.buildJar(
-        folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
+      ClassLoaderTestHelper.buildJar(folder, className, null,
+        ClassLoaderTestHelper.localDirPath(conf));
       classLoader.loadClass(className);
     } catch (ClassNotFoundException cnfe) {
       LOG.error("Should be able to load class " + className, cnfe);
@@ -118,8 +118,8 @@ public class TestDynamicClassLoader {
 
     try {
       String folder = TEST_UTIL.getDataTestDir().toString();
-      ClassLoaderTestHelper.buildJar(
-          folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
+      ClassLoaderTestHelper.buildJar(folder, className, null,
+        ClassLoaderTestHelper.localDirPath(conf));
       classLoader.loadClass(className);
       fail("Should not be able to load class " + className);
     } catch (ClassNotFoundException cnfe) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,15 +29,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * This is a hammer test that verifies MultiVersionConcurrencyControl in a
- * multiple writer single reader scenario.
+ * This is a hammer test that verifies MultiVersionConcurrencyControl in a multiple writer single
+ * reader scenario.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestMultiVersionConcurrencyControl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiVersionConcurrencyControl.class);
+    HBaseClassTestRule.forClass(TestMultiVersionConcurrencyControl.class);
 
   static class Writer implements Runnable {
     final AtomicBoolean finished;
@@ -55,8 +55,7 @@ public class TestMultiVersionConcurrencyControl {
     @Override
     public void run() {
       while (!finished.get()) {
-        MultiVersionConcurrencyControl.WriteEntry e =
-            mvcc.begin();
+        MultiVersionConcurrencyControl.WriteEntry e = mvcc.begin();
         // System.out.println("Begin write: " + e.getWriteNumber());
         // 10 usec - 500usec (including 0)
         int sleepTime = ThreadLocalRandom.current().nextInt(500);

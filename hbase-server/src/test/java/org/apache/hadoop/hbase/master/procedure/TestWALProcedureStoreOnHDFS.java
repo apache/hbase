@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,12 +44,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestWALProcedureStoreOnHDFS {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALProcedureStoreOnHDFS.class);
+    HBaseClassTestRule.forClass(TestWALProcedureStoreOnHDFS.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStoreOnHDFS.class);
 
@@ -57,16 +57,18 @@ public class TestWALProcedureStoreOnHDFS {
 
   private WALProcedureStore store;
 
-  private ProcedureStore.ProcedureStoreListener stopProcedureListener = new ProcedureStore.ProcedureStoreListener() {
-    @Override
-    public void postSync() {}
+  private ProcedureStore.ProcedureStoreListener stopProcedureListener =
+    new ProcedureStore.ProcedureStoreListener() {
+      @Override
+      public void postSync() {
+      }
 
-    @Override
-    public void abortProcess() {
-      LOG.error(HBaseMarkers.FATAL, "Abort the Procedure Store");
-      store.stop(true);
-    }
-  };
+      @Override
+      public void abortProcess() {
+        LOG.error(HBaseMarkers.FATAL, "Abort the Procedure Store");
+        store.stop(true);
+      }
+    };
 
   @Before
   public void initConfig() {
@@ -107,7 +109,7 @@ public class TestWALProcedureStoreOnHDFS {
     }
   }
 
-  @Test(expected=RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testWalAbortOnLowReplication() throws Exception {
     setupDFS();
 
@@ -133,10 +135,13 @@ public class TestWALProcedureStoreOnHDFS {
     assertEquals(3, UTIL.getDFSCluster().getDataNodes().size());
     store.registerListener(new ProcedureStore.ProcedureStoreListener() {
       @Override
-      public void postSync() { Threads.sleepWithoutInterrupt(2000); }
+      public void postSync() {
+        Threads.sleepWithoutInterrupt(2000);
+      }
 
       @Override
-      public void abortProcess() {}
+      public void abortProcess() {
+      }
     });
 
     final AtomicInteger reCount = new AtomicInteger(0);
@@ -166,8 +171,8 @@ public class TestWALProcedureStoreOnHDFS {
     }
 
     assertFalse(store.isRunning());
-    assertTrue(reCount.toString(), reCount.get() >= store.getNumThreads() &&
-                                   reCount.get() < thread.length);
+    assertTrue(reCount.toString(),
+      reCount.get() >= store.getNumThreads() && reCount.get() < thread.length);
   }
 
   @Test
@@ -196,7 +201,7 @@ public class TestWALProcedureStoreOnHDFS {
     }
 
     for (int i = 0; i < numReplicas; ++i) {
-      for (DataNode dn: UTIL.getDFSCluster().getDataNodes()) {
+      for (DataNode dn : UTIL.getDFSCluster().getDataNodes()) {
         while (!dn.isDatanodeFullyStarted()) {
           Thread.sleep(100);
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,12 @@ import org.junit.rules.TestName;
 /**
  * Test that the utility works as expected
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHFileArchiveUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileArchiveUtil.class);
+    HBaseClassTestRule.forClass(TestHFileArchiveUtil.class);
 
   private Path rootDir = new Path("./");
 
@@ -51,8 +51,8 @@ public class TestHFileArchiveUtil {
 
   @Test
   public void testGetTableArchivePath() {
-    assertNotNull(HFileArchiveUtil.getTableArchivePath(rootDir,
-        TableName.valueOf(name.getMethodName())));
+    assertNotNull(
+      HFileArchiveUtil.getTableArchivePath(rootDir, TableName.valueOf(name.getMethodName())));
   }
 
   @Test
@@ -66,7 +66,7 @@ public class TestHFileArchiveUtil {
   public void testRegionArchiveDir() {
     Path regionDir = new Path("region");
     assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
-        TableName.valueOf(name.getMethodName()), regionDir));
+      TableName.valueOf(name.getMethodName()), regionDir));
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * ClusterManager is an api to manage servers in a distributed environment. It provides services
- * for starting / stopping / killing Hadoop/HBase daemons. Concrete implementations provide actual
+ * ClusterManager is an api to manage servers in a distributed environment. It provides services for
+ * starting / stopping / killing Hadoop/HBase daemons. Concrete implementations provide actual
  * functionality for carrying out deployment-specific tasks.
  */
 @InterfaceAudience.Private
@@ -90,21 +87,17 @@ interface ClusterManager extends Configurable {
   void resume(ServiceType service, String hostname, int port) throws IOException;
 
   /**
-   * Returns whether the service is running on the remote host. This only checks whether the
-   * service still has a pid.
+   * Returns whether the service is running on the remote host. This only checks whether the service
+   * still has a pid.
    */
   boolean isRunning(ServiceType service, String hostname, int port) throws IOException;
 
-  /* TODO: further API ideas:
-   *
-   * //return services running on host:
-   * ServiceType[] getRunningServicesOnHost(String hostname);
-   *
-   * //return which services can be run on host (for example, to query whether hmaster can run on this host)
-   * ServiceType[] getRunnableServicesOnHost(String hostname);
-   *
-   * //return which hosts can run this service
-   * String[] getRunnableHostsForService(ServiceType service);
+  /*
+   * TODO: further API ideas: //return services running on host: ServiceType[]
+   * getRunningServicesOnHost(String hostname); //return which services can be run on host (for
+   * example, to query whether hmaster can run on this host) ServiceType[]
+   * getRunnableServicesOnHost(String hostname); //return which hosts can run this service String[]
+   * getRunnableHostsForService(ServiceType service);
    */
 
 }

@@ -6,14 +6,15 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotProcedureStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
@@ -63,11 +65,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- *  A procedure used to take snapshot on tables.
+ * A procedure used to take snapshot on tables.
  */
 @InterfaceAudience.Private
-public class SnapshotProcedure
-    extends AbstractStateMachineTableProcedure<SnapshotState> {
+public class SnapshotProcedure extends AbstractStateMachineTableProcedure<SnapshotState> {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotProcedure.class);
   private final MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
 
@@ -85,7 +86,8 @@ public class SnapshotProcedure
 
   private RetryCounter retryCounter;
 
-  public SnapshotProcedure() { }
+  public SnapshotProcedure() {
+  }
 
   public SnapshotProcedure(final MasterProcedureEnv env, final SnapshotDescription snapshot) {
     super(env);
@@ -263,8 +265,8 @@ public class SnapshotProcedure
     this.status = TaskMonitor.get()
       .createStatus("Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    this.snapshotManifest = SnapshotManifest.create(conf,
-      rootFs, workingDir, snapshot, monitor, status);
+    this.snapshotManifest =
+      SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
     this.snapshotManifest.addTableDescriptor(htd);
   }
 
@@ -278,10 +280,10 @@ public class SnapshotProcedure
   private boolean isAnySplitOrMergeProcedureRunning(MasterProcedureEnv env) {
     return env.getMasterServices().getMasterProcedureExecutor().getProcedures().stream()
       .filter(p -> !p.isFinished())
-      .filter(p -> p instanceof SplitTableRegionProcedure ||
-        p instanceof MergeTableRegionsProcedure)
-      .anyMatch(p -> ((AbstractStateMachineTableProcedure<?>) p)
-        .getTableName().equals(getTableName()));
+      .filter(
+        p -> p instanceof SplitTableRegionProcedure || p instanceof MergeTableRegionsProcedure)
+      .anyMatch(
+        p -> ((AbstractStateMachineTableProcedure<?>) p).getTableName().equals(getTableName()));
   }
 
   private TableDescriptor loadTableDescriptorSnapshot(MasterProcedureEnv env) throws IOException {
@@ -318,10 +320,9 @@ public class SnapshotProcedure
   }
 
   private void verifySnapshot(MasterProcedureEnv env) throws IOException {
-    int verifyThreshold = env.getMasterConfiguration()
-      .getInt("hbase.snapshot.remote.verify.threshold", 10000);
-    List<RegionInfo> regions = env.getAssignmentManager()
-      .getTableRegions(snapshotTable, false)
+    int verifyThreshold =
+      env.getMasterConfiguration().getInt("hbase.snapshot.remote.verify.threshold", 10000);
+    List<RegionInfo> regions = env.getAssignmentManager().getTableRegions(snapshotTable, false)
       .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r)).collect(Collectors.toList());
     int numRegions = regions.size();
 
@@ -329,8 +330,7 @@ public class SnapshotProcedure
       new MasterSnapshotVerifier(env.getMasterServices(), snapshot, workingDirFS);
     if (numRegions >= verifyThreshold) {
       verifier.verifySnapshot(workingDir, false);
-      addChildProcedure(regions.stream()
-        .map(r -> new SnapshotVerifyProcedure(snapshot, r))
+      addChildProcedure(regions.stream().map(r -> new SnapshotVerifyProcedure(snapshot, r))
         .toArray(SnapshotVerifyProcedure[]::new));
     } else {
       verifier.verifySnapshot(workingDir, true);
@@ -351,8 +351,8 @@ public class SnapshotProcedure
   }
 
   private void snapshotSplitRegions(MasterProcedureEnv env) throws IOException {
-    List<RegionInfo> regions = getDefaultRegionReplica(env)
-      .filter(RegionInfo::isSplit).collect(Collectors.toList());
+    List<RegionInfo> regions =
+      getDefaultRegionReplica(env).filter(RegionInfo::isSplit).collect(Collectors.toList());
     snapshotSplitOrClosedRegions(env, regions, "SplitRegionsSnapshotPool");
   }
 
@@ -362,14 +362,14 @@ public class SnapshotProcedure
   }
 
   private Stream<RegionInfo> getDefaultRegionReplica(MasterProcedureEnv env) {
-    return env.getAssignmentManager().getTableRegions(snapshotTable, false)
-      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r));
+    return env.getAssignmentManager().getTableRegions(snapshotTable, false).stream()
+      .filter(r -> RegionReplicaUtil.isDefaultReplica(r));
   }
 
-  private void snapshotSplitOrClosedRegions(MasterProcedureEnv env,
-      List<RegionInfo> regions, String threadPoolName) throws IOException {
-    ThreadPoolExecutor exec = SnapshotManifest
-      .createExecutor(env.getMasterConfiguration(), threadPoolName);
+  private void snapshotSplitOrClosedRegions(MasterProcedureEnv env, List<RegionInfo> regions,
+    String threadPoolName) throws IOException {
+    ThreadPoolExecutor exec =
+      SnapshotManifest.createExecutor(env.getMasterConfiguration(), threadPoolName);
     try {
       ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
         @Override
@@ -388,12 +388,12 @@ public class SnapshotProcedure
     if (!MobUtils.hasMobColumns(htd)) {
       return;
     }
-    ThreadPoolExecutor exec = SnapshotManifest
-      .createExecutor(env.getMasterConfiguration(), "MobRegionSnapshotPool");
+    ThreadPoolExecutor exec =
+      SnapshotManifest.createExecutor(env.getMasterConfiguration(), "MobRegionSnapshotPool");
     RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(htd.getTableName());
     try {
       ModifyRegionUtils.editRegions(exec, Collections.singleton(mobRegionInfo),
-          new ModifyRegionUtils.RegionEditTask() {
+        new ModifyRegionUtils.RegionEditTask() {
           @Override
           public void editRegion(final RegionInfo region) throws IOException {
             snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
@@ -408,8 +408,8 @@ public class SnapshotProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-    serializer.serialize(SnapshotProcedureStateData
-      .newBuilder().setSnapshot(this.snapshot).build());
+    serializer
+      .serialize(SnapshotProcedureStateData.newBuilder().setSnapshot(this.snapshot).build());
   }
 
   @Override
@@ -420,17 +420,15 @@ public class SnapshotProcedure
   }
 
   private Procedure<MasterProcedureEnv>[] createRemoteSnapshotProcedures(MasterProcedureEnv env) {
-    return env.getAssignmentManager().getTableRegions(snapshotTable, true)
-      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r))
-      .map(r -> new SnapshotRegionProcedure(snapshot, r))
-      .toArray(SnapshotRegionProcedure[]::new);
+    return env.getAssignmentManager().getTableRegions(snapshotTable, true).stream()
+      .filter(r -> RegionReplicaUtil.isDefaultReplica(r))
+      .map(r -> new SnapshotRegionProcedure(snapshot, r)).toArray(SnapshotRegionProcedure[]::new);
   }
 
   @Override
   public void toStringClassDetails(StringBuilder builder) {
-    builder.append(getClass().getName())
-      .append(", id=").append(getProcId())
-      .append(", snapshot=").append(ClientSnapshotDescriptionUtils.toString(snapshot));
+    builder.append(getClass().getName()).append(", id=").append(getProcId()).append(", snapshot=")
+      .append(ClientSnapshotDescriptionUtils.toString(snapshot));
   }
 
   public SnapshotDescription getSnapshotDesc() {
@@ -469,7 +467,7 @@ public class SnapshotProcedure
   }
 
   public boolean isSnapshotCorrupted() throws IOException {
-    return workingDirFS.exists(SnapshotDescriptionUtils
-      .getCorruptedFlagFileForSnapshot(workingDir));
+    return workingDirFS
+      .exists(SnapshotDescriptionUtils.getCorruptedFlagFileForSnapshot(workingDir));
   }
 }

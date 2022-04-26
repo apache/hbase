@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestGlobalReplicationThrottler {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGlobalReplicationThrottler.class);
+    HBaseClassTestRule.forClass(TestGlobalReplicationThrottler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestGlobalReplicationThrottler.class);
   private static final int REPLICATION_SOURCE_QUOTA = 200;
@@ -101,8 +101,8 @@ public class TestGlobalReplicationThrottler {
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster2", null, true);
 
-    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(utility2.getClusterKey()).build();
+    ReplicationPeerConfig rpc =
+      ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey()).build();
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();
@@ -122,9 +122,9 @@ public class TestGlobalReplicationThrottler {
     utility1.shutdownMiniCluster();
   }
 
-
   volatile private boolean testQuotaPass = false;
   volatile private boolean testQuotaNonZero = false;
+
   @Test
   public void testQuota() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -134,9 +134,9 @@ public class TestGlobalReplicationThrottler {
     utility1.getAdmin().createTable(tableDescriptor);
     utility2.getAdmin().createTable(tableDescriptor);
 
-    Thread watcher = new Thread(()->{
-      Replication replication = (Replication)utility1.getMiniHBaseCluster()
-          .getRegionServer(0).getReplicationSourceService();
+    Thread watcher = new Thread(() -> {
+      Replication replication = (Replication) utility1.getMiniHBaseCluster().getRegionServer(0)
+        .getReplicationSourceService();
       AtomicLong bufferUsed = replication.getReplicationManager().getTotalBufferUsed();
       testQuotaPass = true;
       while (!Thread.interrupted()) {
@@ -144,9 +144,12 @@ public class TestGlobalReplicationThrottler {
         if (size > 0) {
           testQuotaNonZero = true;
         }
-        //the reason here doing "numOfPeer + 1" is because by using method addEntryToBatch(), even the
-        // batch size (after added last entry) exceeds quota, it still keeps the last one in the batch
-        // so total used buffer size can be one "replication.total.buffer.quota" larger than expected
+        // the reason here doing "numOfPeer + 1" is because by using method addEntryToBatch(), even
+        // the
+        // batch size (after added last entry) exceeds quota, it still keeps the last one in the
+        // batch
+        // so total used buffer size can be one "replication.total.buffer.quota" larger than
+        // expected
         if (size > REPLICATION_SOURCE_QUOTA * (numOfPeer + 1)) {
           // We read logs first then check throttler, so if the buffer quota limiter doesn't
           // take effect, it will push many logs and exceed the quota.
@@ -157,8 +160,8 @@ public class TestGlobalReplicationThrottler {
     });
     watcher.start();
 
-    try(Table t1 = utility1.getConnection().getTable(tableName);
-        Table t2 = utility2.getConnection().getTable(tableName)) {
+    try (Table t1 = utility1.getConnection().getTable(tableName);
+      Table t2 = utility2.getConnection().getTable(tableName)) {
       for (int i = 0; i < 50; i++) {
         Put put = new Put(ROWS[i]);
         put.addColumn(famName, VALUE, VALUE);
@@ -187,6 +190,5 @@ public class TestGlobalReplicationThrottler {
     Assert.assertTrue(testQuotaPass);
     Assert.assertTrue(testQuotaNonZero);
   }
-
 
 }

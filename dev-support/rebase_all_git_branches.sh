@@ -17,11 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script assumes that your remote is called "origin" 
+# This script assumes that your remote is called "origin"
 # and that your local master branch is called "master".
 # I am sure it could be made more abstract but these are the defaults.
 
-# Edit this line to point to your default directory, 
+# Edit this line to point to your default directory,
 # or always pass a directory to the script.
 
 DEFAULT_DIR="EDIT_ME"
@@ -69,13 +69,13 @@ function check_git_branch_status {
 }
 
 function get_jira_status {
-  # This function expects as an argument the JIRA ID, 
+  # This function expects as an argument the JIRA ID,
   # and returns 99 if resolved and 1 if it couldn't
   # get the status.
 
-  # The JIRA status looks like this in the HTML: 
+  # The JIRA status looks like this in the HTML:
   # span id="resolution-val" class="value resolved" >
-  # The following is a bit brittle, but filters for lines with 
+  # The following is a bit brittle, but filters for lines with
   # resolution-val returns 99 if it's resolved
   jira_url='https://issues.apache.org/jira/rest/api/2/issue'
   jira_id="$1"
@@ -106,7 +106,7 @@ while getopts ":hd:" opt; do
       print_usage
       exit 0
       ;;
-    *)  
+    *)
       echo "Invalid argument: $OPTARG" >&2
       print_usage >&2
       exit 1
@@ -135,7 +135,7 @@ get_tracking_branches
 for i in "${tracking_branches[@]}"; do
   git checkout -q "$i"
   # Exit if git status is dirty
-  check_git_branch_status 
+  check_git_branch_status
   git pull -q --rebase
   status=$?
   if [ "$status" -ne 0 ]; then
@@ -169,7 +169,7 @@ for i in "${all_branches[@]}"; do
   git checkout -q "$i"
 
   # Exit if git status is dirty
-  check_git_branch_status 
+  check_git_branch_status
 
   # If this branch has a remote, don't rebase it
   # If it has a remote, it has a log with at least one entry
@@ -184,7 +184,7 @@ for i in "${all_branches[@]}"; do
       echo "Failed. Rolling back. Rebase $i manually."
       git rebase --abort
     fi
-  elif [ $status -ne 0 ]; then 
+  elif [ $status -ne 0 ]; then
   # If status is 0 it means there is a remote branch, we already took care of it
     echo "Unknown error: $?" >&2
     exit 1
@@ -195,10 +195,10 @@ done
 for i in "${deleted_branches[@]}"; do
   read -p "$i's JIRA is resolved. Delete? " yn
   case $yn in
-    [Yy]) 
+    [Yy])
         git branch -D $i
         ;;
-    *) 
+    *)
         echo "To delete it manually, run git branch -D $deleted_branches"
         ;;
   esac

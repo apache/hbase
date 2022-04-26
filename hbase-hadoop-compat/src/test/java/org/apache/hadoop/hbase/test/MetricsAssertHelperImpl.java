@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
 import static org.junit.Assert.assertEquals;
@@ -25,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -36,7 +34,7 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**
- *  A helper class that will allow tests to get into hadoop2's metrics2 values.
+ * A helper class that will allow tests to get into hadoop2's metrics2 values.
  */
 public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   private Map<String, String> tags = new HashMap<>();
@@ -203,8 +201,8 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public long getCounter(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull("Should get counter "+cName + " but did not",counters.get(cName));
-    return  counters.get(cName).longValue();
+    assertNotNull("Should get counter " + cName + " but did not", counters.get(cName));
+    return counters.get(cName).longValue();
   }
 
   @Override
@@ -225,8 +223,8 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public double getGaugeDouble(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull("Should get gauge "+cName + " but did not",gauges.get(cName));
-    return  gauges.get(cName).doubleValue();
+    assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
+    return gauges.get(cName).doubleValue();
   }
 
   @Override

@@ -32,22 +32,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos;
 
 /**
- * Implementation of secure Hadoop policy provider for mapping
- * protocol interfaces to hbase-policy.xml entries.
+ * Implementation of secure Hadoop policy provider for mapping protocol interfaces to
+ * hbase-policy.xml entries.
  */
 @InterfaceAudience.Private
 public class HBasePolicyProvider extends PolicyProvider {
-  protected final static Service[] services = {
-    new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
-    new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
-    new Service("security.client.protocol.acl",
-      MasterProtos.HbckService.BlockingInterface.class),
-    new Service("security.client.protocol.acl",
-      RegistryProtos.ClientMetaService.BlockingInterface.class),
-    new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
-    new Service("security.masterregion.protocol.acl",
-      RegionServerStatusService.BlockingInterface.class)
-  };
+  protected final static Service[] services =
+    { new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
+      new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
+      new Service("security.client.protocol.acl", MasterProtos.HbckService.BlockingInterface.class),
+      new Service("security.client.protocol.acl",
+        RegistryProtos.ClientMetaService.BlockingInterface.class),
+      new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
+      new Service("security.masterregion.protocol.acl",
+        RegionServerStatusService.BlockingInterface.class) };
 
   @Override
   public Service[] getServices() {

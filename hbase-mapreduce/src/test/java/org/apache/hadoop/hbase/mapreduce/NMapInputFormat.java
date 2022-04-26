@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -33,17 +31,16 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
- * Input format that creates a configurable number of map tasks
- * each provided with a single row of NullWritables. This can be
- * useful when trying to write mappers which don't have any real
- * input (eg when the mapper is simply producing random data as output)
+ * Input format that creates a configurable number of map tasks each provided with a single row of
+ * NullWritables. This can be useful when trying to write mappers which don't have any real input
+ * (eg when the mapper is simply producing random data as output)
  */
 public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
   private static final String NMAPS_KEY = "nmapinputformat.num.maps";
 
   @Override
-  public RecordReader<NullWritable, NullWritable> createRecordReader(
-      InputSplit split, TaskAttemptContext tac) {
+  public RecordReader<NullWritable, NullWritable> createRecordReader(InputSplit split,
+    TaskAttemptContext tac) {
     return new SingleRecordReader<>(NullWritable.get(), NullWritable.get());
   }
 
@@ -85,8 +82,7 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
     }
   }
 
-  private static class SingleRecordReader<K, V>
-    extends RecordReader<K, V> {
+  private static class SingleRecordReader<K, V> extends RecordReader<K, V> {
 
     private final K key;
     private final V value;
@@ -107,7 +103,7 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
     }
 
     @Override
-    public V getCurrentValue(){
+    public V getCurrentValue() {
       return value;
     }
 

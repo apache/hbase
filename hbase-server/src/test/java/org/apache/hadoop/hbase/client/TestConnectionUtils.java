@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,17 +29,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestConnectionUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConnectionUtils.class);
+    HBaseClassTestRule.forClass(TestConnectionUtils.class);
 
   @Test
   public void testRetryTimeJitter() {
     long[] retries = new long[200];
-    long baseTime = 1000000;  //Larger number than reality to help test randomness.
+    long baseTime = 1000000; // Larger number than reality to help test randomness.
     long maxTimeExpected = (long) (baseTime * 1.01f);
     for (int i = 0; i < retries.length; i++) {
       retries[i] = ConnectionUtils.getPauseTime(baseTime, 0);
@@ -47,14 +47,14 @@ public class TestConnectionUtils {
 
     Set<Long> retyTimeSet = new TreeSet<>();
     for (long l : retries) {
-      /*make sure that there is some jitter but only 1%*/
+      /* make sure that there is some jitter but only 1% */
       assertTrue(l >= baseTime);
       assertTrue(l <= maxTimeExpected);
       // Add the long to the set
       retyTimeSet.add(l);
     }
 
-    //Make sure that most are unique.  some overlap will happen
+    // Make sure that most are unique. some overlap will happen
     assertTrue(retyTimeSet.size() > (retries.length * 0.80));
   }
 

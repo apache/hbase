@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorUtils.TableDescriptorDelta;
@@ -35,7 +33,7 @@ import org.junit.experimental.categories.Category;
 public class TestTableDescriptorUtils {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableDescriptorUtils.class);
+    HBaseClassTestRule.forClass(TestTableDescriptorUtils.class);
 
   @Test
   public void testDelta() {
@@ -43,32 +41,25 @@ public class TestTableDescriptorUtils {
     ColumnFamilyDescriptor cf2 = ColumnFamilyDescriptorBuilder.of("cf2");
     ColumnFamilyDescriptor cf3 = ColumnFamilyDescriptorBuilder.of("cf3");
     ColumnFamilyDescriptor cf4 = ColumnFamilyDescriptorBuilder.of("cf4");
-    TableDescriptor td = TableDescriptorBuilder
-        .newBuilder(TableName.valueOf("test"))
-        .setColumnFamilies(Arrays.asList(cf1, cf2, cf3, cf4))
-        .build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"))
+      .setColumnFamilies(Arrays.asList(cf1, cf2, cf3, cf4)).build();
 
     TableDescriptorDelta selfCompare = TableDescriptorUtils.computeDelta(td, td);
     assertEquals(0, selfCompare.getColumnsAdded().size());
     assertEquals(0, selfCompare.getColumnsDeleted().size());
     assertEquals(0, selfCompare.getColumnsModified().size());
 
-    ColumnFamilyDescriptor modCf2 = ColumnFamilyDescriptorBuilder
-        .newBuilder(cf2).setMaxVersions(5).build();
-    ColumnFamilyDescriptor modCf3 = ColumnFamilyDescriptorBuilder
-        .newBuilder(cf3).setMaxVersions(5).build();
+    ColumnFamilyDescriptor modCf2 =
+      ColumnFamilyDescriptorBuilder.newBuilder(cf2).setMaxVersions(5).build();
+    ColumnFamilyDescriptor modCf3 =
+      ColumnFamilyDescriptorBuilder.newBuilder(cf3).setMaxVersions(5).build();
     ColumnFamilyDescriptor cf5 = ColumnFamilyDescriptorBuilder.of("cf5");
     ColumnFamilyDescriptor cf6 = ColumnFamilyDescriptorBuilder.of("cf6");
     ColumnFamilyDescriptor cf7 = ColumnFamilyDescriptorBuilder.of("cf7");
-    TableDescriptor newTd = TableDescriptorBuilder
-        .newBuilder(td)
-        .removeColumnFamily(Bytes.toBytes("cf1"))
-        .modifyColumnFamily(modCf2)
-        .modifyColumnFamily(modCf3)
-        .setColumnFamily(cf5)
-        .setColumnFamily(cf6)
-        .setColumnFamily(cf7)
-        .build();
+    TableDescriptor newTd =
+      TableDescriptorBuilder.newBuilder(td).removeColumnFamily(Bytes.toBytes("cf1"))
+        .modifyColumnFamily(modCf2).modifyColumnFamily(modCf3).setColumnFamily(cf5)
+        .setColumnFamily(cf6).setColumnFamily(cf7).build();
 
     TableDescriptorDelta delta = TableDescriptorUtils.computeDelta(td, newTd);
 

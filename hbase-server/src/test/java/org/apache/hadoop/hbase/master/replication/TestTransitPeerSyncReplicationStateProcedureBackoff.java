@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ProcedureTestUtil;
@@ -47,7 +46,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
   private static boolean FAIL = true;
 
   public static class TestTransitPeerSyncReplicationStateProcedure
-      extends TransitPeerSyncReplicationStateProcedure {
+    extends TransitPeerSyncReplicationStateProcedure {
 
     public TestTransitPeerSyncReplicationStateProcedure() {
     }
@@ -66,8 +65,8 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
     }
 
     @Override
-    protected <T extends Procedure<MasterProcedureEnv>> void addChildProcedure(
-        @SuppressWarnings("unchecked") T... subProcedure) {
+    protected <T extends Procedure<MasterProcedureEnv>> void
+      addChildProcedure(@SuppressWarnings("unchecked") T... subProcedure) {
       // Make it a no-op
     }
 
@@ -78,7 +77,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
 
     @Override
     protected void setPeerNewSyncReplicationState(MasterProcedureEnv env)
-        throws ReplicationException {
+      throws ReplicationException {
       tryFail();
     }
 
@@ -94,7 +93,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
 
     @Override
     protected void transitPeerSyncReplicationState(MasterProcedureEnv env)
-        throws ReplicationException {
+      throws ReplicationException {
       tryFail();
     }
 
@@ -132,7 +131,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
   @Test
   public void testDowngradeActiveToActive() throws IOException, InterruptedException {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     // Test procedure: DOWNGRADE_ACTIVE ==> ACTIVE
     long procId = procExec.submitProcedure(
       new TestTransitPeerSyncReplicationStateProcedure("1", SyncReplicationState.ACTIVE));
@@ -151,7 +150,7 @@ public class TestTransitPeerSyncReplicationStateProcedureBackoff {
   @Test
   public void testDowngradeActiveToStandby() throws IOException, InterruptedException {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     // Test procedure: DOWNGRADE_ACTIVE ==> ACTIVE
     long procId = procExec.submitProcedure(
       new TestTransitPeerSyncReplicationStateProcedure("2", SyncReplicationState.STANDBY));

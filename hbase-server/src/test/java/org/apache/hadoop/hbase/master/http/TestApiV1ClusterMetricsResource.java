@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThrows;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.RuleChain;
+
 import org.apache.hbase.thirdparty.javax.ws.rs.NotAcceptableException;
 import org.apache.hbase.thirdparty.javax.ws.rs.client.Client;
 import org.apache.hbase.thirdparty.javax.ws.rs.client.ClientBuilder;
@@ -58,7 +60,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 /**
  * Tests for the master api_v1 {@link ClusterMetricsResource}.
  */
-@Category({ MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestApiV1ClusterMetricsResource {
 
   @ClassRule
@@ -66,19 +68,15 @@ public class TestApiV1ClusterMetricsResource {
     HBaseClassTestRule.forClass(TestApiV1ClusterMetricsResource.class);
 
   private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-    .setMiniClusterOption(StartTestingClusterOption.builder()
-      .numZkServers(3)
-      .numMasters(3)
-      .numDataNodes(3)
-      .build())
+    .setMiniClusterOption(
+      StartTestingClusterOption.builder().numZkServers(3).numMasters(3).numDataNodes(3).build())
     .setConfiguration(() -> {
       // enable Master InfoServer and random port selection
       final Configuration conf = HBaseConfiguration.create();
       conf.setInt(HConstants.MASTER_INFO_PORT, 0);
       conf.set("hbase.http.jersey.tracing.type", "ON_DEMAND");
       return conf;
-    })
-    .build();
+    }).build();
   private static final ConnectionRule connectionRule =
     ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
   private static final ClassSetup classRule = new ClassSetup(connectionRule::getAsyncConnection);
@@ -103,20 +101,14 @@ public class TestApiV1ClusterMetricsResource {
     protected void before() throws Throwable {
       final AsyncConnection conn = connectionSupplier.get();
       admin = conn.getAdmin();
-      final TableDescriptor tableDescriptor = TableDescriptorBuilder
-        .newBuilder(tableName)
-        .setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("c")).build())
-        .setDurability(Durability.SKIP_WAL)
-        .build();
+      final TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("c")).build())
+        .setDurability(Durability.SKIP_WAL).build();
       admin.createTable(tableDescriptor).get();
 
-      final String baseUrl = admin.getMaster()
-        .thenApply(ServerName::getHostname)
-        .thenCombine(
-          admin.getMasterInfoPort(),
-          (hostName, infoPort) -> "http://" + hostName + ":" + infoPort)
-        .get();
+      final String baseUrl =
+        admin.getMaster().thenApply(ServerName::getHostname).thenCombine(admin.getMasterInfoPort(),
+          (hostName, infoPort) -> "http://" + hostName + ":" + infoPort).get();
       final Client client = ClientBuilder.newClient();
       target = client.target(baseUrl).path("api/v1/admin/cluster_metrics");
     }
@@ -125,16 +117,14 @@ public class TestApiV1ClusterMetricsResource {
     protected void after() {
       final TableName tableName = TableName.valueOf("test");
       try {
-        admin.tableExists(tableName)
-          .thenCompose(val -> {
-            if (val) {
-              return admin.disableTable(tableName)
-                .thenCompose(ignored -> admin.deleteTable(tableName));
-            } else {
-              return CompletableFuture.completedFuture(null);
-            }
-          })
-          .get();
+        admin.tableExists(tableName).thenCompose(val -> {
+          if (val) {
+            return admin.disableTable(tableName)
+              .thenCompose(ignored -> admin.deleteTable(tableName));
+          } else {
+            return CompletableFuture.completedFuture(null);
+          }
+        }).get();
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -142,70 +132,49 @@ public class TestApiV1ClusterMetricsResource {
   }
 
   @ClassRule
-  public static RuleChain ruleChain = RuleChain.outerRule(miniClusterRule)
-    .around(connectionRule)
-    .around(classRule);
+  public static RuleChain ruleChain =
+    RuleChain.outerRule(miniClusterRule).around(connectionRule).around(classRule);
 
   @Test
   public void testGetRoot() {
-    final String response = classRule.getTarget()
-      .request(MediaType.APPLICATION_JSON_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class);
-    assertThat(response, allOf(
-      containsString("\"hbase_version\":"),
-      containsString("\"cluster_id\":"),
-      containsString("\"master_name\":"),
-      containsString("\"backup_master_names\":")));
+    final String response = classRule.getTarget().request(MediaType.APPLICATION_JSON_TYPE)
+      .header("X-Jersey-Tracing-Accept", true).get(String.class);
+    assertThat(response,
+      allOf(containsString("\"hbase_version\":"), containsString("\"cluster_id\":"),
+        containsString("\"master_name\":"), containsString("\"backup_master_names\":")));
   }
 
   @Test
   public void testGetRootHtml() {
     assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
-      .request(MediaType.TEXT_HTML_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class));
+      .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetLiveServers() {
-    final String response = classRule.getTarget()
-      .path("live_servers")
-      .request(MediaType.APPLICATION_JSON_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class);
-    assertThat(response, allOf(
-      startsWith("{\"data\":["),
-      endsWith("]}")));
+    final String response =
+      classRule.getTarget().path("live_servers").request(MediaType.APPLICATION_JSON_TYPE)
+        .header("X-Jersey-Tracing-Accept", true).get(String.class);
+    assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetLiveServersHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
-      .path("live_servers")
-      .request(MediaType.TEXT_HTML_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class));
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("live_servers")
+      .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetDeadServers() {
-    final String response = classRule.getTarget()
-      .path("dead_servers")
-      .request(MediaType.APPLICATION_JSON_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class);
-    assertThat(response, allOf(
-      startsWith("{\"data\":["),
-      endsWith("]}")));
+    final String response =
+      classRule.getTarget().path("dead_servers").request(MediaType.APPLICATION_JSON_TYPE)
+        .header("X-Jersey-Tracing-Accept", true).get(String.class);
+    assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetDeadServersHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
-      .path("dead_servers")
-      .request(MediaType.TEXT_HTML_TYPE)
-      .header("X-Jersey-Tracing-Accept", true)
-      .get(String.class));
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("dead_servers")
+      .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,14 +39,14 @@ public class TestScanWildcardColumnTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanWildcardColumnTracker.class);
+    HBaseClassTestRule.forClass(TestScanWildcardColumnTracker.class);
 
   final static int VERSIONS = 2;
 
   @Test
   public void testCheckColumnOk() throws IOException {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
-        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
+    ScanWildcardColumnTracker tracker =
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(4);
@@ -78,8 +78,8 @@ public class TestScanWildcardColumnTracker {
 
   @Test
   public void testCheckColumnEnforceVersions() throws IOException {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
-        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
+    ScanWildcardColumnTracker tracker =
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(4);
@@ -112,8 +112,8 @@ public class TestScanWildcardColumnTracker {
 
   @Test
   public void DisabledTestCheckColumnWrongOrder() {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
-        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
+    ScanWildcardColumnTracker tracker =
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(2);

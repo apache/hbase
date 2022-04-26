@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -118,8 +118,8 @@ public class CommonsCryptoAES extends Cipher {
   }
 
   @Override
-  public OutputStream createEncryptionStream(OutputStream out, Context context,
-                                             byte[] iv) throws IOException {
+  public OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
+    throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);
@@ -130,15 +130,14 @@ public class CommonsCryptoAES extends Cipher {
   }
 
   @Override
-  public OutputStream createEncryptionStream(OutputStream out,
-                                             Encryptor encryptor) throws
-      IOException {
+  public OutputStream createEncryptionStream(OutputStream out, Encryptor encryptor)
+    throws IOException {
     return encryptor.createEncryptionStream(out);
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in, Context context,
-                                            byte[] iv) throws IOException {
+  public InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
+    throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);
@@ -149,9 +148,8 @@ public class CommonsCryptoAES extends Cipher {
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in,
-                                            Decryptor decryptor) throws
-      IOException {
+  public InputStream createDecryptionStream(InputStream in, Decryptor decryptor)
+    throws IOException {
     Preconditions.checkNotNull(decryptor);
     return decryptor.createDecryptionStream(in);
   }

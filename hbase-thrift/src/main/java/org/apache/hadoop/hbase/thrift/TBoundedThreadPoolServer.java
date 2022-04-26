@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import java.util.concurrent.ExecutorService;
@@ -24,7 +23,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -40,6 +38,7 @@ import org.apache.thrift.transport.TTransportException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -48,61 +47,55 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 @InterfaceAudience.Private
 public class TBoundedThreadPoolServer extends TServer {
 
-  private static final String QUEUE_FULL_MSG =
-      "Queue is full, closing connection";
+  private static final String QUEUE_FULL_MSG = "Queue is full, closing connection";
 
   /**
-   * The "core size" of the thread pool. New threads are created on every
-   * connection until this many threads are created.
+   * The "core size" of the thread pool. New threads are created on every connection until this many
+   * threads are created.
    */
-  public static final String MIN_WORKER_THREADS_CONF_KEY =
-      "hbase.thrift.minWorkerThreads";
+  public static final String MIN_WORKER_THREADS_CONF_KEY = "hbase.thrift.minWorkerThreads";
 
   /**
-   * This default core pool size should be enough for many test scenarios. We
-   * want to override this with a much larger number (e.g. at least 200) for a
-   * large-scale production setup.
+   * This default core pool size should be enough for many test scenarios. We want to override this
+   * with a much larger number (e.g. at least 200) for a large-scale production setup.
    */
   public static final int DEFAULT_MIN_WORKER_THREADS = 16;
 
   /**
-   * The maximum size of the thread pool. When the pending request queue
-   * overflows, new threads are created until their number reaches this number.
-   * After that, the server starts dropping connections.
+   * The maximum size of the thread pool. When the pending request queue overflows, new threads are
+   * created until their number reaches this number. After that, the server starts dropping
+   * connections.
    */
-  public static final String MAX_WORKER_THREADS_CONF_KEY =
-      "hbase.thrift.maxWorkerThreads";
+  public static final String MAX_WORKER_THREADS_CONF_KEY = "hbase.thrift.maxWorkerThreads";
 
   public static final int DEFAULT_MAX_WORKER_THREADS = 1000;
 
   /**
-   * The maximum number of pending connections waiting in the queue. If there
-   * are no idle threads in the pool, the server queues requests. Only when
-   * the queue overflows, new threads are added, up to
-   * hbase.thrift.maxQueuedRequests threads.
+   * The maximum number of pending connections waiting in the queue. If there are no idle threads in
+   * the pool, the server queues requests. Only when the queue overflows, new threads are added, up
+   * to hbase.thrift.maxQueuedRequests threads.
    */
-  public static final String MAX_QUEUED_REQUESTS_CONF_KEY =
-      "hbase.thrift.maxQueuedRequests";
+  public static final String MAX_QUEUED_REQUESTS_CONF_KEY = "hbase.thrift.maxQueuedRequests";
 
   public static final int DEFAULT_MAX_QUEUED_REQUESTS = 1000;
 
   /**
-   * Default amount of time in seconds to keep a thread alive. Worker threads
-   * are stopped after being idle for this long.
+   * Default amount of time in seconds to keep a thread alive. Worker threads are stopped after
+   * being idle for this long.
    */
   public static final String THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY =
-      "hbase.thrift.threadKeepAliveTimeSec";
+    "hbase.thrift.threadKeepAliveTimeSec";
 
   private static final int DEFAULT_THREAD_KEEP_ALIVE_TIME_SEC = 60;
 
   /**
-   * Time to wait after interrupting all worker threads. This is after a clean
-   * shutdown has been attempted.
+   * Time to wait after interrupting all worker threads. This is after a clean shutdown has been
+   * attempted.
    */
   public static final int TIME_TO_WAIT_AFTER_SHUTDOWN_MS = 5000;
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TBoundedThreadPoolServer.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TBoundedThreadPoolServer.class.getName());
 
   private final CallQueue callQueue;
 
@@ -112,21 +105,17 @@ public class TBoundedThreadPoolServer extends TServer {
 
     public Args(TServerTransport transport, Configuration conf) {
       super(transport);
-      minWorkerThreads = conf.getInt(MIN_WORKER_THREADS_CONF_KEY,
-          DEFAULT_MIN_WORKER_THREADS);
-      maxWorkerThreads = conf.getInt(MAX_WORKER_THREADS_CONF_KEY,
-          DEFAULT_MAX_WORKER_THREADS);
-      maxQueuedRequests = conf.getInt(MAX_QUEUED_REQUESTS_CONF_KEY,
-          DEFAULT_MAX_QUEUED_REQUESTS);
-      threadKeepAliveTimeSec = conf.getInt(THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY,
-          DEFAULT_THREAD_KEEP_ALIVE_TIME_SEC);
+      minWorkerThreads = conf.getInt(MIN_WORKER_THREADS_CONF_KEY, DEFAULT_MIN_WORKER_THREADS);
+      maxWorkerThreads = conf.getInt(MAX_WORKER_THREADS_CONF_KEY, DEFAULT_MAX_WORKER_THREADS);
+      maxQueuedRequests = conf.getInt(MAX_QUEUED_REQUESTS_CONF_KEY, DEFAULT_MAX_QUEUED_REQUESTS);
+      threadKeepAliveTimeSec =
+        conf.getInt(THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY, DEFAULT_THREAD_KEEP_ALIVE_TIME_SEC);
     }
 
     @Override
     public String toString() {
-      return "min worker threads=" + minWorkerThreads
-          + ", max worker threads=" + maxWorkerThreads 
-          + ", max queued requests=" + maxQueuedRequests;
+      return "min worker threads=" + minWorkerThreads + ", max worker threads=" + maxWorkerThreads
+        + ", max queued requests=" + maxQueuedRequests;
     }
   }
 
@@ -144,8 +133,7 @@ public class TBoundedThreadPoolServer extends TServer {
     int minWorkerThreads = options.minWorkerThreads;
     int maxWorkerThreads = options.maxWorkerThreads;
     if (options.maxQueuedRequests > 0) {
-      this.callQueue = new CallQueue(
-          new LinkedBlockingQueue<>(options.maxQueuedRequests), metrics);
+      this.callQueue = new CallQueue(new LinkedBlockingQueue<>(options.maxQueuedRequests), metrics);
       minWorkerThreads = maxWorkerThreads;
     } else {
       this.callQueue = new CallQueue(new SynchronousQueue<>(), metrics);
@@ -154,10 +142,8 @@ public class TBoundedThreadPoolServer extends TServer {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
-    executorService =
-        new THBaseThreadPoolExecutor(minWorkerThreads,
-            maxWorkerThreads, options.threadKeepAliveTimeSec,
-            TimeUnit.SECONDS, this.callQueue, tfb.build(), metrics);
+    executorService = new THBaseThreadPoolExecutor(minWorkerThreads, maxWorkerThreads,
+      options.threadKeepAliveTimeSec, TimeUnit.SECONDS, this.callQueue, tfb.build(), metrics);
     executorService.allowCoreThreadTimeOut(true);
     serverOptions = options;
   }
@@ -171,13 +157,12 @@ public class TBoundedThreadPoolServer extends TServer {
       return;
     }
 
-    Runtime.getRuntime().addShutdownHook(
-        new Thread(getClass().getSimpleName() + "-shutdown-hook") {
-          @Override
-          public void run() {
-            TBoundedThreadPoolServer.this.stop();
-          }
-        });
+    Runtime.getRuntime().addShutdownHook(new Thread(getClass().getSimpleName() + "-shutdown-hook") {
+      @Override
+      public void run() {
+        TBoundedThreadPoolServer.this.stop();
+      }
+    });
 
     stopped = false;
     while (!stopped && !Thread.interrupted()) {
@@ -200,8 +185,8 @@ public class TBoundedThreadPoolServer extends TServer {
       } catch (RejectedExecutionException rex) {
         if (client.getClass() == TSocket.class) {
           // We expect the client to be TSocket.
-          LOG.warn(QUEUE_FULL_MSG + " from " +
-              ((TSocket) client).getSocket().getRemoteSocketAddress());
+          LOG.warn(
+            QUEUE_FULL_MSG + " from " + ((TSocket) client).getSocket().getRemoteSocketAddress());
         } else {
           LOG.warn(QUEUE_FULL_MSG, rex);
         }
@@ -213,20 +198,18 @@ public class TBoundedThreadPoolServer extends TServer {
   }
 
   /**
-   * Loop until {@link ExecutorService#awaitTermination} finally does return
-   * without an interrupted exception. If we don't do this, then we'll shut
-   * down prematurely. We want to let the executor service clear its task
-   * queue, closing client sockets appropriately.
+   * Loop until {@link ExecutorService#awaitTermination} finally does return without an interrupted
+   * exception. If we don't do this, then we'll shut down prematurely. We want to let the executor
+   * service clear its task queue, closing client sockets appropriately.
    */
   private void shutdownServer() {
     executorService.shutdown();
 
-    long msLeftToWait =
-        serverOptions.stopTimeoutUnit.toMillis(serverOptions.stopTimeoutVal);
+    long msLeftToWait = serverOptions.stopTimeoutUnit.toMillis(serverOptions.stopTimeoutVal);
     long timeMillis = EnvironmentEdgeManager.currentTime();
 
-    LOG.info("Waiting for up to " + msLeftToWait + " ms to finish processing" +
-        " pending requests");
+    LOG
+      .info("Waiting for up to " + msLeftToWait + " ms to finish processing" + " pending requests");
     boolean interrupted = false;
     while (msLeftToWait >= 0) {
       try {
@@ -240,8 +223,8 @@ public class TBoundedThreadPoolServer extends TServer {
       }
     }
 
-    LOG.info("Interrupting all worker threads and waiting for "
-        + TIME_TO_WAIT_AFTER_SHUTDOWN_MS + " ms longer");
+    LOG.info("Interrupting all worker threads and waiting for " + TIME_TO_WAIT_AFTER_SHUTDOWN_MS
+      + " ms longer");
 
     // This will interrupt all the threads, even those running a task.
     executorService.shutdownNow();
@@ -266,7 +249,6 @@ public class TBoundedThreadPoolServer extends TServer {
 
     /**
      * Default constructor.
-     *
      * @param client Transport to process
      */
     private ClientConnnection(TTransport client) {

@@ -57,15 +57,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
- * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
- * from old testing framework to {@link HBaseTestingUtil}.
+ * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions from old testing
+ * framework to {@link HBaseTestingUtil}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestMultiVersions {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiVersions.class);
+    HBaseClassTestRule.forClass(TestMultiVersions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -87,19 +87,17 @@ public class TestMultiVersions {
   }
 
   @Before
-  public void before()
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+  public void before() throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     this.admin = UTIL.getAdmin();
   }
 
   /**
-  * Tests user specifiable time stamps putting, getting and scanning.  Also
-   * tests same in presence of deletes.  Test cores are written so can be
-   * run against an HRegion and against an HTable: i.e. both local and remote.
-   *
-   * <p>Port of old TestTimestamp test to here so can better utilize the spun
-   * up cluster running more than a single test per spin up.  Keep old tests'
-   * crazyness.
+   * Tests user specifiable time stamps putting, getting and scanning. Also tests same in presence
+   * of deletes. Test cores are written so can be run against an HRegion and against an HTable: i.e.
+   * both local and remote.
+   * <p>
+   * Port of old TestTimestamp test to here so can better utilize the spun up cluster running more
+   * than a single test per spin up. Keep old tests' crazyness.
    */
   @Test
   public void testTimestamps() throws Exception {
@@ -117,10 +115,10 @@ public class TestMultiVersions {
       public void flushcache() throws IOException {
         UTIL.getHBaseCluster().flushcache();
       }
-     });
+    });
 
     // Perhaps drop and readd the table between tests so the former does
-    // not pollute this latter?  Or put into separate tests.
+    // not pollute this latter? Or put into separate tests.
     TimestampTestBase.doTestTimestampScanning(table, new FlushCache() {
       @Override
       public void flushcache() throws IOException {
@@ -134,23 +132,21 @@ public class TestMultiVersions {
   /**
    * Verifies versions across a cluster restart.
    * <p/>
-   * Port of old TestGetRowVersions test to here so can better utilize the spun
-   * up cluster running more than a single test per spin up.  Keep old tests'
-   * crazyness.
+   * Port of old TestGetRowVersions test to here so can better utilize the spun up cluster running
+   * more than a single test per spin up. Keep old tests' crazyness.
    */
   @Test
   public void testGetRowVersions() throws Exception {
-    final byte [] contents = Bytes.toBytes("contents");
-    final byte [] row = Bytes.toBytes("row");
-    final byte [] value1 = Bytes.toBytes("value1");
-    final byte [] value2 = Bytes.toBytes("value2");
+    final byte[] contents = Bytes.toBytes("contents");
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] value1 = Bytes.toBytes("value1");
+    final byte[] value2 = Bytes.toBytes("value2");
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(contents)
-          .setMaxVersions(3).build())
-        .build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(contents).setMaxVersions(3).build())
+      .build();
     this.admin.createTable(tableDescriptor);
     Put put = new Put(row, timestamp1);
     put.addColumn(contents, contents, value1);
@@ -160,8 +156,8 @@ public class TestMultiVersions {
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numRegionServers(NUM_SLAVES).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(NUM_SLAVES).build();
     UTIL.startMiniHBaseCluster(option);
     // Make a new connection.
     table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
@@ -176,7 +172,7 @@ public class TestMultiVersions {
     assertNotNull(r);
     assertFalse(r.isEmpty());
     assertEquals(1, r.size());
-    byte [] value = r.getValue(contents, contents);
+    byte[] value = r.getValue(contents, contents);
     assertNotEquals(0, value.length);
     assertTrue(Bytes.equals(value, value2));
     // Now check getRow with multiple versions
@@ -187,10 +183,8 @@ public class TestMultiVersions {
     value = r.getValue(contents, contents);
     assertNotEquals(0, value.length);
     assertArrayEquals(value, value2);
-    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
-      r.getMap();
-    NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap =
-      map.get(contents);
+    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = r.getMap();
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap = map.get(contents);
     NavigableMap<Long, byte[]> versionMap = familyMap.get(contents);
     assertEquals(2, versionMap.size());
     assertArrayEquals(value1, versionMap.get(timestamp1));
@@ -199,11 +193,10 @@ public class TestMultiVersions {
   }
 
   /**
-   * Port of old TestScanMultipleVersions test here so can better utilize the
-   * spun up cluster running more than just a single test.  Keep old tests
-   * crazyness.
-   *
-   * <p>Tests five cases of scans and timestamps.
+   * Port of old TestScanMultipleVersions test here so can better utilize the spun up cluster
+   * running more than just a single test. Keep old tests crazyness.
+   * <p>
+   * Tests five cases of scans and timestamps.
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
@@ -212,13 +205,13 @@ public class TestMultiVersions {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
     final byte[][] rows = new byte[][] { Bytes.toBytes("row_0200"), Bytes.toBytes("row_0800") };
-    final byte [][] splitRows = new byte[][] {Bytes.toBytes("row_0500")};
-    final long [] timestamp = new long[] {100L, 1000L};
+    final byte[][] splitRows = new byte[][] { Bytes.toBytes("row_0500") };
+    final long[] timestamp = new long[] { 100L, 1000L };
     this.admin.createTable(tableDescriptor, splitRows);
     Table table = UTIL.getConnection().getTable(tableName);
     // Assert we got the region layout wanted.
-    Pair<byte[][], byte[][]> keys = UTIL.getConnection()
-        .getRegionLocator(tableName).getStartEndKeys();
+    Pair<byte[][], byte[][]> keys =
+      UTIL.getConnection().getRegionLocator(tableName).getStartEndKeys();
     assertEquals(2, keys.getFirst().length);
     byte[][] startKeys = keys.getFirst();
     byte[][] endKeys = keys.getSecond();
@@ -305,4 +298,3 @@ public class TestMultiVersions {
   }
 
 }
-

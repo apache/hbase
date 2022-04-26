@@ -43,15 +43,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test the synchronization of token authentication master keys through
- * ZKSecretWatcher
+ * Test the synchronization of token authentication master keys through ZKSecretWatcher
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestZKSecretWatcher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKSecretWatcher.class);
+    HBaseClassTestRule.forClass(TestZKSecretWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcher.class);
   private static HBaseTestingUtil TEST_UTIL;
@@ -62,9 +61,10 @@ public class TestZKSecretWatcher {
 
   private static class MockAbortable implements Abortable {
     private boolean abort;
+
     @Override
     public void abort(String reason, Throwable e) {
-      LOG.info("Aborting: "+reason, e);
+      LOG.info("Aborting: " + reason, e);
       abort = true;
     }
 
@@ -77,12 +77,11 @@ public class TestZKSecretWatcher {
   // We subclass AuthenticationTokenSecretManager so that testKeyUpdate can receive
   // notification on the removal of keyId
   private static class AuthenticationTokenSecretManagerForTest
-  extends AuthenticationTokenSecretManager {
+    extends AuthenticationTokenSecretManager {
     private CountDownLatch latch = new CountDownLatch(1);
 
-    public AuthenticationTokenSecretManagerForTest(Configuration conf,
-                                                   ZKWatcher zk, String serverName,
-                                                   long keyUpdateInterval, long tokenMaxLifetime) {
+    public AuthenticationTokenSecretManagerForTest(Configuration conf, ZKWatcher zk,
+      String serverName, long keyUpdateInterval, long tokenMaxLifetime) {
       super(conf, zk, serverName, keyUpdateInterval, tokenMaxLifetime);
     }
 
@@ -108,27 +107,26 @@ public class TestZKSecretWatcher {
 
     ZKWatcher zk = newZK(conf, "server1", new MockAbortable());
     AuthenticationTokenSecretManagerForTest[] tmp = new AuthenticationTokenSecretManagerForTest[2];
-    tmp[0] = new AuthenticationTokenSecretManagerForTest(
-        conf, zk, "server1", 60*60*1000, 60*1000);
+    tmp[0] =
+      new AuthenticationTokenSecretManagerForTest(conf, zk, "server1", 60 * 60 * 1000, 60 * 1000);
     tmp[0].start();
 
     zk = newZK(conf, "server2", new MockAbortable());
-    tmp[1] = new AuthenticationTokenSecretManagerForTest(
-        conf, zk, "server2", 60*60*1000, 60*1000);
+    tmp[1] =
+      new AuthenticationTokenSecretManagerForTest(conf, zk, "server2", 60 * 60 * 1000, 60 * 1000);
     tmp[1].start();
 
     while (KEY_MASTER == null) {
-      for (int i=0; i<2; i++) {
+      for (int i = 0; i < 2; i++) {
         if (tmp[i].isMaster()) {
           KEY_MASTER = tmp[i];
-          KEY_SLAVE = tmp[ (i+1) % 2 ];
+          KEY_SLAVE = tmp[(i + 1) % 2];
           break;
         }
       }
       Thread.sleep(500);
     }
-    LOG.info("Master is "+KEY_MASTER.getName()+
-        ", slave is "+KEY_SLAVE.getName());
+    LOG.info("Master is " + KEY_MASTER.getName() + ", slave is " + KEY_SLAVE.getName());
   }
 
   @AfterClass
@@ -184,19 +182,18 @@ public class TestZKSecretWatcher {
     LOG.debug("Slave current key (key3) {}", slaveCurrent);
 
     // verify that the expired key has been removed
-    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000,
-      () -> {
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000, () -> {
       AuthenticationKey k = KEY_SLAVE.getKey(key1.getKeyId());
       LOG.info("AuthKey1={}", k);
-      return k == null;});
-    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()),
-      KEY_SLAVE.getKey(key1.getKeyId()));
+      return k == null;
+    });
+    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()), KEY_SLAVE.getKey(key1.getKeyId()));
 
     // bring up a new slave
     Configuration conf = TEST_UTIL.getConfiguration();
     ZKWatcher zk = newZK(conf, "server3", new MockAbortable());
-    KEY_SLAVE2 = new AuthenticationTokenSecretManager(
-        conf, zk, "server3", 60*60*1000, 60*1000);
+    KEY_SLAVE2 =
+      new AuthenticationTokenSecretManager(conf, zk, "server3", 60 * 60 * 1000, 60 * 1000);
     KEY_SLAVE2.start();
 
     Thread.sleep(1000);
@@ -220,7 +217,7 @@ public class TestZKSecretWatcher {
 
     // check for a new master
     AuthenticationTokenSecretManager[] mgrs =
-        new AuthenticationTokenSecretManager[]{ KEY_SLAVE, KEY_SLAVE2 };
+      new AuthenticationTokenSecretManager[] { KEY_SLAVE, KEY_SLAVE2 };
     AuthenticationTokenSecretManager newMaster = null;
     int tries = 0;
     while (newMaster == null && tries++ < 5) {
@@ -239,18 +236,18 @@ public class TestZKSecretWatcher {
     AuthenticationKey current = newMaster.getCurrentKey();
     // new master will immediately roll the current key, so it's current may be greater
     assertTrue(current.getKeyId() >= slaveCurrent.getKeyId());
-    LOG.debug("New master, current key: "+current.getKeyId());
+    LOG.debug("New master, current key: " + current.getKeyId());
 
     // roll the current key again on new master and verify the key ID increments
     newMaster.rollCurrentKey();
     AuthenticationKey newCurrent = newMaster.getCurrentKey();
-    LOG.debug("New master, rolled new current key: "+newCurrent.getKeyId());
+    LOG.debug("New master, rolled new current key: " + newCurrent.getKeyId());
     assertTrue(newCurrent.getKeyId() > current.getKeyId());
 
     // add another slave
     ZKWatcher zk3 = newZK(conf, "server4", new MockAbortable());
-    KEY_SLAVE3 = new AuthenticationTokenSecretManager(
-        conf, zk3, "server4", 60*60*1000, 60*1000);
+    KEY_SLAVE3 =
+      new AuthenticationTokenSecretManager(conf, zk3, "server4", 60 * 60 * 1000, 60 * 1000);
     KEY_SLAVE3.start();
     Thread.sleep(5000);
 
@@ -262,7 +259,7 @@ public class TestZKSecretWatcher {
     assertFalse(newMaster.isMaster());
 
     // check for a new master
-    mgrs = new AuthenticationTokenSecretManager[]{ KEY_SLAVE, KEY_SLAVE2, KEY_SLAVE3 };
+    mgrs = new AuthenticationTokenSecretManager[] { KEY_SLAVE, KEY_SLAVE2, KEY_SLAVE3 };
     newMaster = null;
     tries = 0;
     while (newMaster == null && tries++ < 5) {
@@ -281,17 +278,17 @@ public class TestZKSecretWatcher {
     AuthenticationKey current2 = newMaster.getCurrentKey();
     // new master will immediately roll the current key, so it's current may be greater
     assertTrue(current2.getKeyId() >= newCurrent.getKeyId());
-    LOG.debug("New master 2, current key: "+current2.getKeyId());
+    LOG.debug("New master 2, current key: " + current2.getKeyId());
 
     // roll the current key again on new master and verify the key ID increments
     newMaster.rollCurrentKey();
     AuthenticationKey newCurrent2 = newMaster.getCurrentKey();
-    LOG.debug("New master 2, rolled new current key: "+newCurrent2.getKeyId());
+    LOG.debug("New master 2, rolled new current key: " + newCurrent2.getKeyId());
     assertTrue(newCurrent2.getKeyId() > current2.getKeyId());
   }
 
-  private static ZKWatcher newZK(Configuration conf, String name,
-                                 Abortable abort) throws Exception {
+  private static ZKWatcher newZK(Configuration conf, String name, Abortable abort)
+    throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
     ZKWatcher zk = new ZKWatcher(copy, name, abort);
     return zk;

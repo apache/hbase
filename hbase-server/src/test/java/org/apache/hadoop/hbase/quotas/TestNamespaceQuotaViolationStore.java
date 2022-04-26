@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class TestNamespaceQuotaViolationStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespaceQuotaViolationStore.class);
+    HBaseClassTestRule.forClass(TestNamespaceQuotaViolationStore.class);
 
   private static final long ONE_MEGABYTE = 1024L * 1024L;
 
@@ -81,12 +81,8 @@ public class TestNamespaceQuotaViolationStore {
     NamespaceQuotaSnapshotStore mockStore = mock(NamespaceQuotaSnapshotStore.class);
     when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
-    Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
-        SpaceQuota.newBuilder()
-            .setSoftLimit(1024L)
-            .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE)
-            .build())
-        .build();
+    Quotas quotaWithSpace = Quotas.newBuilder().setSpace(SpaceQuota.newBuilder().setSoftLimit(1024L)
+      .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build()).build();
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();
@@ -110,46 +106,34 @@ public class TestNamespaceQuotaViolationStore {
     TableName tn1 = TableName.valueOf(NS, "tn1");
     TableName tn2 = TableName.valueOf(NS, "tn2");
     TableName tn3 = TableName.valueOf("tn3");
-    SpaceQuota quota = SpaceQuota.newBuilder()
-        .setSoftLimit(ONE_MEGABYTE)
-        .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(SpaceViolationPolicy.DISABLE))
-        .build();
+    SpaceQuota quota = SpaceQuota.newBuilder().setSoftLimit(ONE_MEGABYTE)
+      .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(SpaceViolationPolicy.DISABLE))
+      .build();
 
     // Create some junk data to filter. Makes sure it's so large that it would
     // immediately violate the quota.
     for (int i = 0; i < 3; i++) {
 
-      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
-              .setStartKey(Bytes.toBytes(i))
-              .setEndKey(Bytes.toBytes(i + 1))
-              .build(),
-          5L * ONE_MEGABYTE);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 5L * ONE_MEGABYTE);
     }
 
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(0))
-        .setEndKey(Bytes.toBytes(1))
-        .build(), 1024L * 512L);
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(1))
-        .setEndKey(Bytes.toBytes(2))
-        .build(), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(0))
+      .setEndKey(Bytes.toBytes(1)).build(), 1024L * 512L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(1))
+      .setEndKey(Bytes.toBytes(2)).build(), 1024L * 256L);
 
     // Below the quota
     assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
-    regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-        .setStartKey(Bytes.toBytes(2))
-        .setEndKey(Bytes.toBytes(3))
-        .build(), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(2))
+      .setEndKey(Bytes.toBytes(3)).build(), 1024L * 256L);
 
     // Equal to the quota is still in observance
     assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
-    regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-        .setStartKey(Bytes.toBytes(3))
-        .setEndKey(Bytes.toBytes(4))
-        .build(), 1024L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(3))
+      .setEndKey(Bytes.toBytes(4)).build(), 1024L);
 
     // Exceeds the quota, should be in violation
     assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
@@ -167,28 +151,20 @@ public class TestNamespaceQuotaViolationStore {
     assertEquals(0, size(store.filterBySubject("asdf")));
 
     for (int i = 0; i < 5; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     for (int i = 0; i < 3; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     for (int i = 0; i < 10; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     for (int i = 0; i < 8; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn4)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn4).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     assertEquals(26, regionReports.size());
     assertEquals(5, size(store.filterBySubject(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR)));

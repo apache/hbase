@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,16 +33,16 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the inclusive stop row filter
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestInclusiveStopFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestInclusiveStopFilter.class);
+    HBaseClassTestRule.forClass(TestInclusiveStopFilter.class);
 
-  private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
-  private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
-  private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
+  private final byte[] STOP_ROW = Bytes.toBytes("stop_row");
+  private final byte[] GOOD_ROW = Bytes.toBytes("good_row");
+  private final byte[] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
 
   Filter mainFilter;
 
@@ -52,8 +52,7 @@ public class TestInclusiveStopFilter {
   }
 
   /**
-   * Tests identification of the stop row
-   * @throws Exception
+   * Tests identification of the stop row n
    */
   @Test
   public void testStopRowIdentification() throws Exception {
@@ -61,8 +60,7 @@ public class TestInclusiveStopFilter {
   }
 
   /**
-   * Tests serialization
-   * @throws Exception
+   * Tests serialization n
    */
   @Test
   public void testSerialization() throws Exception {
@@ -89,4 +87,3 @@ public class TestInclusiveStopFilter {
   }
 
 }
-

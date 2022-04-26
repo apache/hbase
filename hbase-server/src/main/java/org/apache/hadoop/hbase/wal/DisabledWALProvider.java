@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -44,10 +43,8 @@ import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 
 /**
- * No-op implementation of {@link WALProvider} used when the WAL is disabled.
- *
- * Should only be used when severe data loss is acceptable.
- *
+ * No-op implementation of {@link WALProvider} used when the WAL is disabled. Should only be used
+ * when severe data loss is acceptable.
  */
 @InterfaceAudience.Private
 class DisabledWALProvider implements WALProvider {
@@ -58,7 +55,7 @@ class DisabledWALProvider implements WALProvider {
 
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+    throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -97,11 +94,11 @@ class DisabledWALProvider implements WALProvider {
     protected final AtomicBoolean closed = new AtomicBoolean(false);
 
     public DisabledWAL(final Path path, final Configuration conf,
-        final List<WALActionsListener> listeners) {
+      final List<WALActionsListener> listeners) {
       this.coprocessorHost = new WALCoprocessorHost(this, conf);
       this.path = path;
       if (null != listeners) {
-        for(WALActionsListener listener : listeners) {
+        for (WALActionsListener listener : listeners) {
           registerWALActionsListener(listener);
         }
       }
@@ -148,7 +145,7 @@ class DisabledWALProvider implements WALProvider {
 
     @Override
     public void shutdown() {
-      if(closed.compareAndSet(false, true)) {
+      if (closed.compareAndSet(false, true)) {
         if (!this.listeners.isEmpty()) {
           for (WALActionsListener listener : this.listeners) {
             listener.logCloseRequested();
@@ -168,13 +165,12 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
-      throws IOException {
+    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
       return append(info, key, edits, false);
     }
 
     private long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
-        throws IOException {
+      throws IOException {
       WriteEntry writeEntry = key.getMvcc().begin();
       if (!edits.isReplay()) {
         for (Cell cell : edits.getCells()) {
@@ -197,8 +193,10 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public void updateStore(byte[] encodedRegionName, byte[] familyName,
-        Long sequenceid, boolean onlyIfGreater) { return; }
+    public void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
+      boolean onlyIfGreater) {
+      return;
+    }
 
     @Override
     public void sync() {
@@ -215,8 +213,8 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public Long startCacheFlush(final byte[] encodedRegionName, Map<byte[], Long>
-        flushedFamilyNamesToSeq) {
+    public Long startCacheFlush(final byte[] encodedRegionName,
+      Map<byte[], Long> flushedFamilyNamesToSeq) {
       return startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq.keySet());
     }
 

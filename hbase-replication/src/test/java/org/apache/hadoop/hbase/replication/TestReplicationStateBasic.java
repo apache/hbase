@@ -79,11 +79,11 @@ public abstract class TestReplicationStateBasic {
      */
     rqs.addWAL(server1, "qId1", "trash");
     rqs.removeWAL(server1, "qId1", "trash");
-    rqs.addWAL(server1,"qId2", "filename1");
-    rqs.addWAL(server1,"qId3", "filename2");
-    rqs.addWAL(server1,"qId3", "filename3");
-    rqs.addWAL(server2,"trash", "trash");
-    rqs.removeQueue(server2,"trash");
+    rqs.addWAL(server1, "qId2", "filename1");
+    rqs.addWAL(server1, "qId3", "filename2");
+    rqs.addWAL(server1, "qId3", "filename3");
+    rqs.addWAL(server2, "trash", "trash");
+    rqs.removeQueue(server2, "trash");
 
     List<ServerName> reps = rqs.getListOfReplicators();
     assertEquals(2, reps.size());
@@ -105,10 +105,11 @@ public abstract class TestReplicationStateBasic {
   }
 
   private void removeAllQueues(ServerName serverName) throws ReplicationException {
-    for (String queue: rqs.getAllQueues(serverName)) {
+    for (String queue : rqs.getAllQueues(serverName)) {
       rqs.removeQueue(serverName, queue);
     }
   }
+
   @Test
   public void testReplicationQueues() throws ReplicationException {
     // Initialize ReplicationPeer so we can add peers (we don't transfer lone queues)
@@ -254,7 +255,7 @@ public abstract class TestReplicationStateBasic {
     assertNumberOfPeers(2);
 
     assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationUtils
-        .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
+      .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
     rp.getPeerStorage().removePeer(ID_ONE);
     rp.removePeer(ID_ONE);
     assertNumberOfPeers(1);
@@ -344,7 +345,7 @@ public abstract class TestReplicationStateBasic {
       }
       if (zkTimeoutCount < ZK_MAX_COUNT) {
         LOG.debug("ConnectedPeerStatus was " + !status + " but expected " + status
-            + ", sleeping and trying again.");
+          + ", sleeping and trying again.");
         Thread.sleep(ZK_SLEEP_INTERVAL);
       } else {
         fail("Timed out waiting for ConnectedPeerStatus to be " + status);
@@ -373,8 +374,8 @@ public abstract class TestReplicationStateBasic {
       }
       // Add peers for the corresponding queues so they are not orphans
       rp.getPeerStorage().addPeer("qId" + i,
-        ReplicationPeerConfig.newBuilder().
-          setClusterKey(MiniZooKeeperCluster.HOST + ":2818:/bogus" + i).build(),
+        ReplicationPeerConfig.newBuilder()
+          .setClusterKey(MiniZooKeeperCluster.HOST + ":2818:/bogus" + i).build(),
         true, SyncReplicationState.NONE);
     }
   }

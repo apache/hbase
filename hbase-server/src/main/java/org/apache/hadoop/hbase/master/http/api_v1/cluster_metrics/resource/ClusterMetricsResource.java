@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.http.api_v1.cluster_metrics.model.ClusterMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.javax.ws.rs.GET;
 import org.apache.hbase.thirdparty.javax.ws.rs.Path;
 import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
@@ -43,9 +44,9 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 public class ClusterMetricsResource {
 
   // TODO: using the async client API lends itself well to using the JAX-RS 2.0 Spec's asynchronous
-  //  server APIs. However, these are only available when Jersey is wired up using Servlet 3.x
-  //  container and all of our existing InfoServer stuff is build on Servlet 2.x.
-  //  See also https://blog.allegro.tech/2014/10/async-rest.html#mixing-with-completablefuture
+  // server APIs. However, these are only available when Jersey is wired up using Servlet 3.x
+  // container and all of our existing InfoServer stuff is build on Servlet 2.x.
+  // See also https://blog.allegro.tech/2014/10/async-rest.html#mixing-with-completablefuture
 
   private final AsyncAdmin admin;
 
@@ -62,26 +63,21 @@ public class ClusterMetricsResource {
   @GET
   @Path("/")
   public ClusterMetrics getBaseMetrics() throws ExecutionException, InterruptedException {
-    final EnumSet<Option> fields = EnumSet.of(
-      Option.HBASE_VERSION,
-      Option.CLUSTER_ID,
-      Option.MASTER,
-      Option.BACKUP_MASTERS
-    );
+    final EnumSet<Option> fields =
+      EnumSet.of(Option.HBASE_VERSION, Option.CLUSTER_ID, Option.MASTER, Option.BACKUP_MASTERS);
     return ClusterMetrics.from(get(fields));
   }
 
   @GET
   @Path("/live_servers")
-  public Collection<ServerMetrics> getLiveServers() throws ExecutionException,
-    InterruptedException {
+  public Collection<ServerMetrics> getLiveServers()
+    throws ExecutionException, InterruptedException {
     return get(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values();
   }
 
   @GET
   @Path("/dead_servers")
-  public List<ServerName> getDeadServers() throws ExecutionException,
-    InterruptedException {
+  public List<ServerName> getDeadServers() throws ExecutionException, InterruptedException {
     return get(EnumSet.of(Option.DEAD_SERVERS)).getDeadServerNames();
   }
 }

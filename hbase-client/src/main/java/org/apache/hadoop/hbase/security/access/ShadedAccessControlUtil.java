@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
@@ -28,6 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * Convert protobuf objects in AccessControl.proto under hbase-protocol-shaded to user-oriented
  * objects and vice versa. <br>
- *
  * In HBASE-15638, we create a hbase-protocol-shaded module for upgrading protobuf version to 3.x,
  * but there are still some coprocessor endpoints(such as AccessControl, Authentication,
  * MulitRowMutation) which depend on hbase-protocol module for CPEP compatibility. In fact, we use
@@ -73,16 +72,16 @@ public class ShadedAccessControlUtil {
    */
   public static Permission.Action toPermissionAction(AccessControlProtos.Permission.Action action) {
     switch (action) {
-    case READ:
-      return Permission.Action.READ;
-    case WRITE:
-      return Permission.Action.WRITE;
-    case EXEC:
-      return Permission.Action.EXEC;
-    case CREATE:
-      return Permission.Action.CREATE;
-    case ADMIN:
-      return Permission.Action.ADMIN;
+      case READ:
+        return Permission.Action.READ;
+      case WRITE:
+        return Permission.Action.WRITE;
+      case EXEC:
+        return Permission.Action.EXEC;
+      case CREATE:
+        return Permission.Action.CREATE;
+      case ADMIN:
+        return Permission.Action.ADMIN;
     }
     throw new IllegalArgumentException("Unknown action value " + action.name());
   }
@@ -94,7 +93,7 @@ public class ShadedAccessControlUtil {
    * @return the converted array of Actions
    */
   public static Permission.Action[]
-      toPermissionActions(List<AccessControlProtos.Permission.Action> protoActions) {
+    toPermissionActions(List<AccessControlProtos.Permission.Action> protoActions) {
     Permission.Action[] actions = new Permission.Action[protoActions.size()];
     for (int i = 0; i < protoActions.size(); i++) {
       actions[i] = toPermissionAction(protoActions.get(i));
@@ -110,8 +109,8 @@ public class ShadedAccessControlUtil {
 
   public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
     return HBaseProtos.TableName.newBuilder()
-        .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
-        .setQualifier(ByteString.copyFrom(tableName.getQualifier())).build();
+      .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
+      .setQualifier(ByteString.copyFrom(tableName.getQualifier())).build();
   }
 
   /**
@@ -151,7 +150,7 @@ public class ShadedAccessControlUtil {
       if (perm.hasFamily()) family = perm.getFamily().toByteArray();
       if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
       return Permission.newBuilder(table).withFamily(family).withQualifier(qualifier)
-          .withActions(actions).build();
+        .withActions(actions).build();
     }
     throw new IllegalStateException("Unrecognize Perm Type: " + proto.getType());
   }
@@ -167,9 +166,9 @@ public class ShadedAccessControlUtil {
       NamespacePermission nsPerm = (NamespacePermission) perm;
       ret.setType(AccessControlProtos.Permission.Type.Namespace);
       AccessControlProtos.NamespacePermission.Builder builder =
-          AccessControlProtos.NamespacePermission.newBuilder();
+        AccessControlProtos.NamespacePermission.newBuilder();
       builder.setNamespaceName(org.apache.hbase.thirdparty.com.google.protobuf.ByteString
-          .copyFromUtf8(nsPerm.getNamespace()));
+        .copyFromUtf8(nsPerm.getNamespace()));
       Permission.Action[] actions = perm.getActions();
       if (actions != null) {
         for (Permission.Action a : actions) {
@@ -181,7 +180,7 @@ public class ShadedAccessControlUtil {
       TablePermission tablePerm = (TablePermission) perm;
       ret.setType(AccessControlProtos.Permission.Type.Table);
       AccessControlProtos.TablePermission.Builder builder =
-          AccessControlProtos.TablePermission.newBuilder();
+        AccessControlProtos.TablePermission.newBuilder();
       builder.setTableName(toProtoTableName(tablePerm.getTableName()));
       if (tablePerm.hasFamily()) {
         builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
@@ -200,7 +199,7 @@ public class ShadedAccessControlUtil {
       // perm.getAccessScope() == Permission.Scope.GLOBAL
       ret.setType(AccessControlProtos.Permission.Type.Global);
       AccessControlProtos.GlobalPermission.Builder builder =
-          AccessControlProtos.GlobalPermission.newBuilder();
+        AccessControlProtos.GlobalPermission.newBuilder();
       Permission.Action[] actions = perm.getActions();
       if (actions != null) {
         for (Permission.Action a : actions) {
@@ -218,8 +217,8 @@ public class ShadedAccessControlUtil {
    * @param proto the protobuf UserPermission
    * @return the converted UserPermission
    */
-  public static ListMultimap<String, Permission> toUserTablePermissions(
-      AccessControlProtos.UsersAndPermissions proto) {
+  public static ListMultimap<String, Permission>
+    toUserTablePermissions(AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, Permission> perms = ArrayListMultimap.create();
     AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
     for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
@@ -239,12 +238,12 @@ public class ShadedAccessControlUtil {
    * @return the protobuf UserTablePermissions
    */
   public static AccessControlProtos.UsersAndPermissions
-      toUserTablePermissions(ListMultimap<String, UserPermission> perm) {
+    toUserTablePermissions(ListMultimap<String, UserPermission> perm) {
     AccessControlProtos.UsersAndPermissions.Builder builder =
-        AccessControlProtos.UsersAndPermissions.newBuilder();
+      AccessControlProtos.UsersAndPermissions.newBuilder();
     for (Map.Entry<String, Collection<UserPermission>> entry : perm.asMap().entrySet()) {
       AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
-          AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
+        AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
       userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
       for (UserPermission userPerm : entry.getValue()) {
         userPermBuilder.addPermissions(toPermission(userPerm.getPermission()));
@@ -270,14 +269,14 @@ public class ShadedAccessControlUtil {
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
     return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(ByteString.copyFromUtf8(perm.getUser()))
-        .setPermission(toPermission(perm.getPermission())).build();
+      .setUser(ByteString.copyFromUtf8(perm.getUser()))
+      .setPermission(toPermission(perm.getPermission())).build();
   }
 
   public static GrantRequest buildGrantRequest(UserPermission userPermission,
-      boolean mergeExistingPermissions) {
+    boolean mergeExistingPermissions) {
     return GrantRequest.newBuilder().setUserPermission(toUserPermission(userPermission))
-        .setMergeExistingPermissions(mergeExistingPermissions).build();
+      .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   public static RevokeRequest buildRevokeRequest(UserPermission userPermission) {
@@ -285,9 +284,9 @@ public class ShadedAccessControlUtil {
   }
 
   public static AccessControlProtos.GetUserPermissionsRequest
-      buildGetUserPermissionsRequest(GetUserPermissionsRequest request) {
+    buildGetUserPermissionsRequest(GetUserPermissionsRequest request) {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
-        AccessControlProtos.GetUserPermissionsRequest.newBuilder();
+      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (request.getUserName() != null && !request.getUserName().isEmpty()) {
       builder.setUserName(ByteString.copyFromUtf8(request.getUserName()));
     }
@@ -312,7 +311,7 @@ public class ShadedAccessControlUtil {
   }
 
   public static GetUserPermissionsResponse
-      buildGetUserPermissionsResponse(final List<UserPermission> permissions) {
+    buildGetUserPermissionsResponse(final List<UserPermission> permissions) {
     GetUserPermissionsResponse.Builder builder = GetUserPermissionsResponse.newBuilder();
     for (UserPermission perm : permissions) {
       builder.addUserPermission(toUserPermission(perm));
@@ -321,7 +320,7 @@ public class ShadedAccessControlUtil {
   }
 
   public static HasUserPermissionsRequest buildHasUserPermissionsRequest(String userName,
-      List<Permission> permissions) {
+    List<Permission> permissions) {
     HasUserPermissionsRequest.Builder builder = HasUserPermissionsRequest.newBuilder();
     if (userName != null && !userName.isEmpty()) {
       builder.setUserName(ByteString.copyFromUtf8(userName));

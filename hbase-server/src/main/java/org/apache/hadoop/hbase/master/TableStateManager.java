@@ -62,7 +62,7 @@ public class TableStateManager {
   /**
    * Set table state to provided. Caller should lock table on write.
    * @param tableName table to change state for
-   * @param newState new state
+   * @param newState  new state
    */
   public void setTableState(TableName tableName, TableState.State newState) throws IOException {
     ReadWriteLock lock = tnLock.getLock(tableName);
@@ -148,8 +148,9 @@ public class TableStateManager {
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      if (TableState.State.DISABLING.equals(newState) ||
-          TableState.State.DISABLED.equals(newState)) {
+      if (
+        TableState.State.DISABLING.equals(newState) || TableState.State.DISABLED.equals(newState)
+      ) {
         throw new IllegalArgumentIOException("Cannot disable meta table; " + newState);
       }
       // Otherwise, just return; no need to set ENABLED on meta -- it is always ENABLED.

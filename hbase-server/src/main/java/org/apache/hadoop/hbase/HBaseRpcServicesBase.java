@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -136,8 +136,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     priority = createPriority();
     // Using Address means we don't get the IP too. Shorten it more even to just the host name
     // w/o the domain.
-    final String name = processName + "/" +
-      Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
+    final String name = processName + "/"
+      + Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
     server.setName(name);
     // Set how many times to retry talking to another server over Connection.
     ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
@@ -148,8 +148,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       rpcServer = RpcServerFactory.createRpcServer(server, name, getServices(), bindAddress, conf,
         rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
     } catch (BindException be) {
-      throw new IOException(be.getMessage() + ". To switch ports use the '" + getPortConfigName() +
-        "' configuration property.", be.getCause() != null ? be.getCause() : be);
+      throw new IOException(be.getMessage() + ". To switch ports use the '" + getPortConfigName()
+        + "' configuration property.", be.getCause() != null ? be.getCause() : be);
     }
     final InetSocketAddress address = rpcServer.getListenerAddress();
     if (address == null) {
@@ -351,8 +351,9 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    slowLogPayloads = namedQueueGetResponse != null ? namedQueueGetResponse.getSlowLogPayloads() :
-      Collections.emptyList();
+    slowLogPayloads = namedQueueGetResponse != null
+      ? namedQueueGetResponse.getSlowLogPayloads()
+      : Collections.emptyList();
     return slowLogPayloads;
   }
 

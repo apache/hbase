@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
@@ -37,15 +36,18 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
     hfilesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_HFILES, 0L);
   }
 
-  @Override public void setLastAppliedOpAge(long age) {
+  @Override
+  public void setLastAppliedOpAge(long age) {
     ageHist.add(age);
   }
 
-  @Override public void incrAppliedBatches(long batches) {
+  @Override
+  public void incrAppliedBatches(long batches) {
     batchesCounter.incr(batches);
   }
 
-  @Override public void incrAppliedOps(long batchsize) {
+  @Override
+  public void incrAppliedOps(long batchsize) {
     opsCounter.incr(batchsize);
   }
 
@@ -59,7 +61,8 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
     hfilesCounter.incr(hfiles);
   }
 
-  @Override public long getSinkAppliedOps() {
+  @Override
+  public long getSinkAppliedOps() {
     return opsCounter.value();
   }
 }

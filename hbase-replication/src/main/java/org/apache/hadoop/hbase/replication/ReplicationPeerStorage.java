@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ public interface ReplicationPeerStorage {
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled,
-      SyncReplicationState syncReplicationState) throws ReplicationException;
+    SyncReplicationState syncReplicationState) throws ReplicationException;
 
   /**
    * Remove a replication peer.
@@ -50,7 +50,7 @@ public interface ReplicationPeerStorage {
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException;
+    throws ReplicationException;
 
   /**
    * Return the peer ids of all replication peers.
@@ -75,7 +75,7 @@ public interface ReplicationPeerStorage {
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   void setPeerNewSyncReplicationState(String peerId, SyncReplicationState state)
-      throws ReplicationException;
+    throws ReplicationException;
 
   /**
    * Overwrite the sync replication state with the new sync replication state which is set with the
@@ -92,8 +92,8 @@ public interface ReplicationPeerStorage {
   SyncReplicationState getPeerSyncReplicationState(String peerId) throws ReplicationException;
 
   /**
-   * Get the new sync replication state. Will return {@link SyncReplicationState#NONE} if we are
-   * not in a transition.
+   * Get the new sync replication state. Will return {@link SyncReplicationState#NONE} if we are not
+   * in a transition.
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   SyncReplicationState getPeerNewSyncReplicationState(String peerId) throws ReplicationException;

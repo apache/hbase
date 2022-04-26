@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.Server;
@@ -33,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class OpenPriorityRegionHandler extends OpenRegionHandler {
   public OpenPriorityRegionHandler(Server server, RegionServerServices rsServices,
-                                   RegionInfo regionInfo, TableDescriptor htd, long masterSystemTime) {
+    RegionInfo regionInfo, TableDescriptor htd, long masterSystemTime) {
     super(server, rsServices, regionInfo, htd, masterSystemTime,
-       EventType.M_RS_OPEN_PRIORITY_REGION);
+      EventType.M_RS_OPEN_PRIORITY_REGION);
   }
 }

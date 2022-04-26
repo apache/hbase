@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.io;
+
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * A CellScanner that knows its size in memory in bytes.
- * Used playing the CellScanner into an in-memory buffer; knowing the size ahead of time saves
- * on background buffer resizings.
+ * A CellScanner that knows its size in memory in bytes. Used playing the CellScanner into an
+ * in-memory buffer; knowing the size ahead of time saves on background buffer resizings.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface SizedCellScanner extends CellScanner, HeapSize {}
+public interface SizedCellScanner extends CellScanner, HeapSize {
+}

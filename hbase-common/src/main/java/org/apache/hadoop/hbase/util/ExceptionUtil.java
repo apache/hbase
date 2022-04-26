@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,16 +20,12 @@ package org.apache.hadoop.hbase.util;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedByInterruptException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class handles the different interruption classes.
- * It can be:
- * - InterruptedException
- * - InterruptedIOException (inherits IOException); used in IO
- * - ClosedByInterruptException (inherits IOException)
- * - SocketTimeoutException inherits InterruptedIOException but is not a real
+ * This class handles the different interruption classes. It can be: - InterruptedException -
+ * InterruptedIOException (inherits IOException); used in IO - ClosedByInterruptException (inherits
+ * IOException) - SocketTimeoutException inherits InterruptedIOException but is not a real
  * interruption, so we have to distinguish the case. This pattern is unfortunately common.
  */
 @InterfaceAudience.Private
@@ -78,7 +73,7 @@ public final class ExceptionUtil {
 
     if (t instanceof InterruptedException || t instanceof ClosedByInterruptException) {
       InterruptedIOException iie =
-          new InterruptedIOException("Origin: " + t.getClass().getSimpleName());
+        new InterruptedIOException("Origin: " + t.getClass().getSimpleName());
       iie.initCause(t);
       return iie;
     }

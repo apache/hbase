@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertFalse;
+
 import java.util.Iterator;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -43,19 +44,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests that are adjunct to {@link TestExportSnapshot}. They used to be in same test suite but
- * the test suite ran too close to the maximum time limit so we split these out. Uses
- * facility from TestExportSnapshot where possible.
+ * Tests that are adjunct to {@link TestExportSnapshot}. They used to be in same test suite but the
+ * test suite ran too close to the maximum time limit so we split these out. Uses facility from
+ * TestExportSnapshot where possible.
  * @see TestExportSnapshot
  */
 @Ignore // HBASE-24493
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestExportSnapshotAdjunct {
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotAdjunct.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExportSnapshotAdjunct.class);
+    HBaseClassTestRule.forClass(TestExportSnapshotAdjunct.class);
   @Rule
   public final TestName testName = new TestName();
 
@@ -75,12 +76,11 @@ public class TestExportSnapshotAdjunct {
   }
 
   /**
-   * Check for references to '/tmp'. We are trying to avoid having references to outside of the
-   * test data dir when running tests. References outside of the test dir makes it so concurrent
-   * tests can stamp on each other by mistake. This check is for references to the 'tmp'.
-   *
-   * This is a strange place for this test but I want somewhere where the configuration is
-   * full -- filed w/ hdfs and mapreduce configurations.
+   * Check for references to '/tmp'. We are trying to avoid having references to outside of the test
+   * data dir when running tests. References outside of the test dir makes it so concurrent tests
+   * can stamp on each other by mistake. This check is for references to the 'tmp'. This is a
+   * strange place for this test but I want somewhere where the configuration is full -- filed w/
+   * hdfs and mapreduce configurations.
    */
   private void checkForReferencesToTmpDir() {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -126,8 +126,7 @@ public class TestExportSnapshotAdjunct {
     admin.snapshot(emptySnapshotName, tableName);
 
     // Add some rows
-    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50,
-      TestExportSnapshot.FAMILY);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50, TestExportSnapshot.FAMILY);
     tableNumFiles = admin.getRegions(tableName).size();
 
     // take a snapshot
@@ -151,9 +150,8 @@ public class TestExportSnapshotAdjunct {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      snapshotName, snapshotName, tableNumFiles, TEST_UTIL.getDefaultRootDirPath(),
-      copyDir, true, null, true);
+    TestExportSnapshot.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, null, true);
   }
 
   /**
@@ -168,8 +166,7 @@ public class TestExportSnapshotAdjunct {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 4);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      snapshotName, snapshotName, tableNumFiles, TEST_UTIL.getDefaultRootDirPath(),
-      copyDir, true, null, false);
+    TestExportSnapshot.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, null, false);
   }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
-
-import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * FilterListWithAND represents an ordered list of filters which will be evaluated with an AND
@@ -72,7 +69,8 @@ public class FilterListWithAND extends FilterListBase {
    * The jump step will be:
    *
    * <pre>
-   * INCLUDE &lt; SKIP &lt; INCLUDE_AND_NEXT_COL &lt; NEXT_COL &lt; INCLUDE_AND_SEEK_NEXT_ROW &lt; NEXT_ROW &lt; SEEK_NEXT_USING_HINT
+   * INCLUDE &lt; SKIP &lt; INCLUDE_AND_NEXT_COL &lt; NEXT_COL &lt; INCLUDE_AND_SEEK_NEXT_ROW &lt; NEXT_ROW
+   *     &lt; SEEK_NEXT_USING_HINT
    * </pre>
    *
    * Here, we have the following map to describe The Maximal Step Rule. if current return code (for
@@ -91,7 +89,7 @@ public class FilterListWithAND extends FilterListBase {
    * SEEK_NEXT_USING_HINT       SEEK_NEXT_USING_HINT       SEEK_NEXT_USING_HINT      SEEK_NEXT_USING_HINT       SEEK_NEXT_USING_HINT  SEEK_NEXT_USING_HINT  SEEK_NEXT_USING_HINT  SEEK_NEXT_USING_HINT
    * </pre>
    *
-   * @param rc Return code which is calculated by previous sub-filter(s) in filter list.
+   * @param rc      Return code which is calculated by previous sub-filter(s) in filter list.
    * @param localRC Return code of the current sub-filter in filter list.
    * @return Return code which is merged by the return code of previous sub-filter(s) and the return
    *         code of current sub-filter.
@@ -120,8 +118,10 @@ public class FilterListWithAND extends FilterListBase {
         }
         break;
       case INCLUDE_AND_SEEK_NEXT_ROW:
-        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-          ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
+            ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)
+        ) {
           return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
         }
         if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
@@ -140,8 +140,10 @@ public class FilterListWithAND extends FilterListBase {
         }
         break;
       case NEXT_COL:
-        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.SKIP,
-          ReturnCode.NEXT_COL)) {
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.SKIP,
+            ReturnCode.NEXT_COL)
+        ) {
           return ReturnCode.NEXT_COL;
         }
         if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
@@ -152,7 +154,7 @@ public class FilterListWithAND extends FilterListBase {
         return ReturnCode.NEXT_ROW;
     }
     throw new IllegalStateException(
-        "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
+      "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
   }
 
   private boolean isIncludeRelatedReturnCode(ReturnCode rc) {

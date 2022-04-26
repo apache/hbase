@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespaceReplication.class);
+    HBaseClassTestRule.forClass(TestNamespaceReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceReplication.class);
 
@@ -112,19 +112,19 @@ public class TestNamespaceReplication extends TestReplicationBase {
     admin2.createNamespace(NamespaceDescriptor.create(ns2).build());
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tabAName);
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
-      .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
-      .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+      .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+      .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
     TableDescriptor tabA = builder.build();
     admin1.createTable(tabA);
     admin2.createTable(tabA);
 
     builder = TableDescriptorBuilder.newBuilder(tabBName);
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
-      .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
-      .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+      .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+      .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
     TableDescriptor tabB = builder.build();
     admin1.createTable(tabB);
     admin2.createTable(tabB);
@@ -191,7 +191,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     tableCfs.put(tabAName, new ArrayList<>());
     tableCfs.get(tabAName).add("f1");
     admin1.updateReplicationPeerConfig(peerId, ReplicationPeerConfig.newBuilder(rpc)
-        .setNamespaces(namespaces).setTableCFsMap(tableCfs).build());
+      .setNamespaces(namespaces).setTableCFsMap(tableCfs).build());
     LOG.info("update peer config");
 
     // Only family f1 of Table A can replicated to cluster2
@@ -209,8 +209,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     admin1.removeReplicationPeer(peerId);
   }
 
-  private void put(Table source, byte[] row, byte[]... families)
-      throws Exception {
+  private void put(Table source, byte[] row, byte[]... families) throws Exception {
     for (byte[] fam : families) {
       Put put = new Put(row);
       put.addColumn(fam, row, val);
@@ -218,8 +217,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     }
   }
 
-  private void delete(Table source, byte[] row, byte[]... families)
-      throws Exception {
+  private void delete(Table source, byte[] row, byte[]... families) throws Exception {
     for (byte[] fam : families) {
       Delete del = new Delete(row);
       del.addFamily(fam);
@@ -227,8 +225,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     }
   }
 
-  private void ensureRowExisted(Table target, byte[] row, byte[]... families)
-      throws Exception {
+  private void ensureRowExisted(Table target, byte[] row, byte[]... families) throws Exception {
     for (byte[] fam : families) {
       Get get = new Get(row);
       get.addFamily(fam);
@@ -249,8 +246,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     }
   }
 
-  private void ensureRowNotExisted(Table target, byte[] row, byte[]... families)
-      throws Exception {
+  private void ensureRowNotExisted(Table target, byte[] row, byte[]... families) throws Exception {
     for (byte[] fam : families) {
       Get get = new Get(row);
       get.addFamily(fam);

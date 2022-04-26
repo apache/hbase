@@ -34,26 +34,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMergedRegionsState;
 
 /**
- * GC regions that have been Merged.
- * Caller determines if it is GC time. This Procedure does not check.
- * <p>This is a Table Procedure. We take a read lock on the Table.
- * We do NOT keep a lock for the life of this procedure. The subprocedures
- * take locks on the Regions they are purging.
+ * GC regions that have been Merged. Caller determines if it is GC time. This Procedure does not
+ * check.
+ * <p>
+ * This is a Table Procedure. We take a read lock on the Table. We do NOT keep a lock for the life
+ * of this procedure. The subprocedures take locks on the Regions they are purging.
  * @deprecated 2.3.0 Use {@link GCMultipleMergedRegionsProcedure}.
  */
 @InterfaceAudience.Private
 @Deprecated
 public class GCMergedRegionsProcedure
-extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
+  extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   private static final Logger LOG = LoggerFactory.getLogger(GCMergedRegionsProcedure.class);
   private RegionInfo father;
   private RegionInfo mother;
   private RegionInfo mergedChild;
 
-  public GCMergedRegionsProcedure(final MasterProcedureEnv env,
-      final RegionInfo mergedChild,
-      final RegionInfo father,
-      final RegionInfo mother) {
+  public GCMergedRegionsProcedure(final MasterProcedureEnv env, final RegionInfo mergedChild,
+    final RegionInfo father, final RegionInfo mother) {
     super(env);
     this.father = father;
     this.mother = mother;
@@ -94,16 +92,16 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
       }
     } catch (IOException ioe) {
       // TODO: This is going to spew log?
-      LOG.warn("Error trying to GC merged regions " + this.father.getShortNameToLog() + " & " +
-        this.mother.getShortNameToLog() + "; retrying...", ioe);
+      LOG.warn("Error trying to GC merged regions " + this.father.getShortNameToLog() + " & "
+        + this.mother.getShortNameToLog() + "; retrying...", ioe);
     }
     return Flow.HAS_MORE_STATE;
   }
 
   private GCRegionProcedure[] createGCRegionProcedures(final MasterProcedureEnv env) {
-    GCRegionProcedure [] procs = new GCRegionProcedure[2];
+    GCRegionProcedure[] procs = new GCRegionProcedure[2];
     int index = 0;
-    for (RegionInfo hri: new RegionInfo [] {this.father, this.mother}) {
+    for (RegionInfo hri : new RegionInfo[] { this.father, this.mother }) {
       GCRegionProcedure proc = new GCRegionProcedure(env, hri);
       proc.setOwner(env.getRequestUser().getShortName());
       procs[index++] = proc;
@@ -113,7 +111,7 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, GCMergedRegionsState state)
-  throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // no-op
   }
 
@@ -133,23 +131,21 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData.Builder msg =
-        MasterProcedureProtos.GCMergedRegionsStateData.newBuilder().
-        setParentA(ProtobufUtil.toRegionInfo(this.father)).
-        setParentB(ProtobufUtil.toRegionInfo(this.mother)).
-        setMergedChild(ProtobufUtil.toRegionInfo(this.mergedChild));
+      MasterProcedureProtos.GCMergedRegionsStateData.newBuilder()
+        .setParentA(ProtobufUtil.toRegionInfo(this.father))
+        .setParentB(ProtobufUtil.toRegionInfo(this.mother))
+        .setMergedChild(ProtobufUtil.toRegionInfo(this.mergedChild));
     serializer.serialize(msg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData msg =
-        serializer.deserialize(MasterProcedureProtos.GCMergedRegionsStateData.class);
+      serializer.deserialize(MasterProcedureProtos.GCMergedRegionsStateData.class);
     this.father = ProtobufUtil.toRegionInfo(msg.getParentA());
     this.mother = ProtobufUtil.toRegionInfo(msg.getParentB());
     this.mergedChild = ProtobufUtil.toRegionInfo(msg.getMergedChild());

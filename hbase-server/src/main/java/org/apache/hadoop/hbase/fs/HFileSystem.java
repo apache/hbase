@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.fs;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -57,27 +54,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An encapsulation for the FileSystem object that hbase uses to access
- * data. This class allows the flexibility of using
- * separate filesystem objects for reading and writing hfiles and wals.
+ * An encapsulation for the FileSystem object that hbase uses to access data. This class allows the
+ * flexibility of using separate filesystem objects for reading and writing hfiles and wals.
  */
 @InterfaceAudience.Private
 public class HFileSystem extends FilterFileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(HFileSystem.class);
 
-  private final FileSystem noChecksumFs;   // read hfile data from storage
+  private final FileSystem noChecksumFs; // read hfile data from storage
   private final boolean useHBaseChecksum;
   private static volatile byte unspecifiedStoragePolicyId = Byte.MIN_VALUE;
 
   /**
    * Create a FileSystem object for HBase regionservers.
-   * @param conf The configuration to be used for the filesystem
-   * @param useHBaseChecksum if true, then use
-   *        checksum verfication in hbase, otherwise
-   *        delegate checksum verification to the FileSystem.
+   * @param conf             The configuration to be used for the filesystem
+   * @param useHBaseChecksum if true, then use checksum verfication in hbase, otherwise delegate
+   *                         checksum verification to the FileSystem.
    */
-  public HFileSystem(Configuration conf, boolean useHBaseChecksum)
-    throws IOException {
+  public HFileSystem(Configuration conf, boolean useHBaseChecksum) throws IOException {
 
     // Create the default filesystem with checksum verification switched on.
     // By default, any operation to this FilterFileSystem occurs on
@@ -120,9 +114,8 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Wrap a FileSystem object within a HFileSystem. The noChecksumFs and
-   * writefs are both set to be the same specified fs.
-   * Do not verify hbase-checksums while reading data from filesystem.
+   * Wrap a FileSystem object within a HFileSystem. The noChecksumFs and writefs are both set to be
+   * the same specified fs. Do not verify hbase-checksums while reading data from filesystem.
    * @param fs Set the noChecksumFs and writeFs to this specified filesystem.
    */
   public HFileSystem(FileSystem fs) {
@@ -132,11 +125,9 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Returns the filesystem that is specially setup for
-   * doing reads from storage. This object avoids doing
-   * checksum verifications for reads.
-   * @return The FileSystem object that can be used to read data
-   *         from files.
+   * Returns the filesystem that is specially setup for doing reads from storage. This object avoids
+   * doing checksum verifications for reads.
+   * @return The FileSystem object that can be used to read data from files.
    */
   public FileSystem getNoChecksumFs() {
     return noChecksumFs;
@@ -152,10 +143,10 @@ public class HFileSystem extends FilterFileSystem {
 
   /**
    * Set the source path (directory/file) to the specified storage policy.
-   * @param path The source path (directory/file).
-   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc.
-   * See see hadoop 2.6+ org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g
-   * 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
+   * @param path       The source path (directory/file).
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See see hadoop 2.6+
+   *                   org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g 'COLD',
+   *                   'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public void setStoragePolicy(Path path, String policyName) {
     CommonFSUtils.setStoragePolicy(this.fs, path, policyName);
@@ -171,7 +162,7 @@ public class HFileSystem extends FilterFileSystem {
   public String getStoragePolicyName(Path path) {
     try {
       Object blockStoragePolicySpi =
-          ReflectionUtils.invokeMethod(this.fs, "getStoragePolicy", path);
+        ReflectionUtils.invokeMethod(this.fs, "getStoragePolicy", path);
       return (String) ReflectionUtils.invokeMethod(blockStoragePolicySpi, "getName");
     } catch (Exception e) {
       // Maybe fail because of using old HDFS version, try the old way
@@ -221,8 +212,7 @@ public class HFileSystem extends FilterFileSystem {
 
   /**
    * Are we verifying checksums in HBase?
-   * @return True, if hbase is configured to verify checksums,
-   *         otherwise false.
+   * @return True, if hbase is configured to verify checksums, otherwise false.
    */
   public boolean useHBaseChecksum() {
     return useHBaseChecksum;
@@ -240,10 +230,8 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Returns a brand new instance of the FileSystem. It does not use
-   * the FileSystem.Cache. In newer versions of HDFS, we can directly
-   * invoke FileSystem.newInstance(Configuration).
-   *
+   * Returns a brand new instance of the FileSystem. It does not use the FileSystem.Cache. In newer
+   * versions of HDFS, we can directly invoke FileSystem.newInstance(Configuration).
    * @param conf Configuration
    * @return A new instance of the filesystem
    */
@@ -271,9 +259,9 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Returns an instance of Filesystem wrapped into the class specified in
-   * hbase.fs.wrapper property, if one is set in the configuration, returns
-   * unmodified FS instance passed in as an argument otherwise.
+   * Returns an instance of Filesystem wrapped into the class specified in hbase.fs.wrapper
+   * property, if one is set in the configuration, returns unmodified FS instance passed in as an
+   * argument otherwise.
    * @param base Filesystem instance to wrap
    * @param conf Configuration
    * @return wrapped instance of FS, or the same instance if no wrapping configured.
@@ -296,15 +284,14 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Add an interceptor on the calls to the namenode#getBlockLocations from the DFSClient
-   * linked to this FileSystem. See HBASE-6435 for the background.
+   * Add an interceptor on the calls to the namenode#getBlockLocations from the DFSClient linked to
+   * this FileSystem. See HBASE-6435 for the background.
    * <p/>
    * There should be no reason, except testing, to create a specific ReorderBlocks.
-   *
    * @return true if the interceptor was added, false otherwise.
    */
   static boolean addLocationsOrderInterceptor(Configuration conf, final ReorderBlocks lrb) {
-    if (!conf.getBoolean("hbase.filesystem.reorder.blocks", true)) {  // activated by default
+    if (!conf.getBoolean("hbase.filesystem.reorder.blocks", true)) { // activated by default
       LOG.debug("addLocationsOrderInterceptor configured to false");
       return false;
     }
@@ -318,17 +305,16 @@ public class HFileSystem extends FilterFileSystem {
     }
 
     if (!(fs instanceof DistributedFileSystem)) {
-      LOG.debug("The file system is not a DistributedFileSystem. " +
-          "Skipping on block location reordering");
+      LOG.debug("The file system is not a DistributedFileSystem. "
+        + "Skipping on block location reordering");
       return false;
     }
 
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     DFSClient dfsc = dfs.getClient();
     if (dfsc == null) {
-      LOG.warn("The DistributedFileSystem does not contain a DFSClient. Can't add the location " +
-          "block reordering interceptor. Continuing, but this is unexpected."
-      );
+      LOG.warn("The DistributedFileSystem does not contain a DFSClient. Can't add the location "
+        + "block reordering interceptor. Continuing, but this is unexpected.");
       return false;
     }
 
@@ -341,16 +327,15 @@ public class HFileSystem extends FilterFileSystem {
 
       ClientProtocol namenode = (ClientProtocol) nf.get(dfsc);
       if (namenode == null) {
-        LOG.warn("The DFSClient is not linked to a namenode. Can't add the location block" +
-            " reordering interceptor. Continuing, but this is unexpected."
-        );
+        LOG.warn("The DFSClient is not linked to a namenode. Can't add the location block"
+          + " reordering interceptor. Continuing, but this is unexpected.");
         return false;
       }
 
       ClientProtocol cp1 = createReorderingProxy(namenode, lrb, conf);
       nf.set(dfsc, cp1);
-      LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering" +
-        " using class " + lrb.getClass().getName());
+      LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering"
+        + " using class " + lrb.getClass().getName());
     } catch (NoSuchFieldException e) {
       LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
       return false;
@@ -363,44 +348,44 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   private static ClientProtocol createReorderingProxy(final ClientProtocol cp,
-      final ReorderBlocks lrb, final Configuration conf) {
+    final ReorderBlocks lrb, final Configuration conf) {
     return (ClientProtocol) Proxy.newProxyInstance(cp.getClass().getClassLoader(),
-        new Class[]{ClientProtocol.class, Closeable.class}, new InvocationHandler() {
-          @Override
-          public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            try {
-              if ((args == null || args.length == 0) && "close".equals(method.getName())) {
-                RPC.stopProxy(cp);
-                return null;
-              } else {
-                Object res = method.invoke(cp, args);
-                if (res != null && args != null && args.length == 3
-                    && "getBlockLocations".equals(method.getName())
-                    && res instanceof LocatedBlocks
-                    && args[0] instanceof String
-                    && args[0] != null) {
-                  lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
-                }
-                return res;
+      new Class[] { ClientProtocol.class, Closeable.class }, new InvocationHandler() {
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+          try {
+            if ((args == null || args.length == 0) && "close".equals(method.getName())) {
+              RPC.stopProxy(cp);
+              return null;
+            } else {
+              Object res = method.invoke(cp, args);
+              if (
+                res != null && args != null && args.length == 3
+                  && "getBlockLocations".equals(method.getName()) && res instanceof LocatedBlocks
+                  && args[0] instanceof String && args[0] != null
+              ) {
+                lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
               }
-            } catch  (InvocationTargetException ite) {
-              // We will have this for all the exception, checked on not, sent
-              //  by any layer, including the functional exception
-              Throwable cause = ite.getCause();
-              if (cause == null){
-                throw new RuntimeException("Proxy invocation failed and getCause is null", ite);
-              }
-              if (cause instanceof UndeclaredThrowableException) {
-                Throwable causeCause = cause.getCause();
-                if (causeCause == null) {
-                  throw new RuntimeException("UndeclaredThrowableException had null cause!");
-                }
-                cause = cause.getCause();
-              }
-              throw cause;
+              return res;
             }
+          } catch (InvocationTargetException ite) {
+            // We will have this for all the exception, checked on not, sent
+            // by any layer, including the functional exception
+            Throwable cause = ite.getCause();
+            if (cause == null) {
+              throw new RuntimeException("Proxy invocation failed and getCause is null", ite);
+            }
+            if (cause instanceof UndeclaredThrowableException) {
+              Throwable causeCause = cause.getCause();
+              if (causeCause == null) {
+                throw new RuntimeException("UndeclaredThrowableException had null cause!");
+              }
+              cause = cause.getCause();
+            }
+            throw cause;
           }
-        });
+        }
+      });
   }
 
   /**
@@ -408,24 +393,23 @@ public class HFileSystem extends FilterFileSystem {
    */
   interface ReorderBlocks {
     /**
-     *
      * @param conf - the conf to use
-     * @param lbs - the LocatedBlocks to reorder
-     * @param src - the file name currently read
+     * @param lbs  - the LocatedBlocks to reorder
+     * @param src  - the file name currently read
      * @throws IOException - if something went wrong
      */
     void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src) throws IOException;
   }
 
   /**
-   * We're putting at lowest priority the wal files blocks that are on the same datanode
-   * as the original regionserver which created these files. This because we fear that the
-   * datanode is actually dead, so if we use it it will timeout.
+   * We're putting at lowest priority the wal files blocks that are on the same datanode as the
+   * original regionserver which created these files. This because we fear that the datanode is
+   * actually dead, so if we use it it will timeout.
    */
   static class ReorderWALBlocks implements ReorderBlocks {
     @Override
     public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src)
-        throws IOException {
+      throws IOException {
 
       ServerName sn = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, src);
       if (sn == null) {
@@ -436,8 +420,7 @@ public class HFileSystem extends FilterFileSystem {
       // Ok, so it's an WAL
       String hostName = sn.getHostname();
       if (LOG.isTraceEnabled()) {
-        LOG.trace(src +
-            " is an WAL file, so reordering blocks, last hostname will be:" + hostName);
+        LOG.trace(src + " is an WAL file, so reordering blocks, last hostname will be:" + hostName);
       }
 
       // Just check for all blocks
@@ -460,10 +443,9 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Create a new HFileSystem object, similar to FileSystem.get().
-   * This returns a filesystem object that avoids checksum
-   * verification in the filesystem for hfileblock-reads.
-   * For these blocks, checksum verification is done by HBase.
+   * Create a new HFileSystem object, similar to FileSystem.get(). This returns a filesystem object
+   * that avoids checksum verification in the filesystem for hfileblock-reads. For these blocks,
+   * checksum verification is done by HBase.
    */
   static public FileSystem get(Configuration conf) throws IOException {
     return new HFileSystem(conf, true);
@@ -477,17 +459,13 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * The org.apache.hadoop.fs.FilterFileSystem does not yet support
-   * createNonRecursive. This is a hadoop bug and when it is fixed in Hadoop,
-   * this definition will go away.
+   * The org.apache.hadoop.fs.FilterFileSystem does not yet support createNonRecursive. This is a
+   * hadoop bug and when it is fixed in Hadoop, this definition will go away.
    */
   @Override
   @SuppressWarnings("deprecation")
-  public FSDataOutputStream createNonRecursive(Path f,
-      boolean overwrite,
-      int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException {
-    return fs.createNonRecursive(f, overwrite, bufferSize, replication,
-                                 blockSize, progress);
+  public FSDataOutputStream createNonRecursive(Path f, boolean overwrite, int bufferSize,
+    short replication, long blockSize, Progressable progress) throws IOException {
+    return fs.createNonRecursive(f, overwrite, bufferSize, replication, blockSize, progress);
   }
 }

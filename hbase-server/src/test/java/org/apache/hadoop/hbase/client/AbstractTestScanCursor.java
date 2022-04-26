@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -78,12 +77,12 @@ public abstract class AbstractTestScanCursor {
   }
 
   private static void createTestTable(TableName name, byte[][] rows, byte[][] families,
-      byte[][] qualifiers, byte[] cellValue) throws IOException {
+    byte[][] qualifiers, byte[] cellValue) throws IOException {
     TEST_UTIL.createTable(name, families).put(createPuts(rows, families, qualifiers, cellValue));
   }
 
   private static List<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
-      byte[] value) throws IOException {
+    byte[] value) throws IOException {
     List<Put> puts = new ArrayList<>();
     for (int row = 0; row < rows.length; row++) {
       Put put = new Put(rows[row]);
@@ -115,8 +114,8 @@ public abstract class AbstractTestScanCursor {
     public ReturnCode filterCell(final Cell c) throws IOException {
       Threads.sleep(TIMEOUT / 2 + 100);
       return Bytes.equals(CellUtil.cloneRow(c), ROWS[reversed ? 0 : NUM_ROWS - 1])
-          ? ReturnCode.INCLUDE
-          : ReturnCode.SKIP;
+        ? ReturnCode.INCLUDE
+        : ReturnCode.SKIP;
     }
 
     @Override
@@ -131,13 +130,13 @@ public abstract class AbstractTestScanCursor {
 
   protected Scan createScanWithSparseFilter() {
     return new Scan().setMaxResultSize(Long.MAX_VALUE).setCaching(Integer.MAX_VALUE)
-        .setNeedCursorResult(true).setAllowPartialResults(true).setFilter(new SparseFilter(false));
+      .setNeedCursorResult(true).setAllowPartialResults(true).setFilter(new SparseFilter(false));
   }
 
   protected Scan createReversedScanWithSparseFilter() {
     return new Scan().setMaxResultSize(Long.MAX_VALUE).setCaching(Integer.MAX_VALUE)
-        .setReversed(true).setNeedCursorResult(true).setAllowPartialResults(true)
-        .setFilter(new SparseFilter(true));
+      .setReversed(true).setNeedCursorResult(true).setAllowPartialResults(true)
+      .setFilter(new SparseFilter(true));
   }
 
   protected Scan createScanWithSizeLimit() {

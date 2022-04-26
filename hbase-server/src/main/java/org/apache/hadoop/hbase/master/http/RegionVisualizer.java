@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.gson.FieldNamingPolicy;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
@@ -94,13 +95,11 @@ public class RegionVisualizer extends AbstractHBaseTool {
   }
 
   static Gson buildGson() {
-    return new GsonBuilder()
-      .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+    return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
       .enableComplexMapKeySerialization()
       .registerTypeAdapter(byte[].class, new ByteArraySerializer())
       .registerTypeAdapter(Size.class, new SizeAsBytesSerializer())
-      .registerTypeAdapter(RegionDetails.class, new RegionDetailsSerializer())
-      .create();
+      .registerTypeAdapter(RegionDetails.class, new RegionDetailsSerializer()).create();
   }
 
   private ClusterMetrics getClusterMetrics()
@@ -123,28 +122,28 @@ public class RegionVisualizer extends AbstractHBaseTool {
       return Collections.emptyList();
     }
 
-    return clusterMetrics.getLiveServerMetrics().entrySet().stream()
-      .flatMap(serverEntry -> {
-        final ServerName serverName = serverEntry.getKey();
-        final ServerMetrics serverMetrics = serverEntry.getValue();
-        return serverMetrics.getRegionMetrics().values().stream()
-          .map(regionMetrics -> {
-            final TableName tableName = RegionInfo.getTable(regionMetrics.getRegionName());
-            return new RegionDetails(serverName, tableName, regionMetrics);
-          });
-      })
-      .collect(Collectors.toList());
+    return clusterMetrics.getLiveServerMetrics().entrySet().stream().flatMap(serverEntry -> {
+      final ServerName serverName = serverEntry.getKey();
+      final ServerMetrics serverMetrics = serverEntry.getValue();
+      return serverMetrics.getRegionMetrics().values().stream().map(regionMetrics -> {
+        final TableName tableName = RegionInfo.getTable(regionMetrics.getRegionName());
+        return new RegionDetails(serverName, tableName, regionMetrics);
+      });
+    }).collect(Collectors.toList());
   }
 
-  @Override protected void addOptions() {
-
-  }
-
-  @Override protected void processOptions(CommandLine cmd) {
+  @Override
+  protected void addOptions() {
 
   }
 
-  @Override protected int doWork() throws Exception {
+  @Override
+  protected void processOptions(CommandLine cmd) {
+
+  }
+
+  @Override
+  protected int doWork() throws Exception {
     final Configuration conf = HBaseConfiguration.create(getConf());
     final AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get();
     final RegionVisualizer viz = new RegionVisualizer(conn.getAdmin());
@@ -194,11 +193,8 @@ public class RegionVisualizer extends AbstractHBaseTool {
     private final TableName tableName;
     private final RegionMetrics regionMetrics;
 
-    RegionDetails(
-      final ServerName serverName,
-      final TableName tableName,
-      final RegionMetrics regionMetrics
-    ) {
+    RegionDetails(final ServerName serverName, final TableName tableName,
+      final RegionMetrics regionMetrics) {
       this.serverName = serverName;
       this.tableName = tableName;
       this.regionMetrics = regionMetrics;
@@ -219,10 +215,8 @@ public class RegionVisualizer extends AbstractHBaseTool {
     @Override
     public String toString() {
       return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-        .append("serverName", serverName)
-        .append("tableName", tableName)
-        .append("regionMetrics", regionMetrics)
-        .toString();
+        .append("serverName", serverName).append("tableName", tableName)
+        .append("regionMetrics", regionMetrics).toString();
     }
 
     @Override
@@ -237,19 +231,13 @@ public class RegionVisualizer extends AbstractHBaseTool {
 
       RegionDetails that = (RegionDetails) o;
 
-      return new EqualsBuilder()
-        .append(serverName, that.serverName)
-        .append(tableName, that.tableName)
-        .append(regionMetrics, that.regionMetrics)
-        .isEquals();
+      return new EqualsBuilder().append(serverName, that.serverName)
+        .append(tableName, that.tableName).append(regionMetrics, that.regionMetrics).isEquals();
     }
 
     @Override
     public int hashCode() {
-      return new HashCodeBuilder(17, 37)
-        .append(serverName)
-        .append(tableName)
-        .append(regionMetrics)
+      return new HashCodeBuilder(17, 37).append(serverName).append(tableName).append(regionMetrics)
         .toHashCode();
     }
   }

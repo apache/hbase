@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -44,8 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
 
 @InterfaceAudience.Private
-public class DisableTableProcedure
-    extends AbstractStateMachineTableProcedure<DisableTableState> {
+public class DisableTableProcedure extends AbstractStateMachineTableProcedure<DisableTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(DisableTableProcedure.class);
 
   private TableName tableName;
@@ -57,24 +55,24 @@ public class DisableTableProcedure
 
   /**
    * Constructor
-   * @param env MasterProcedureEnv
-   * @param tableName the table to operate on
+   * @param env                 MasterProcedureEnv
+   * @param tableName           the table to operate on
    * @param skipTableStateCheck whether to check table state
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final boolean skipTableStateCheck) throws HBaseIOException {
+    final boolean skipTableStateCheck) throws HBaseIOException {
     this(env, tableName, skipTableStateCheck, null);
   }
 
   /**
    * Constructor
-   * @param env MasterProcedureEnv
-   * @param tableName the table to operate on
+   * @param env                 MasterProcedureEnv
+   * @param tableName           the table to operate on
    * @param skipTableStateCheck whether to check table state
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch)
-      throws HBaseIOException {
+    final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch)
+    throws HBaseIOException {
     super(env, syncLatch);
     this.tableName = tableName;
     preflightChecks(env, true);
@@ -83,7 +81,7 @@ public class DisableTableProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final DisableTableState state)
-      throws InterruptedException {
+    throws InterruptedException {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -109,8 +107,9 @@ public class DisableTableProcedure
           setNextState(DisableTableState.DISABLE_TABLE_ADD_REPLICATION_BARRIER);
           break;
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
-          if (env.getMasterServices().getTableDescriptors().get(tableName)
-              .hasGlobalReplicationScope()) {
+          if (
+            env.getMasterServices().getTableDescriptors().get(tableName).hasGlobalReplicationScope()
+          ) {
             MasterFileSystem fs = env.getMasterFileSystem();
             try (BufferedMutator mutator = env.getMasterServices().getConnection()
               .getBufferedMutator(TableName.META_TABLE_NAME)) {
@@ -148,7 +147,7 @@ public class DisableTableProcedure
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DisableTableState state)
-      throws IOException {
+    throws IOException {
     // nothing to rollback, prepare-disable is just table-state checks.
     // We can fail if the table does not exist or is not disabled.
     switch (state) {
@@ -192,26 +191,24 @@ public class DisableTableProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DisableTableStateData.Builder disableTableMsg =
-        MasterProcedureProtos.DisableTableStateData.newBuilder()
-            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-            .setTableName(ProtobufUtil.toProtoTableName(tableName))
-            .setSkipTableStateCheck(skipTableStateCheck);
+      MasterProcedureProtos.DisableTableStateData.newBuilder()
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
+        .setTableName(ProtobufUtil.toProtoTableName(tableName))
+        .setSkipTableStateCheck(skipTableStateCheck);
 
     serializer.serialize(disableTableMsg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DisableTableStateData disableTableMsg =
-        serializer.deserialize(MasterProcedureProtos.DisableTableStateData.class);
+      serializer.deserialize(MasterProcedureProtos.DisableTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(disableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(disableTableMsg.getTableName());
     skipTableStateCheck = disableTableMsg.getSkipTableStateCheck();
@@ -236,8 +233,8 @@ public class DisableTableProcedure
   }
 
   /**
-   * Action before any real action of disabling table. Set the exception in the procedure instead
-   * of throwing it.  This approach is to deal with backward compatible with 1.0.
+   * Action before any real action of disabling table. Set the exception in the procedure instead of
+   * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
@@ -276,11 +273,11 @@ public class DisableTableProcedure
 
   /**
    * Action before disabling table.
-   * @param env MasterProcedureEnv
+   * @param env   MasterProcedureEnv
    * @param state the procedure state
    */
   protected void preDisable(final MasterProcedureEnv env, final DisableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
   }
 
@@ -289,7 +286,7 @@ public class DisableTableProcedure
    * @param env MasterProcedureEnv
    */
   private static void setTableStateToDisabling(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+    final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
     env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.DISABLING);
@@ -301,7 +298,7 @@ public class DisableTableProcedure
    * @param env MasterProcedureEnv
    */
   protected static void setTableStateToDisabled(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+    final TableName tableName) throws IOException {
     // Flip the table to disabled
     env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.DISABLED);
@@ -310,21 +307,21 @@ public class DisableTableProcedure
 
   /**
    * Action after disabling table.
-   * @param env MasterProcedureEnv
+   * @param env   MasterProcedureEnv
    * @param state the procedure state
    */
   protected void postDisable(final MasterProcedureEnv env, final DisableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
   }
 
   /**
    * Coprocessor Action.
-   * @param env MasterProcedureEnv
+   * @param env   MasterProcedureEnv
    * @param state the procedure state
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final DisableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       switch (state) {

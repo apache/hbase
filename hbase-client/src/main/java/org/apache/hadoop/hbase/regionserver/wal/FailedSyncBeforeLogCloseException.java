@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when we fail close of the write-ahead-log file.
- * Package private.  Only used inside this package.
+ * Thrown when we fail close of the write-ahead-log file. Package private. Only used inside this
+ * package.
  */
 @InterfaceAudience.Public
 public class FailedSyncBeforeLogCloseException extends FailedLogCloseException {
@@ -33,7 +32,7 @@ public class FailedSyncBeforeLogCloseException extends FailedLogCloseException {
   }
 
   /**
-   * @param msg
+   * n
    */
   public FailedSyncBeforeLogCloseException(String msg) {
     super(msg);

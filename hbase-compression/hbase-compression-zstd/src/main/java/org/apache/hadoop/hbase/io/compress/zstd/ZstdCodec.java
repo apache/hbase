@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
@@ -81,7 +82,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
-      throws IOException {
+    throws IOException {
     return new BlockDecompressorStream(in, d, getBufferSize(conf));
   }
 
@@ -92,10 +93,10 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
-      throws IOException {
+    throws IOException {
     int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
-      (int)Zstd.compressBound(bufferSize) - bufferSize); // overhead only
+      (int) Zstd.compressBound(bufferSize) - bufferSize); // overhead only
   }
 
   @Override
@@ -117,8 +118,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   static int getLevel(Configuration conf) {
     return conf.getInt(ZSTD_LEVEL_KEY,
-      conf.getInt(
-        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY,
+      conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_DEFAULT));
   }
 
@@ -143,10 +143,8 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   // Reference: https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md
 
   static boolean isDictionary(byte[] dictionary) {
-    return (dictionary[0] == (byte)0x37 &&
-            dictionary[1] == (byte)0xA4 &&
-            dictionary[2] == (byte)0x30 &&
-            dictionary[3] == (byte)0xEC);
+    return (dictionary[0] == (byte) 0x37 && dictionary[1] == (byte) 0xA4
+      && dictionary[2] == (byte) 0x30 && dictionary[3] == (byte) 0xEC);
   }
 
   static int getDictionaryId(byte[] dictionary) {

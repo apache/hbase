@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHbckChore.class);
+    HBaseClassTestRule.forClass(TestHbckChore.class);
 
   private HbckChore hbckChore;
 
@@ -71,7 +71,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-        hbckChore.getInconsistentRegions();
+      hbckChore.getInconsistentRegions();
 
     // Test for case1: Master thought this region opened, but no regionserver reported it.
     assertTrue(inconsistentRegions.containsKey(metaRegionName));
@@ -103,7 +103,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Test for case1: Master thought this region opened, but no regionserver reported it.
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-        hbckChore.getInconsistentRegions();
+      hbckChore.getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
     ServerName locationInMeta = pair.getFirst();
@@ -115,7 +115,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Server2
     final ServerName tempLocationInMeta = locationInMeta;
     final ServerName anotherServer =
-        serverNames.stream().filter(s -> !s.equals(tempLocationInMeta)).findFirst().get();
+      serverNames.stream().filter(s -> !s.equals(tempLocationInMeta)).findFirst().get();
     am.reportOnlineRegions(anotherServer, Collections.singleton(hri.getRegionName()));
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
@@ -160,7 +160,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-        hbckChore.getInconsistentRegions();
+      hbckChore.getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
     ServerName locationInMeta = pair.getFirst();
@@ -170,8 +170,8 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     // Set table state to disabled, then not in inconsistent regions.
     TableStateManager tableStateManager = master.getTableStateManager();
-    Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED)).
-        thenReturn(true);
+    Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED))
+      .thenReturn(true);
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
@@ -181,7 +181,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   public void testForSplitParent() throws Exception {
     TableName tableName = TableName.valueOf("testForSplitParent");
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(0))
-        .setEndKey(Bytes.toBytes(1)).setSplit(true).setOffline(true).setRegionId(0).build();
+      .setEndKey(Bytes.toBytes(1)).setSplit(true).setOffline(true).setRegionId(0).build();
     String regionName = hri.getEncodedName();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
@@ -192,7 +192,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-        hbckChore.getInconsistentRegions();
+      hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
   }
 

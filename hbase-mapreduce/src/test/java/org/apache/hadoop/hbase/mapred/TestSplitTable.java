@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,27 +33,27 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestSplitTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitTable.class);
+    HBaseClassTestRule.forClass(TestSplitTable.class);
 
   @Rule
   public TestName name = new TestName();
 
   @Test
-  @SuppressWarnings({"deprecation", "SelfComparison"})
+  @SuppressWarnings({ "deprecation", "SelfComparison" })
   public void testSplitTableCompareTo() {
-    TableSplit aTableSplit = new TableSplit(Bytes.toBytes("tableA"),
-        Bytes.toBytes("aaa"), Bytes.toBytes("ddd"), "locationA");
+    TableSplit aTableSplit = new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
+      Bytes.toBytes("ddd"), "locationA");
 
-    TableSplit bTableSplit = new TableSplit(Bytes.toBytes("tableA"),
-        Bytes.toBytes("iii"), Bytes.toBytes("kkk"), "locationA");
+    TableSplit bTableSplit = new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("iii"),
+      Bytes.toBytes("kkk"), "locationA");
 
-    TableSplit cTableSplit = new TableSplit(Bytes.toBytes("tableA"),
-        Bytes.toBytes("lll"), Bytes.toBytes("zzz"), "locationA");
+    TableSplit cTableSplit = new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("lll"),
+      Bytes.toBytes("zzz"), "locationA");
 
     assertEquals(0, aTableSplit.compareTo(aTableSplit));
     assertEquals(0, bTableSplit.compareTo(bTableSplit));
@@ -105,18 +105,15 @@ public class TestSplitTable {
   @Test
   @SuppressWarnings("deprecation")
   public void testToString() {
-    TableSplit split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), Bytes.toBytes("row-start"),
-            Bytes.toBytes("row-end"), "location");
-    String str =
-        "HBase table split(table name: " + name.getMethodName() + ", start row: row-start, "
-            + "end row: row-end, region location: location)";
+    TableSplit split = new TableSplit(TableName.valueOf(name.getMethodName()),
+      Bytes.toBytes("row-start"), Bytes.toBytes("row-end"), "location");
+    String str = "HBase table split(table name: " + name.getMethodName()
+      + ", start row: row-start, " + "end row: row-end, region location: location)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit((TableName) null, null, null, null);
-    str =
-        "HBase table split(table name: null, start row: null, "
-            + "end row: null, region location: null)";
+    str = "HBase table split(table name: null, start row: null, "
+      + "end row: null, region location: null)";
     Assert.assertEquals(str, split.toString());
   }
 }

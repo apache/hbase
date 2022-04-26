@@ -93,8 +93,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * This Constructor accepts an instance of MetricsBalancer,
-   * which will be used instead of creating a new one
+   * This Constructor accepts an instance of MetricsBalancer, which will be used instead of creating
+   * a new one
    */
   protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
     this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
@@ -112,7 +112,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
-
   @Override
   public void setClusterInfoProvider(ClusterInfoProvider provider) {
     this.provider = provider;
@@ -125,10 +124,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
-  protected final boolean idleRegionServerExist(BalancerClusterState c){
+  protected final boolean idleRegionServerExist(BalancerClusterState c) {
     boolean isServerExistsWithMoreRegions = false;
     boolean isServerExistsWithZeroRegions = false;
-    for (int[] serverList: c.regionsPerServer){
+    for (int[] serverList : c.regionsPerServer) {
       if (serverList.length > 1) {
         isServerExistsWithMoreRegions = true;
       }
@@ -140,21 +139,19 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Generates a bulk assignment plan to be used on cluster startup using a
-   * simple round-robin assignment.
+   * Generates a bulk assignment plan to be used on cluster startup using a simple round-robin
+   * assignment.
    * <p/>
-   * Takes a list of all the regions and all the servers in the cluster and
-   * returns a map of each server to the regions that it should be assigned.
+   * Takes a list of all the regions and all the servers in the cluster and returns a map of each
+   * server to the regions that it should be assigned.
    * <p/>
-   * Currently implemented as a round-robin assignment. Same invariant as load
-   * balancing, all servers holding floor(avg) or ceiling(avg).
-   *
-   * TODO: Use block locations from HDFS to place regions with their blocks
-   *
+   * Currently implemented as a round-robin assignment. Same invariant as load balancing, all
+   * servers holding floor(avg) or ceiling(avg). TODO: Use block locations from HDFS to place
+   * regions with their blocks
    * @param regions all regions
    * @param servers all servers
-   * @return map of server to the regions it should take, or emptyMap if no
-   *         assignment is possible (ie. no servers)
+   * @return map of server to the regions it should take, or emptyMap if no assignment is possible
+   *         (ie. no servers)
    */
   @Override
   @NonNull
@@ -184,7 +181,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   private BalancerClusterState createCluster(List<ServerName> servers,
     Collection<RegionInfo> regions) throws HBaseIOException {
-    boolean hasRegionReplica= false;
+    boolean hasRegionReplica = false;
     try {
       if (provider != null) {
         hasRegionReplica = provider.hasRegionReplica(regions);
@@ -210,8 +207,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         clusterState.put(server, Collections.emptyList());
       }
     }
-    return new BalancerClusterState(regions, clusterState, null, this.regionFinder,
-        rackManager);
+    return new BalancerClusterState(regions, clusterState, null, this.regionFinder, rackManager);
   }
 
   private List<ServerName> findIdleServers(List<ServerName> servers) {
@@ -224,7 +220,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   @Override
   public ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
-      throws HBaseIOException {
+    throws HBaseIOException {
     metricsBalancer.incrMiscInvocations();
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
@@ -238,35 +234,32 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (idleServers.size() == 1) {
       return idleServers.get(0);
     }
-    final List<ServerName> finalServers = idleServers.isEmpty() ?
-            servers : idleServers;
+    final List<ServerName> finalServers = idleServers.isEmpty() ? servers : idleServers;
     List<RegionInfo> regions = Lists.newArrayList(regionInfo);
     BalancerClusterState cluster = createCluster(finalServers, regions);
     return randomAssignment(cluster, regionInfo, finalServers);
   }
 
   /**
-   * Generates a bulk assignment startup plan, attempting to reuse the existing
-   * assignment information from META, but adjusting for the specified list of
-   * available/online servers available for assignment.
+   * Generates a bulk assignment startup plan, attempting to reuse the existing assignment
+   * information from META, but adjusting for the specified list of available/online servers
+   * available for assignment.
    * <p>
-   * Takes a map of all regions to their existing assignment from META. Also
-   * takes a list of online servers for regions to be assigned to. Attempts to
-   * retain all assignment, so in some instances initial assignment will not be
-   * completely balanced.
+   * Takes a map of all regions to their existing assignment from META. Also takes a list of online
+   * servers for regions to be assigned to. Attempts to retain all assignment, so in some instances
+   * initial assignment will not be completely balanced.
    * <p>
-   * Any leftover regions without an existing server to be assigned to will be
-   * assigned randomly to available servers.
-   *
+   * Any leftover regions without an existing server to be assigned to will be assigned randomly to
+   * available servers.
    * @param regions regions and existing assignment from meta
    * @param servers available servers
-   * @return map of servers and regions to be assigned to them, or emptyMap if no
-   *           assignment is possible (ie. no servers)
+   * @return map of servers and regions to be assigned to them, or emptyMap if no assignment is
+   *         possible (ie. no servers)
    */
   @Override
   @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-      List<ServerName> servers) throws HBaseIOException {
+    List<ServerName> servers) throws HBaseIOException {
     // Update metrics
     metricsBalancer.incrMiscInvocations();
     int numServers = servers == null ? 0 : servers.size();
@@ -360,15 +353,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     String randomAssignMsg = "";
     if (numRandomAssignments > 0) {
-      randomAssignMsg =
-          numRandomAssignments + " regions were assigned "
-              + "to random hosts, since the old hosts for these regions are no "
-              + "longer present in the cluster. These hosts were:\n  "
-              + Joiner.on("\n  ").join(oldHostsNoLongerPresent);
+      randomAssignMsg = numRandomAssignments + " regions were assigned "
+        + "to random hosts, since the old hosts for these regions are no "
+        + "longer present in the cluster. These hosts were:\n  "
+        + Joiner.on("\n  ").join(oldHostsNoLongerPresent);
     }
 
     LOG.info("Reassigned " + regions.size() + " regions. " + numRetainedAssigments
-        + " retained the pre-restart assignment. " + randomAssignMsg);
+      + " retained the pre-restart assignment. " + randomAssignMsg);
     return Collections.unmodifiableMap(assignments);
   }
 
@@ -432,8 +424,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-  * Updates the balancer status tag reported to JMX
-  */
+   * Updates the balancer status tag reported to JMX
+   */
   @Override
   public void updateBalancerStatus(boolean status) {
     metricsBalancer.balancerStatus(status);
@@ -443,7 +435,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * Used to assign a single region to a random server.
    */
   private ServerName randomAssignment(BalancerClusterState cluster, RegionInfo regionInfo,
-      List<ServerName> servers) {
+    List<ServerName> servers) {
     int numServers = servers.size(); // servers is not null, numServers > 1
     ServerName sn = null;
     final int maxIterations = numServers * 4;
@@ -456,8 +448,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       if (!usedSNs.contains(sn)) {
         usedSNs.add(sn);
       }
-    } while (cluster.wouldLowerAvailability(regionInfo, sn)
-        && iterations++ < maxIterations);
+    } while (cluster.wouldLowerAvailability(regionInfo, sn) && iterations++ < maxIterations);
     if (iterations >= maxIterations) {
       // We have reached the max. Means the servers that we collected is still lowering the
       // availability
@@ -507,7 +498,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionIdx++;
     }
 
-
     List<RegionInfo> lastFewRegions = new ArrayList<>();
     // assign the remaining by going through the list and try to assign to servers one-by-one
     serverIdx = rand.nextInt(numServers);
@@ -542,17 +532,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   // return a modifiable map, as we may add more entries into the returned map.
   private Map<ServerName, List<RegionInfo>>
     getRegionAssignmentsByServer(Collection<RegionInfo> regions) {
-    return provider != null ? new HashMap<>(provider.getSnapShotOfAssignment(regions)) :
-      new HashMap<>();
+    return provider != null
+      ? new HashMap<>(provider.getSnapShotOfAssignment(regions))
+      : new HashMap<>();
   }
 
-  protected final Map<ServerName, List<RegionInfo>> toEnsumbleTableLoad(
-      Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable) {
+  protected final Map<ServerName, List<RegionInfo>>
+    toEnsumbleTableLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable) {
     Map<ServerName, List<RegionInfo>> returnMap = new TreeMap<>();
     for (Map<ServerName, List<RegionInfo>> serverNameListMap : LoadOfAllTable.values()) {
       serverNameListMap.forEach((serverName, regionInfoList) -> {
         List<RegionInfo> regionInfos =
-            returnMap.computeIfAbsent(serverName, k -> new ArrayList<>());
+          returnMap.computeIfAbsent(serverName, k -> new ArrayList<>());
         regionInfos.addAll(regionInfoList);
       });
     }
@@ -567,7 +558,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * multiple times, one table a time, where we will only pass in the regions for a single table
    * each time. If not, we will pass in all the regions at once, and the {@code tableName} will be
    * {@link HConstants#ENSEMBLE_TABLE_NAME}.
-   * @param tableName the table to be balanced
+   * @param tableName      the table to be balanced
    * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
    */

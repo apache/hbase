@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -241,8 +241,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     this.rpcServices = createRpcServices();
     useThisHostnameInstead = getUseThisHostnameInstead(conf);
     InetSocketAddress addr = rpcServices.getSocketAddress();
-    String hostName = StringUtils.isBlank(useThisHostnameInstead) ? addr.getHostName() :
-      this.useThisHostnameInstead;
+    String hostName = StringUtils.isBlank(useThisHostnameInstead)
+      ? addr.getHostName()
+      : this.useThisHostnameInstead;
     serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
     // login the zookeeper client principal (if using security)
     ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
@@ -266,8 +267,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
 
     if (clusterMode()) {
-      if (conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-        DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+      if (
+        conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+      ) {
         csm = new ZkCoordinatedStateManager(this);
       } else {
         csm = null;
@@ -299,9 +301,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     }
 
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
-      String msg = "Failed to start http info server. Address " + addr +
-        " does not belong to this host. Correct configuration parameter: " +
-        "hbase.regionserver.info.bindAddress";
+      String msg = "Failed to start http info server. Address " + addr
+        + " does not belong to this host. Correct configuration parameter: "
+        + "hbase.regionserver.info.bindAddress";
       LOG.error(msg);
       throw new IOException(msg);
     }
@@ -383,8 +385,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       long globalMemStoreSize = pair.getFirst();
       boolean offheap = pair.getSecond() == MemoryType.NON_HEAP;
       // When off heap memstore in use, take full area for chunk pool.
-      float poolSizePercentage = offheap ? 1.0F :
-        conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
+      float poolSizePercentage = offheap
+        ? 1.0F
+        : conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
         MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
@@ -536,8 +539,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   /**
-   * get NamedQueue Provider to add different logs to ringbuffer
-   * @return NamedQueueRecorder
+   * get NamedQueue Provider to add different logs to ringbuffer n
    */
   public NamedQueueRecorder getNamedQueueRecorder() {
     return this.namedQueueRecorder;
@@ -556,7 +558,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public MetaRegionLocationCache getMetaRegionLocationCache() {
     return this.metaRegionLocationCache;
   }

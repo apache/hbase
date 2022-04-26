@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,23 +33,20 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationDisableInactivePeer.class);
+    HBaseClassTestRule.forClass(TestReplicationDisableInactivePeer.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationDisableInactivePeer.class);
+    LoggerFactory.getLogger(TestReplicationDisableInactivePeer.class);
 
   /**
-   * Test disabling an inactive peer. Add a peer which is inactive, trying to
-   * insert, disable the peer, then activate the peer and make sure nothing is
-   * replicated. In Addition, enable the peer and check the updates are
-   * replicated.
-   *
-   * @throws Exception
+   * Test disabling an inactive peer. Add a peer which is inactive, trying to insert, disable the
+   * peer, then activate the peer and make sure nothing is replicated. In Addition, enable the peer
+   * and check the updates are replicated. n
    */
   @Test
   public void testDisableInactivePeer() throws Exception {

@@ -57,7 +57,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementalBackup.class);
+    HBaseClassTestRule.forClass(TestIncrementalBackup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackup.class);
 
@@ -87,7 +87,8 @@ public class TestIncrementalBackup extends TestBackupBase {
     TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(mobName).setMobEnabled(true)
-        .setMobThreshold(5L).build()).build();
+        .setMobThreshold(5L).build())
+      .build();
     TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     try (Connection conn = ConnectionFactory.createConnection(conf1)) {
@@ -104,7 +105,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
       LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
       Assert.assertEquals(HBaseTestingUtil.countRows(t1),
-              NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
+        NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
       LOG.debug("written " + ADD_ROWS + " rows to " + table1);
       // additionally, insert rows to MOB cf
       int NB_ROWS_MOB = 111;
@@ -112,7 +113,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       LOG.debug("written " + NB_ROWS_MOB + " rows to " + table1 + " to Mob enabled CF");
       t1.close();
       Assert.assertEquals(HBaseTestingUtil.countRows(t1),
-              NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
+        NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
       Table t2 = conn.getTable(table2);
       Put p2;
       for (int i = 0; i < 5; i++) {
@@ -174,7 +175,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       LOG.debug("Restoring full " + backupIdFull);
       client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdFull, false,
-                tablesRestoreFull, tablesMapFull, true));
+        tablesRestoreFull, tablesMapFull, true));
 
       // #6.1 - check tables for full restore
       Admin hAdmin = TEST_UTIL.getAdmin();
@@ -194,8 +195,8 @@ public class TestIncrementalBackup extends TestBackupBase {
       // #7 - restore incremental backup for multiple tables, with overwrite
       TableName[] tablesRestoreIncMultiple = new TableName[] { table1, table2 };
       TableName[] tablesMapIncMultiple = new TableName[] { table1_restore, table2_restore };
-      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple2,
-              false, tablesRestoreIncMultiple, tablesMapIncMultiple, true));
+      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple2, false,
+        tablesRestoreIncMultiple, tablesMapIncMultiple, true));
       hTable = conn.getTable(table1_restore);
 
       LOG.debug("After incremental restore: " + hTable.getDescriptor());

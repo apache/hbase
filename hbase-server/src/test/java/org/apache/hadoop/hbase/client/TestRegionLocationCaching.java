@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestRegionLocationCaching {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
+    HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static int SLAVES = 1;
@@ -101,7 +101,7 @@ public class TestRegionLocationCaching {
    * immediately.
    */
   private void checkRegionLocationIsCached(final TableName tableName, final Connection conn)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     for (int count = 0; count < 50; count++) {
       int number = ((AsyncConnectionImpl) conn.toAsyncConnection()).getLocator()
         .getNumberOfCachedRegionLocations(tableName);
@@ -114,7 +114,7 @@ public class TestRegionLocationCaching {
    * Method to check whether the passed row exists in the given table
    */
   private static void checkExistence(final TableName tableName, final byte[] row,
-      final byte[] family, final byte[] qualifier) throws Exception {
+    final byte[] family, final byte[] qualifier) throws Exception {
     // verify that the row exists
     Result r;
     Get get = new Get(row);

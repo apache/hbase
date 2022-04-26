@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,74 +33,65 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
- * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
- * More test functionality can be found within {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
+ * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the
+ * filter. More test functionality can be found within
+ * {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
  */
-@Category({FilterTests.class, SmallTests.class})
-public class TestColumnPaginationFilter
-{
+@Category({ FilterTests.class, SmallTests.class })
+public class TestColumnPaginationFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnPaginationFilter.class);
+    HBaseClassTestRule.forClass(TestColumnPaginationFilter.class);
 
-    private static final byte[] ROW = Bytes.toBytes("row_1_test");
-    private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
-    private static final byte[] VAL_1 = Bytes.toBytes("a");
-    private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");
+  private static final byte[] ROW = Bytes.toBytes("row_1_test");
+  private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
+  private static final byte[] VAL_1 = Bytes.toBytes("a");
+  private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");
 
-    private Filter columnPaginationFilterOffset;
-    private Filter columnPaginationFilter;
+  private Filter columnPaginationFilterOffset;
+  private Filter columnPaginationFilter;
 
-    @Before
-    public void setUp() throws Exception {
-        columnPaginationFilter = getColumnPaginationFilter();
-        columnPaginationFilterOffset = getColumnPaginationFilterOffset();
-    }
+  @Before
+  public void setUp() throws Exception {
+    columnPaginationFilter = getColumnPaginationFilter();
+    columnPaginationFilterOffset = getColumnPaginationFilterOffset();
+  }
 
-    private Filter getColumnPaginationFilter() {
-        return new ColumnPaginationFilter(1, 0);
-    }
+  private Filter getColumnPaginationFilter() {
+    return new ColumnPaginationFilter(1, 0);
+  }
 
-    private Filter getColumnPaginationFilterOffset() {
-        return new ColumnPaginationFilter(1, COLUMN_QUALIFIER);
-    }
+  private Filter getColumnPaginationFilterOffset() {
+    return new ColumnPaginationFilter(1, COLUMN_QUALIFIER);
+  }
 
-    private Filter serializationTest(Filter filter) throws Exception {
-      FilterProtos.Filter filterProto = ProtobufUtil.toFilter(filter);
-      Filter newFilter = ProtobufUtil.toFilter(filterProto);
+  private Filter serializationTest(Filter filter) throws Exception {
+    FilterProtos.Filter filterProto = ProtobufUtil.toFilter(filter);
+    Filter newFilter = ProtobufUtil.toFilter(filterProto);
 
-      return newFilter;
-    }
+    return newFilter;
+  }
 
+  /**
+   * The more specific functionality tests are contained within the TestFilters class. This class is
+   * mainly for testing serialization nn
+   */
+  private void basicFilterTests(ColumnPaginationFilter filter) throws Exception {
+    KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
+    assertTrue("basicFilter1", filter.filterCell(c) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL);
+  }
 
-    /**
-     * The more specific functionality tests are contained within the TestFilters class.  This class is mainly for testing
-     * serialization
-     *
-     * @param filter
-     * @throws Exception
-     */
-    private void basicFilterTests(ColumnPaginationFilter filter) throws Exception
-    {
-      KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
-      assertTrue("basicFilter1", filter.filterCell(c) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL);
-    }
+  /**
+   * Tests serialization n
+   */
+  @Test
+  public void testSerialization() throws Exception {
+    Filter newFilter = serializationTest(columnPaginationFilter);
+    basicFilterTests((ColumnPaginationFilter) newFilter);
 
-    /**
-     * Tests serialization
-     * @throws Exception
-     */
-    @Test
-    public void testSerialization() throws Exception {
-      Filter newFilter = serializationTest(columnPaginationFilter);
-      basicFilterTests((ColumnPaginationFilter)newFilter);
-
-      Filter newFilterOffset = serializationTest(columnPaginationFilterOffset);
-      basicFilterTests((ColumnPaginationFilter)newFilterOffset);
-    }
-
-
+    Filter newFilterOffset = serializationTest(columnPaginationFilterOffset);
+    basicFilterTests((ColumnPaginationFilter) newFilterOffset);
+  }
 
 }
-

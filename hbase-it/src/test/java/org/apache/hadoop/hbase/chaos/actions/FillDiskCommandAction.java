@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * Fill the disk on a random regionserver.
  */
 public class FillDiskCommandAction extends SudoCommandAction {
@@ -35,14 +33,14 @@ public class FillDiskCommandAction extends SudoCommandAction {
   private final String path;
 
   /**
-   * Fill the disk on a random regionserver.
-   * Please note that the file will be created regardless of the set duration or timeout.
-   * So please use timeout and duration big enough to avoid complication caused by retries.
-   *
-   * @param size size of the generated file in MB or fill the disk if set to 0
+   * Fill the disk on a random regionserver. Please note that the file will be created regardless of
+   * the set duration or timeout. So please use timeout and duration big enough to avoid
+   * complication caused by retries.
+   * @param size     size of the generated file in MB or fill the disk if set to 0
    * @param duration the time this issue persists in milliseconds
-   * @param path the path to the generated file
-   * @param timeout the timeout for executing required commands on the region server in milliseconds
+   * @param path     the path to the generated file
+   * @param timeout  the timeout for executing required commands on the region server in
+   *                 milliseconds
    */
   public FillDiskCommandAction(long size, long duration, String path, long timeout) {
     super(timeout);
@@ -51,7 +49,8 @@ public class FillDiskCommandAction extends SudoCommandAction {
     this.path = path;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -72,15 +71,15 @@ public class FillDiskCommandAction extends SudoCommandAction {
     }
   }
 
-  private String getFillCommand(){
-    if (size == 0){
+  private String getFillCommand() {
+    if (size == 0) {
       return String.format("dd if=/dev/urandom of=%s/garbage bs=1M iflag=fullblock", path);
     }
-    return String.format("dd if=/dev/urandom of=%s/garbage bs=1M count=%s iflag=fullblock",
-        path, size);
+    return String.format("dd if=/dev/urandom of=%s/garbage bs=1M count=%s iflag=fullblock", path,
+      size);
   }
 
-  private String getClearCommand(){
+  private String getClearCommand() {
     return String.format("rm -f %s/garbage", path);
   }
 

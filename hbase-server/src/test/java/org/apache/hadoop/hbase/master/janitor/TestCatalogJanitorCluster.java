@@ -184,8 +184,8 @@ public class TestCatalogJanitorCluster {
     // add a new region [a, cc)
     RegionInfo newRiT4 = RegionInfoBuilder.newBuilder(T4).setStartKey("a".getBytes())
       .setEndKey("cc".getBytes()).build();
-    Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4,
-      EnvironmentEdgeManager.currentTime());
+    Put putForT4 =
+      MetaTableAccessor.makePutFromRegionInfo(newRiT4, EnvironmentEdgeManager.currentTime());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT4));
 
     janitor.scan();
@@ -207,8 +207,8 @@ public class TestCatalogJanitorCluster {
     // add a new region [a, g)
     RegionInfo newRiT5 = RegionInfoBuilder.newBuilder(T5).setStartKey("a".getBytes())
       .setEndKey("g".getBytes()).build();
-    Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5,
-      EnvironmentEdgeManager.currentTime());
+    Put putForT5 =
+      MetaTableAccessor.makePutFromRegionInfo(newRiT5, EnvironmentEdgeManager.currentTime());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT5));
 
     janitor.scan();
@@ -311,8 +311,10 @@ public class TestCatalogJanitorCluster {
     assertFalse(lastReport.isEmpty());
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = new LinkedList<>();
     for (Pair<RegionInfo, RegionInfo> hole : lastReport.getHoles()) {
-      if (hole.getFirst().getTable().equals(tableName) ||
-        hole.getSecond().getTable().equals(tableName)) {
+      if (
+        hole.getFirst().getTable().equals(tableName)
+          || hole.getSecond().getTable().equals(tableName)
+      ) {
         holes.add(hole);
       }
     }

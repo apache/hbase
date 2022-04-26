@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.client.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.StringValue;
 
 public class ShellTestProcedure extends Procedure<Object> implements TableProcedureInterface {
@@ -57,8 +57,7 @@ public class ShellTestProcedure extends Procedure<Object> implements TableProced
 
   @Override
   protected Procedure<Object>[] execute(Object env)
-      throws ProcedureYieldException, ProcedureSuspendedException,
-      InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     return null;
   }
 
@@ -72,15 +71,13 @@ public class ShellTestProcedure extends Procedure<Object> implements TableProced
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     StringValue message = StringValue.newBuilder().setValue(tableNameString).build();
     serializer.serialize(message);
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     StringValue message = serializer.deserialize(StringValue.class);
     tableNameString = message.getValue();
   }

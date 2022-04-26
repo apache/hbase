@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.ExecutorService;
@@ -43,8 +41,7 @@ public class BufferedMutatorParams implements Cloneable {
   private BufferedMutator.ExceptionListener listener = new BufferedMutator.ExceptionListener() {
     @Override
     public void onException(RetriesExhaustedWithDetailsException exception,
-        BufferedMutator bufferedMutator)
-        throws RetriesExhaustedWithDetailsException {
+      BufferedMutator bufferedMutator) throws RetriesExhaustedWithDetailsException {
       throw exception;
     }
   };
@@ -145,8 +142,8 @@ public class BufferedMutatorParams implements Cloneable {
   }
 
   /**
-   *  @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
-   *              BufferedMutator will use Connection's ExecutorService.
+   * @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
+   *             BufferedMutator will use Connection's ExecutorService.
    */
   @Deprecated
   public ExecutorService getPool() {
@@ -154,8 +151,8 @@ public class BufferedMutatorParams implements Cloneable {
   }
 
   /**
-   * Override the default executor pool defined by the {@code hbase.htable.threads.*}
-   * configuration values.
+   * Override the default executor pool defined by the {@code hbase.htable.threads.*} configuration
+   * values.
    * @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
    *             BufferedMutator will use Connection's ExecutorService.
    */
@@ -200,18 +197,18 @@ public class BufferedMutatorParams implements Cloneable {
     return this;
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
-    justification="The clone below is complete")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "CN_IDIOM_NO_SUPER_CALL",
+      justification = "The clone below is complete")
   @Override
   public BufferedMutatorParams clone() {
     BufferedMutatorParams clone = new BufferedMutatorParams(this.tableName);
-    clone.writeBufferSize                     = this.writeBufferSize;
-    clone.writeBufferPeriodicFlushTimeoutMs   = this.writeBufferPeriodicFlushTimeoutMs;
+    clone.writeBufferSize = this.writeBufferSize;
+    clone.writeBufferPeriodicFlushTimeoutMs = this.writeBufferPeriodicFlushTimeoutMs;
     clone.writeBufferPeriodicFlushTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs;
-    clone.maxKeyValueSize                     = this.maxKeyValueSize;
-    clone.pool                                = this.pool;
-    clone.listener                            = this.listener;
-    clone.implementationClassName             = this.implementationClassName;
+    clone.maxKeyValueSize = this.maxKeyValueSize;
+    clone.pool = this.pool;
+    clone.listener = this.listener;
+    clone.implementationClassName = this.implementationClassName;
     return clone;
   }
 }

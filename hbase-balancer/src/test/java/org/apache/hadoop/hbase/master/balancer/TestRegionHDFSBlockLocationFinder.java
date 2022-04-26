@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -220,8 +220,8 @@ public class TestRegionHDFSBlockLocationFinder {
       cache.put(region, hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
-      0.123f));
+    finder
+      .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
 
     // everything should be cached, because metrics were null before
     for (RegionInfo region : REGIONS) {
@@ -229,8 +229,8 @@ public class TestRegionHDFSBlockLocationFinder {
       assertSame(cache.get(region), hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
-      0.345f));
+    finder
+      .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
 
     // cache refresh happens in a background thread, so we need to wait for the value to
     // update before running assertions.

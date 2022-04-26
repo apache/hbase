@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
@@ -43,12 +42,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Ignore // See HBASE-19742 for issue on reenabling.
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMemstoreLABWithoutPool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMemstoreLABWithoutPool.class);
+    HBaseClassTestRule.forClass(TestMemstoreLABWithoutPool.class);
 
   private final static Configuration conf = new Configuration();
 
@@ -58,12 +57,12 @@ public class TestMemstoreLABWithoutPool {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
-        .getMax() * 0.8);
+    long globalMemStoreLimit =
+      (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() * 0.8);
     // disable pool
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT + Bytes.SIZEOF_LONG,
-      false, globalMemStoreLimit, 0.0f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-      null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT + Bytes.SIZEOF_LONG, false,
+      globalMemStoreLimit, 0.0f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   /**
@@ -95,7 +94,7 @@ public class TestMemstoreLABWithoutPool {
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          newKv.getOffset() + size <= newKv.getBuffer().capacity());
+        newKv.getOffset() + size <= newKv.getBuffer().capacity());
       expectedOff += size;
     }
   }
@@ -115,8 +114,8 @@ public class TestMemstoreLABWithoutPool {
     // launch multiple threads to trigger frequent chunk retirement
     List<Thread> threads = new ArrayList<>();
     // create smaller sized kvs
-    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
-        new byte[0]);
+    final KeyValue kv =
+      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), new byte[0]);
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         threads.add(getChunkQueueTestThread(mslab[i], "testLABChunkQueue-" + j, kv));
@@ -150,11 +149,11 @@ public class TestMemstoreLABWithoutPool {
     }
     // all of the chunkIds would have been returned back
     assertTrue("All the chunks must have been cleared",
-        ChunkCreator.instance.numberOfMappedChunks() == 0);
+      ChunkCreator.instance.numberOfMappedChunks() == 0);
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
-      Cell cellToCopyInto) {
+    Cell cellToCopyInto) {
     Thread thread = new Thread() {
       volatile boolean stopped = false;
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
 
   protected static StochasticLoadBalancer loadBalancer;
 
-  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer = new
-    DummyMetricsStochasticBalancer();
+  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer =
+    new DummyMetricsStochasticBalancer();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -59,8 +59,7 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     boolean assertFullyBalancedForReplicas) {
     Map<ServerName, List<RegionInfo>> serverMap =
       createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
-    testWithCluster(serverMap, null, assertFullyBalanced,
-      assertFullyBalancedForReplicas);
+    testWithCluster(serverMap, null, assertFullyBalanced, assertFullyBalancedForReplicas);
   }
 
   protected void testWithClusterWithIteration(int numNodes, int numRegions, int numRegionsPerServer,
@@ -96,8 +95,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
         assertClusterAsBalanced(balancedCluster);
         LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
         List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
-        assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
-          "produce none.", secondPlans);
+        assertNull("Given a requirement to be fully balanced, second attempt at plans should "
+          + "produce none.", secondPlans);
       }
 
       if (assertFullyBalancedForReplicas) {
@@ -135,8 +134,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     LOG.info("Mock Final balance: " + printMock(balancedCluster));
 
     if (assertFullyBalanced) {
-      assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
-        "produce none.", plans);
+      assertNull("Given a requirement to be fully balanced, second attempt at plans should "
+        + "produce none.", plans);
     }
     if (assertFullyBalancedForReplicas) {
       assertRegionReplicaPlacement(serverMap, rackManager);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -246,22 +246,22 @@ public class TestBulkLoadHFiles {
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges)
-      throws Exception {
+    throws Exception {
     runTest(testName, bloomType, null, hfileRanges);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges, boolean useMap)
-      throws Exception {
+    throws Exception {
     runTest(testName, bloomType, null, hfileRanges, useMap);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges) throws Exception {
+    byte[][][] hfileRanges) throws Exception {
     runTest(testName, bloomType, tableSplitKeys, hfileRanges, false);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap) throws Exception {
+    byte[][][] hfileRanges, boolean useMap) throws Exception {
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
     final boolean preCreateTable = tableSplitKeys != null;
 
@@ -286,24 +286,24 @@ public class TestBulkLoadHFiles {
   }
 
   private void runTest(String testName, TableName tableName, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
-      int depth) throws Exception {
+    boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
+    int depth) throws Exception {
     TableDescriptor htd = buildHTD(tableName, bloomType);
     runTest(testName, htd, preCreateTable, tableSplitKeys, hfileRanges, useMap, false, depth);
   }
 
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor) throws Exception {
+    byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
+    byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
+    int factor) throws Exception {
     return loadHFiles(testName, htd, util, fam, qual, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, deleteFile, copyFiles, initRowCount, factor, 2);
   }
 
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor, int depth) throws Exception {
+    byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
+    byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
+    int factor, int depth) throws Exception {
     Path baseDirectory = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
     baseDirectory = baseDirectory.makeQualified(fs.getUri(), fs.getWorkingDirectory());
@@ -473,8 +473,8 @@ public class TestBulkLoadHFiles {
       // further check whether the exception message is correct
       String errMsg = e.getMessage();
       assertTrue(
-        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY +
-          "], current message: [" + errMsg + "]",
+        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY
+          + "], current message: [" + errMsg + "]",
         errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
     }
   }
@@ -587,7 +587,7 @@ public class TestBulkLoadHFiles {
   }
 
   private void testSplitStoreFileWithDifferentEncoding(DataBlockEncoding bulkloadEncoding,
-      DataBlockEncoding cfEncoding) throws IOException {
+    DataBlockEncoding cfEncoding) throws IOException {
     Path dir = util.getDataTestDirOnTestFS("testSplitHFileWithDifferentEncoding");
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
@@ -765,8 +765,8 @@ public class TestBulkLoadHFiles {
     BulkLoadHFiles loader = new BulkLoadHFilesTool(util.getConfiguration()) {
       @Override
       protected CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
-          final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
-          final byte[] first, Collection<LoadQueueItem> lqis) {
+        final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
+        final byte[] first, Collection<LoadQueueItem> lqis) {
         attmptedCalls.incrementAndGet();
         return super.tryAtomicRegionLoad(conn, tableName, copyFiles, first, lqis);
       }

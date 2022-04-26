@@ -7,23 +7,20 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.util.Strings;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
@@ -47,12 +44,12 @@ public class ReplicationLoad {
 
   /**
    * buildReplicationLoad
-   * @param sources List of ReplicationSource instances for which metrics should be reported
+   * @param sources     List of ReplicationSource instances for which metrics should be reported
    * @param sinkMetrics metrics of the replication sink
    */
 
   public void buildReplicationLoad(final List<ReplicationSourceInterface> sources,
-      final MetricsSink sinkMetrics) {
+    final MetricsSink sinkMetrics) {
 
     if (sinkMetrics != null) {
       // build the SinkLoad
@@ -81,7 +78,7 @@ public class ReplicationLoad {
       long timeStampOfNextToReplicate = sm.getTimeStampNextToReplicate();
       long replicationLag = sm.getReplicationDelay();
       ClusterStatusProtos.ReplicationLoadSource.Builder rLoadSourceBuild =
-          ClusterStatusProtos.ReplicationLoadSource.newBuilder();
+        ClusterStatusProtos.ReplicationLoadSource.newBuilder();
       rLoadSourceBuild.setPeerID(peerId);
       rLoadSourceBuild.setAgeOfLastShippedOp(ageOfLastShippedOp);
       rLoadSourceBuild.setSizeOfLogQueue(sizeOfLogQueue);
@@ -90,12 +87,12 @@ public class ReplicationLoad {
       rLoadSourceBuild.setTimeStampOfNextToReplicate(timeStampOfNextToReplicate);
       rLoadSourceBuild.setEditsRead(editsRead);
       rLoadSourceBuild.setOPsShipped(oPsShipped);
-      if (source instanceof ReplicationSource){
-        ReplicationSource replSource = (ReplicationSource)source;
+      if (source instanceof ReplicationSource) {
+        ReplicationSource replSource = (ReplicationSource) source;
         rLoadSourceBuild.setRecovered(replSource.getReplicationQueueInfo().isQueueRecovered());
         rLoadSourceBuild.setQueueId(replSource.getReplicationQueueInfo().getQueueId());
         rLoadSourceBuild.setRunning(replSource.isWorkerRunning());
-        rLoadSourceBuild.setEditsSinceRestart(timeStampOfNextToReplicate>0);
+        rLoadSourceBuild.setEditsSinceRestart(timeStampOfNextToReplicate > 0);
       }
 
       this.replicationLoadSourceEntries.add(rLoadSourceBuild.build());
@@ -109,15 +106,13 @@ public class ReplicationLoad {
   public String sourceToString() {
     StringBuilder sb = new StringBuilder();
 
-    for (ClusterStatusProtos.ReplicationLoadSource rls :
-        this.replicationLoadSourceEntries) {
+    for (ClusterStatusProtos.ReplicationLoadSource rls : this.replicationLoadSourceEntries) {
 
       sb = Strings.appendKeyValue(sb, "\n           PeerID", rls.getPeerID());
       sb = Strings.appendKeyValue(sb, "AgeOfLastShippedOp", rls.getAgeOfLastShippedOp());
       sb = Strings.appendKeyValue(sb, "SizeOfLogQueue", rls.getSizeOfLogQueue());
-      sb =
-          Strings.appendKeyValue(sb, "TimestampsOfLastShippedOp",
-              (new Date(rls.getTimeStampOfLastShippedOp()).toString()));
+      sb = Strings.appendKeyValue(sb, "TimestampsOfLastShippedOp",
+        (new Date(rls.getTimeStampOfLastShippedOp()).toString()));
       sb = Strings.appendKeyValue(sb, "Replication Lag", rls.getReplicationLag());
     }
 
@@ -132,12 +127,10 @@ public class ReplicationLoad {
     if (this.replicationLoadSink == null) return null;
 
     StringBuilder sb = new StringBuilder();
-    sb =
-        Strings.appendKeyValue(sb, "AgeOfLastAppliedOp",
-          this.replicationLoadSink.getAgeOfLastAppliedOp());
-    sb =
-        Strings.appendKeyValue(sb, "TimestampsOfLastAppliedOp",
-          (new Date(this.replicationLoadSink.getTimeStampsOfLastAppliedOp()).toString()));
+    sb = Strings.appendKeyValue(sb, "AgeOfLastAppliedOp",
+      this.replicationLoadSink.getAgeOfLastAppliedOp());
+    sb = Strings.appendKeyValue(sb, "TimestampsOfLastAppliedOp",
+      (new Date(this.replicationLoadSink.getTimeStampsOfLastAppliedOp()).toString()));
 
     return sb.toString();
   }

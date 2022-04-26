@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,13 +64,13 @@ public class TestSchedulerQueueDeadLock {
   }
 
   public static class TableSharedProcedure extends NoopProcedure<TestEnv>
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
 
     private final Semaphore latch = new Semaphore(0);
 
     @Override
     protected Procedure<TestEnv>[] execute(TestEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       latch.acquire();
       return null;
     }
@@ -105,13 +105,13 @@ public class TestSchedulerQueueDeadLock {
   }
 
   public static class TableExclusiveProcedure extends NoopProcedure<TestEnv>
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
 
     private final Semaphore latch = new Semaphore(0);
 
     @Override
     protected Procedure<TestEnv>[] execute(TestEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       latch.acquire();
       return null;
     }
@@ -215,13 +215,13 @@ public class TestSchedulerQueueDeadLock {
   }
 
   public static final class TableShardParentProcedure extends NoopProcedure<TestEnv>
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
 
     private boolean scheduled;
 
     @Override
     protected Procedure<TestEnv>[] execute(TestEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       if (!scheduled) {
         scheduled = true;
         return new Procedure[] { new TableSharedProcedure() };

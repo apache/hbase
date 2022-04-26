@@ -97,8 +97,8 @@ public class FavoredNodesManager {
   }
 
   /**
-   * Favored nodes are not applicable for system tables. We will use this to check before
-   * we apply any favored nodes logic on a region.
+   * Favored nodes are not applicable for system tables. We will use this to check before we apply
+   * any favored nodes logic on a region.
    */
   public static boolean isFavoredNodeApplicable(RegionInfo regionInfo) {
     return !regionInfo.getTable().isSystemTable();
@@ -113,9 +113,9 @@ public class FavoredNodesManager {
   }
 
   /**
-   * This should only be used when sending FN information to the region servers. Instead of
-   * sending the region server port, we use the datanode port. This helps in centralizing the DN
-   * port logic in Master. The RS uses the port from the favored node list as hints.
+   * This should only be used when sending FN information to the region servers. Instead of sending
+   * the region server port, we use the datanode port. This helps in centralizing the DN port logic
+   * in Master. The RS uses the port from the favored node list as hints.
    */
   public synchronized List<ServerName> getFavoredNodesWithDNPort(RegionInfo regionInfo) {
     if (getFavoredNodes(regionInfo) == null) {
@@ -124,14 +124,14 @@ public class FavoredNodesManager {
 
     List<ServerName> fnWithDNPort = Lists.newArrayList();
     for (ServerName sn : getFavoredNodes(regionInfo)) {
-      fnWithDNPort.add(ServerName.valueOf(sn.getHostname(), datanodeDataTransferPort,
-        NON_STARTCODE));
+      fnWithDNPort
+        .add(ServerName.valueOf(sn.getHostname(), datanodeDataTransferPort, NON_STARTCODE));
     }
     return fnWithDNPort;
   }
 
   public synchronized void updateFavoredNodes(Map<RegionInfo, List<ServerName>> regionFNMap)
-      throws IOException {
+    throws IOException {
     Map<RegionInfo, List<ServerName>> regionToFavoredNodes = new HashMap<>();
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionFNMap.entrySet()) {
       RegionInfo regionInfo = entry.getKey();
@@ -147,13 +147,13 @@ public class FavoredNodesManager {
 
       if (!isFavoredNodeApplicable(regionInfo)) {
         throw new IOException("Can't update FN for a un-applicable region: "
-            + regionInfo.getRegionNameAsString() + " with " + servers);
+          + regionInfo.getRegionNameAsString() + " with " + servers);
       }
 
       if (servers.size() != FAVORED_NODES_NUM) {
-        throw new IOException("At least " + FAVORED_NODES_NUM
-            + " favored nodes should be present for region : " + regionInfo.getEncodedName()
-            + " current FN servers:" + servers);
+        throw new IOException(
+          "At least " + FAVORED_NODES_NUM + " favored nodes should be present for region : "
+            + regionInfo.getEncodedName() + " current FN servers:" + servers);
       }
 
       List<ServerName> serversWithNoStartCodes = Lists.newArrayList();
@@ -161,8 +161,8 @@ public class FavoredNodesManager {
         if (sn.getStartcode() == NON_STARTCODE) {
           serversWithNoStartCodes.add(sn);
         } else {
-          serversWithNoStartCodes.add(ServerName.valueOf(sn.getHostname(), sn.getPort(),
-              NON_STARTCODE));
+          serversWithNoStartCodes
+            .add(ServerName.valueOf(sn.getHostname(), sn.getPort(), NON_STARTCODE));
         }
       }
       regionToFavoredNodes.put(regionInfo, serversWithNoStartCodes);
@@ -170,7 +170,7 @@ public class FavoredNodesManager {
 
     // Lets do a bulk update to meta since that reduces the RPC's
     FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-        provider.getConnection());
+      provider.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
@@ -191,8 +191,7 @@ public class FavoredNodesManager {
     regionList.add(hri);
     primaryRSToRegionMap.put(serverToUse, regionList);
 
-    serverToUse = ServerName
-        .valueOf(servers.get(SECONDARY.ordinal()).getAddress(), NON_STARTCODE);
+    serverToUse = ServerName.valueOf(servers.get(SECONDARY.ordinal()).getAddress(), NON_STARTCODE);
     regionList = secondaryRSToRegionMap.get(serverToUse);
     if (regionList == null) {
       regionList = new ArrayList<>();
@@ -200,8 +199,7 @@ public class FavoredNodesManager {
     regionList.add(hri);
     secondaryRSToRegionMap.put(serverToUse, regionList);
 
-    serverToUse = ServerName.valueOf(servers.get(TERTIARY.ordinal()).getAddress(),
-      NON_STARTCODE);
+    serverToUse = ServerName.valueOf(servers.get(TERTIARY.ordinal()).getAddress(), NON_STARTCODE);
     regionList = teritiaryRSToRegionMap.get(serverToUse);
     if (regionList == null) {
       regionList = new ArrayList<>();

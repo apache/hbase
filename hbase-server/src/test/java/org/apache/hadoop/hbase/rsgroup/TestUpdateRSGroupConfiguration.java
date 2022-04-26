@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -36,7 +35,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
   protected static final Logger LOG = LoggerFactory.getLogger(TestUpdateRSGroupConfiguration.class);
 
@@ -98,22 +97,20 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
     ADMIN.updateConfiguration(TEST_GROUP);
 
     // Check the configuration of the RegionServer in test rsgroup, should be update
-    Configuration regionServerConfiguration =
-      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .filter(regionServer ->
-          (regionServer.getServerName().getAddress().equals(testRSGroup.getServers().first())))
-        .collect(Collectors.toList()).get(0).getConfiguration();
+    Configuration regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster()
+      .getLiveRegionServerThreads().stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
+      .filter(regionServer -> (regionServer.getServerName().getAddress()
+        .equals(testRSGroup.getServers().first())))
+      .collect(Collectors.toList()).get(0).getConfiguration();
     int custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(1000, custom);
 
     // Check the configuration of the RegionServer in test2 rsgroup, should not be update
-    regionServerConfiguration =
-      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .filter(regionServer ->
-          (regionServer.getServerName().getAddress().equals(test2RSGroup.getServers().first())))
-        .collect(Collectors.toList()).get(0).getConfiguration();
+    regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+      .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
+      .filter(regionServer -> (regionServer.getServerName().getAddress()
+        .equals(test2RSGroup.getServers().first())))
+      .collect(Collectors.toList()).get(0).getConfiguration();
     custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(0, custom);
 

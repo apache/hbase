@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -53,15 +52,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestSplitOrMergeStatus {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
+    HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
   public TestName name = new TestName();
@@ -106,8 +105,8 @@ public class TestSplitOrMergeStatus {
     admin.close();
   }
 
-
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testMergeSwitch() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
@@ -122,7 +121,7 @@ public class TestSplitOrMergeStatus {
       Threads.sleep(1);
     }
     assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
-        originalCount != postSplitCount);
+      originalCount != postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
     boolean result = admin.mergeSwitch(false, false);
@@ -147,7 +146,7 @@ public class TestSplitOrMergeStatus {
       regions.get(1).getEncodedNameAsBytes(), true);
     f.get(10, TimeUnit.SECONDS);
     count = admin.getRegions(tableName).size();
-    assertTrue((postSplitCount / 2 /*Merge*/) == count);
+    assertTrue((postSplitCount / 2 /* Merge */) == count);
     admin.close();
   }
 
@@ -169,10 +168,10 @@ public class TestSplitOrMergeStatus {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2).build());
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2).build());
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     ServerName serverName =
-        RegionReplicaTestHelper.getRSCarryingReplica(TEST_UTIL, tableName, 1).get();
+      RegionReplicaTestHelper.getRSCarryingReplica(TEST_UTIL, tableName, 1).get();
     List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tableName);
     insertData(tableName, startRowNum, rowCount);
     int splitRowNum = startRowNum + rowCount / 2;
@@ -184,18 +183,18 @@ public class TestSplitOrMergeStatus {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     // Disable the table
     long procId1 = procExec
-        .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
+      .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     // Delete Table
     long procId2 =
-        procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
+      procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     AssignmentTestingUtil.killRs(TEST_UTIL, serverName);
     Threads.sleepWithoutInterrupt(5000);
     boolean hasRegionsInTransition = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getAssignmentManager().getRegionStates().hasRegionsInTransition();
+      .getAssignmentManager().getRegionStates().hasRegionsInTransition();
     assertEquals(false, hasRegionsInTransition);
   }
 
@@ -204,7 +203,7 @@ public class TestSplitOrMergeStatus {
   }
 
   private void insertData(final TableName tableName, int startRow, int rowCount)
-      throws IOException {
+    throws IOException {
     Table t = TEST_UTIL.getConnection().getTable(tableName);
     Put p;
     for (int i = 0; i < rowCount; i++) {

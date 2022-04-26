@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,12 +31,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestCombinedBlockCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCombinedBlockCache.class);
+    HBaseClassTestRule.forClass(TestCombinedBlockCache.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -44,8 +44,7 @@ public class TestCombinedBlockCache {
   public void testCombinedCacheStats() {
     CacheStats lruCacheStats = new CacheStats("lruCacheStats", 2);
     CacheStats bucketCacheStats = new CacheStats("bucketCacheStats", 2);
-    CombinedCacheStats stats =
-        new CombinedCacheStats(lruCacheStats, bucketCacheStats);
+    CombinedCacheStats stats = new CombinedCacheStats(lruCacheStats, bucketCacheStats);
 
     double delta = 0.01;
 
@@ -54,8 +53,8 @@ public class TestCombinedBlockCache {
     // bucket cache: 2 hit non-caching,1 miss non-caching/primary,1 fail insert
     lruCacheStats.hit(true, true, BlockType.DATA);
     lruCacheStats.miss(true, false, BlockType.DATA);
-    bucketCacheStats.hit(false,true, BlockType.DATA);
-    bucketCacheStats.hit(false,true, BlockType.DATA);
+    bucketCacheStats.hit(false, true, BlockType.DATA);
+    bucketCacheStats.hit(false, true, BlockType.DATA);
     bucketCacheStats.miss(false, true, BlockType.DATA);
 
     assertEquals(5, stats.getRequestCount());
@@ -71,7 +70,6 @@ public class TestCombinedBlockCache {
     assertEquals(0.4, stats.getMissRatio(), delta);
     assertEquals(0.5, stats.getMissCachingRatio(), delta);
 
-
     // lru cache: 2 evicted, 1 evict
     // bucket cache: 1 evict
     lruCacheStats.evicted(1000, true);
@@ -83,7 +81,7 @@ public class TestCombinedBlockCache {
     assertEquals(1, stats.getPrimaryEvictedCount());
     assertEquals(1.0, stats.evictedPerEviction(), delta);
 
-    // lru cache:  1 fail insert
+    // lru cache: 1 fail insert
     lruCacheStats.failInsert();
     assertEquals(1, stats.getFailedInserts());
 

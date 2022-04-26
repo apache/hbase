@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,12 @@
 package org.apache.hadoop.hbase.util;
 
 import java.util.Arrays;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This class encapsulates a byte array and overrides hashCode and equals so
- * that it's identity is based on the data rather than the array instance.
+ * This class encapsulates a byte array and overrides hashCode and equals so that it's identity is
+ * based on the data rather than the array instance.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
@@ -50,10 +48,8 @@ public class HashedBytes {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
-      return true;
-    if (obj == null || getClass() != obj.getClass())
-      return false;
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
     HashedBytes other = (HashedBytes) obj;
     return (hashCode == other.hashCode) && Arrays.equals(bytes, other.bytes);
   }

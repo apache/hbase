@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyProcedureStateData;
@@ -43,11 +44,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- *  A remote procedure which is used to send verify snapshot request to region server.
+ * A remote procedure which is used to send verify snapshot request to region server.
  */
 @InterfaceAudience.Private
-public class SnapshotVerifyProcedure
-    extends ServerRemoteProcedure implements TableProcedureInterface {
+public class SnapshotVerifyProcedure extends ServerRemoteProcedure
+  implements TableProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotVerifyProcedure.class);
 
   private SnapshotDescription snapshot;
@@ -55,7 +56,8 @@ public class SnapshotVerifyProcedure
 
   private RetryCounter retryCounter;
 
-  public SnapshotVerifyProcedure() {}
+  public SnapshotVerifyProcedure() {
+  }
 
   public SnapshotVerifyProcedure(SnapshotDescription snapshot, RegionInfo region) {
     this.snapshot = snapshot;
@@ -107,8 +109,8 @@ public class SnapshotVerifyProcedure
       setFailure("verify-snapshot", e);
     } finally {
       // release the worker
-      env.getMasterServices().getSnapshotManager()
-        .releaseSnapshotVerifyWorker(this, targetServer, env.getProcedureScheduler());
+      env.getMasterServices().getSnapshotManager().releaseSnapshotVerifyWorker(this, targetServer,
+        env.getProcedureScheduler());
     }
   }
 
@@ -120,7 +122,7 @@ public class SnapshotVerifyProcedure
 
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     try {
       // if we've already known the snapshot is corrupted, then stop scheduling
       // the new procedures and the undispatched procedures
@@ -133,8 +135,8 @@ public class SnapshotVerifyProcedure
       }
       // acquire a worker
       if (!dispatched && targetServer == null) {
-        targetServer = env.getMasterServices()
-          .getSnapshotManager().acquireSnapshotVerifyWorker(this);
+        targetServer =
+          env.getMasterServices().getSnapshotManager().acquireSnapshotVerifyWorker(this);
       }
       // send remote request
       Procedure<MasterProcedureEnv>[] res = super.execute(env);
@@ -195,8 +197,7 @@ public class SnapshotVerifyProcedure
 
   @Override
   protected void toStringClassDetails(StringBuilder builder) {
-    builder.append(getClass().getSimpleName())
-      .append(", snapshot=").append(snapshot.getName());
+    builder.append(getClass().getSimpleName()).append(", snapshot=").append(snapshot.getName());
     if (targetServer != null) {
       builder.append(", targetServer=").append(targetServer);
     }

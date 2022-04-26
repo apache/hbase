@@ -110,9 +110,9 @@ public final class HBaseKerberosUtils {
 
   /**
    * Set up configuration for a secure HDFS+HBase cluster.
-   * @param conf configuration object.
+   * @param conf             configuration object.
    * @param servicePrincipal service principal used by NN, HM and RS.
-   * @param spnegoPrincipal SPNEGO principal used by NN web UI.
+   * @param spnegoPrincipal  SPNEGO principal used by NN web UI.
    */
   public static void setSecuredConfiguration(Configuration conf, String servicePrincipal,
     String spnegoPrincipal) {
@@ -156,7 +156,7 @@ public final class HBaseKerberosUtils {
   /**
    * Set up SSL configuration for HDFS NameNode and DataNode.
    * @param utility a HBaseTestingUtility object.
-   * @param clazz the caller test class.
+   * @param clazz   the caller test class.
    * @throws Exception if unable to set up SSL configuration
    */
   public static void setSSLConfiguration(HBaseCommonTestingUtil utility, Class<?> clazz)

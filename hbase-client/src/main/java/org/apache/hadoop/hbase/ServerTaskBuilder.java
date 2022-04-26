@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,7 +33,8 @@ public final class ServerTaskBuilder {
   private long startTime;
   private long completionTime;
 
-  private ServerTaskBuilder() { }
+  private ServerTaskBuilder() {
+  }
 
   private static final class ServerTaskImpl implements ServerTask {
 
@@ -44,7 +45,7 @@ public final class ServerTaskBuilder {
     private final long completionTime;
 
     private ServerTaskImpl(final String description, final String status,
-        final ServerTask.State state, final long startTime, final long completionTime) {
+      final ServerTask.State state, final long startTime, final long completionTime) {
       this.description = description;
       this.status = status;
       this.state = state;

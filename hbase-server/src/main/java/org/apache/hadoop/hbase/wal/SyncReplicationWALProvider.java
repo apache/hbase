@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -108,7 +108,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+    throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -144,8 +144,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
         throw new IllegalArgumentException("No valid constructor provided for class " + clazz);
       }
       constructor.setAccessible(true);
-      return (DualAsyncFSWAL) constructor.newInstance(
-        CommonFSUtils.getWALFileSystem(conf),
+      return (DualAsyncFSWAL) constructor.newInstance(CommonFSUtils.getWALFileSystem(conf),
         ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
         CommonFSUtils.getWALRootDir(conf),
         ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId),
@@ -196,7 +195,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     }
     WAL wal = null;
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
-        peerInfoProvider.getPeerIdAndRemoteWALDir(region.getTable());
+      peerInfoProvider.getPeerIdAndRemoteWALDir(region.getTable());
     if (peerIdAndRemoteWALDir.isPresent()) {
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
       wal = getWAL(pair.getFirst(), pair.getSecond());
@@ -284,7 +283,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @Override
   public void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
-      SyncReplicationState to, int stage) {
+    SyncReplicationState to, int stage) {
     if (from == SyncReplicationState.ACTIVE) {
       if (stage == 0) {
         Lock lock = createLock.acquireLock(peerId);
@@ -306,7 +305,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   private static class DefaultSyncReplicationPeerInfoProvider
-      implements SyncReplicationPeerInfoProvider {
+    implements SyncReplicationPeerInfoProvider {
 
     @Override
     public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(TableName table) {
@@ -315,7 +314,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
     @Override
     public boolean checkState(TableName table,
-        BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
+      BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
       return false;
     }
   }

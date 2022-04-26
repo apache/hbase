@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestRawAsyncTablePartialScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawAsyncTablePartialScan.class);
+    HBaseClassTestRule.forClass(TestRawAsyncTablePartialScan.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -64,14 +64,11 @@ public class TestRawAsyncTablePartialScan {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TABLE = CONN.getTable(TABLE_NAME);
-    TABLE
-        .putAll(IntStream.range(0, COUNT)
-            .mapToObj(i -> new Put(Bytes.toBytes(String.format("%02d", i)))
-                .addColumn(FAMILY, CQS[0], Bytes.toBytes(i))
-                .addColumn(FAMILY, CQS[1], Bytes.toBytes(2 * i))
-                .addColumn(FAMILY, CQS[2], Bytes.toBytes(3 * i)))
-            .collect(Collectors.toList()))
-        .get();
+    TABLE.putAll(IntStream.range(0, COUNT)
+      .mapToObj(i -> new Put(Bytes.toBytes(String.format("%02d", i)))
+        .addColumn(FAMILY, CQS[0], Bytes.toBytes(i)).addColumn(FAMILY, CQS[1], Bytes.toBytes(2 * i))
+        .addColumn(FAMILY, CQS[2], Bytes.toBytes(3 * i)))
+      .collect(Collectors.toList())).get();
   }
 
   @AfterClass

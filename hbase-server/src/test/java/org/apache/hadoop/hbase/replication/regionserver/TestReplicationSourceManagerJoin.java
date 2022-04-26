@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Optional;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -44,7 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationSourceManagerJoin extends TestReplicationBase {
 
   @ClassRule
@@ -78,9 +77,8 @@ public class TestReplicationSourceManagerJoin extends TestReplicationBase {
       table.put(new Put(Bytes.toBytes(i)).addColumn(famName, row, row));
     }
     // Kill rs holding table region. There are only TWO servers. We depend on it.
-    Optional<HRegionServer> server =
-      UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
+    Optional<HRegionServer> server = UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads()
+      .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
       .filter(rs -> !rs.getRegions(tableName).isEmpty()).findAny();
     assertTrue(server.isPresent());
     server.get().abort("stopping for test");

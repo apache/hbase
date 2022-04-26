@@ -23,37 +23,37 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.http.gson.GsonSerializationFeature;
 import org.apache.hadoop.hbase.master.http.jersey.MasterFeature;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ServerProperties;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.TracingConfig;
 
 /**
- * Encapsulates construction and configuration of the {@link ResourceConfig} that implements
- * the {@code cluster-metrics} endpoints.
+ * Encapsulates construction and configuration of the {@link ResourceConfig} that implements the
+ * {@code cluster-metrics} endpoints.
  */
 @InterfaceAudience.Private
 public final class ResourceConfigFactory {
 
-  private ResourceConfigFactory() {}
+  private ResourceConfigFactory() {
+  }
 
   public static ResourceConfig createResourceConfig(Configuration conf, HMaster master) {
-    return new ResourceConfig()
-      .setApplicationName("api_v1")
+    return new ResourceConfig().setApplicationName("api_v1")
       .packages(ResourceConfigFactory.class.getPackage().getName())
       // TODO: anything registered here that does not have necessary bindings won't inject properly
-      //   at annotation sites and will result in a WARN logged by o.a.h.t.o.g.j.i.inject.Providers.
-      //   These warnings should be treated by the service as fatal errors, but I have not found a
-      //   callback API for registering a failed binding handler.
-      .register(ResponseEntityMapper.class)
-      .register(GsonSerializationFeature.class)
+      // at annotation sites and will result in a WARN logged by o.a.h.t.o.g.j.i.inject.Providers.
+      // These warnings should be treated by the service as fatal errors, but I have not found a
+      // callback API for registering a failed binding handler.
+      .register(ResponseEntityMapper.class).register(GsonSerializationFeature.class)
       .register(new MasterFeature(master))
 
       // devs: enable TRACING to see how jersey is dispatching to resources.
       // in hbase-site.xml, set 'hbase.http.jersey.tracing.type=ON_DEMAND` and
       // to curl, add `-H X-Jersey-Tracing-Accept:true`
-      .property(ServerProperties.TRACING, conf.get(
-        "hbase.http.jersey.tracing.type", TracingConfig.OFF.name()))
-      .property(ServerProperties.TRACING_THRESHOLD, conf.get(
-        "hbase.http.jersey.tracing.threshold", "TRACE"));
+      .property(ServerProperties.TRACING,
+        conf.get("hbase.http.jersey.tracing.type", TracingConfig.OFF.name()))
+      .property(ServerProperties.TRACING_THRESHOLD,
+        conf.get("hbase.http.jersey.tracing.threshold", "TRACE"));
   }
 }

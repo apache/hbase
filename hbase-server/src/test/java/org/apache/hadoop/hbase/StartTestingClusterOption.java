@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -173,11 +172,11 @@ public final class StartTestingClusterOption {
 
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass +
-      ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) +
-      ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" +
-      Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir=" +
-      createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
+      + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
+      + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts="
+      + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir="
+      + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
@@ -265,8 +264,7 @@ public final class StartTestingClusterOption {
     }
 
     public Builder numWorkers(int numWorkers) {
-      return numDataNodes(numWorkers)
-        .numRegionServers(numWorkers);
+      return numDataNodes(numWorkers).numRegionServers(numWorkers);
     }
 
     public Builder createRootDir(boolean createRootDir) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.C
  */
 @InterfaceAudience.Private
 public class CreateNamespaceProcedure
-    extends AbstractStateMachineNamespaceProcedure<CreateNamespaceState> {
+  extends AbstractStateMachineNamespaceProcedure<CreateNamespaceState> {
   private static final Logger LOG = LoggerFactory.getLogger(CreateNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
@@ -43,19 +43,19 @@ public class CreateNamespaceProcedure
   }
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) {
+    final NamespaceDescriptor nsDescriptor) {
     this(env, nsDescriptor, null);
   }
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor, ProcedurePrepareLatch latch) {
+    final NamespaceDescriptor nsDescriptor, ProcedurePrepareLatch latch) {
     super(env, latch);
     this.nsDescriptor = nsDescriptor;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CreateNamespaceState state)
-      throws InterruptedException {
+    throws InterruptedException {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -90,8 +90,8 @@ public class CreateNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-create-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to create namespace=" + nsDescriptor.getName() +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to create namespace=" + nsDescriptor.getName()
+          + " (in state=" + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -99,7 +99,7 @@ public class CreateNamespaceProcedure
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final CreateNamespaceState state)
-      throws IOException {
+    throws IOException {
     if (state == CreateNamespaceState.CREATE_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-create is just state checks.
       // TODO: coprocessor rollback semantic is still undefined.
@@ -194,11 +194,11 @@ public class CreateNamespaceProcedure
 
   /**
    * Set quota for the namespace
-   * @param env MasterProcedureEnv
+   * @param env          MasterProcedureEnv
    * @param nsDescriptor NamespaceDescriptor
    **/
   private static void setNamespaceQuota(final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) throws IOException {
+    final NamespaceDescriptor nsDescriptor) throws IOException {
     if (env.getMasterServices().isInitialized()) {
       env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
     }

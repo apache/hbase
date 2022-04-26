@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
@@ -30,7 +29,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -45,12 +43,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {
@@ -64,7 +64,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   private final double updatePercent;
 
   public MultiThreadedUpdater(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double updatePercent) throws IOException {
+    TableName tableName, double updatePercent) throws IOException {
     super(dataGen, conf, tableName, "U");
     this.updatePercent = updatePercent;
   }
@@ -168,12 +168,12 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 get = dataGenerator.beforeGet(rowKeyBase, get);
               } catch (Exception e) {
                 // Ideally wont happen
-                LOG.warn("Failed to modify the get from the load generator  = [" + Bytes.toString(get.getRow())
-                    + "], column family = [" + Bytes.toString(cf) + "]", e);
+                LOG.warn("Failed to modify the get from the load generator  = ["
+                  + Bytes.toString(get.getRow()) + "], column family = [" + Bytes.toString(cf)
+                  + "]", e);
               }
               Result result = getRow(get, rowKeyBase, cf);
-              Map<byte[], byte[]> columnValues =
-                result != null ? result.getFamilyMap(cf) : null;
+              Map<byte[], byte[]> columnValues = result != null ? result.getFamilyMap(cf) : null;
               if (columnValues == null) {
                 int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
                 if (((int) rowKeyBase % specialPermCellInsertionFactor == 0)) {
@@ -181,10 +181,10 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 } else {
                   failedKeySet.add(rowKeyBase);
                   LOG.error("Failed to update the row with key = [" + Bytes.toString(rowKey)
-                      + "], since we could not get the original row");
+                    + "], since we could not get the original row");
                 }
               }
-              if(columnValues != null) {
+              if (columnValues != null) {
                 for (byte[] column : columnValues.keySet()) {
                   if (Bytes.equals(column, INCREMENT) || Bytes.equals(column, MUTATE_INFO)) {
                     continue;
@@ -199,29 +199,29 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                     Cell kv = result.getColumnLatestCell(cf, column);
                     checkedValue = kv != null ? CellUtil.cloneValue(kv) : null;
                     Preconditions.checkNotNull(checkedValue,
-                        "Column value to be checked should not be null");
+                      "Column value to be checked should not be null");
                   }
                   buf.setLength(0); // Clear the buffer
                   buf.append("#").append(Bytes.toString(column)).append(":");
                   ++columnCount;
                   switch (mt) {
-                  case PUT:
-                    Put put = new Put(rowKey);
-                    put.addColumn(cf, column, hashCodeBytes);
-                    mutate(table, put, rowKeyBase, rowKey, cf, column, checkedValue);
-                    buf.append(MutationType.PUT.getNumber());
-                    break;
-                  case DELETE:
-                    Delete delete = new Delete(rowKey);
-                    // Delete all versions since a put
-                    // could be called multiple times if CM is used
-                    delete.addColumns(cf, column);
-                    mutate(table, delete, rowKeyBase, rowKey, cf, column, checkedValue);
-                    buf.append(MutationType.DELETE.getNumber());
-                    break;
-                  default:
-                    buf.append(MutationType.APPEND.getNumber());
-                    app.addColumn(cf, column, hashCodeBytes);
+                    case PUT:
+                      Put put = new Put(rowKey);
+                      put.addColumn(cf, column, hashCodeBytes);
+                      mutate(table, put, rowKeyBase, rowKey, cf, column, checkedValue);
+                      buf.append(MutationType.PUT.getNumber());
+                      break;
+                    case DELETE:
+                      Delete delete = new Delete(rowKey);
+                      // Delete all versions since a put
+                      // could be called multiple times if CM is used
+                      delete.addColumns(cf, column);
+                      mutate(table, delete, rowKeyBase, rowKey, cf, column, checkedValue);
+                      buf.append(MutationType.DELETE.getNumber());
+                      break;
+                    default:
+                      buf.append(MutationType.APPEND.getNumber());
+                      app.addColumn(cf, column, hashCodeBytes);
                   }
                   app.addColumn(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
                   if (!isBatchUpdate) {
@@ -234,8 +234,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
             }
             if (isBatchUpdate) {
               if (verbose) {
-                LOG.debug("Preparing increment and append for key = ["
-                  + Bytes.toString(rowKey) + "], " + columnCount + " columns");
+                LOG.debug("Preparing increment and append for key = [" + Bytes.toString(rowKey)
+                  + "], " + columnCount + " columns");
               }
               mutate(table, inc, rowKeyBase);
               mutate(table, app, rowKeyBase);
@@ -267,9 +267,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       try {
         result = table.get(get);
       } catch (IOException ie) {
-        LOG.warn(
-            "Failed to get the row for key = [" + Bytes.toString(get.getRow()) + "], column family = ["
-                + Bytes.toString(cf) + "]", ie);
+        LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow())
+          + "], column family = [" + Bytes.toString(cf) + "]", ie);
       }
       return result;
     }
@@ -278,19 +277,19 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       mutate(table, m, keyBase, null, null, null, null);
     }
 
-    public void mutate(Table table, Mutation m,
-        long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
+    public void mutate(Table table, Mutation m, long keyBase, byte[] row, byte[] cf, byte[] q,
+      byte[] v) {
       long start = EnvironmentEdgeManager.currentTime();
       try {
         m = dataGenerator.beforeMutate(keyBase, m);
         if (m instanceof Increment) {
-          table.increment((Increment)m);
+          table.increment((Increment) m);
         } else if (m instanceof Append) {
-          table.append((Append)m);
+          table.append((Append) m);
         } else if (m instanceof Put) {
-          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put)m);
+          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put) m);
         } else if (m instanceof Delete) {
-          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete)m);
+          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete) m);
         } else {
           throw new IllegalArgumentException(
             "unsupported mutation " + m.getClass().getSimpleName());
@@ -310,10 +309,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         } else {
           exceptionInfo = StringUtils.stringifyException(e);
         }
-        LOG.error("Failed to mutate: " + keyBase + " after " +
-            (EnvironmentEdgeManager.currentTime() - start) +
-          "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
-            + exceptionInfo);
+        LOG.error("Failed to mutate: " + keyBase + " after "
+          + (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: "
+          + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
       }
     }
   }
@@ -323,7 +321,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     super.waitForFinish();
     System.out.println("Failed to update keys: " + failedKeySet.size());
     for (Long key : failedKeySet) {
-       System.out.println("Failed to update key: " + key);
+      System.out.println("Failed to update key: " + key);
     }
   }
 
@@ -331,29 +329,28 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     mutate(table, m, keyBase, null, null, null, null);
   }
 
-  public void mutate(Table table, Mutation m,
-      long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
+  public void mutate(Table table, Mutation m, long keyBase, byte[] row, byte[] cf, byte[] q,
+    byte[] v) {
     long start = EnvironmentEdgeManager.currentTime();
     try {
       m = dataGenerator.beforeMutate(keyBase, m);
       if (m instanceof Increment) {
-        table.increment((Increment)m);
+        table.increment((Increment) m);
       } else if (m instanceof Append) {
-        table.append((Append)m);
+        table.append((Append) m);
       } else if (m instanceof Put) {
-        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put)m);
+        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put) m);
       } else if (m instanceof Delete) {
-        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete)m);
+        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete) m);
       } else {
-        throw new IllegalArgumentException(
-          "unsupported mutation " + m.getClass().getSimpleName());
+        throw new IllegalArgumentException("unsupported mutation " + m.getClass().getSimpleName());
       }
       totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
     } catch (IOException e) {
       failedKeySet.add(keyBase);
       String exceptionInfo;
       if (e instanceof RetriesExhaustedWithDetailsException) {
-        RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
+        RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException) e;
         exceptionInfo = aggEx.getExhaustiveDescription();
       } else {
         StringWriter stackWriter = new StringWriter();
@@ -362,9 +359,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         pw.flush();
         exceptionInfo = StringUtils.stringifyException(e);
       }
-      LOG.error("Failed to mutate: " + keyBase + " after " +
-        (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
-          getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
+      LOG.error("Failed to mutate: " + keyBase + " after "
+        + (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: "
+        + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
     }
   }
 

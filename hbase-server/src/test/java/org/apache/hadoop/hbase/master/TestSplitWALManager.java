@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SPLIT_WAL;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,11 +54,13 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 @Category({ MasterTests.class, LargeTests.class })
 
@@ -65,7 +68,7 @@ public class TestSplitWALManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitWALManager.class);
+    HBaseClassTestRule.forClass(TestSplitWALManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWALManager.class);
   private static HBaseTestingUtil TEST_UTIL;
@@ -95,8 +98,8 @@ public class TestSplitWALManager {
   public void testAcquireAndRelease() throws Exception {
     List<FakeServerProcedure> testProcedures = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      testProcedures.add(new FakeServerProcedure(
-          TEST_UTIL.getHBaseCluster().getServerHoldingMeta()));
+      testProcedures
+        .add(new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta()));
     }
     ServerName server = splitWALManager.acquireSplitWALWorker(testProcedures.get(0));
     Assert.assertNotNull(server);
@@ -113,7 +116,7 @@ public class TestSplitWALManager {
     Assert.assertTrue(e instanceof ProcedureSuspendedException);
 
     splitWALManager.releaseSplitWALWorker(server, TEST_UTIL.getHBaseCluster().getMaster()
-        .getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+      .getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
     Assert.assertNotNull(splitWALManager.acquireSplitWALWorker(testProcedures.get(3)));
   }
 
@@ -121,8 +124,8 @@ public class TestSplitWALManager {
   public void testAddNewServer() throws Exception {
     List<FakeServerProcedure> testProcedures = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      testProcedures.add(new FakeServerProcedure(
-          TEST_UTIL.getHBaseCluster().getServerHoldingMeta()));
+      testProcedures
+        .add(new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta()));
     }
     ServerName server = splitWALManager.acquireSplitWALWorker(testProcedures.get(0));
     Assert.assertNotNull(server);
@@ -151,13 +154,13 @@ public class TestSplitWALManager {
     ProcedureExecutor<MasterProcedureEnv> masterPE = master.getMasterProcedureExecutor();
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     Path metaWALDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
-        AbstractFSWALProvider.getWALDirectoryName(metaServer.toString()));
+      AbstractFSWALProvider.getWALDirectoryName(metaServer.toString()));
     // Test splitting meta wal
     FileStatus[] wals =
-        TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.META_FILTER);
+      TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.META_FILTER);
     Assert.assertEquals(1, wals.length);
     List<Procedure> testProcedures =
-        splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);
+      splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);
     Assert.assertEquals(1, testProcedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, testProcedures.get(0));
     Assert.assertFalse(TEST_UTIL.getTestFileSystem().exists(wals[0].getPath()));
@@ -166,7 +169,7 @@ public class TestSplitWALManager {
     wals = TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.NON_META_FILTER);
     Assert.assertEquals(1, wals.length);
     testProcedures =
-        splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);
+      splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);
     Assert.assertEquals(1, testProcedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, testProcedures.get(0));
     Assert.assertFalse(TEST_UTIL.getTestFileSystem().exists(wals[0].getPath()));
@@ -178,16 +181,16 @@ public class TestSplitWALManager {
     List<FakeServerProcedure> testProcedures = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       FakeServerProcedure procedure =
-          new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getRegionServer(i).getServerName());
+        new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getRegionServer(i).getServerName());
       testProcedures.add(procedure);
       ProcedureTestingUtility.submitProcedure(masterPE, procedure, HConstants.NO_NONCE,
-          HConstants.NO_NONCE);
+        HConstants.NO_NONCE);
     }
     TEST_UTIL.waitFor(10000, () -> testProcedures.get(2).isWorkerAcquired());
     FakeServerProcedure failedProcedure =
-        new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta());
+      new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta());
     ProcedureTestingUtility.submitProcedure(masterPE, failedProcedure, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+      HConstants.NO_NONCE);
     TEST_UTIL.waitFor(20000, () -> failedProcedure.isTriedToAcquire());
     Assert.assertFalse(failedProcedure.isWorkerAcquired());
     // let one procedure finish and release worker
@@ -207,8 +210,8 @@ public class TestSplitWALManager {
     List<FileStatus> wals = splitWALManager.getWALsToSplit(metaServer, false);
     Assert.assertEquals(1, wals.size());
     ServerName testServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .map(rs -> rs.getRegionServer().getServerName()).filter(rs -> rs != metaServer).findAny()
-        .get();
+      .map(rs -> rs.getRegionServer().getServerName()).filter(rs -> rs != metaServer).findAny()
+      .get();
     metaWals = splitWALManager.getWALsToSplit(testServer, true);
     Assert.assertEquals(0, metaWals.size());
   }
@@ -216,10 +219,10 @@ public class TestSplitWALManager {
   private void splitLogsTestHelper(HBaseTestingUtil testUtil) throws Exception {
     HMaster hmaster = testUtil.getHBaseCluster().getMaster();
     SplitWALManager splitWALManager = hmaster.getSplitWALManager();
-    LOG.info("The Master FS is pointing to: " + hmaster.getMasterFileSystem()
-      .getFileSystem().getUri());
-    LOG.info("The WAL FS is pointing to: " + hmaster.getMasterFileSystem()
-      .getWALFileSystem().getUri());
+    LOG.info(
+      "The Master FS is pointing to: " + hmaster.getMasterFileSystem().getFileSystem().getUri());
+    LOG.info(
+      "The WAL FS is pointing to: " + hmaster.getMasterFileSystem().getWALFileSystem().getUri());
 
     testUtil.createTable(TABLE_NAME, FAMILY, testUtil.KEYS_FOR_HBA_CREATE_TABLE);
     // load table
@@ -256,7 +259,7 @@ public class TestSplitWALManager {
   }
 
   @Test
-  public void testSplitLogsWithDifferentWalAndRootFS() throws Exception{
+  public void testSplitLogsWithDifferentWalAndRootFS() throws Exception {
     HBaseTestingUtil testUtil2 = new HBaseTestingUtil();
     testUtil2.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     testUtil2.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
@@ -273,7 +276,7 @@ public class TestSplitWALManager {
     List<FakeServerProcedure> testProcedures = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       FakeServerProcedure procedure =
-          new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getRegionServer(i).getServerName());
+        new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getRegionServer(i).getServerName());
       testProcedures.add(procedure);
       ProcedureTestingUtility.submitProcedure(master.getMasterProcedureExecutor(), procedure,
         HConstants.NO_NONCE, HConstants.NO_NONCE);
@@ -288,7 +291,7 @@ public class TestSplitWALManager {
     this.master = TEST_UTIL.getHBaseCluster().getMaster();
 
     FakeServerProcedure failedProcedure =
-        new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta());
+      new FakeServerProcedure(TEST_UTIL.getHBaseCluster().getServerHoldingMeta());
     ProcedureTestingUtility.submitProcedure(master.getMasterProcedureExecutor(), failedProcedure,
       HConstants.NO_NONCE, HConstants.NO_NONCE);
     TEST_UTIL.waitFor(20000, () -> failedProcedure.isTriedToAcquire());
@@ -300,8 +303,8 @@ public class TestSplitWALManager {
   }
 
   public static final class FakeServerProcedure
-      extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.SplitWALState>
-      implements ServerProcedureInterface {
+    extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.SplitWALState>
+    implements ServerProcedureInterface {
 
     private ServerName serverName;
     private ServerName worker;
@@ -331,8 +334,8 @@ public class TestSplitWALManager {
 
     @Override
     protected Flow executeFromState(MasterProcedureEnv env,
-                                    MasterProcedureProtos.SplitWALState state)
-        throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      MasterProcedureProtos.SplitWALState state)
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
       SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
       switch (state) {
         case ACQUIRE_SPLIT_WAL_WORKER:
@@ -366,7 +369,7 @@ public class TestSplitWALManager {
 
     @Override
     protected void rollbackState(MasterProcedureEnv env, MasterProcedureProtos.SplitWALState state)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
 
     }
 
@@ -403,7 +406,7 @@ public class TestSplitWALManager {
     @Override
     protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
       MasterProcedureProtos.SplitWALData.Builder builder =
-          MasterProcedureProtos.SplitWALData.newBuilder();
+        MasterProcedureProtos.SplitWALData.newBuilder();
       builder.setWalPath("test").setCrashedServer(ProtobufUtil.toServerName(serverName));
       serializer.serialize(builder.build());
     }
@@ -411,7 +414,7 @@ public class TestSplitWALManager {
     @Override
     protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
       MasterProcedureProtos.SplitWALData data =
-          serializer.deserialize(MasterProcedureProtos.SplitWALData.class);
+        serializer.deserialize(MasterProcedureProtos.SplitWALData.class);
       serverName = ProtobufUtil.toServerName(data.getCrashedServer());
     }
   }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -34,8 +32,7 @@ public class NoneEncoder {
   private DataOutputStream out;
   private HFileBlockDefaultEncodingContext encodingCtx;
 
-  public NoneEncoder(DataOutputStream out,
-      HFileBlockDefaultEncodingContext encodingCtx) {
+  public NoneEncoder(DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) {
     this.out = out;
     this.encodingCtx = encodingCtx;
   }

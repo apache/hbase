@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
   private static final Logger LOG = LoggerFactory.getLogger(ReplaySyncReplicationWALCallable.class);
 
   private static final String REPLAY_SYNC_REPLICATION_WAL_BATCH_SIZE =
-      "hbase.replay.sync.replication.wal.batch.size";
+    "hbase.replay.sync.replication.wal.batch.size";
 
   private static final long DEFAULT_REPLAY_SYNC_REPLICATION_WAL_BATCH_SIZE = 8 * 1024 * 1024;
 
@@ -102,11 +102,11 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
       List<Entry> entries = readWALEntries(reader);
       while (!entries.isEmpty()) {
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
-            .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
+          .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
         ReplicateWALEntryRequest request = pair.getFirst();
-        rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
-            pair.getSecond(), request.getReplicationClusterId(),
-            request.getSourceBaseNamespaceDirPath(), request.getSourceHFileArchiveDirPath());
+        rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(), pair.getSecond(),
+          request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
+          request.getSourceHFileArchiveDirPath());
         // Read next entries.
         entries = readWALEntries(reader);
       }

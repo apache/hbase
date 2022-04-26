@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,19 +45,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * 1. Create table t1
- * 2. Load data to t1
- * 3 Full backup t1
- * 4 Load data to t1
- * 5 bulk load into t1
- * 6 Incremental backup t1
+ * 1. Create table t1 2. Load data to t1 3 Full backup t1 4 Load data to t1 5 bulk load into t1 6
+ * Incremental backup t1
  */
 @Category(LargeTests.class)
 public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementalBackupWithBulkLoad.class);
+    HBaseClassTestRule.forClass(TestIncrementalBackupWithBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
@@ -92,11 +88,11 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     int NB_ROWS2 = 20;
     LOG.debug("bulk loading into " + testName);
-    int actual = TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
-        qualName, false, null, new byte[][][] {
-          new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
-        }, true, false, true, NB_ROWS_IN_BATCH*2, NB_ROWS2);
+    int actual =
+      TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName, qualName, false, null,
+        new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
+        true, false, true, NB_ROWS_IN_BATCH * 2, NB_ROWS2);
 
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
@@ -105,11 +101,11 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     assertTrue(checkSucceeded(backupIdIncMultiple));
     // #4 bulk load again
     LOG.debug("bulk loading into " + testName);
-    int actual1 = TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
-      qualName, false, null,
-      new byte[][][] { new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("qqq") },
-        new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },
-      true, false, true, NB_ROWS_IN_BATCH * 2 + actual, NB_ROWS2);
+    int actual1 =
+      TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName, qualName, false, null,
+        new byte[][][] { new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("qqq") },
+          new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },
+        true, false, true, NB_ROWS_IN_BATCH * 2 + actual, NB_ROWS2);
 
     // #5 - incremental backup for table1
     tables = Lists.newArrayList(table1);
@@ -123,9 +119,9 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     // #6 - restore incremental backup for table1
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1 };
-    //TableName[] tablesMapIncMultiple = new TableName[] { table1_restore };
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple1,
-      false, tablesRestoreIncMultiple, tablesRestoreIncMultiple, true));
+    // TableName[] tablesMapIncMultiple = new TableName[] { table1_restore };
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple1, false,
+      tablesRestoreIncMultiple, tablesRestoreIncMultiple, true));
 
     Table hTable = conn.getTable(table1);
     Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2 + actual + actual1);
@@ -133,10 +129,10 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair
-        = table.readBulkloadRows(tables);
+      Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>,
+        List<byte[]>> pair = table.readBulkloadRows(tables);
       assertTrue("map still has " + pair.getSecond().size() + " entries",
-          pair.getSecond().isEmpty());
+        pair.getSecond().isEmpty());
     }
     assertTrue(checkSucceeded(backupIdFull));
 

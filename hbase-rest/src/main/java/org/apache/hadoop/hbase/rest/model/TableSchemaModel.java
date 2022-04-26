@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableSchemaMessage
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="TableSchema")
+@XmlRootElement(name = "TableSchema")
 @InterfaceAudience.Private
 public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
@@ -73,13 +72,14 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final QName COMPRESSION = new QName(ColumnFamilyDescriptorBuilder.COMPRESSION);
 
   private String name;
-  private Map<QName,Object> attrs = new LinkedHashMap<>();
+  private Map<QName, Object> attrs = new LinkedHashMap<>();
   private List<ColumnSchemaModel> columns = new ArrayList<>();
 
   /**
    * Default constructor.
    */
-  public TableSchemaModel() {}
+  public TableSchemaModel() {
+  }
 
   /**
    * Constructor
@@ -88,16 +88,14 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   public TableSchemaModel(TableDescriptor tableDescriptor) {
     setName(tableDescriptor.getTableName().getNameAsString());
     for (Map.Entry<Bytes, Bytes> e : tableDescriptor.getValues().entrySet()) {
-      addAttribute(Bytes.toString(e.getKey().get()),
-        Bytes.toString(e.getValue().get()));
+      addAttribute(Bytes.toString(e.getKey().get()), Bytes.toString(e.getValue().get()));
     }
     for (ColumnFamilyDescriptor hcd : tableDescriptor.getColumnFamilies()) {
       ColumnSchemaModel columnModel = new ColumnSchemaModel();
       columnModel.setName(hcd.getNameAsString());
-      for (Map.Entry<Bytes, Bytes> e:
-          hcd.getValues().entrySet()) {
+      for (Map.Entry<Bytes, Bytes> e : hcd.getValues().entrySet()) {
         columnModel.addAttribute(Bytes.toString(e.getKey().get()),
-            Bytes.toString(e.getValue().get()));
+          Bytes.toString(e.getValue().get()));
       }
       addColumnFamily(columnModel);
     }
@@ -105,7 +103,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
 
   /**
    * Add an attribute to the table descriptor
-   * @param name attribute name
+   * @param name  attribute name
    * @param value attribute value
    */
   @JsonAnySetter
@@ -114,8 +112,8 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   /**
-   * Return a table descriptor value as a string. Calls toString() on the
-   * object stored in the descriptor value map.
+   * Return a table descriptor value as a string. Calls toString() on the object stored in the
+   * descriptor value map.
    * @param name the attribute name
    * @return the attribute value
    */
@@ -154,14 +152,14 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   @XmlAnyAttribute
   @JsonAnyGetter
-  public Map<QName,Object> getAny() {
+  public Map<QName, Object> getAny() {
     return attrs;
   }
 
   /**
    * @return the columns
    */
-  @XmlElement(name="ColumnSchema")
+  @XmlElement(name = "ColumnSchema")
   public List<ColumnSchemaModel> getColumns() {
     return columns;
   }
@@ -180,7 +178,8 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     this.columns = columns;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override
@@ -189,7 +188,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     sb.append("{ NAME=> '");
     sb.append(name);
     sb.append('\'');
-    for (Map.Entry<QName,Object> e : attrs.entrySet()) {
+    for (Map.Entry<QName, Object> e : attrs.entrySet()) {
       sb.append(", ");
       sb.append(e.getKey().getLocalPart());
       sb.append(" => '");
@@ -265,8 +264,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(name);
     for (Map.Entry<QName, Object> e : attrs.entrySet()) {
-      TableSchema.Attribute.Builder attrBuilder =
-        TableSchema.Attribute.newBuilder();
+      TableSchema.Attribute.Builder attrBuilder = TableSchema.Attribute.newBuilder();
       attrBuilder.setName(e.getKey().getLocalPart());
       attrBuilder.setValue(e.getValue().toString());
       builder.addAttrs(attrBuilder);
@@ -276,8 +274,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
       ColumnSchema.Builder familyBuilder = ColumnSchema.newBuilder();
       familyBuilder.setName(family.getName());
       for (Map.Entry<QName, Object> e : familyAttrs.entrySet()) {
-        ColumnSchema.Attribute.Builder attrBuilder =
-          ColumnSchema.Attribute.newBuilder();
+        ColumnSchema.Attribute.Builder attrBuilder = ColumnSchema.Attribute.newBuilder();
         attrBuilder.setName(e.getKey().getLocalPart());
         attrBuilder.setValue(e.getValue().toString());
         familyBuilder.addAttrs(attrBuilder);
@@ -300,8 +297,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     this.setName(builder.getName());
@@ -321,8 +317,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
         familyModel.addAttribute(ColumnFamilyDescriptorBuilder.TTL, family.getTtl());
       }
       if (family.hasMaxVersions()) {
-        familyModel.addAttribute(HConstants.VERSIONS,
-          family.getMaxVersions());
+        familyModel.addAttribute(HConstants.VERSIONS, family.getMaxVersions());
       }
       if (family.hasCompression()) {
         familyModel.addAttribute(ColumnFamilyDescriptorBuilder.COMPRESSION,
@@ -344,8 +339,8 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
       tableDescriptorBuilder.setValue(e.getKey().getLocalPart(), e.getValue().toString());
     }
     for (ColumnSchemaModel column : getColumns()) {
-      ColumnFamilyDescriptorBuilder cfdb = ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(column.getName()));
+      ColumnFamilyDescriptorBuilder cfdb =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column.getName()));
       for (Map.Entry<QName, Object> e : column.getAny().entrySet()) {
         cfdb.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }

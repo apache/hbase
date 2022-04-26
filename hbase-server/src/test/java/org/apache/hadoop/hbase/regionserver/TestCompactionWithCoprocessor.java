@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,20 +25,20 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Make sure compaction tests still pass with the preFlush and preCompact
- * overridden to implement the default behavior
+ * Make sure compaction tests still pass with the preFlush and preCompact overridden to implement
+ * the default behavior
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestCompactionWithCoprocessor extends TestCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionWithCoprocessor.class);
+    HBaseClassTestRule.forClass(TestCompactionWithCoprocessor.class);
 
   /** constructor */
   public TestCompactionWithCoprocessor() throws Exception {
     super();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        NoOpScanPolicyObserver.class.getName());
+      NoOpScanPolicyObserver.class.getName());
   }
 }

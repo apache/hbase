@@ -15,57 +15,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.locking;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
- * Lock for HBase Entity either a Table, a Namespace, or Regions.
- *
- * These are remote locks which live on master, and need periodic heartbeats to keep them alive.
- * (Once we request the lock, internally an heartbeat thread will be started on the client).
- * If master does not receive the heartbeat in time, it'll release the lock and make it available
- * to other users.
- *
- * <p>Use {@link LockServiceClient} to build instances. Then call {@link #requestLock()}.
- * {@link #requestLock} will contact master to queue the lock and start the heartbeat thread
- * which will check lock's status periodically and once the lock is acquired, it will send the
- * heartbeats to the master.
- *
- * <p>Use {@link #await} or {@link #await(long, TimeUnit)} to wait for the lock to be acquired.
- * Always call {@link #unlock()} irrespective of whether lock was acquired or not. If the lock
- * was acquired, it'll be released. If it was not acquired, it is possible that master grants the
- * lock in future and the heartbeat thread keeps it alive forever by sending heartbeats.
- * Calling {@link #unlock()} will stop the heartbeat thread and cancel the lock queued on master.
- *
- * <p>There are 4 ways in which these remote locks may be released/can be lost:
- * <ul><li>Call {@link #unlock}.</li>
- * <li>Lock times out on master: Can happen because of network issues, GC pauses, etc.
- *     Worker thread will call the given abortable as soon as it detects such a situation.</li>
+ * Lock for HBase Entity either a Table, a Namespace, or Regions. These are remote locks which live
+ * on master, and need periodic heartbeats to keep them alive. (Once we request the lock, internally
+ * an heartbeat thread will be started on the client). If master does not receive the heartbeat in
+ * time, it'll release the lock and make it available to other users.
+ * <p>
+ * Use {@link LockServiceClient} to build instances. Then call {@link #requestLock()}.
+ * {@link #requestLock} will contact master to queue the lock and start the heartbeat thread which
+ * will check lock's status periodically and once the lock is acquired, it will send the heartbeats
+ * to the master.
+ * <p>
+ * Use {@link #await} or {@link #await(long, TimeUnit)} to wait for the lock to be acquired. Always
+ * call {@link #unlock()} irrespective of whether lock was acquired or not. If the lock was
+ * acquired, it'll be released. If it was not acquired, it is possible that master grants the lock
+ * in future and the heartbeat thread keeps it alive forever by sending heartbeats. Calling
+ * {@link #unlock()} will stop the heartbeat thread and cancel the lock queued on master.
+ * <p>
+ * There are 4 ways in which these remote locks may be released/can be lost:
+ * <ul>
+ * <li>Call {@link #unlock}.</li>
+ * <li>Lock times out on master: Can happen because of network issues, GC pauses, etc. Worker thread
+ * will call the given abortable as soon as it detects such a situation.</li>
  * <li>Fail to contact master: If worker thread can not contact mater and thus fails to send
- *     heartbeat before the timeout expires, it assumes that lock is lost and calls the
- *     abortable.</li>
+ * heartbeat before the timeout expires, it assumes that lock is lost and calls the abortable.</li>
  * <li>Worker thread is interrupted.</li>
  * </ul>
- *
- * Use example:
- * <code>
+ * Use example: <code>
  * EntityLock lock = lockServiceClient.*Lock(...., "exampled lock", abortable);
  * lock.requestLock();
  * ....
@@ -81,8 +76,7 @@ import org.apache.hadoop.hbase.util.Threads;
 public class EntityLock {
   private static final Logger LOG = LoggerFactory.getLogger(EntityLock.class);
 
-  public static final String HEARTBEAT_TIME_BUFFER =
-      "hbase.client.locks.heartbeat.time.buffer.ms";
+  public static final String HEARTBEAT_TIME_BUFFER = "hbase.client.locks.heartbeat.time.buffer.ms";
 
   private final AtomicBoolean locked = new AtomicBoolean(false);
   private final CountDownLatch latch = new CountDownLatch(1);
@@ -102,12 +96,12 @@ public class EntityLock {
   private Long procId = null;
 
   /**
-   * Abortable.abort() is called when the lease of the lock will expire.
-   * It's up to the user decide if simply abort the process or handle the loss of the lock
-   * by aborting the operation that was supposed to be under lock.
+   * Abortable.abort() is called when the lease of the lock will expire. It's up to the user decide
+   * if simply abort the process or handle the loss of the lock by aborting the operation that was
+   * supposed to be under lock.
    */
-  EntityLock(Configuration conf, LockService.BlockingInterface stub,
-      LockRequest request, Abortable abort) {
+  EntityLock(Configuration conf, LockService.BlockingInterface stub, LockRequest request,
+    Abortable abort) {
     this.stub = stub;
     this.lockRequest = request;
     this.abort = abort;
@@ -158,10 +152,9 @@ public class EntityLock {
   }
 
   /**
-   * Sends rpc to the master to request lock.
-   * The lock request is queued with other lock requests.
-   * Call {@link #await()} to wait on lock.
-   * Always call {@link #unlock()} after calling the below, even after error.
+   * Sends rpc to the master to request lock. The lock request is queued with other lock requests.
+   * Call {@link #await()} to wait on lock. Always call {@link #unlock()} after calling the below,
+   * even after error.
    */
   public void requestLock() throws IOException {
     if (procId == null) {
@@ -179,7 +172,7 @@ public class EntityLock {
   /**
    * @param timeout in milliseconds. If set to 0, waits indefinitely.
    * @return true if lock was acquired; and false if waiting time elapsed before lock could be
-   * acquired.
+   *         acquired.
    */
   public boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
     final boolean result = latch.await(timeout, timeUnit);
@@ -188,7 +181,7 @@ public class EntityLock {
       LOG.info("Acquired " + lockRequestStr);
     } else {
       LOG.info(String.format("Failed acquire in %s %s of %s", timeout, timeUnit.toString(),
-          lockRequestStr));
+        lockRequestStr));
     }
     return result;
   }
@@ -227,7 +220,7 @@ public class EntityLock {
     @Override
     public void run() {
       final LockHeartbeatRequest lockHeartbeatRequest =
-          LockHeartbeatRequest.newBuilder().setProcId(procId).build();
+        LockHeartbeatRequest.newBuilder().setProcId(procId).build();
 
       LockHeartbeatResponse response;
       while (true) {
@@ -243,12 +236,13 @@ public class EntityLock {
         if (!isLocked() && response.getLockStatus() == LockHeartbeatResponse.LockStatus.LOCKED) {
           locked.set(true);
           latch.countDown();
-        } else if (isLocked() && response.getLockStatus() == LockHeartbeatResponse.LockStatus.UNLOCKED) {
-          // Lock timed out.
-          locked.set(false);
-          abort.abort("Lock timed out.", null);
-          return;
-        }
+        } else
+          if (isLocked() && response.getLockStatus() == LockHeartbeatResponse.LockStatus.UNLOCKED) {
+            // Lock timed out.
+            locked.set(false);
+            abort.abort("Lock timed out.", null);
+            return;
+          }
 
         try {
           // If lock not acquired yet, poll faster so we can notify faster.

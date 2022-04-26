@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -69,6 +71,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -86,7 +89,7 @@ class TableOverAsyncTable implements Table {
   private final IOExceptionSupplier<ExecutorService> poolSupplier;
 
   TableOverAsyncTable(AsyncConnectionImpl conn, AsyncTable<?> table,
-      IOExceptionSupplier<ExecutorService> poolSupplier) {
+    IOExceptionSupplier<ExecutorService> poolSupplier) {
     this.conn = conn;
     this.table = table;
     this.poolSupplier = poolSupplier;
@@ -141,7 +144,7 @@ class TableOverAsyncTable implements Table {
 
   @Override
   public <R> void batchCallback(List<? extends Row> actions, Object[] results, Callback<R> callback)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     ConcurrentLinkedQueue<ThrowableWithExtraContext> errors = new ConcurrentLinkedQueue<>();
     CountDownLatch latch = new CountDownLatch(actions.size());
     AsyncTableRegionLocator locator = conn.getRegionLocator(getName());
@@ -164,8 +167,8 @@ class TableOverAsyncTable implements Table {
             (l, le) -> {
               if (le != null) {
                 errors.add(new ThrowableWithExtraContext(le, EnvironmentEdgeManager.currentTime(),
-                  "Error when finding the region for row " +
-                    Bytes.toStringBinary(actions.get(index).getRow())));
+                  "Error when finding the region for row "
+                    + Bytes.toStringBinary(actions.get(index).getRow())));
               } else {
                 callback.update(l.getRegion().getRegionName(), actions.get(index).getRow(), r);
               }
@@ -330,13 +333,13 @@ class TableOverAsyncTable implements Table {
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount)
-      throws IOException {
+    throws IOException {
     return FutureUtils.get(table.incrementColumnValue(row, family, qualifier, amount));
   }
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount,
-      Durability durability) throws IOException {
+    Durability durability) throws IOException {
     return FutureUtils.get(table.incrementColumnValue(row, family, qualifier, amount, durability));
   }
 
@@ -346,16 +349,16 @@ class TableOverAsyncTable implements Table {
 
   @SuppressWarnings("deprecation")
   private static final class RegionCoprocessorRpcChannel extends RegionCoprocessorRpcChannelImpl
-      implements CoprocessorRpcChannel {
+    implements CoprocessorRpcChannel {
 
     RegionCoprocessorRpcChannel(AsyncConnectionImpl conn, TableName tableName, RegionInfo region,
-        byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
+      byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
       super(conn, tableName, region, row, rpcTimeoutNs, operationTimeoutNs);
     }
 
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-        Message responsePrototype, RpcCallback<Message> done) {
+      Message responsePrototype, RpcCallback<Message> done) {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
       CoprocessorBlockingRpcCallback<Message> callback = new CoprocessorBlockingRpcCallback<>();
       super.callMethod(method, c, request, responsePrototype, callback);
@@ -374,7 +377,7 @@ class TableOverAsyncTable implements Table {
 
     @Override
     public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
-        Message request, Message responsePrototype) throws ServiceException {
+      Message request, Message responsePrototype) throws ServiceException {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
       CoprocessorBlockingRpcCallback<Message> done = new CoprocessorBlockingRpcCallback<>();
       callMethod(method, c, request, responsePrototype, done);
@@ -401,31 +404,31 @@ class TableOverAsyncTable implements Table {
   /**
    * Get the corresponding start keys and regions for an arbitrary range of keys.
    * <p>
-   * @param startKey Starting row in range, inclusive
-   * @param endKey Ending row in range
+   * @param startKey      Starting row in range, inclusive
+   * @param endKey        Ending row in range
    * @param includeEndKey true if endRow is inclusive, false if exclusive
    * @return A pair of list of start keys and list of HRegionLocations that contain the specified
    *         range
    * @throws IOException if a remote or network exception occurs
    */
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(final byte[] startKey,
-      final byte[] endKey, final boolean includeEndKey) throws IOException {
+    final byte[] endKey, final boolean includeEndKey) throws IOException {
     return getKeysAndRegionsInRange(startKey, endKey, includeEndKey, false);
   }
 
   /**
    * Get the corresponding start keys and regions for an arbitrary range of keys.
    * <p>
-   * @param startKey Starting row in range, inclusive
-   * @param endKey Ending row in range
+   * @param startKey      Starting row in range, inclusive
+   * @param endKey        Ending row in range
    * @param includeEndKey true if endRow is inclusive, false if exclusive
-   * @param reload true to reload information or false to use cached information
+   * @param reload        true to reload information or false to use cached information
    * @return A pair of list of start keys and list of HRegionLocations that contain the specified
    *         range
    * @throws IOException if a remote or network exception occurs
    */
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(final byte[] startKey,
-      final byte[] endKey, final boolean includeEndKey, final boolean reload) throws IOException {
+    final byte[] endKey, final boolean includeEndKey, final boolean reload) throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
       throw new IllegalArgumentException(
@@ -440,9 +443,11 @@ class TableOverAsyncTable implements Table {
       keysInRange.add(currentKey);
       regionsInRange.add(regionLocation);
       currentKey = regionLocation.getRegion().getEndKey();
-    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
-      (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0 ||
-        (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
+    } while (
+      !Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
+        && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
+          || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0))
+    );
     return new Pair<>(keysInRange, regionsInRange);
   }
 
@@ -462,7 +467,7 @@ class TableOverAsyncTable implements Table {
   }
 
   private <R> void coprocessorService(String serviceName, byte[] startKey, byte[] endKey,
-      Callback<R> callback, StubCall<R> call) throws Throwable {
+    Callback<R> callback, StubCall<R> call) throws Throwable {
     // get regions covered by the row range
     ExecutorService pool = Context.current().wrap(this.poolSupplier.get());
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
@@ -496,18 +501,17 @@ class TableOverAsyncTable implements Table {
           Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
-        throw new InterruptedIOException("Interrupted calling coprocessor service " + serviceName +
-          " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
+        throw new InterruptedIOException("Interrupted calling coprocessor service " + serviceName
+          + " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
       }
     }
   }
 
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
-      byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
+    byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
-      .setTableName(table.getName())
-      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+      .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       coprocessorService(service.getName(), startKey, endKey, callback, channel -> {
@@ -522,17 +526,15 @@ class TableOverAsyncTable implements Table {
   @SuppressWarnings("unchecked")
   @Override
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
-      Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
-      throws ServiceException, Throwable {
+    Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
+    throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
-      .setTableName(table.getName())
-      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+      .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       coprocessorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
         try (Scope ignored = context.makeCurrent()) {
-          return (R) channel.callBlockingMethod(
-            methodDescriptor, null, request, responsePrototype);
+          return (R) channel.callBlockingMethod(methodDescriptor, null, request, responsePrototype);
         }
       });
     }, supplier);

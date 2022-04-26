@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -59,7 +58,7 @@ public class TestRegionSizeUse {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSizeUse.class);
+    HBaseClassTestRule.forClass(TestRegionSizeUse.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSizeUse.class);
   private static final int SIZE_PER_VALUE = 256;
@@ -99,14 +98,14 @@ public class TestRegionSizeUse {
 
     HMaster master = cluster.getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-    Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+    Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
     // Wait until we get all of the region reports for our table
     // The table may split, so make sure we have at least as many as expected right after we
     // finished writing the data.
     int observedRegions = numRegionsForTable(tn, regionSizes);
     while (observedRegions < regions.size()) {
       LOG.debug("Expecting more regions. Saw " + observedRegions
-          + " region sizes reported, expected at least " + regions.size());
+        + " region sizes reported, expected at least " + regions.size());
       Thread.sleep(1000);
       regionSizes = quotaManager.snapshotRegionSizes();
       observedRegions = numRegionsForTable(tn, regionSizes);
@@ -118,12 +117,11 @@ public class TestRegionSizeUse {
       totalRegionSize += regionSize;
     }
     assertTrue("Expected region size report to exceed " + bytesWritten + ", but was "
-        + totalRegionSize + ". RegionSizes=" + regionSizes, bytesWritten < totalRegionSize);
+      + totalRegionSize + ". RegionSizes=" + regionSizes, bytesWritten < totalRegionSize);
   }
 
   /**
    * Writes at least {@code sizeInBytes} bytes of data to HBase and returns the TableName used.
-   *
    * @param sizeInBytes The amount of data to write in bytes.
    * @return The table the data was written to
    */
@@ -139,14 +137,13 @@ public class TestRegionSizeUse {
     }
 
     // Create the table
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tn);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tn);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(F1)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    admin.createTable(tableDescriptorBuilder.build(), Bytes.toBytes("1"),
-      Bytes.toBytes("9"), NUM_SPLITS);
+    admin.createTable(tableDescriptorBuilder.build(), Bytes.toBytes("1"), Bytes.toBytes("9"),
+      NUM_SPLITS);
 
     final Table table = conn.getTable(tn);
     try {
@@ -188,14 +185,13 @@ public class TestRegionSizeUse {
 
   /**
    * Computes the number of regions for the given table that have a positive size.
-   *
-   * @param tn The TableName in question
+   * @param tn      The TableName in question
    * @param regions A collection of region sizes
    * @return The number of regions for the given table.
    */
-  private int numRegionsForTable(TableName tn, Map<RegionInfo,Long> regions) {
+  private int numRegionsForTable(TableName tn, Map<RegionInfo, Long> regions) {
     int sum = 0;
-    for (Entry<RegionInfo,Long> entry : regions.entrySet()) {
+    for (Entry<RegionInfo, Long> entry : regions.entrySet()) {
       if (tn.equals(entry.getKey().getTable()) && 0 < entry.getValue()) {
         sum++;
       }

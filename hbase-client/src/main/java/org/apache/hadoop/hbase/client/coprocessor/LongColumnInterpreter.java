@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,23 +30,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LongMsg;
 
 /**
- * a concrete column interpreter implementation. The cell value is a Long value
- * and its promoted data type is also a Long value. For computing aggregation
- * function, this class is used to find the datatype of the cell value. Client
- * is supposed to instantiate it and passed along as a parameter. See
- * TestAggregateProtocol methods for its sample usage.
- * Its methods handle null arguments gracefully. 
+ * a concrete column interpreter implementation. The cell value is a Long value and its promoted
+ * data type is also a Long value. For computing aggregation function, this class is used to find
+ * the datatype of the cell value. Client is supposed to instantiate it and passed along as a
+ * parameter. See TestAggregateProtocol methods for its sample usage. Its methods handle null
+ * arguments gracefully.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
-                 EmptyMsg, LongMsg, LongMsg> {
+public class LongColumnInterpreter
+  extends ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> {
 
   @Override
-  public Long getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
-      throws IOException {
-    if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
-      return null;
+  public Long getValue(byte[] colFamily, byte[] colQualifier, Cell kv) throws IOException {
+    if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG) return null;
     return PrivateCellUtil.getValueAsLong(kv);
   }
 
@@ -64,8 +60,7 @@ public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
   public int compare(final Long l1, final Long l2) {
     if (l1 == null ^ l2 == null) {
       return l1 == null ? -1 : 1; // either of one is null.
-    } else if (l1 == null)
-      return 0; // both are null
+    } else if (l1 == null) return 0; // both are null
     return l1.compareTo(l2); // natural ordering.
   }
 
@@ -91,8 +86,7 @@ public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
 
   @Override
   public double divideForAvg(Long l1, Long l2) {
-    return (l2 == null || l1 == null) ? Double.NaN : (l1.doubleValue() / l2
-        .doubleValue());
+    return (l2 == null || l1 == null) ? Double.NaN : (l1.doubleValue() / l2.doubleValue());
   }
 
   @Override
@@ -112,7 +106,7 @@ public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
 
   @Override
   public void initialize(EmptyMsg msg) {
-    //nothing 
+    // nothing
   }
 
   @Override

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Map;
@@ -35,15 +34,17 @@ abstract class CandidateGenerator {
    * From a list of regions pick a random one. Null can be returned which
    * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
    * rather than swap.
-   * @param cluster The state of the cluster
-   * @param server index of the server
+   * @param cluster        The state of the cluster
+   * @param server         index of the server
    * @param chanceOfNoSwap Chance that this will decide to try a move rather than a swap.
    * @return a random {@link RegionInfo} or null if an asymmetrical move is suggested.
    */
   int pickRandomRegion(BalancerClusterState cluster, int server, double chanceOfNoSwap) {
     // Check to see if this is just a move.
-    if (cluster.regionsPerServer[server].length == 0
-        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap) {
+    if (
+      cluster.regionsPerServer[server].length == 0
+        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap
+    ) {
       // signal a move only.
       return -1;
     }

@@ -22,14 +22,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.io.ByteBufferWriterOutputStream;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
@@ -37,6 +35,7 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A WALCellCodec that encrypts the WALedits.
@@ -91,8 +90,7 @@ public class SecureWALCellCodec extends WALCellCodec {
       // encoder supports that just read the remainder in directly
 
       if (ivLength != this.iv.length) {
-        throw new IOException("Incorrect IV length: expected=" + iv.length + " have=" +
-          ivLength);
+        throw new IOException("Incorrect IV length: expected=" + iv.length + " have=" + ivLength);
       }
       IOUtils.readFully(in, this.iv);
 
@@ -124,12 +122,12 @@ public class SecureWALCellCodec extends WALCellCodec {
 
       // Row
       int elemLen = StreamUtils.readRawVarint32(cin);
-      pos = Bytes.putShort(backingArray, pos, (short)elemLen);
+      pos = Bytes.putShort(backingArray, pos, (short) elemLen);
       IOUtils.readFully(cin, backingArray, pos, elemLen);
       pos += elemLen;
       // Family
       elemLen = StreamUtils.readRawVarint32(cin);
-      pos = Bytes.putByte(backingArray, pos, (byte)elemLen);
+      pos = Bytes.putByte(backingArray, pos, (byte) elemLen);
       IOUtils.readFully(cin, backingArray, pos, elemLen);
       pos += elemLen;
       // Qualifier

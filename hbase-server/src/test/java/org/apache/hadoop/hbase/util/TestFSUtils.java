@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -64,12 +63,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link FSUtils}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestFSUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSUtils.class);
+    HBaseClassTestRule.forClass(TestFSUtils.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSUtils.class);
 
@@ -98,10 +97,9 @@ public class TestFSUtils {
     }
   }
 
-  private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize)
-    throws Exception {
+  private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize) throws Exception {
     FSDataOutputStream out = fs.create(file);
-    byte [] data = new byte[dataSize];
+    byte[] data = new byte[dataSize];
     out.write(data, 0, dataSize);
     out.close();
   }
@@ -145,7 +143,7 @@ public class TestFSUtils {
 
       // create a file with two blocks
       testFile = new Path("/test1.txt");
-      WriteDataToHDFS(fs, testFile, 2*DEFAULT_BLOCK_SIZE);
+      WriteDataToHDFS(fs, testFile, 2 * DEFAULT_BLOCK_SIZE);
 
       // given the default replication factor is 3, the same as the number of
       // datanodes; the locality index for each host should be 100%,
@@ -158,18 +156,16 @@ public class TestFSUtils {
         HDFSBlocksDistribution blocksDistribution =
           fileToBlockDistribution.getForPath(fs, testFile);
 
-        long uniqueBlocksTotalWeight =
-          blocksDistribution.getUniqueBlocksTotalWeight();
+        long uniqueBlocksTotalWeight = blocksDistribution.getUniqueBlocksTotalWeight();
         for (String host : hosts) {
           long weight = blocksDistribution.getWeight(host);
           ok = (ok && uniqueBlocksTotalWeight == weight);
         }
       } while (!ok && EnvironmentEdgeManager.currentTime() < maxTime);
       assertTrue(ok);
-      } finally {
+    } finally {
       htu.shutdownMiniDFSCluster();
     }
-
 
     try {
       // set up a cluster with 4 nodes
@@ -180,7 +176,7 @@ public class TestFSUtils {
 
       // create a file with three blocks
       testFile = new Path("/test2.txt");
-      WriteDataToHDFS(fs, testFile, 3*DEFAULT_BLOCK_SIZE);
+      WriteDataToHDFS(fs, testFile, 3 * DEFAULT_BLOCK_SIZE);
 
       // given the default replication factor is 3, we will have total of 9
       // replica of blocks; thus the host with the highest weight should have
@@ -197,14 +193,12 @@ public class TestFSUtils {
         weight = blocksDistribution.getWeight(tophost);
 
         // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
-      } while (uniqueBlocksTotalWeight != weight &&
-          EnvironmentEdgeManager.currentTime() < maxTime);
+      } while (uniqueBlocksTotalWeight != weight && EnvironmentEdgeManager.currentTime() < maxTime);
       assertTrue(uniqueBlocksTotalWeight == weight);
 
     } finally {
       htu.shutdownMiniDFSCluster();
     }
-
 
     try {
       // set up a cluster with 4 nodes
@@ -224,9 +218,10 @@ public class TestFSUtils {
       do {
         blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
         // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
-      }
-      while (blocksDistribution.getTopHosts().size() != 3 &&
-          EnvironmentEdgeManager.currentTime() < maxTime);
+      } while (
+        blocksDistribution.getTopHosts().size() != 3
+          && EnvironmentEdgeManager.currentTime() < maxTime
+      );
       assertEquals("Wrong number of hosts distributing blocks.", 3,
         blocksDistribution.getTopHosts().size());
     } finally {
@@ -257,9 +252,9 @@ public class TestFSUtils {
     assertTrue(CommonFSUtils.isExists(fs, versionFile));
     assertTrue(CommonFSUtils.delete(fs, versionFile, true));
     Path metaRegionDir =
-        FSUtils.getRegionDirFromRootDir(rootdir, RegionInfoBuilder.FIRST_META_REGIONINFO);
-    FsPermission defaultPerms = CommonFSUtils.getFilePermissions(fs, this.conf,
-        HConstants.DATA_FILE_UMASK_KEY);
+      FSUtils.getRegionDirFromRootDir(rootdir, RegionInfoBuilder.FIRST_META_REGIONINFO);
+    FsPermission defaultPerms =
+      CommonFSUtils.getFilePermissions(fs, this.conf, HConstants.DATA_FILE_UMASK_KEY);
     CommonFSUtils.create(fs, metaRegionDir, defaultPerms, false);
     boolean thrown = false;
     try {
@@ -268,10 +263,10 @@ public class TestFSUtils {
       thrown = true;
     }
     assertTrue("Expected FileSystemVersionException", thrown);
-    // Write out a good version file.  See if we can read it in and convert.
+    // Write out a good version file. See if we can read it in and convert.
     String version = HConstants.FILE_SYSTEM_VERSION;
     writeVersionFile(versionFile, version);
-    FileStatus [] status = fs.listStatus(versionFile);
+    FileStatus[] status = fs.listStatus(versionFile);
     assertNotNull(status);
     assertTrue(status.length > 0);
     String newVersion = FSUtils.getVersion(fs, rootdir);
@@ -299,15 +294,15 @@ public class TestFSUtils {
     final Path rootdir = htu.getDataTestDir();
     final FileSystem fs = rootdir.getFileSystem(conf);
     // default fs permission
-    FsPermission defaultFsPerm = CommonFSUtils.getFilePermissions(fs, conf,
-        HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission defaultFsPerm =
+      CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // 'hbase.data.umask.enable' is false. We will get default fs permission.
     assertEquals(FsPermission.getFileDefault(), defaultFsPerm);
 
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     // first check that we don't crash if we don't have perms set
-    FsPermission defaultStartPerm = CommonFSUtils.getFilePermissions(fs, conf,
-        HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission defaultStartPerm =
+      CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // default 'hbase.data.umask'is 000, and this umask will be used when
     // 'hbase.data.umask.enable' is true.
     // Therefore we will not get the real fs default in this case.
@@ -316,8 +311,8 @@ public class TestFSUtils {
 
     conf.setStrings(HConstants.DATA_FILE_UMASK_KEY, "077");
     // now check that we get the right perms
-    FsPermission filePerm = CommonFSUtils.getFilePermissions(fs, conf,
-        HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission filePerm =
+      CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     assertEquals(new FsPermission("700"), filePerm);
 
     // then that the correct file is created
@@ -366,7 +361,8 @@ public class TestFSUtils {
   public void testFilteredStatusDoesNotThrowOnNotFound() throws Exception {
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     try {
-      assertNull(FSUtils.listStatusWithStatusFilter(cluster.getFileSystem(), new Path("definitely/doesn't/exist"), null));
+      assertNull(FSUtils.listStatusWithStatusFilter(cluster.getFileSystem(),
+        new Path("definitely/doesn't/exist"), null));
     } finally {
       cluster.shutdown();
     }
@@ -396,7 +392,7 @@ public class TestFSUtils {
     EnvironmentEdgeManager.injectEdge(mockEnv);
     try {
       String dstFile = HBaseTestingUtil.getRandomUUID().toString();
-      Path dst = new Path(testDir , dstFile);
+      Path dst = new Path(testDir, dstFile);
 
       assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
       assertFalse("The moved file should not be present", CommonFSUtils.isExists(fs, p));
@@ -441,8 +437,7 @@ public class TestFSUtils {
 
   class AlwaysFailSetStoragePolicyFileSystem extends DistributedFileSystem {
     @Override
-    public void setStoragePolicy(final Path src, final String policyName)
-            throws IOException {
+    public void setStoragePolicy(final Path src, final String policyName) throws IOException {
       throw new IOException("The setStoragePolicy method is invoked");
     }
   }
@@ -474,7 +469,7 @@ public class TestFSUtils {
       fs.mkdirs(testDir);
 
       String storagePolicy =
-          conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
       CommonFSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
       String file = HBaseTestingUtil.getRandomUUID().toString();
@@ -483,11 +478,13 @@ public class TestFSUtils {
       HFileSystem hfs = new HFileSystem(fs);
       String policySet = hfs.getStoragePolicyName(p);
       LOG.debug("The storage policy of path " + p + " is " + policySet);
-      if (policy.equals(HConstants.DEFER_TO_HDFS_STORAGE_POLICY)
-              || policy.equals(INVALID_STORAGE_POLICY)) {
+      if (
+        policy.equals(HConstants.DEFER_TO_HDFS_STORAGE_POLICY)
+          || policy.equals(INVALID_STORAGE_POLICY)
+      ) {
         String hdfsDefaultPolicy = hfs.getStoragePolicyName(hfs.getHomeDirectory());
         LOG.debug("The default hdfs storage policy (indicated by home path: "
-                + hfs.getHomeDirectory() + ") is " + hdfsDefaultPolicy);
+          + hfs.getHomeDirectory() + ") is " + hdfsDefaultPolicy);
         Assert.assertEquals(hdfsDefaultPolicy, policySet);
       } else {
         Assert.assertEquals(policy, policySet);
@@ -500,11 +497,11 @@ public class TestFSUtils {
   }
 
   /**
-   * Ugly test that ensures we can get at the hedged read counters in dfsclient.
-   * Does a bit of preading with hedged reads enabled using code taken from hdfs TestPread.
-   * @throws Exception
+   * Ugly test that ensures we can get at the hedged read counters in dfsclient. Does a bit of
+   * preading with hedged reads enabled using code taken from hdfs TestPread. n
    */
-  @Test public void testDFSHedgedReadMetrics() throws Exception {
+  @Test
+  public void testDFSHedgedReadMetrics() throws Exception {
     // Enable hedged reads and set it so the threshold is really low.
     // Most of this test is taken from HDFS, from TestPread.
     conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
@@ -515,15 +512,15 @@ public class TestFSUtils {
     conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 0);
     conf.setBoolean("dfs.datanode.transferTo.allowed", false);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    // Get the metrics.  Should be empty.
+    // Get the metrics. Should be empty.
     DFSHedgedReadMetrics metrics = FSUtils.getDFSHedgedReadMetrics(conf);
     assertEquals(0, metrics.getHedgedReadOps());
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path p = new Path("preadtest.dat");
       // We need > 1 blocks to test out the hedged reads.
-      DFSTestUtil.createFile(fileSys, p, 12 * blockSize, 12 * blockSize,
-        blockSize, (short) 3, seed);
+      DFSTestUtil.createFile(fileSys, p, 12 * blockSize, 12 * blockSize, blockSize, (short) 3,
+        seed);
       pReadFile(fileSys, p);
       cleanupFile(fileSys, p);
       assertTrue(metrics.getHedgedReadOps() > 0);
@@ -532,7 +529,6 @@ public class TestFSUtils {
       cluster.shutdown();
     }
   }
-
 
   @Test
   public void testCopyFilesParallel() throws Exception {
@@ -605,19 +601,19 @@ public class TestFSUtils {
     // check block location caching
     stm = fileSys.open(name);
     stm.readFully(1, actual, 0, 4096);
-    stm.readFully(4*blockSize, actual, 0, 4096);
-    stm.readFully(7*blockSize, actual, 0, 4096);
-    actual = new byte[3*4096];
-    stm.readFully(0*blockSize, actual, 0, 3*4096);
+    stm.readFully(4 * blockSize, actual, 0, 4096);
+    stm.readFully(7 * blockSize, actual, 0, 4096);
+    actual = new byte[3 * 4096];
+    stm.readFully(0 * blockSize, actual, 0, 3 * 4096);
     checkAndEraseData(actual, 0, expected, "Pread Test 7");
-    actual = new byte[8*4096];
-    stm.readFully(3*blockSize, actual, 0, 8*4096);
-    checkAndEraseData(actual, 3*blockSize, expected, "Pread Test 8");
+    actual = new byte[8 * 4096];
+    stm.readFully(3 * blockSize, actual, 0, 8 * 4096);
+    checkAndEraseData(actual, 3 * blockSize, expected, "Pread Test 8");
     // read the tail
-    stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize/2);
+    stm.readFully(11 * blockSize + blockSize / 2, actual, 0, blockSize / 2);
     IOException res = null;
     try { // read beyond the end of the file
-      stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize);
+      stm.readFully(11 * blockSize + blockSize / 2, actual, 0, blockSize);
     } catch (IOException e) {
       // should throw an exception
       res = e;
@@ -629,42 +625,37 @@ public class TestFSUtils {
 
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+      assertEquals(message + " byte " + (from + idx) + " differs. expected " + expected[from + idx]
+        + " actual " + actual[idx], actual[idx], expected[from + idx]);
       actual[idx] = 0;
     }
   }
 
-  private void doPread(FSDataInputStream stm, long position, byte[] buffer,
-      int offset, int length) throws IOException {
+  private void doPread(FSDataInputStream stm, long position, byte[] buffer, int offset, int length)
+    throws IOException {
     int nread = 0;
     // long totalRead = 0;
     // DFSInputStream dfstm = null;
 
-    /* Disable. This counts do not add up. Some issue in original hdfs tests?
-    if (stm.getWrappedStream() instanceof DFSInputStream) {
-      dfstm = (DFSInputStream) (stm.getWrappedStream());
-      totalRead = dfstm.getReadStatistics().getTotalBytesRead();
-    } */
+    /*
+     * Disable. This counts do not add up. Some issue in original hdfs tests? if
+     * (stm.getWrappedStream() instanceof DFSInputStream) { dfstm = (DFSInputStream)
+     * (stm.getWrappedStream()); totalRead = dfstm.getReadStatistics().getTotalBytesRead(); }
+     */
 
     while (nread < length) {
-      int nbytes =
-          stm.read(position + nread, buffer, offset + nread, length - nread);
+      int nbytes = stm.read(position + nread, buffer, offset + nread, length - nread);
       assertTrue("Error in pread", nbytes > 0);
       nread += nbytes;
     }
 
-    /* Disable. This counts do not add up. Some issue in original hdfs tests?
-    if (dfstm != null) {
-      if (isHedgedRead) {
-        assertTrue("Expected read statistic to be incremented",
-          length <= dfstm.getReadStatistics().getTotalBytesRead() - totalRead);
-      } else {
-        assertEquals("Expected read statistic to be incremented", length, dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
-      }
-    }*/
+    /*
+     * Disable. This counts do not add up. Some issue in original hdfs tests? if (dfstm != null) {
+     * if (isHedgedRead) { assertTrue("Expected read statistic to be incremented", length <=
+     * dfstm.getReadStatistics().getTotalBytesRead() - totalRead); } else {
+     * assertEquals("Expected read statistic to be incremented", length, dfstm
+     * .getReadStatistics().getTotalBytesRead() - totalRead); } }
+     */
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
@@ -672,7 +663,6 @@ public class TestFSUtils {
     assertTrue(fileSys.delete(name, true));
     assertTrue(!fileSys.exists(name));
   }
-
 
   static {
     try {

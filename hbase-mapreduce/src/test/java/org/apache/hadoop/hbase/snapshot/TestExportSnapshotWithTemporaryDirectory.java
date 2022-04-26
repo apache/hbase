@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,12 +31,12 @@ import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Ignore // HBASE-24493
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExportSnapshotWithTemporaryDirectory.class);
+    HBaseClassTestRule.forClass(TestExportSnapshotWithTemporaryDirectory.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -54,8 +54,8 @@ public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot
     Path tmpDir = null;
     try {
       FileSystem localFs = FileSystem.getLocal(conf);
-      tmpDir = TEST_UTIL.getDataTestDir(UUID.randomUUID().toString()).
-        makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
+      tmpDir = TEST_UTIL.getDataTestDir(UUID.randomUUID().toString())
+        .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }

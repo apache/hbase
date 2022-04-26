@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,23 +31,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test that we propagate errors through an dispatcher exactly once via different failure
- * injection mechanisms.
+ * Test that we propagate errors through an dispatcher exactly once via different failure injection
+ * mechanisms.
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestForeignExceptionDispatcher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestForeignExceptionDispatcher.class);
+    HBaseClassTestRule.forClass(TestForeignExceptionDispatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestForeignExceptionDispatcher.class);
 
   /**
    * Exception thrown from the test
    */
-  final ForeignException EXTEXN = new ForeignException("FORTEST", new IllegalArgumentException("FORTEST"));
-  final ForeignException EXTEXN2 = new ForeignException("FORTEST2", new IllegalArgumentException("FORTEST2"));
+  final ForeignException EXTEXN =
+    new ForeignException("FORTEST", new IllegalArgumentException("FORTEST"));
+  final ForeignException EXTEXN2 =
+    new ForeignException("FORTEST2", new IllegalArgumentException("FORTEST2"));
 
   /**
    * Tests that a dispatcher only dispatches only the first exception, and does not propagate

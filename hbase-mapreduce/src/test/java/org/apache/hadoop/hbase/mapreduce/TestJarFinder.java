@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,12 +46,12 @@ public class TestJarFinder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestJarFinder.class);
+    HBaseClassTestRule.forClass(TestJarFinder.class);
 
   @Test
   public void testJar() throws Exception {
 
-    //picking a class that is for sure in a JAR in the classpath
+    // picking a class that is for sure in a JAR in the classpath
     String jar = JarFinder.getJar(LoggerFactory.class);
     Assert.assertTrue(new File(jar).exists());
   }
@@ -59,8 +59,7 @@ public class TestJarFinder {
   private static void delete(File file) throws IOException {
     if (file.getAbsolutePath().length() < 5) {
       throw new IllegalArgumentException(
-        MessageFormat.format("Path [{0}] is too short, not deleting",
-                             file.getAbsolutePath()));
+        MessageFormat.format("Path [{0}] is too short, not deleting", file.getAbsolutePath()));
     }
     if (file.exists()) {
       if (file.isDirectory()) {
@@ -73,16 +72,15 @@ public class TestJarFinder {
       }
       if (!file.delete()) {
         throw new RuntimeException(
-          MessageFormat.format("Could not delete path [{0}]",
-                               file.getAbsolutePath()));
+          MessageFormat.format("Could not delete path [{0}]", file.getAbsolutePath()));
       }
     }
   }
 
   @Test
   public void testExpandedClasspath() throws Exception {
-    //picking a class that is for sure in a directory in the classpath
-    //in this case the JAR is created on the fly
+    // picking a class that is for sure in a directory in the classpath
+    // in this case the JAR is created on the fly
     String jar = JarFinder.getJar(TestJarFinder.class);
     Assert.assertTrue(new File(jar).exists());
   }
@@ -90,7 +88,7 @@ public class TestJarFinder {
   @Test
   public void testExistingManifest() throws Exception {
     File dir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-                        TestJarFinder.class.getName() + "-testExistingManifest");
+      TestJarFinder.class.getName() + "-testExistingManifest");
     delete(dir);
     dir.mkdirs();
 
@@ -109,8 +107,7 @@ public class TestJarFinder {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     JarOutputStream zos = new JarOutputStream(baos);
     JarFinder.jarDir(dir, "", zos);
-    JarInputStream jis =
-      new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    JarInputStream jis = new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
     Assert.assertNotNull(jis.getManifest());
     jis.close();
   }
@@ -118,7 +115,7 @@ public class TestJarFinder {
   @Test
   public void testNoManifest() throws Exception {
     File dir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-                        TestJarFinder.class.getName() + "-testNoManifest");
+      TestJarFinder.class.getName() + "-testNoManifest");
     delete(dir);
     dir.mkdirs();
     File propsFile = new File(dir, "props.properties");
@@ -128,8 +125,7 @@ public class TestJarFinder {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     JarOutputStream zos = new JarOutputStream(baos);
     JarFinder.jarDir(dir, "", zos);
-    JarInputStream jis =
-      new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    JarInputStream jis = new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
     Assert.assertNotNull(jis.getManifest());
     jis.close();
   }

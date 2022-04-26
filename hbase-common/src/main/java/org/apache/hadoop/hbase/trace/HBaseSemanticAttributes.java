@@ -23,9 +23,10 @@ import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The constants in this class correspond with the guidance outlined by the OpenTelemetry
- * <a href="https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions">Semantic Conventions</a>.
-*/
+ * The constants in this class correspond with the guidance outlined by the OpenTelemetry <a href=
+ * "https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions">Semantic
+ * Conventions</a>.
+ */
 @InterfaceAudience.Private
 public final class HBaseSemanticAttributes {
   public static final AttributeKey<String> DB_SYSTEM = SemanticAttributes.DB_SYSTEM;
@@ -37,8 +38,8 @@ public final class HBaseSemanticAttributes {
   public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
   /**
-   * For operations that themselves ship one or more operations, such as
-   * {@link Operation#BATCH} and {@link Operation#CHECK_AND_MUTATE}.
+   * For operations that themselves ship one or more operations, such as {@link Operation#BATCH} and
+   * {@link Operation#CHECK_AND_MUTATE}.
    */
   public static final AttributeKey<List<String>> CONTAINER_DB_OPERATIONS_KEY =
     AttributeKey.stringArrayKey("db.hbase.container_operations");
@@ -74,12 +75,13 @@ public final class HBaseSemanticAttributes {
   }
 
   /**
-   * These are values used with {@link #RPC_SYSTEM}. Only a single value for now; more to come as
-   * we add tracing over our gateway components.
+   * These are values used with {@link #RPC_SYSTEM}. Only a single value for now; more to come as we
+   * add tracing over our gateway components.
    */
   public enum RpcSystem {
     HBASE_RPC,
   }
 
-  private HBaseSemanticAttributes() { }
+  private HBaseSemanticAttributes() {
+  }
 }

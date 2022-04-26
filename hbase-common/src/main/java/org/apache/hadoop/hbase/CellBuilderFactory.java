@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Create a CellBuilder instance. Currently, we have two kinds of Cell Builder.
- * {@link CellBuilderType#DEEP_COPY} All bytes array passed into builder will be copied to build an new Cell.
- *                                   The cell impl is {@link org.apache.hadoop.hbase.KeyValue}
- * {@link CellBuilderType#SHALLOW_COPY} Just copy the references of passed bytes array to build an new Cell
- *                                      The cell impl is {@link org.apache.hadoop.hbase.IndividualBytesFieldCell}
- * NOTE: The cell impl may be changed in the future. The user application SHOULD NOT depend on any concrete cell impl.
+ * {@link CellBuilderType#DEEP_COPY} All bytes array passed into builder will be copied to build an
+ * new Cell. The cell impl is {@link org.apache.hadoop.hbase.KeyValue}
+ * {@link CellBuilderType#SHALLOW_COPY} Just copy the references of passed bytes array to build an
+ * new Cell The cell impl is {@link org.apache.hadoop.hbase.IndividualBytesFieldCell} NOTE: The cell
+ * impl may be changed in the future. The user application SHOULD NOT depend on any concrete cell
+ * impl.
  */
 @InterfaceAudience.Public
 public final class CellBuilderFactory {
@@ -47,6 +47,6 @@ public final class CellBuilderFactory {
     }
   }
 
-  private CellBuilderFactory(){
+  private CellBuilderFactory() {
   }
 }

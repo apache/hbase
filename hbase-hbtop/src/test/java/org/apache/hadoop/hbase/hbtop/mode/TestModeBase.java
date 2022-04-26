@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,23 +22,21 @@ import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.TestUtils;
 import org.junit.Test;
 
-
 public abstract class TestModeBase {
 
   @Test
   public void testGetRecords() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(),
-        null);
+    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(), null);
     assertRecords(records);
   }
 
   protected abstract Mode getMode();
+
   protected abstract void assertRecords(List<Record> records);
 
   @Test
   public void testDrillDown() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(),
-        null);
+    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(), null);
     for (Record record : records) {
       assertDrillDown(record, getMode().drillDown(record));
     }

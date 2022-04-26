@@ -24,25 +24,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * A collection of criteria used for table selection. The logic of table selection is as follows:
  * <ul>
- *   <li>
- *     When no parameter values are provided, an unfiltered list of all user tables is returned.
- *   </li>
- *   <li>
- *     When a list of {@link TableName TableNames} are provided, the filter starts with any of
- *     these tables that exist.
- *   </li>
- *   <li>
- *     When a {@code namespace} name is provided, the filter starts with all the tables present in
- *     that namespace.
- *   </li>
- *   <li>
- *     If both a list of {@link TableName TableNames} and a {@code namespace} name are provided,
- *     the {@link TableName} list is honored and the {@code namespace} name is ignored.
- *   </li>
- *   <li>
- *     If a {@code regex} is provided, this subset of {@link TableName TableNames} is further
- *     reduced to those that match the provided regular expression.
- *   </li>
+ * <li>When no parameter values are provided, an unfiltered list of all user tables is returned.
+ * </li>
+ * <li>When a list of {@link TableName TableNames} are provided, the filter starts with any of these
+ * tables that exist.</li>
+ * <li>When a {@code namespace} name is provided, the filter starts with all the tables present in
+ * that namespace.</li>
+ * <li>If both a list of {@link TableName TableNames} and a {@code namespace} name are provided, the
+ * {@link TableName} list is honored and the {@code namespace} name is ignored.</li>
+ * <li>If a {@code regex} is provided, this subset of {@link TableName TableNames} is further
+ * reduced to those that match the provided regular expression.</li>
  * </ul>
  */
 @InterfaceAudience.Public

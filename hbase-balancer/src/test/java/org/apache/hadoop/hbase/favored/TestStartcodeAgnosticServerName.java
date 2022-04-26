@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,18 +28,18 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestStartcodeAgnosticServerName {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStartcodeAgnosticServerName.class);
+    HBaseClassTestRule.forClass(TestStartcodeAgnosticServerName.class);
 
   @Test
   public void testStartCodeServerName() {
     ServerName sn = ServerName.valueOf("www.example.org", 1234, 5678);
     StartcodeAgnosticServerName snStartCode =
-        new StartcodeAgnosticServerName("www.example.org", 1234, 5678);
+      new StartcodeAgnosticServerName("www.example.org", 1234, 5678);
 
     assertTrue(ServerName.isSameAddress(sn, snStartCode));
     assertTrue(snStartCode.equals(sn));
@@ -47,7 +47,7 @@ public class TestStartcodeAgnosticServerName {
     assertEquals(0, snStartCode.compareTo(sn));
 
     StartcodeAgnosticServerName snStartCodeFNPort =
-        new StartcodeAgnosticServerName("www.example.org", 1234, ServerName.NON_STARTCODE);
+      new StartcodeAgnosticServerName("www.example.org", 1234, ServerName.NON_STARTCODE);
     assertTrue(ServerName.isSameAddress(snStartCodeFNPort, snStartCode));
     assertTrue(snStartCode.equals(snStartCodeFNPort));
     assertTrue(snStartCodeFNPort.equals(snStartCode));

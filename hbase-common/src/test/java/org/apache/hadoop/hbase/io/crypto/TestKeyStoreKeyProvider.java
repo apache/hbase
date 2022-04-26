@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,12 +40,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestKeyStoreKeyProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
+    HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestKeyStoreKeyProvider.class);
   static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
@@ -62,8 +62,7 @@ public class TestKeyStoreKeyProvider {
     // Create a JKECS store containing a test secret key
     KeyStore store = KeyStore.getInstance("JCEKS");
     store.load(null, PASSWORD.toCharArray());
-    store.setEntry(ALIAS,
-      new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
+    store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
       new KeyStore.PasswordProtection(PASSWORD.toCharArray()));
     // Create the test directory
     String dataDir = TEST_UTIL.getDataTestDir().toString();
@@ -104,8 +103,8 @@ public class TestKeyStoreKeyProvider {
   @Test
   public void testKeyStoreKeyProviderWithPasswordFile() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
-    provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile=" +
-      URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
+    provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile="
+      + URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
     Key key = provider.getKey(ALIAS);
     assertNotNull(key);
     byte[] keyBytes = key.getEncoded();

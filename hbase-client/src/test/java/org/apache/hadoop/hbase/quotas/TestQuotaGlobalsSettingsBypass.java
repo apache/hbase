@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
@@ -30,12 +30,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestQuotaGlobalsSettingsBypass {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaGlobalsSettingsBypass.class);
+    HBaseClassTestRule.forClass(TestQuotaGlobalsSettingsBypass.class);
 
   @Test
   public void testMerge() throws IOException {
@@ -47,19 +47,19 @@ public class TestQuotaGlobalsSettingsBypass {
   @Test
   public void testInvalidMerges() throws IOException {
     QuotaGlobalsSettingsBypass userBypass =
-        new QuotaGlobalsSettingsBypass("joe", null, null, null, true);
+      new QuotaGlobalsSettingsBypass("joe", null, null, null, true);
     QuotaGlobalsSettingsBypass tableBypass =
-        new QuotaGlobalsSettingsBypass(null, TableName.valueOf("table"), null, null, true);
+      new QuotaGlobalsSettingsBypass(null, TableName.valueOf("table"), null, null, true);
     QuotaGlobalsSettingsBypass namespaceBypass =
-        new QuotaGlobalsSettingsBypass(null, null, "ns", null, true);
+      new QuotaGlobalsSettingsBypass(null, null, "ns", null, true);
     QuotaGlobalsSettingsBypass regionServerBypass =
-        new QuotaGlobalsSettingsBypass(null, null, null, "all", true);
+      new QuotaGlobalsSettingsBypass(null, null, null, "all", true);
     QuotaGlobalsSettingsBypass userOnTableBypass =
-        new QuotaGlobalsSettingsBypass("joe", TableName.valueOf("table"), null, null, true);
+      new QuotaGlobalsSettingsBypass("joe", TableName.valueOf("table"), null, null, true);
     QuotaGlobalsSettingsBypass userOnNamespaceBypass =
-        new QuotaGlobalsSettingsBypass("joe", null, "ns", null, true);
+      new QuotaGlobalsSettingsBypass("joe", null, "ns", null, true);
     QuotaGlobalsSettingsBypass userOnRegionServerBypass =
-        new QuotaGlobalsSettingsBypass("joe", null, null, "all", true);
+      new QuotaGlobalsSettingsBypass("joe", null, null, "all", true);
 
     assertTrue(userBypass.merge(userBypass).getBypass());
     expectFailure(userBypass, new QuotaGlobalsSettingsBypass("frank", null, null, null, false));
@@ -142,6 +142,7 @@ public class TestQuotaGlobalsSettingsBypass {
     try {
       one.merge(two);
       fail("Expected to see an Exception merging " + two + " into " + one);
-    } catch (IllegalArgumentException e) {}
+    } catch (IllegalArgumentException e) {
+    }
   }
 }

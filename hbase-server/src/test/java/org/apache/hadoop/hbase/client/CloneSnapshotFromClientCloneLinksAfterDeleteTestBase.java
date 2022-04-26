@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientCloneLinksAfterDeleteTestBase
-    extends CloneSnapshotFromClientTestBase {
+  extends CloneSnapshotFromClientTestBase {
 
   /**
    * Verify that tables created from the snapshot are still alive after source table deletion.

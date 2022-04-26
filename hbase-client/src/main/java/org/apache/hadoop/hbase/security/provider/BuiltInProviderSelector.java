@@ -21,9 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.Objects;
-
 import net.jcip.annotations.NotThreadSafe;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
@@ -39,14 +37,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Default implementation of {@link AuthenticationProviderSelector} which can choose from the
  * authentication implementations which HBase provides out of the box: Simple, Kerberos, and
- * Delegation Token authentication.
- *
- * This implementation will ignore any {@link SaslAuthenticationProvider}'s which are available
- * on the classpath or specified in the configuration because HBase cannot correctly choose which
- * token should be returned to a client when multiple are present. It is expected that users
- * implement their own {@link AuthenticationProviderSelector} when writing a custom provider.
- *
- * This implementation is not thread-safe. {@link #configure(Configuration, Collection)} and
+ * Delegation Token authentication. This implementation will ignore any
+ * {@link SaslAuthenticationProvider}'s which are available on the classpath or specified in the
+ * configuration because HBase cannot correctly choose which token should be returned to a client
+ * when multiple are present. It is expected that users implement their own
+ * {@link AuthenticationProviderSelector} when writing a custom provider. This implementation is not
+ * thread-safe. {@link #configure(Configuration, Collection)} and
  * {@link #selectProvider(String, User)} is not safe if they are called concurrently.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
@@ -61,8 +57,8 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
   Text digestAuthTokenKind = null;
 
   @Override
-  public void configure(
-      Configuration conf, Collection<SaslClientAuthenticationProvider> providers) {
+  public void configure(Configuration conf,
+    Collection<SaslClientAuthenticationProvider> providers) {
     if (this.conf != null) {
       throw new IllegalStateException("configure() should only be called once");
     }
@@ -73,19 +69,19 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
       if (SimpleSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().contentEquals(name)) {
         if (simpleAuth != null) {
           throw new IllegalStateException(
-              "Encountered multiple SimpleSaslClientAuthenticationProvider instances");
+            "Encountered multiple SimpleSaslClientAuthenticationProvider instances");
         }
         simpleAuth = (SimpleSaslClientAuthenticationProvider) provider;
       } else if (GssSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().equals(name)) {
         if (krbAuth != null) {
           throw new IllegalStateException(
-              "Encountered multiple GssSaslClientAuthenticationProvider instances");
+            "Encountered multiple GssSaslClientAuthenticationProvider instances");
         }
         krbAuth = (GssSaslClientAuthenticationProvider) provider;
       } else if (DigestSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().equals(name)) {
         if (digestAuth != null) {
           throw new IllegalStateException(
-              "Encountered multiple DigestSaslClientAuthenticationProvider instances");
+            "Encountered multiple DigestSaslClientAuthenticationProvider instances");
         }
         digestAuth = (DigestSaslClientAuthenticationProvider) provider;
         digestAuthTokenKind = new Text(digestAuth.getTokenKind());
@@ -95,13 +91,13 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
     }
     if (simpleAuth == null || krbAuth == null || digestAuth == null) {
       throw new IllegalStateException("Failed to load SIMPLE, KERBEROS, and DIGEST authentication "
-          + "providers. Classpath is not sane.");
+        + "providers. Classpath is not sane.");
     }
   }
 
   @Override
-  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User user) {
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User user) {
     requireNonNull(clusterId, "Null clusterId was given");
     requireNonNull(user, "Null user was given");
 
@@ -117,10 +113,11 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
     // (for whatever that's worth).
     for (Token<? extends TokenIdentifier> token : user.getTokens()) {
       // We need to check for two things:
-      //   1. This token is for the HBase cluster we want to talk to
-      //   2. We have suppporting client implementation to handle the token (the "kind" of token)
-      if (clusterIdAsText.equals(token.getService()) &&
-          digestAuthTokenKind.equals(token.getKind())) {
+      // 1. This token is for the HBase cluster we want to talk to
+      // 2. We have suppporting client implementation to handle the token (the "kind" of token)
+      if (
+        clusterIdAsText.equals(token.getService()) && digestAuthTokenKind.equals(token.getKind())
+      ) {
         return new Pair<>(digestAuth, token);
       }
     }
@@ -128,15 +125,17 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
     final UserGroupInformation currentUser = user.getUGI();
     // May be null if Hadoop AuthenticationMethod is PROXY
     final UserGroupInformation realUser = currentUser.getRealUser();
-    if (currentUser.hasKerberosCredentials() ||
-        (realUser != null && realUser.hasKerberosCredentials())) {
+    if (
+      currentUser.hasKerberosCredentials()
+        || (realUser != null && realUser.hasKerberosCredentials())
+    ) {
       return new Pair<>(krbAuth, null);
     }
     // This indicates that a client is requesting some authentication mechanism which the servers
     // don't know how to process (e.g. there is no provider which can support it). This may be
     // a bug or simply a misconfiguration of client *or* server.
     LOG.warn("No matching SASL authentication provider and supporting token found from providers"
-        + " for user: {}", user);
+      + " for user: {}", user);
     return null;
   }
 

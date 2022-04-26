@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.provider.example;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -30,7 +29,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -45,14 +43,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 
 @InterfaceAudience.Private
 public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticationProvider
-    implements SaslClientAuthenticationProvider {
+  implements SaslClientAuthenticationProvider {
 
   @Override
   public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-      SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
-      Map<String, String> saslProps) throws IOException {
-    return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism()}, null, null,
-        SaslUtil.SASL_DEFAULT_REALM, saslProps, new ShadeSaslClientCallbackHandler(token));
+    SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+    Map<String, String> saslProps) throws IOException {
+    return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
+      null, SaslUtil.SASL_DEFAULT_REALM, saslProps, new ShadeSaslClientCallbackHandler(token));
   }
 
   @Override
@@ -71,8 +69,9 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
   static class ShadeSaslClientCallbackHandler implements CallbackHandler {
     private final String username;
     private final char[] password;
-    public ShadeSaslClientCallbackHandler(
-        Token<? extends TokenIdentifier> token) throws IOException {
+
+    public ShadeSaslClientCallbackHandler(Token<? extends TokenIdentifier> token)
+      throws IOException {
       TokenIdentifier id = token.decodeIdentifier();
       if (id == null) {
         // Something is wrong with the environment if we can't get our Identifier back out.

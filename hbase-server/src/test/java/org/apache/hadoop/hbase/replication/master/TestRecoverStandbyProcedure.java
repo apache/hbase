@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,12 +65,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRecoverStandbyProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRecoverStandbyProcedure.class);
+    HBaseClassTestRule.forClass(TestRecoverStandbyProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoverStandbyProcedure.class);
 
@@ -162,9 +162,8 @@ public class TestRecoverStandbyProcedure {
     for (int i = 0; i < WAL_NUMBER; i++) {
       try (ProtobufLogWriter writer = new ProtobufLogWriter()) {
         Path wal = new Path(peerRemoteWALDir, "srv1,8888." + i + ".syncrep");
-        writer.init(fs, wal, conf, true,
-            WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir),
-            StreamSlowMonitor.create(conf, "defaultMonitor"));
+        writer.init(fs, wal, conf, true, WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir),
+          StreamSlowMonitor.create(conf, "defaultMonitor"));
         List<Entry> entries = setupWALEntries(i * ROW_COUNT, (i + 1) * ROW_COUNT);
         for (Entry entry : entries) {
           writer.append(entry);
@@ -177,8 +176,8 @@ public class TestRecoverStandbyProcedure {
 
   private List<Entry> setupWALEntries(int startRow, int endRow) {
     return IntStream.range(startRow, endRow)
-        .mapToObj(i -> createWALEntry(Bytes.toBytes(i), Bytes.toBytes(i)))
-        .collect(Collectors.toList());
+      .mapToObj(i -> createWALEntry(Bytes.toBytes(i), Bytes.toBytes(i)))
+      .collect(Collectors.toList());
   }
 
   private Entry createWALEntry(byte[] row, byte[] value) {

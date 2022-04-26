@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -32,7 +31,7 @@ public interface Timer extends Metric {
   /**
    * Update the timer with the given duration in given time unit.
    * @param duration the duration of the event
-   * @param unit the time unit for the duration
+   * @param unit     the time unit for the duration
    */
   void update(long duration, TimeUnit unit);
 
