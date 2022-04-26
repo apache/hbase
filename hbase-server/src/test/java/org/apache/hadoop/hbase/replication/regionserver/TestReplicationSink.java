@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -69,14 +71,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
+
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSink {
@@ -426,6 +427,67 @@ public class TestReplicationSink {
     }
     // Clean up the created hfiles or it will mess up subsequent tests
   }
+
+  /**
+   * Test failure metrics produced for failed replication edits
+   */
+  @Test
+  public void testFailedReplicationSinkMetrics() throws IOException {
+    long initialFailedBatches = SINK.getSinkMetrics().getFailedBatches();
+    long errorCount = 0L;
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
+    List<Cell> cells = new ArrayList<>();
+    for(int i = 0; i < BATCH_SIZE; i++) {
+      entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
+    }
+    cells.clear(); // cause IndexOutOfBoundsException
+    try {
+      SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+      Assert.fail("Should re-throw ArrayIndexOutOfBoundsException.");
+    } catch (ArrayIndexOutOfBoundsException e) {
+      errorCount++;
+      assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
+    }
+
+    entries.clear();
+    cells.clear();
+    TableName notExistTable = TableName.valueOf("notExistTable");  // cause TableNotFoundException
+    for (int i = 0; i < BATCH_SIZE; i++) {
+      entries.add(createEntry(notExistTable, i, KeyValue.Type.Put, cells));
+    }
+    try {
+      SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+      Assert.fail("Should re-throw TableNotFoundException.");
+    } catch (TableNotFoundException e) {
+      errorCount++;
+      assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
+    }
+
+    entries.clear();
+    cells.clear();
+    for(int i = 0; i < BATCH_SIZE; i++) {
+      entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
+    }
+    // cause IOException in batch()
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Admin admin = conn.getAdmin()) {
+        admin.disableTable(TABLE_NAME1);
+        try {
+          SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
+            replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+          Assert.fail("Should re-throw IOException.");
+        } catch (IOException e) {
+          errorCount++;
+          assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
+        } finally {
+          admin.enableTable(TABLE_NAME1);
+        }
+      }
+    }
+  }
+
 
   private WALEntry createEntry(TableName table, int row,  KeyValue.Type type, List<Cell> cells) {
     byte[] fam = table.equals(TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
