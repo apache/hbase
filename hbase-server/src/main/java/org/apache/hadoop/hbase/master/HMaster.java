@@ -553,7 +553,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public void run() {
     try {
-      intallShutdownHook();
+      installShutdownHook();
       registerConfigurationObservers();
       Threads.setDaemonThreadRunning(new Thread(() -> {
         try {

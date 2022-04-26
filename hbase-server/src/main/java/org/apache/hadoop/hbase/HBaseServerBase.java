@@ -456,7 +456,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
    * when HMaster and HRegionServer are started.
    * For details, please refer to HBASE-26951
    */
-  protected void intallShutdownHook() {
+  protected final void installShutdownHook() {
     ShutdownHook.install(conf, dataFs, this, Thread.currentThread());
     isShutdownHookInstalled = true;
   }
