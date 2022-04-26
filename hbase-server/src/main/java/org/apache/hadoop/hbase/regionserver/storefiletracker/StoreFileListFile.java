@@ -200,8 +200,8 @@ class StoreFileListFile {
           lists[i] = load(files.get(i));
           loaded = true;
         } catch (EOFException e) {
-          // this is normal case, so use info and do not log stacktrace
-          LOG.info("Failed to load track file {}: {}", trackFiles[i], e.toString());
+          // this is normal case, so just log at debug
+          LOG.debug("EOF loading track file {}, ignoring the exception", trackFiles[i], e);
         }
       }
       if (loaded) {
@@ -258,7 +258,7 @@ class StoreFileListFile {
     } catch (IOException e) {
       // we will create new file with overwrite = true, so not a big deal here, only for speed up
       // loading as we do not need to read this file when loading
-      LOG.debug("failed to delete old track file {}, not a big deal, just ignore", e);
+      LOG.debug("Failed to delete old track file {}, ignoring the exception", e);
     }
   }
 }
