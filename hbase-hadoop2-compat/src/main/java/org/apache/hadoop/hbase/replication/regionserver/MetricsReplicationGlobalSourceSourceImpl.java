@@ -36,6 +36,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
   private final MutableFastCounter logReadInEditsCounter;
   private final MutableFastCounter walEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
+  private final MutableFastCounter failedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
   private final MutableFastCounter shippedBytesCounter;
 
@@ -66,6 +67,8 @@ public class MetricsReplicationGlobalSourceSourceImpl
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getGauge(SOURCE_SIZE_OF_LOG_QUEUE, 0L);
 
     shippedBatchesCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_BATCHES, 0L);
+
+    failedBatchesCounter = rms.getMetricsRegistry().getCounter(SOURCE_FAILED_BATCHES, 0L);
 
     shippedOpsCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_OPS, 0L);
 
@@ -124,6 +127,10 @@ public class MetricsReplicationGlobalSourceSourceImpl
 
   @Override public void incrBatchesShipped(int batches) {
     shippedBatchesCounter.incr(batches);
+  }
+
+  @Override public void incrFailedBatches() {
+    failedBatchesCounter.incr();
   }
 
   @Override public void incrOpsShipped(long ops) {

@@ -27,6 +27,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_SIZE_OF_LOG_QUEUE = "source.sizeOfLogQueue";
   public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
   public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
+  public static final String SOURCE_FAILED_BATCHES = "source.failedBatches";
 
   @Deprecated
   /** @deprecated Use SOURCE_SHIPPED_BYTES instead */
@@ -60,6 +61,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void decrSizeOfLogQueue(int size);
   void incrLogEditsFiltered(long size);
   void incrBatchesShipped(int batches);
+  void incrFailedBatches();
   void incrOpsShipped(long ops);
   void incrShippedBytes(long size);
   void incrLogReadInBytes(long size);

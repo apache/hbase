@@ -231,6 +231,15 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
+   * Convenience method to update metrics when batch of operations has failed.
+   */
+  public void incrementFailedBatches(){
+    singleSourceSource.incrFailedBatches();
+    globalSourceSource.incrFailedBatches();
+  }
+
+
+  /**
    * Gets the number of edits not eligible for replication this source queue logs so far.
    * @return logEditsFiltered non-replicable edits filtered from this queue logs.
    */

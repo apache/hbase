@@ -221,6 +221,7 @@ public class ReplicationSourceShipper extends Thread {
         }
         break;
       } catch (Exception ex) {
+        source.getSourceMetrics().incrementFailedBatches();
         LOG.warn("{} threw unknown exception:",
           source.getReplicationEndpoint().getClass().getName(), ex);
         if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
