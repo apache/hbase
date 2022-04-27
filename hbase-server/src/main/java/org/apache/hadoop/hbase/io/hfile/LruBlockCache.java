@@ -174,13 +174,25 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private final AtomicLong size;
 
   /** Current size of data blocks */
-  private final LongAdder dataBlockSize;
+  private final LongAdder dataBlockSize = new LongAdder();
+
+  /** Current size of index blocks */
+  private final LongAdder indexBlockSize = new LongAdder();
+
+  /** Current size of bloom blocks */
+  private final LongAdder bloomBlockSize = new LongAdder();
 
   /** Current number of cached elements */
   private final AtomicLong elements;
 
   /** Current number of cached data block elements */
-  private final LongAdder dataBlockElements;
+  private final LongAdder dataBlockElements = new LongAdder();
+
+  /** Current number of cached index block elements */
+  private final LongAdder indexBlockElements = new LongAdder();
+
+  /** Current number of cached bloom block elements */
+  private final LongAdder bloomBlockElements = new LongAdder();
 
   /** Cache access count (sequential ID) */
   private final AtomicLong count;
@@ -319,8 +331,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     this.stats = new CacheStats(this.getClass().getSimpleName());
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
-    this.dataBlockElements = new LongAdder();
-    this.dataBlockSize = new LongAdder();
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
     this.size = new AtomicLong(this.overhead);
     this.hardCapacityLimitFactor = hardLimitFactor;
@@ -432,7 +442,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
-    if (buf.getBlockType().isData()) {
+    if (buf.getBlockType().isBloom()) {
+      bloomBlockElements.increment();
+    } else if (buf.getBlockType().isIndex()) {
+      indexBlockElements.increment();
+    } else if (buf.getBlockType().isData()) {
       dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
@@ -489,8 +503,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (evict) {
       heapsize *= -1;
     }
-    if (bt != null && bt.isData()) {
-      dataBlockSize.add(heapsize);
+    if (bt != null) {
+      if (bt.isBloom()) {
+        bloomBlockSize.add(heapsize);
+      } else if (bt.isIndex()) {
+        indexBlockSize.add(heapsize);
+      } else if (bt.isData()) {
+        dataBlockSize.add(heapsize);
+      }
     }
     return size.addAndGet(heapsize);
   }
@@ -606,7 +626,12 @@ public class LruBlockCache implements FirstLevelBlockCache {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    if (block.getBuffer().getBlockType().isData()) {
+    BlockType bt = block.getBuffer().getBlockType();
+    if (bt.isBloom()) {
+      bloomBlockElements.decrement();
+    } else if (bt.isIndex()) {
+      indexBlockElements.decrement();
+    } else if (bt.isData()) {
       dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
@@ -885,6 +910,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return this.dataBlockSize.sum();
   }
 
+  public long getCurrentIndexSize() {
+    return this.indexBlockSize.sum();
+  }
+
+  public long getCurrentBloomSize() {
+    return this.bloomBlockSize.sum();
+  }
+
   @Override
   public long getFreeSize() {
     return getMaxSize() - getCurrentSize();
@@ -903,6 +936,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
   @Override
   public long getDataBlockCount() {
     return this.dataBlockElements.sum();
+  }
+
+  public long getIndexBlockCount() {
+    return this.indexBlockElements.sum();
+  }
+
+  public long getBloomBlockCount() {
+    return this.bloomBlockElements.sum();
   }
 
   EvictionThread getEvictionThread() {
