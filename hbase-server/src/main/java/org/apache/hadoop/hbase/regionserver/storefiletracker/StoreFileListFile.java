@@ -120,8 +120,8 @@ class StoreFileListFile {
       try {
         lists[i] = load(trackFiles[i]);
       } catch (FileNotFoundException | EOFException e) {
-        // this is normal case, so use info and do not log stacktrace
-        LOG.info("Failed to load track file {}: {}", trackFiles[i], e.toString());
+        // this is normal case, so just log at debug
+        LOG.debug("EOF loading track file {}, ignoring the exception", trackFiles[i], e);
       }
     }
     int winnerIndex = select(lists);
@@ -162,8 +162,8 @@ class StoreFileListFile {
       fs.delete(trackFiles[nextTrackFile], false);
     } catch (IOException e) {
       // we will create new file with overwrite = true, so not a big deal here, only for speed up
-      // loading as we do not need to read this file when loading(we will hit FileNotFoundException)
-      LOG.debug("failed to delete old track file {}, not a big deal, just ignore", e);
+      // loading as we do not need to read this file when loading
+      LOG.debug("Failed to delete old track file {}, ignoring the exception", e);
     }
   }
 }
