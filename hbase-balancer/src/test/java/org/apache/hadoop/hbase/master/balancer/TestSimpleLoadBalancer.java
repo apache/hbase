@@ -165,28 +165,19 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testBalanceClusterOverallStrictly() throws Exception {
-    int[] regionNumOfTable1PerServer = { 3, 3, 4, 4, 4, 4, 5, 5, 5 };
-    int[] regionNumOfTable2PerServer = { 2, 2, 2, 2, 2, 2, 2, 2, 1 };
-    TreeMap<ServerName, List<RegionInfo>> serverRegionInfo = new TreeMap<>();
-    List<ServerAndLoad> serverAndLoads = new ArrayList<>();
-    for (int i = 0; i < regionNumOfTable1PerServer.length; i++) {
-      ServerName serverName = ServerName.valueOf("server" + i, 1000, -1);
-      List<RegionInfo> regions1 =
-          createRegions(regionNumOfTable1PerServer[i], TableName.valueOf("table1"));
-      List<RegionInfo> regions2 =
-          createRegions(regionNumOfTable2PerServer[i], TableName.valueOf("table2"));
-      regions1.addAll(regions2);
-      serverRegionInfo.put(serverName, regions1);
-      ServerAndLoad serverAndLoad = new ServerAndLoad(serverName,
-          regionNumOfTable1PerServer[i] + regionNumOfTable2PerServer[i]);
-      serverAndLoads.add(serverAndLoad);
-    }
-    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
+  public void testBalanceClusterOverallStrictly() {
+    int[][] regionsPerServerPerTable = new int[][]{
+      new int[]{ 3, 3, 4, 4, 4, 4, 5, 5, 5 },
+      new int[]{ 2, 2, 2, 2, 2, 2, 2, 2, 1 },
+    };
+    TreeMap<ServerName, List<RegionInfo>> serverRegionInfo =
+      mockClusterServers(regionsPerServerPerTable);
+    List<ServerAndLoad> serverAndLoads = convertToList(serverRegionInfo);
+    Map<TableName, TreeMap<ServerName, List<RegionInfo>>> loadOfAllTable =
         mockClusterServersWithTables(serverRegionInfo);
-    loadBalancer.setClusterLoad((Map) LoadOfAllTable);
-    List<RegionPlan> partialplans = loadBalancer.balanceTable(TableName.valueOf("table1"),
-      LoadOfAllTable.get(TableName.valueOf("table1")));
+    loadBalancer.setClusterLoad((Map) loadOfAllTable);
+    List<RegionPlan> partialplans = loadBalancer.balanceTable(TableName.valueOf("table0"),
+      loadOfAllTable.get(TableName.valueOf("table0")));
     List<ServerAndLoad> balancedServerLoads =
         reconcile(serverAndLoads, partialplans, serverRegionInfo);
     for (ServerAndLoad serverAndLoad : balancedServerLoads) {

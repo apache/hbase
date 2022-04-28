@@ -65,7 +65,9 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
     loadBalancer.setClusterInfoProvider(provider);
     loadBalancer.onConfigurationChange(conf);
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
+    float slop = conf.getFloat(HConstants.LOAD_BALANCER_SLOP_KEY, 0.2f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
+    conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, -1f);
     try {
       // Test with/without per table balancer.
       boolean[] perTableBalancerConfigs = {true, false};
@@ -100,6 +102,7 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
+      conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, slop);
       loadBalancer.onConfigurationChange(conf);
     }
   }

@@ -203,11 +203,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return this.candidateGenerators;
   }
 
-  @Override
-  protected float getDefaultSlop() {
-    return 0.001f;
-  }
-
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> candidateGenerators = new ArrayList<CandidateGenerator>(4);
     candidateGenerators.add(GeneratorType.RANDOM.ordinal(), new RandomCandidateGenerator());
@@ -353,6 +348,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     if (idleRegionServerExist(cluster)){
       LOG.info("Running balancer because cluster has idle server(s)."+
+        " function cost={}", functionCost());
+      return true;
+    }
+
+    if (sloppyRegionServerExist(cs)) {
+      LOG.info("Running balancer because cluster has sloppy server(s)."+
         " function cost={}", functionCost());
       return true;
     }
