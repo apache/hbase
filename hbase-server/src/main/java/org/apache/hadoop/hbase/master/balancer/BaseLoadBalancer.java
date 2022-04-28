@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -247,6 +248,28 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
     return isServerExistsWithMoreRegions && isServerExistsWithZeroRegions;
+  }
+
+  protected final boolean sloppyRegionServerExist(ClusterLoadState cs) {
+    if (slop < 0) {
+      LOG.debug("Slop is less than zero, not checking for sloppiness.");
+      return false;
+    }
+    float average = cs.getLoadAverage(); // for logging
+    int floor = (int) Math.floor(average * (1 - slop));
+    int ceiling = (int) Math.ceil(average * (1 + slop));
+    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
+      NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
+      if (LOG.isTraceEnabled()) {
+        // If nothing to balance, then don't say anything unless trace-level logging.
+        LOG.trace("Skipping load balancing because balanced cluster; " + "servers=" +
+          cs.getNumServers() + " regions=" + cs.getNumRegions() + " average=" + average +
+          " mostloaded=" + serversByLoad.lastKey().getLoad() + " leastloaded=" +
+          serversByLoad.firstKey().getLoad());
+      }
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -532,16 +555,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return assignments;
   }
 
-  protected final float normalizeSlop(float slop) {
-    if (slop < 0) {
-      return 0;
-    }
-    if (slop > 1) {
-      return 1;
-    }
-    return slop;
-  }
-
   protected float getDefaultSlop() {
     return 0.2f;
   }
@@ -554,11 +567,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected void loadConf(Configuration conf) {
-    this.slop =normalizeSlop(conf.getFloat("hbase.regions.slop", getDefaultSlop()));
-
-    this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(conf);
-
+    this.slop = conf.getFloat("hbase.regions.slop", getDefaultSlop());
     this.rackManager = new RackManager(getConf());
+    this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(conf);
     useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
       regionFinder = createRegionLocationFinder(conf);

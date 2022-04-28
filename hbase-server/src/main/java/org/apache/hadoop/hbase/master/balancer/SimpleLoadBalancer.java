@@ -195,24 +195,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     if (idleRegionServerExist(c)) {
       return true;
     }
-
     // Check if we even need to do any load balancing
     // HBASE-3681 check sloppiness first
-    float average = cs.getLoadAverage(); // for logging
-    int floor = (int) Math.floor(average * (1 - slop));
-    int ceiling = (int) Math.ceil(average * (1 + slop));
-    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
-      NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
-      if (LOG.isTraceEnabled()) {
-        // If nothing to balance, then don't say anything unless trace-level logging.
-        LOG.trace("Skipping load balancing because balanced cluster; " + "servers=" +
-          cs.getNumServers() + " regions=" + cs.getNumRegions() + " average=" + average +
-          " mostloaded=" + serversByLoad.lastKey().getLoad() + " leastloaded=" +
-          serversByLoad.firstKey().getLoad());
-      }
-      return false;
-    }
-    return true;
+    return sloppyRegionServerExist(cs);
   }
 
   /**
