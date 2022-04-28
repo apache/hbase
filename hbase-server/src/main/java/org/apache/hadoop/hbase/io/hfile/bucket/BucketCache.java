@@ -88,8 +88,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 /**
  * BucketCache uses {@link BucketAllocator} to allocate/free blocks, and uses
  * BucketCache#ramCache and BucketCache#backingMap in order to
- * determine if a given element is in the cache. The bucket cache can use on-heap or
- * off-heap memory {@link ByteBufferIOEngine} or in a file {@link FileIOEngine} to
+ * determine if a given element is in the cache. The bucket cache can use
+ * off-heap memory {@link ByteBufferIOEngine} or mmap {@link ExclusiveMemoryMmapIOEngine}
+ * or pmem {@link SharedMemoryMmapIOEngine} or local files {@link FileIOEngine} to
  * store/read the block data.
  *
  * <p>Eviction is via a similar algorithm as used in
