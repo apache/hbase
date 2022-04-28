@@ -102,6 +102,16 @@ public interface MetricsRegionServerWrapper {
   long getMemStoreSize();
 
   /**
+   * Get the size of the on heap memstore on this region server.
+   */
+  long getOnHeapMemStoreSize();
+
+  /**
+   * Get the size of the off heap memstore on this region server.
+   */
+  long getOffHeapMemStoreSize();
+
+  /**
    * Get the total size of the store files this region server is serving from.
    */
   long getStoreFileSize();
@@ -226,7 +236,22 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
+  /**
+   * Get the limit size of the off heap memstore (if enabled), otherwise
+   * get the limit size of the on heap memstore.
+   */
   long getMemStoreLimit();
+
+  /**
+   * Get the limit size of the on heap memstore.
+   */
+  long getOnHeapMemStoreLimit();
+
+  /**
+   * Get the limit size of the off heap memstore.
+   */
+  long getOffHeapMemStoreLimit();
+
   /**
    * Get the size (in bytes) of the block cache that is free.
    */

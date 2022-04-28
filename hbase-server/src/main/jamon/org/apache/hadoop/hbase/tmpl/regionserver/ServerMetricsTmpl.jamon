@@ -117,8 +117,9 @@ MetricsRegionServerWrapper mWrap;
         <th>Max Heap</th>
         <th>Direct Memory Used</th>
         <th>Direct Memory Configured</th>
-        <th>Memstore Size</th>
-        <th>Memstore Limit</th>
+        <th>Memstore On-Heap Size / Limit</th>
+        <th>Memstore Off-Heap Size / Limit</th>
+        <th>Memstore Data Size (On&&Off Heap)</th>
     </tr>
 </tr>
 <tr>
@@ -135,10 +136,15 @@ MetricsRegionServerWrapper mWrap;
         <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemorySize(), "B", 1) %>
     </td>
     <td>
-        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreSize(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getOnHeapMemStoreSize(), "B", 1) + " / "
+         + TraditionalBinaryPrefix.long2String(mWrap.getOnHeapMemStoreLimit(), "B", 1) %>
     </td>
     <td>
-        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreLimit(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getOffHeapMemStoreSize(), "B", 1) + " / "
+         + TraditionalBinaryPrefix.long2String(mWrap.getOffHeapMemStoreLimit(), "B", 1) %>
+    </td>
+    <td>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreSize(), "B", 1) %>
     </td>
 </tr>
 </table>
