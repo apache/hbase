@@ -399,7 +399,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
     return hasEmptyBalancerPlans(servers);
   }
-  
+
   private boolean hasEmptyBalancerPlans(int[][] mockCluster) {
     Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
     return hasEmptyBalancerPlans(servers);
