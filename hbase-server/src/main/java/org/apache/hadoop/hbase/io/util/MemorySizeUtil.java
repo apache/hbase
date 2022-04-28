@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
- * Util class to calculate memory size for memstore, block cache(L1, L2) of RS.
+ * Util class to calculate memory size for memstore(on heap, off heap), block cache(L1, L2) of RS.
  */
 @InterfaceAudience.Private
 public class MemorySizeUtil {
