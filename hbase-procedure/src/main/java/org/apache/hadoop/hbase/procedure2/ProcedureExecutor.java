@@ -46,8 +46,10 @@ import org.apache.hadoop.hbase.procedure2.Procedure.LockState;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
+import org.apache.hadoop.hbase.procedure2.trace.ProcedureSpanBuilder;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -1947,6 +1949,34 @@ public class ProcedureExecutor<TEnvironment> {
       scheduler.signalAll();
     }
 
+    /**
+     * Encapsulates execution of the current {@link #activeProcedure} for easy tracing.
+     */
+    private long runProcedure() throws IOException {
+      final Procedure<TEnvironment> proc = this.activeProcedure;
+      int activeCount = activeExecutorCount.incrementAndGet();
+      int runningCount = store.setRunningProcedureCount(activeCount);
+      LOG.trace("Execute pid={} runningCount={}, activeCount={}", proc.getProcId(), runningCount,
+        activeCount);
+      executionStartTime.set(EnvironmentEdgeManager.currentTime());
+      IdLock.Entry lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
+      try {
+        executeProcedure(proc);
+      } catch (AssertionError e) {
+        LOG.info("ASSERT pid=" + proc.getProcId(), e);
+        throw e;
+      } finally {
+        procExecutionLock.releaseLockEntry(lockEntry);
+        activeCount = activeExecutorCount.decrementAndGet();
+        runningCount = store.setRunningProcedureCount(activeCount);
+        LOG.trace("Halt pid={} runningCount={}, activeCount={}", proc.getProcId(), runningCount,
+          activeCount);
+        this.activeProcedure = null;
+        executionStartTime.set(Long.MAX_VALUE);
+      }
+      return EnvironmentEdgeManager.currentTime();
+    }
+
     @Override
     public void run() {
       long lastUpdate = EnvironmentEdgeManager.currentTime();
@@ -1958,27 +1988,7 @@ public class ProcedureExecutor<TEnvironment> {
             continue;
           }
           this.activeProcedure = proc;
-          int activeCount = activeExecutorCount.incrementAndGet();
-          int runningCount = store.setRunningProcedureCount(activeCount);
-          LOG.trace("Execute pid={} runningCount={}, activeCount={}", proc.getProcId(),
-            runningCount, activeCount);
-          executionStartTime.set(EnvironmentEdgeManager.currentTime());
-          IdLock.Entry lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
-          try {
-            executeProcedure(proc);
-          } catch (AssertionError e) {
-            LOG.info("ASSERT pid=" + proc.getProcId(), e);
-            throw e;
-          } finally {
-            procExecutionLock.releaseLockEntry(lockEntry);
-            activeCount = activeExecutorCount.decrementAndGet();
-            runningCount = store.setRunningProcedureCount(activeCount);
-            LOG.trace("Halt pid={} runningCount={}, activeCount={}", proc.getProcId(), runningCount,
-              activeCount);
-            this.activeProcedure = null;
-            lastUpdate = EnvironmentEdgeManager.currentTime();
-            executionStartTime.set(Long.MAX_VALUE);
-          }
+          lastUpdate = TraceUtil.trace(this::runProcedure, new ProcedureSpanBuilder(proc));
         }
       } catch (Throwable t) {
         LOG.warn("Worker terminating UNNATURALLY {}", this.activeProcedure, t);

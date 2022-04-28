@@ -49,7 +49,7 @@ import org.junit.rules.ExternalResource;
  *     private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
  *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *     protected static final ConnectionRule connectionRule =
- *       new ConnectionRule(miniClusterRule::createConnection);
+ *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
  *
  *     &#64;ClassRule
  *     public static final TestRule classRule =
