@@ -71,12 +71,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     "hbase.master.balancer.rejection.buffer.enabled";
   public static final boolean DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED = false;
 
+  public static final boolean DEFAULT_HBASE_MASTER_LOADBALANCE_BYTABLE = false;
+
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
   protected volatile RegionHDFSBlockLocationFinder regionFinder;
   protected boolean useRegionFinder;
-  protected boolean isByTable = false;
+  protected boolean isByTable = DEFAULT_HBASE_MASTER_LOADBALANCE_BYTABLE;
 
   // slop for regions
   protected float slop;
@@ -415,7 +417,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     } else {
       regionFinder = null;
     }
-    this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
+    this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE,
+      DEFAULT_HBASE_MASTER_LOADBALANCE_BYTABLE);
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
     LOG.info("slop={}", this.slop);
   }
