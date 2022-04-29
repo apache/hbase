@@ -158,8 +158,7 @@ public class WALUtil {
     final MultiVersionConcurrencyControl mvcc, final Map<String, byte[]> extendedAttributes,
     final boolean sync, final RegionReplicationSink sink) throws IOException {
     // TODO: Pass in current time to use?
-    WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
-      EnvironmentEdgeManager.currentTime(), mvcc, replicationScope, extendedAttributes);
+    WALKeyImpl walKey = createWALKey(hri, mvcc, replicationScope, extendedAttributes);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
       trx = wal.appendMarker(hri, walKey, edit);
@@ -180,6 +179,13 @@ public class WALUtil {
       throw ioe;
     }
     return walKey;
+  }
+
+  public static WALKeyImpl createWALKey(final RegionInfo hri, MultiVersionConcurrencyControl mvcc,
+      final NavigableMap<byte[], Integer> replicationScope,
+      final Map<String, byte[]> extendedAttributes) {
+    return new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
+      EnvironmentEdgeManager.currentTime(), mvcc, replicationScope, extendedAttributes);
   }
 
   /**

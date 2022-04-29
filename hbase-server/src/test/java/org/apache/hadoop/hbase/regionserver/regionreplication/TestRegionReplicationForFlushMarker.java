@@ -89,7 +89,7 @@ public class TestRegionReplicationForFlushMarker {
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final int NB_SERVERS = 2;
 
-  private static TableName tableName = TableName.valueOf("testRegionReplicationSinkError");
+  private static TableName tableName = TableName.valueOf("TestRegionReplicationForFlushMarker");
   private static volatile boolean startTest = false;
 
   @BeforeClass
@@ -119,8 +119,9 @@ public class TestRegionReplicationForFlushMarker {
    * {@link FlushAction#CANNOT_FLUSH} marker to the WAL when the memstore is empty,so if the
    * {@link RegionReplicationSink} request a flush when the memstore is empty, it could not receive
    * the {@link FlushAction#CANNOT_FLUSH} and the replication may be hanged. After HBASE-26768,when
-   * the {@link RegionReplicationSink} request a flush when the memstore is empty,it writes the
-   * {@link FlushAction#CANNOT_FLUSH} marker to the WAL.
+   * the {@link RegionReplicationSink} request a flush when the memstore is empty,even it does not
+   * writes the {@link FlushAction#CANNOT_FLUSH} marker to the WAL,we also replicate the
+   * {@link FlushAction#CANNOT_FLUSH} marker to the secondary region replica.
    */
   @Test
   public void testCannotFlushMarker() throws Exception {
@@ -131,8 +132,9 @@ public class TestRegionReplicationForFlushMarker {
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName(HRegionForTest.USER_THREAD_NAME);
     try {
-      startTest = true;
+
       byte[] rowKey1 = Bytes.toBytes(1);
+      startTest = true;
       /**
        * Write First cell,replicating to secondary replica is error,and then
        * {@link RegionReplicationSink} request flush,after {@link RegionReplicationSink} receiving
@@ -161,7 +163,8 @@ public class TestRegionReplicationForFlushMarker {
   private HRegionForTest[] createTable() throws Exception {
     TableDescriptor tableDescriptor =
         TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .build();
     HTU.getAdmin().createTable(tableDescriptor);
     final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
     for (int i = 0; i < NB_SERVERS; i++) {
@@ -197,6 +200,11 @@ public class TestRegionReplicationForFlushMarker {
 
     public void setRegionReplicationSink(RegionReplicationSink regionReplicationSink) {
       this.regionReplicationSink = Optional.of(regionReplicationSink);
+    }
+
+    @Override
+    protected void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
+      // not write the region open marker to interrupt the test.
     }
 
     @Override
