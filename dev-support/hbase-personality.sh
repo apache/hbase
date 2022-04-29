@@ -156,10 +156,14 @@ function personality_modules
   # At a few points, hbase modules can run build, test, etc. in parallel
   # Let it happen. Means we'll use more CPU but should be for short bursts.
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
-  if [[ -n "${BUILD_THREAD}" ]]; then
-    extra="--threads=${BUILD_THREAD}"
+  if [[ "${testtype}" == mvnsite ]]; then
+    yetus_debug "Skip specifying --threads since maven-site-plugin does not support building in parallel."
   else
-    extra="--threads=2"
+    if [[ -n "${BUILD_THREAD}" ]]; then
+      extra="--threads=${BUILD_THREAD}"
+    else
+      extra="--threads=2"
+    fi
   fi
 
   # Set java.io.tmpdir to avoid exhausting the /tmp space
