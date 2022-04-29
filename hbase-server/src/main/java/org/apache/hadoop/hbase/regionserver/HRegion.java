@@ -3024,7 +3024,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         WALUtil.createWALKey(getRegionInfo(), mvcc, this.getReplicationScope(), null);
     walKey.setWriteEntry(flushOpSeqIdMVCCEntry);
     /**
-     * Here the ServerCall is null for {@link RegionReplicationSink#add} because the
+     * Here the {@link ServerCall} is null for {@link RegionReplicationSink#add} because the
      * flushMarkerWALEdit is created by ourselves, not from rpc.
      */
     flushOpSeqIdMVCCEntry.attachCompletionAction(() -> sink.add(walKey, flushMarkerWALEdit, null));
