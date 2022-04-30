@@ -73,7 +73,8 @@ public class MetricsRegionServer {
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
-    metricRegistry = MetricRegistries.global().get(serverSource.getMetricRegistryInfo()).get();
+    metricRegistry = MetricRegistries.global().get(serverSource.getMetricRegistryInfo()).orElseThrow(
+      ()->new IllegalStateException("metricRegistry is null"));
 
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");

@@ -35,7 +35,8 @@ public class RegionServerTableMetrics {
     latencies = CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
     if (enableTableQueryMeter) {
       queryMeter = new MetricsTableQueryMeterImpl(MetricRegistries.global().
-        get(((MetricsTableLatenciesImpl) latencies).getMetricRegistryInfo()).get());
+        get(((MetricsTableLatenciesImpl) latencies).getMetricRegistryInfo()).orElseThrow(
+        ()-> new IllegalStateException("metricRegistry is null")));
     }
   }
 
