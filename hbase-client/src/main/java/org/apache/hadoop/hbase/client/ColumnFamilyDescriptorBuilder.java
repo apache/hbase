@@ -41,6 +41,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptor.REPLICATION_SCOPE_BYTES;
+import static org.apache.hadoop.hbase.util.ColumnFamilyAttributeValidator.validateAttributeValue;
 
 /**
  * @since 2.0.0
@@ -285,6 +287,7 @@ public class ColumnFamilyDescriptorBuilder {
   }
 
   private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
+
 
   static {
     DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER.name());
@@ -707,6 +710,7 @@ public class ColumnFamilyDescriptorBuilder {
       if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
+        validateAttributeValue(key, value);
         values.put(key, value);
       }
       return this;
@@ -1417,6 +1421,5 @@ public class ColumnFamilyDescriptorBuilder {
     public ModifyableColumnFamilyDescriptor setStoragePolicy(String policy) {
       return setValue(STORAGE_POLICY_BYTES, policy);
     }
-
   }
 }

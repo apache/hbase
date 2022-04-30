@@ -21,7 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.fail;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -40,7 +41,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.util.Map;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestColumnFamilyDescriptorBuilder {
@@ -258,5 +258,44 @@ public class TestColumnFamilyDescriptorBuilder {
     assertEquals("1", builder.build().getConfigurationValue(testConf));
     builder.setConfiguration(testConf, "");
     assertNull(builder.build().getConfigurationValue(testConf));
+  }
+
+  @Test
+  public void testValidateColumnFamilyAttributeValues() {
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY);
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING, "unknown");
+      fail("Wrong Data Block Encoding should not be allowed.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.COMPRESSION, "unknown");
+      fail("Wrong Compression Algorithm should not be allowed.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.BLOOMFILTER, "unknown");
+      fail("Wrong Bloom Filter should not be allowed.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.KEEP_DELETED_CELLS, "unknown");
+      fail("Wrong Keep Deleted Cells option should not be allowed.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "unknown");
+      fail("Wrong In memory compaction policy  should not be allowed.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.MIN_VERSIONS, "foo");
+      fail("MIN_VERSIONS value should be integer.");
+    } catch (IllegalArgumentException ia) {}
+    try {
+      builder.setValue(ColumnFamilyDescriptorBuilder.MIN_VERSIONS, "123123123123123123");
+      fail("MIN_VERSIONS value should be integer.");
+    } catch (IllegalArgumentException ia) {}
+    builder.setValue(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING,"FAST_DIFF");
+    builder.setValue(ColumnFamilyDescriptorBuilder.COMPRESSION,"LZO");
+    builder.setValue(ColumnFamilyDescriptorBuilder.BLOOMFILTER,"ROW");
+    builder.setValue(ColumnFamilyDescriptorBuilder.KEEP_DELETED_CELLS,"TRUE");
+    builder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION,"EAGER");
   }
 }

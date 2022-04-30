@@ -208,6 +208,13 @@ public final class TableDescriptorChecker {
       } catch (IllegalArgumentException e) {
         warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
       }
+
+      // check Data Block Encoding
+      try {
+        hcd.getDataBlockEncoding();
+      } catch (IllegalArgumentException e) {
+        warnOrThrowExceptionForFailure(false, e.getMessage(), e);
+      }
     }
   }
 
