@@ -338,7 +338,11 @@ public final class TableName implements Comparable<TableName> {
         this.namespace = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME;
         this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
         this.systemTable = true;
-      } else {
+      } else if (Bytes.equals(NamespaceDescriptor.MASTER_NAMESPACE_NAME, namespace)) {
+        this.namespace = NamespaceDescriptor.MASTER_NAMESPACE_NAME;
+        this.namespaceAsString = NamespaceDescriptor.MASTER_NAMESPACE_NAME_STR;
+        this.systemTable = true;
+      }  else {
         this.namespace = new byte[namespace.remaining()];
         namespace.duplicate().get(this.namespace);
         this.namespaceAsString = Bytes.toString(this.namespace);
