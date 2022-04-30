@@ -865,8 +865,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * from meta region</li>
    * <li>Start region server tracker, construct the online servers set and find out dead servers and
    * schedule SCP for them. The online servers will be constructed by scanning zk, and we will also
-   * scan the wal directory to find out possible live region servers, and the differences between
-   * these two sets are the dead servers</li>
+   * scan the wal directory and load from master local region to find out possible live region servers,
+   * and the differences between these two sets are the dead servers</li>
    * </ol>
    * </li>
    * <li>If this is a new deploy, schedule a InitMetaProcedure to initialize meta</li>
@@ -941,8 +941,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       this.splitWALManager = new SplitWALManager(this);
     }
 
-
-
     tryMigrateMetaLocationsFromZooKeeper();
 
     createProcedureExecutor();
@@ -963,8 +961,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.assignmentManager.setupRIT(ritList);
 
     // Start RegionServerTracker with listing of servers found with exiting SCPs -- these should
-    // be registered in the deadServers set -- and with the list of servernames out on the
-    // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
+    // be registered in the deadServers set -- and the servernames loaded from the WAL directory
+    // and master local region that COULD BE 'alive'(we'll schedule SCPs for each and let SCP figure it out).
     // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker.upgrade(
