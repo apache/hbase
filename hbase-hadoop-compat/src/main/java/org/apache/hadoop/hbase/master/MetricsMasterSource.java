@@ -67,6 +67,9 @@ public interface MetricsMasterSource extends BaseSource {
   String MERGE_PLAN_COUNT_NAME = "mergePlanCount";
   String ONLINE_REGION_COUNT_NAME = "onlineRegionCount";
   String OFFLINE_REGION_COUNT_NAME = "offlineRegionCount";
+  String ORPHAN_REGIONS_ON_RS_COUNT_NAME = "orphanRegionsOnRsCount";
+  String ORPHAN_REGIONS_ON_FS_COUNT_NAME = "orphanRegionsOnFsCount";
+  String INCONSISTENT_REGIONS_COUNT_NAME = "inconsistentRegionsCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
   String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
@@ -90,6 +93,9 @@ public interface MetricsMasterSource extends BaseSource {
   String MERGE_PLAN_COUNT_DESC = "Number of Region Merge Plans executed";
   String ONLINE_REGION_COUNT_DESC = "Number of Online Regions";
   String OFFLINE_REGION_COUNT_DESC = "Number of Offline Regions";
+  String ORPHAN_REGIONS_ON_RS_COUNT_NAME_DESC = "Number of orphan Regions on rs";
+  String ORPHAN_REGIONS_ON_FS_COUNT_NAME_DESC = "Number of orphan Regions on fs";
+  String INCONSISTENT_REGIONS_COUNT_NAME_DESC = "Number of inconsistent Regions";
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
 

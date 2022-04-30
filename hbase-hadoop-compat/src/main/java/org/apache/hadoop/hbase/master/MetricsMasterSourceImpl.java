@@ -140,7 +140,13 @@ public class MetricsMasterSourceImpl
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), masterWrapper.getServerName())
           .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), masterWrapper.getClusterId())
           .tag(Interns.info(IS_ACTIVE_MASTER_NAME, IS_ACTIVE_MASTER_DESC),
-              String.valueOf(masterWrapper.getIsActiveMaster()));
+              String.valueOf(masterWrapper.getIsActiveMaster()))
+          .addGauge(Interns.info(ORPHAN_REGIONS_ON_RS_COUNT_NAME,
+              ORPHAN_REGIONS_ON_RS_COUNT_NAME_DESC), masterWrapper.getOrphanRegionsOnRs())
+          .addGauge(Interns.info(ORPHAN_REGIONS_ON_FS_COUNT_NAME,
+              ORPHAN_REGIONS_ON_FS_COUNT_NAME_DESC), masterWrapper.getOrphanRegionsOnFs())
+          .addGauge(Interns.info(INCONSISTENT_REGIONS_COUNT_NAME,
+              INCONSISTENT_REGIONS_COUNT_NAME_DESC), masterWrapper.getInconsistentRegions());
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

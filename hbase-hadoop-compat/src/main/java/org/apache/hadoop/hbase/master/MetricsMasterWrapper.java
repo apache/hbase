@@ -168,4 +168,26 @@ public interface MetricsMasterWrapper {
    * @return pair of count for online regions and offline regions
    */
   PairOfSameType<Integer> getRegionCounts();
+
+  /**
+   * Get the number of orphan regions on rs
+   *
+   * @return number of orphan regions on rs
+   */
+  int getOrphanRegionsOnRs();
+
+  /**
+   * Get the number of orphan regions on fs
+   *
+   * @return number of orphan regions on fs
+   */
+  int getOrphanRegionsOnFs();
+
+  /**
+   * Get the number of inconsistent regions
+   *
+   * @return number of inconsistent regions
+   */
+  int getInconsistentRegions();
+
 }
