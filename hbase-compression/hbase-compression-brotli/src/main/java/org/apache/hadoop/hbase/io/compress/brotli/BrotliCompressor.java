@@ -162,8 +162,8 @@ public class BrotliCompressor implements CanReinit, Compressor {
       int newBufferSize = BrotliCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
-        this.inBuf = ByteBuffer.allocateDirect(bufferSize);
-        this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        this.inBuf = ByteBuffer.allocate(bufferSize);
+        this.outBuf = ByteBuffer.allocate(bufferSize);
       }
     }
     reset();
