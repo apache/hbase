@@ -36,9 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -296,15 +294,8 @@ public final class SnapshotReferenceUtil {
     }
 
     // check if the linked file exists (in the archive, or in the table dir)
-    HFileLink link = null;
-    if (MobUtils.isMobRegionInfo(regionInfo)) {
-      // for mob region
-      link = HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(conf),
-          HFileArchiveUtil.getArchivePath(conf), linkPath);
-    } else {
-      // not mob region
-      link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
-    }
+    // for mob region and not mob region
+    HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
     try {
       FileStatus fstat = link.getFileStatus(fs);
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {
