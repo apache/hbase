@@ -244,11 +244,11 @@ public abstract class AbstractHBaseTool implements Tool {
     }
   }
 
-  public long getOptionAsLong(CommandLine cmd, String opt, int defaultValue) {
+  public long getOptionAsLong(CommandLine cmd, String opt, long defaultValue) {
     return getOptionAsLong(cmd, opt, defaultValue, 10);
   }
 
-  public long getOptionAsLong(CommandLine cmd, String opt, int defaultValue, int radix) {
+  public long getOptionAsLong(CommandLine cmd, String opt, long defaultValue, int radix) {
     if (cmd.hasOption(opt)) {
       return Long.parseLong(cmd.getOptionValue(opt), radix);
     } else {

@@ -64,6 +64,7 @@ public class RowCounter extends AbstractHBaseTool {
 
   private final static String OPT_START_TIME = "starttime";
   private final static String OPT_END_TIME = "endtime";
+  private final static String OPT_CACHE_BLOCKS = "cacheBlocks";
   private final static String OPT_RANGE = "range";
   private final static String OPT_EXPECTED_COUNT = "expectedCount";
 
@@ -71,6 +72,7 @@ public class RowCounter extends AbstractHBaseTool {
   private List<MultiRowRangeFilter.RowRange> rowRangeList;
   private long startTime;
   private long endTime;
+  private boolean cacheBlocks;
   private long expectedCount;
   private List<String> columns = new ArrayList<>();
 
@@ -112,7 +114,7 @@ public class RowCounter extends AbstractHBaseTool {
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
-    scan.setCacheBlocks(false);
+    scan.setCacheBlocks(cacheBlocks);
     setScanFilter(scan, rowRangeList);
 
     for (String columnName : this.columns) {
@@ -302,12 +304,16 @@ public class RowCounter extends AbstractHBaseTool {
     Option endTimeOption = Option.builder(null).valueSeparator('=').hasArg(true).
         desc("end time filter limit, to only count rows up to this timestamp.").
         longOpt(OPT_END_TIME).build();
+    Option cacheBlocksOption = Option.builder(null).hasArg(false).
+        desc("force all blocks for a table to be loaded into the block cache.").
+        longOpt(OPT_CACHE_BLOCKS).build();
     Option rangeOption = Option.builder(null).valueSeparator('=').hasArg(true).
         desc("[startKey],[endKey][;[startKey],[endKey]...]]").longOpt(OPT_RANGE).build();
     Option expectedOption = Option.builder(null).valueSeparator('=').hasArg(true).
         desc("expected number of rows to be count.").longOpt(OPT_EXPECTED_COUNT).build();
     addOption(startTimeOption);
     addOption(endTimeOption);
+    addOption(cacheBlocksOption);
     addOption(rangeOption);
     addOption(expectedOption);
   }
@@ -318,12 +324,10 @@ public class RowCounter extends AbstractHBaseTool {
     if(cmd.getOptionValue(OPT_RANGE)!=null) {
       this.rowRangeList = parseRowRangeParameter(cmd.getOptionValue(OPT_RANGE));
     }
-    this.endTime = cmd.getOptionValue(OPT_END_TIME) == null ? HConstants.LATEST_TIMESTAMP :
-        Long.parseLong(cmd.getOptionValue(OPT_END_TIME));
-    this.expectedCount = cmd.getOptionValue(OPT_EXPECTED_COUNT) == null ? Long.MIN_VALUE :
-        Long.parseLong(cmd.getOptionValue(OPT_EXPECTED_COUNT));
-    this.startTime = cmd.getOptionValue(OPT_START_TIME) == null ? 0 :
-        Long.parseLong(cmd.getOptionValue(OPT_START_TIME));
+    this.startTime = getOptionAsLong(cmd, OPT_START_TIME, 0L);
+    this.endTime = getOptionAsLong(cmd, OPT_END_TIME, HConstants.LATEST_TIMESTAMP);
+    this.expectedCount = getOptionAsLong(cmd, OPT_EXPECTED_COUNT, Long.MIN_VALUE);
+    this.cacheBlocks = cmd.hasOption(OPT_CACHE_BLOCKS);
 
     for(int i=1; i<cmd.getArgList().size(); i++){
       String argument = cmd.getArgList().get(i);
