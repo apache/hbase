@@ -93,9 +93,12 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   @Override
   public Result next() throws IOException {
     values.clear();
-    scanner.nextRaw(values);
-    if (values.isEmpty()) {
-      //we are done
+    boolean moreValues;
+    do {
+      moreValues = scanner.nextRaw(values);
+    } while (values.isEmpty() && moreValues);
+
+    if (!moreValues) {
       return null;
     }
 
