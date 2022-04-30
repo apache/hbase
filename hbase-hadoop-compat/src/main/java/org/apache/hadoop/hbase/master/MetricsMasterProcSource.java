@@ -52,4 +52,15 @@ public interface MetricsMasterProcSource extends BaseSource {
 
   String NUM_MASTER_WALS_DESC = "Number of master WAL files";
 
+  String NUM_SPLIT_PROCEDURE_REQUEST_NAME = "splitProcedure_RequestCount";
+
+  String NUM_SPLIT_PROCEDURE_REQUEST_DESC = "Number of split requests";
+
+  String NUM_SPLIT_PROCEDURE_SUCCESS_NAME = "splitProcedure_SuccessCount";
+
+  String NUM_SPLIT_PROCEDURE_SUCCESS_DESC = "Number of split requests which were successful";
+
+  String SPLIT_PROCEDURE_TIME_HISTO_NAME = "splitProcedureTime";
+
+  String SPLIT_PROCEDURE_TIME_HISTO_DESC = "Split procedure time histogram";
 }
