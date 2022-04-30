@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -262,40 +263,38 @@ public class SecureBulkLoadManager {
         }
       }
 
-      map = ugi.doAs(new PrivilegedAction<Map<byte[], List<Path>>>() {
+      map = ugi.doAs(new PrivilegedExceptionAction<Map<byte[], List<Path>>>() {
         @Override
-        public Map<byte[], List<Path>> run() {
+        public Map<byte[], List<Path>> run() throws Exception{
           FileSystem fs = null;
-          try {
-            /*
-             * This is creating and caching a new FileSystem instance. Other code called
-             * "beneath" this method will rely on this FileSystem instance being in the
-             * cache. This is important as those methods make _no_ attempt to close this
-             * FileSystem instance. It is critical that here, in SecureBulkLoadManager,
-             * we are tracking the lifecycle and closing the FS when safe to do so.
-             */
-            fs = FileSystem.get(conf);
-            for(Pair<byte[], String> el: familyPaths) {
-              Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
-              if(!fs.exists(stageFamily)) {
-                fs.mkdirs(stageFamily);
-                fs.setPermission(stageFamily, PERM_ALL_ACCESS);
-              }
+          /*
+           * This is creating and caching a new FileSystem instance. Other code called
+           * "beneath" this method will rely on this FileSystem instance being in the
+           * cache. This is important as those methods make _no_ attempt to close this
+           * FileSystem instance. It is critical that here, in SecureBulkLoadManager,
+           * we are tracking the lifecycle and closing the FS when safe to do so.
+           */
+          fs = FileSystem.get(conf);
+          for(Pair<byte[], String> el: familyPaths) {
+            Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
+            if(!fs.exists(stageFamily)) {
+              fs.mkdirs(stageFamily);
+              fs.setPermission(stageFamily, PERM_ALL_ACCESS);
             }
-            if (fsCreatedListener != null) {
-              fsCreatedListener.accept(region);
-            }
-            //We call bulkLoadHFiles as requesting user
-            //To enable access prior to staging
-            return region.bulkLoadHFiles(familyPaths, true,
-                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
-              clusterIds, request.getReplicate());
-          } catch (Exception e) {
-            LOG.error("Failed to complete bulk load", e);
           }
-          return null;
+          if (fsCreatedListener != null) {
+            fsCreatedListener.accept(region);
+          }
+          //We call bulkLoadHFiles as requesting user
+          //To enable access prior to staging
+          return region.bulkLoadHFiles(familyPaths, true,
+              new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
+            clusterIds, request.getReplicate());
         }
       });
+    } catch (Exception e){
+      LOG.error("Failed to complete bulk load", e);
+      throw new IOException(e);
     } finally {
       decrementUgiReference(ugi);
       try {
