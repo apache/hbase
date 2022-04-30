@@ -20,6 +20,80 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.12 - Unreleased (as of 2022-04-30)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26961](https://issues.apache.org/jira/browse/HBASE-26961) | cache region locations when getAllRegionLocations() for branch-2.4+ |  Minor | Client |
+| [HBASE-26860](https://issues.apache.org/jira/browse/HBASE-26860) | Backport "HBASE-25681 Add a switch for server/table queryMeter" to branch-2.4 |  Major | . |
+| [HBASE-26980](https://issues.apache.org/jira/browse/HBASE-26980) | Update javadoc of BucketCache.java |  Trivial | documentation |
+| [HBASE-26581](https://issues.apache.org/jira/browse/HBASE-26581) | Add metrics around failed replication edits |  Minor | metrics, Replication |
+| [HBASE-26971](https://issues.apache.org/jira/browse/HBASE-26971) | SnapshotInfo --snapshot param is marked as required even when trying to list all snapshots |  Minor | . |
+| [HBASE-26618](https://issues.apache.org/jira/browse/HBASE-26618) | Involving primary meta region in meta scan with CatalogReplicaLoadBalanceSimpleSelector |  Minor | meta replicas |
+| [HBASE-26885](https://issues.apache.org/jira/browse/HBASE-26885) | The TRSP should not go on when it get a bogus server name from AM |  Major | proc-v2 |
+| [HBASE-26872](https://issues.apache.org/jira/browse/HBASE-26872) | Load rate calculator for cost functions should be more precise |  Major | Balancer |
+| [HBASE-26832](https://issues.apache.org/jira/browse/HBASE-26832) | Avoid repeated releasing of flushed wal entries in AsyncFSWAL#syncCompleted |  Major | wal |
+| [HBASE-26878](https://issues.apache.org/jira/browse/HBASE-26878) | TableInputFormatBase should cache RegionSizeCalculator |  Minor | . |
+| [HBASE-26175](https://issues.apache.org/jira/browse/HBASE-26175) | MetricsHBaseServer should record all kinds of Exceptions |  Minor | metrics |
+| [HBASE-26858](https://issues.apache.org/jira/browse/HBASE-26858) | Refactor TestMasterRegionOnTwoFileSystems to avoid dead loop |  Major | test |
+| [HBASE-26848](https://issues.apache.org/jira/browse/HBASE-26848) | Set java.io.tmpdir on mvn command when running jenkins job |  Major | jenkins, test |
+| [HBASE-26680](https://issues.apache.org/jira/browse/HBASE-26680) | Close and do not write trailer for the broken WAL writer |  Major | wal |
+| [HBASE-26720](https://issues.apache.org/jira/browse/HBASE-26720) | ExportSnapshot should validate the source snapshot before copying files |  Major | snapshots |
+| [HBASE-26275](https://issues.apache.org/jira/browse/HBASE-26275) | update error message when executing deleteall with ROWPREFIXFILTER in meta table |  Minor | shell |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26917](https://issues.apache.org/jira/browse/HBASE-26917) | Do not add --threads when running 'mvn site' |  Major | build, scripts |
+| [HBASE-26941](https://issues.apache.org/jira/browse/HBASE-26941) | LocalHBaseCluster.waitOnRegionServer should not call join while interrupted |  Critical | test |
+| [HBASE-26944](https://issues.apache.org/jira/browse/HBASE-26944) | Possible resource leak while creating new region scanner |  Major | . |
+| [HBASE-26895](https://issues.apache.org/jira/browse/HBASE-26895) | on hbase shell, 'delete/deleteall' for a columnfamily is not working |  Major | shell |
+| [HBASE-26901](https://issues.apache.org/jira/browse/HBASE-26901) | delete with null columnQualifier occurs NullPointerException when NewVersionBehavior is on |  Major | Deletes, Scanners |
+| [HBASE-26880](https://issues.apache.org/jira/browse/HBASE-26880) | Misspelling commands in hbase shell will crash the shell |  Minor | shell |
+| [HBASE-26924](https://issues.apache.org/jira/browse/HBASE-26924) | [Documentation] Fix log parameter error and spelling error |  Trivial | logging |
+| [HBASE-26811](https://issues.apache.org/jira/browse/HBASE-26811) | Secondary replica may be disabled for read incorrectly forever |  Major | read replicas |
+| [HBASE-26812](https://issues.apache.org/jira/browse/HBASE-26812) | ShortCircuitingClusterConnection fails to close RegionScanners when making short-circuited calls |  Critical | . |
+| [HBASE-26838](https://issues.apache.org/jira/browse/HBASE-26838) | Junit jar is not included in the hbase tar ball, causing issues for some  hbase tools that do rely on it |  Major | integration tests, tooling |
+| [HBASE-26871](https://issues.apache.org/jira/browse/HBASE-26871) | shaded mapreduce and shaded byo-hadoop client artifacts contains no classes |  Blocker | integration tests, jenkins, mapreduce |
+| [HBASE-26896](https://issues.apache.org/jira/browse/HBASE-26896) | list\_quota\_snapshots fails with ‘ERROR NameError: uninitialized constant Shell::Commands::ListQuotaSnapshots::TABLE’ |  Major | shell |
+| [HBASE-26718](https://issues.apache.org/jira/browse/HBASE-26718) | HFileArchiver can remove referenced StoreFiles from the archive |  Major | Compaction, HFile, snapshots |
+| [HBASE-26864](https://issues.apache.org/jira/browse/HBASE-26864) | SplitTableRegionProcedure calls openParentRegions() at a wrong state during rollback. |  Major | Region Assignment |
+| [HBASE-26876](https://issues.apache.org/jira/browse/HBASE-26876) | Use toStringBinary for rowkey in RegionServerCallable error string |  Minor | . |
+| [HBASE-26875](https://issues.apache.org/jira/browse/HBASE-26875) | RpcRetryingCallerImpl translateException ignores return value of recursive call |  Minor | . |
+| [HBASE-26869](https://issues.apache.org/jira/browse/HBASE-26869) | RSRpcServices.scan should deep clone cells when RpcCallContext is null |  Major | regionserver |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26932](https://issues.apache.org/jira/browse/HBASE-26932) | Skip generating ref guide when running 'mvn site' on branch other than master |  Major | build, pom |
+| [HBASE-26928](https://issues.apache.org/jira/browse/HBASE-26928) | Fix several indentation problems |  Major | . |
+| [HBASE-26922](https://issues.apache.org/jira/browse/HBASE-26922) | Fix LineLength warnings as much as possible if it can not be fixed by spotless |  Major | . |
+| [HBASE-26929](https://issues.apache.org/jira/browse/HBASE-26929) | Upgrade surefire plugin to 3.0.0-M6 |  Major | pom, test |
+| [HBASE-26916](https://issues.apache.org/jira/browse/HBASE-26916) | Fix missing braces warnings in DefaultVisibilityExpressionResolver |  Major | . |
+| [HBASE-26919](https://issues.apache.org/jira/browse/HBASE-26919) | Rewrite the counting rows part in TestFromClientSide4 |  Major | test |
+| [HBASE-26920](https://issues.apache.org/jira/browse/HBASE-26920) | Fix missing braces warnings in TestProcedureMember |  Major | test |
+| [HBASE-26921](https://issues.apache.org/jira/browse/HBASE-26921) | Rewrite the counting cells part in TestMultiVersions |  Major | test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26882](https://issues.apache.org/jira/browse/HBASE-26882) | Backport "HBASE-26810 Add dynamic configuration support for system coprocessors" to branch-2 |  Major | Coprocessors, master, regionserver |
+| [HBASE-26903](https://issues.apache.org/jira/browse/HBASE-26903) | Bump httpclient from 4.5.3 to 4.5.13 |  Minor | . |
+| [HBASE-26902](https://issues.apache.org/jira/browse/HBASE-26902) | Bump bcprov-jdk15on from 1.60 to 1.67 |  Minor | . |
+| [HBASE-26834](https://issues.apache.org/jira/browse/HBASE-26834) | Adapt ConnectionRule for both sync and async connections |  Major | test |
+| [HBASE-26861](https://issues.apache.org/jira/browse/HBASE-26861) | Fix flaky TestSnapshotFromMaster.testSnapshotHFileArchiving |  Major | snapshots, test |
+
+
 ## Release 2.4.11 - 2022-03-21
 
 

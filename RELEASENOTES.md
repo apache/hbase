@@ -20,6 +20,26 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.12 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26581](https://issues.apache.org/jira/browse/HBASE-26581) | *Minor* | **Add metrics around failed replication edits**
+
+Adds new metrics sink.failedBatches and source.failedBatches to replication metrics, allowing one to track failures on both sides of a replication stream. As with other source metrics, the new source.failedBatches is reported globally and by peer id.
+
+
+---
+
+* [HBASE-26618](https://issues.apache.org/jira/browse/HBASE-26618) | *Minor* | **Involving primary meta region in meta scan with CatalogReplicaLoadBalanceSimpleSelector**
+
+When META replica LoadBalance mode is enabled at client-side, clients will try to read from one META region first. If META location is from any non-primary META regions, in case of errors, it will fall back to the primary META region.
+
+
+
 # HBASE  2.4.11 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
