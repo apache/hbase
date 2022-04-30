@@ -2794,7 +2794,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             long flushOpSeqId = writeEntry.getWriteNumber();
             FlushResultImpl flushResult =
                 new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushOpSeqId,
-                    "Nothing to flush", writeFlushRequestMarkerToWAL(wal, writeFlushWalMarker));
+                    "Nothing to flush",
+                    writeCanNotFlushMarkerToWAL(writeEntry, wal, writeFlushWalMarker));
             mvcc.completeAndWait(writeEntry);
             // Set to null so we don't complete it again down in finally block.
             writeEntry = null;
@@ -2975,17 +2976,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Writes a marker to WAL indicating a flush is requested but cannot be complete due to various
-   * reasons. Ignores exceptions from WAL. Returns whether the write succeeded.
+   * This method is only used when we flush but the memstore is empty,if writeFlushWalMarker is
+   * true,we write the {@link FlushAction#CANNOT_FLUSH} flush marker to WAL when the memstore is
+   * empty. Ignores exceptions from WAL. Returns whether the write succeeded.
    * @return whether WAL write was successful
    */
-  private boolean writeFlushRequestMarkerToWAL(WAL wal, boolean writeFlushWalMarker) {
+  private boolean writeCanNotFlushMarkerToWAL(WriteEntry flushOpSeqIdMVCCEntry, WAL wal,
+      boolean writeFlushWalMarker) {
+    FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.CANNOT_FLUSH, getRegionInfo(),
+      -1, new TreeMap<>(Bytes.BYTES_COMPARATOR));
+    RegionReplicationSink sink = regionReplicationSink.orElse(null);
+
+    if (sink != null && !writeFlushWalMarker) {
+      /**
+       * Here for replication to secondary region replica could use {@link FlushAction#CANNOT_FLUSH}
+       * to recover writeFlushWalMarker is false, we create {@link WALEdit} for
+       * {@link FlushDescriptor} and attach the {@link RegionReplicationSink#add} to the
+       * flushOpSeqIdMVCCEntry,see HBASE-26960 for more details.
+       */
+      this.attachReplicateRegionReplicaToFlushOpSeqIdMVCCEntry(flushOpSeqIdMVCCEntry,
+        desc, sink);
+      return false;
+    }
+
     if (writeFlushWalMarker && wal != null && !writestate.readOnly) {
-      FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.CANNOT_FLUSH,
-        getRegionInfo(), -1, new TreeMap<>(Bytes.BYTES_COMPARATOR));
       try {
         WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, true, mvcc,
-          regionReplicationSink.orElse(null));
+          sink);
         return true;
       } catch (IOException e) {
         LOG.warn(getRegionInfo().getEncodedName() + " : " +
@@ -2993,6 +3010,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     return false;
+  }
+
+  /**
+   * Create {@link WALEdit} for {@link FlushDescriptor} and attach {@link RegionReplicationSink#add}
+   * to the flushOpSeqIdMVCCEntry.
+   */
+  private void attachReplicateRegionReplicaToFlushOpSeqIdMVCCEntry(WriteEntry flushOpSeqIdMVCCEntry,
+      FlushDescriptor desc, RegionReplicationSink sink) {
+    assert !flushOpSeqIdMVCCEntry.getCompletionAction().isPresent();
+    WALEdit flushMarkerWALEdit = WALEdit.createFlushWALEdit(getRegionInfo(), desc);
+    WALKeyImpl walKey =
+        WALUtil.createWALKey(getRegionInfo(), mvcc, this.getReplicationScope(), null);
+    walKey.setWriteEntry(flushOpSeqIdMVCCEntry);
+    /**
+     * Here the {@link ServerCall} is null for {@link RegionReplicationSink#add} because the
+     * flushMarkerWALEdit is created by ourselves, not from rpc.
+     */
+    flushOpSeqIdMVCCEntry.attachCompletionAction(() -> sink.add(walKey, flushMarkerWALEdit, null));
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",

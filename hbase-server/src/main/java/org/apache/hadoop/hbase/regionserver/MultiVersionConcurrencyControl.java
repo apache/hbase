@@ -303,6 +303,10 @@ public class MultiVersionConcurrencyControl {
       completionAction.ifPresent(Runnable::run);
     }
 
+    public Optional<Runnable> getCompletionAction() {
+      return completionAction;
+    }
+
     public long getWriteNumber() {
       return this.writeNumber;
     }
