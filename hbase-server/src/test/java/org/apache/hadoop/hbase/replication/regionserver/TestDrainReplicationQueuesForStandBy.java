@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -115,4 +116,11 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
       assertTrue(region2.get(new Get(Bytes.toBytes(i))).isEmpty());
     }
   }
+
+  @After
+  public void clean() throws Exception {
+     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    }
+
 }
