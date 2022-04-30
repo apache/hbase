@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.util.clock;
 
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * YieldAdvancingClock implements a strategy for currentTimeAdvancing that yields the thread
+ * until the clock ticks over.
+ */
 @InterfaceAudience.Private
-public class DefaultEnvironmentEdge extends BaseEnvironmentEdge {
+public class YieldAdvancingClock extends SpinAdvancingClock {
 
-  // No overrides here
+  public YieldAdvancingClock(HashedBytes name) {
+    super(name);
+  }
+
+  // Broken out to inlinable method for subclassing and instrumentation.
+  @Override
+  protected void spin() throws InterruptedException {
+    Thread.sleep(1, 0); // black magic to yield on all platforms
+    super.spin();
+  }
 
 }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
@@ -201,6 +202,14 @@ public class TestHFileCleaner {
       @Override
       public long currentTime() {
         return createTime;
+      }
+      @Override
+      public Clock getClock(HashedBytes name) {
+        return null;
+      }
+      @Override
+      public boolean removeClock(Clock clock) {
+        return false;
       }
     };
     EnvironmentEdgeManager.injectEdge(setTime);

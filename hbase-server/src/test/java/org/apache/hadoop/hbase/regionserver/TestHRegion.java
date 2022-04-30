@@ -155,9 +155,11 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdge.Clock;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
@@ -451,11 +453,14 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, method);
     try {
+      Mutation[] mutations = new Mutation[HBaseTestingUtil.ROWS.length];
+      int i = 0;
       for (byte[] row : HBaseTestingUtil.ROWS) {
-        Put put = new Put(row);
-        put.addColumn(family, family, row);
-        region.put(put);
+        Put p = new Put(row);
+        p.addColumn(family, family, row);
+        mutations[i++] = p;
       }
+      region.batchMutate(mutations);
       region.flush(true);
       // After flush, data size should be zero
       assertEquals(0, region.getMemStoreDataSize());
@@ -3533,7 +3538,7 @@ public class TestHRegion {
   }
 
   @Test
-  public void testDelete_CheckTimestampUpdated() throws IOException {
+  public void testDelete_CheckTimestampUpdated() throws Exception {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] col1 = Bytes.toBytes("col1");
     byte[] col2 = Bytes.toBytes("col2");
@@ -3553,9 +3558,13 @@ public class TestHRegion {
     deleteMap.put(fam1, kvs);
     region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap));
 
-    // extract the key values out the memstore:
+    // Extract the key values out the memstore after ensuring the time has advanced
+    // for the test's comparisons to be valid.
     // This is kinda hacky, but better than nothing...
-    long now = EnvironmentEdgeManager.currentTime();
+    Clock clock = EnvironmentEdgeManager.getDelegate()
+      .getClock(new HashedBytes(Bytes.toBytes("foo")));
+    long now = clock.currentTimeAdvancing();
+    EnvironmentEdgeManager.getDelegate().removeClock(clock);
     AbstractMemStore memstore = (AbstractMemStore) region.getStore(fam1).memstore;
     Cell firstCell = memstore.getActive().first();
     assertTrue(firstCell.getTimestamp() <= now);
@@ -6548,22 +6557,18 @@ public class TestHRegion {
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
 
-    // create one storefile contains many rows will be skipped
-    // to check StoreFileScanner.seekToPreviousRow
-    for (int i = 10000; i < 20000; i++) {
-      Put p = new Put(Bytes.toBytes(""+i));
-      p.addColumn(cf1, col, Bytes.toBytes("" + i));
-      region.put(p);
-    }
-    region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
-
     // create one memstore contains many rows will be skipped
     // to check MemStoreScanner.seekToPreviousRow
-    for (int i = 10000; i < 20000; i++) {
-      Put p = new Put(Bytes.toBytes(""+i));
-      p.addColumn(cf1, col, Bytes.toBytes("" + i));
-      region.put(p);
+    Mutation[] mutations = new Mutation[10000];
+    for (int i = 0; i < 10000; i++) {
+      Put p = new Put(Bytes.toBytes("" + (10000 + i)));
+      p.addColumn(cf1, col, Bytes.toBytes("" + (10000 + i)));
+      mutations[i] = p;
     }
+    region.batchMutate(mutations);
+    region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
+
+    region.batchMutate(mutations);
 
     List<Cell> currRow = new ArrayList<>();
     boolean hasNext;
@@ -6600,11 +6605,14 @@ public class TestHRegion {
 
     // create one memstore contains many rows will be skipped
     // to check MemStoreScanner.seekToPreviousRow
-    for (int i = 10000; i < 20000; i++) {
-      Put p = new Put(Bytes.toBytes("" + i));
-      p.addColumn(cf1, col, Bytes.toBytes("" + i));
-      region.put(p);
+    Mutation[] mutations = new Mutation[10000];
+    for (int i = 0; i < 10000; i++) {
+      Put p = new Put(Bytes.toBytes("" + (10000+i)));
+      p.addColumn(cf1, col, Bytes.toBytes("" + (10000+i)));
+      mutations[i] = p;
     }
+    region.batchMutate(mutations);
+
     List<Cell> currRow = new ArrayList<>();
     boolean hasNext;
     boolean assertDone = false;
@@ -6649,11 +6657,14 @@ public class TestHRegion {
     RegionScannerImpl scanner = region.getScanner(scan);
 
     // Put a lot of cells that have sequenceIDs grater than the readPt of the reverse scan
-    for (int i = 100000; i < 200000; i++) {
-      Put p = new Put(Bytes.toBytes("" + i));
-      p.addColumn(cf1, col, Bytes.toBytes("" + i));
-      region.put(p);
+    Mutation[] mutations = new Mutation[100000];
+    for (int i = 0; i < 100000; i++) {
+      Put p = new Put(Bytes.toBytes("" + ( 100000 + i )));
+      p.addColumn(cf1, col, Bytes.toBytes("" + ( 100000 + i )));
+      mutations[i] = p;
     }
+    region.batchMutate(mutations);
+
     List<Cell> currRow = new ArrayList<>();
     boolean hasNext;
     do {
@@ -6930,7 +6941,8 @@ public class TestHRegion {
 
   @Test
   public void testCellTTLs() throws IOException {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    edge.setValue(1234);
     EnvironmentEdgeManager.injectEdge(edge);
 
     final byte[] row = Bytes.toBytes("testRow");
@@ -6979,7 +6991,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q4));
 
     // Increment time to T+5 seconds
-    edge.incrementTime(5000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
@@ -6988,7 +7000,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q4));
 
     // Increment time to T+10 seconds
-    edge.incrementTime(5000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
@@ -6997,7 +7009,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q4));
 
     // Increment time to T+15 seconds
-    edge.incrementTime(5000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
@@ -7006,7 +7018,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q4));
 
     // Increment time to T+20 seconds
-    edge.incrementTime(10000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
@@ -7023,9 +7035,9 @@ public class TestHRegion {
     assertNotNull(val);
     assertEquals(1L, Bytes.toLong(val));
 
-    // Increment with a TTL of 5 seconds
+    // Increment with a TTL of 4 seconds
     Increment incr = new Increment(row).addColumn(fam1, q1, 1L);
-    incr.setTTL(5000);
+    incr.setTTL(4000);
     region.increment(incr); // 2
 
     // New value should be 2
@@ -7035,7 +7047,7 @@ public class TestHRegion {
     assertEquals(2L, Bytes.toLong(val));
 
     // Increment time to T+25 seconds
-    edge.incrementTime(5000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     // Value should be back to 1
     r = region.get(new Get(row));
@@ -7044,7 +7056,7 @@ public class TestHRegion {
     assertEquals(1L, Bytes.toLong(val));
 
     // Increment time to T+30 seconds
-    edge.incrementTime(5000);
+    edge.setValue(edge.currentTime() + (5 * 1000) + 1);
 
     // Original value written at T+20 should be gone now via family TTL
     r = region.get(new Get(row));
@@ -7121,9 +7133,9 @@ public class TestHRegion {
 
   @Test
   public void testIncrementTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Increment inc = new Increment(row);
@@ -7146,9 +7158,9 @@ public class TestHRegion {
 
   @Test
   public void testAppendTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Append a = new Append(row);
@@ -7177,9 +7189,9 @@ public class TestHRegion {
 
   @Test
   public void testCheckAndMutateTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Put p = new Put(row);
@@ -7381,9 +7393,9 @@ public class TestHRegion {
 
   @Test
   public void testCheckAndRowMutateTimestampsAreMonotonic() throws IOException {
-    region = initHRegion(tableName, method, CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
+    region = initHRegion(tableName, method, CONF, fam1);
 
     edge.setValue(10);
     Put p = new Put(row);

@@ -57,9 +57,9 @@ import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -883,7 +883,8 @@ public class TestDefaultMemStore {
   @Test
   public void testUpdateToTimeOfOldestEdit() throws Exception {
     try {
-      EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+      ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+      edge.setValue(1234);
       EnvironmentEdgeManager.injectEdge(edge);
       DefaultMemStore memstore = new DefaultMemStore();
       long t = memstore.timeOfOldestEdit();
@@ -935,21 +936,20 @@ public class TestDefaultMemStore {
 
   protected void checkShouldFlush(Configuration conf, boolean expected) throws Exception {
     try {
-      EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+      ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+      edge.setValue(1234);
       EnvironmentEdgeManager.injectEdge(edge);
       HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
       String cf = "foo";
       HRegion region =
           hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
-
-      edge.setCurrentTimeMillis(1234);
       Put p = new Put(Bytes.toBytes("r"));
       p.add(KeyValueTestUtil.create("r", cf, "q", 100, "v"));
       region.put(p);
-      edge.setCurrentTimeMillis(1234 + 100);
+      edge.setValue(1234 + 100);
       StringBuilder sb = new StringBuilder();
       assertTrue(!region.shouldFlush(sb));
-      edge.setCurrentTimeMillis(1234 + 10000);
+      edge.setValue(1234 + 10000);
       assertTrue(region.shouldFlush(sb) == expected);
     } finally {
       EnvironmentEdgeManager.reset();
@@ -965,9 +965,9 @@ public class TestDefaultMemStore {
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
     HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     Path testDir = hbaseUtility.getDataTestDir();
-    EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    edge.setValue(1234);
     EnvironmentEdgeManager.injectEdge(edge);
-    edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, "1234");
     TableDescriptors tds = new FSTableDescriptors(conf);
     FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
@@ -982,10 +982,10 @@ public class TestDefaultMemStore {
         .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
     HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));
     addRegionToMETA(meta, r);
-    edge.setCurrentTimeMillis(1234 + 100);
+    edge.setValue(1234 + 100);
     StringBuilder sb = new StringBuilder();
     assertTrue(meta.shouldFlush(sb) == false);
-    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
+    edge.setValue(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
     assertTrue(meta.shouldFlush(sb) == true);
   }
 
@@ -1007,17 +1007,6 @@ public class TestDefaultMemStore {
     NavigableMap<byte[], List<Cell>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     familyMap.put(HConstants.CATALOG_FAMILY, cells);
     meta.put(new Put(row, HConstants.LATEST_TIMESTAMP, familyMap));
-  }
-
-  private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
-    long t = 1234;
-    @Override
-    public long currentTime() {
-      return t;
-    }
-    public void setCurrentTimeMillis(long t) {
-      this.t = t;
-    }
   }
 
   /**

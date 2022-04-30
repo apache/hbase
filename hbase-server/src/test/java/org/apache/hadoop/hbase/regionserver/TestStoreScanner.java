@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -61,6 +60,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -83,7 +83,7 @@ public class TestStoreScanner {
   private static final String CF_STR = "cf";
   private static final byte[] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
 
@@ -986,6 +986,14 @@ public class TestStoreScanner {
         @Override
         public long currentTime() {
           return now;
+        }
+        @Override
+        public Clock getClock(HashedBytes name) {
+          return null;
+        }
+        @Override
+        public boolean removeClock(Clock clock) {
+          return false;
         }
       });
       // @formatter:off

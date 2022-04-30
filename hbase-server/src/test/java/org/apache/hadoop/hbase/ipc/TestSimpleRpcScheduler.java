@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.util.BaseEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
@@ -576,7 +576,7 @@ public class TestSimpleRpcScheduler {
     }
   }
 
-  private static final class CoDelEnvironmentEdge implements EnvironmentEdge {
+  private static final class CoDelEnvironmentEdge extends BaseEnvironmentEdge {
 
     private final BlockingQueue<Long> timeQ = new LinkedBlockingQueue<>();
 
@@ -599,6 +599,7 @@ public class TestSimpleRpcScheduler {
       }
       return System.currentTimeMillis();
     }
+
   }
 
   // FIX. I don't get this test (St.Ack). When I time this test, the minDelay is > 2 * codel delay

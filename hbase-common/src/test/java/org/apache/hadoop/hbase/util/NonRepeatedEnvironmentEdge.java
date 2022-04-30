@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * An clock which will never return the same clock twice.
  */
 @InterfaceAudience.Private
-public class NonRepeatedEnvironmentEdge implements EnvironmentEdge {
+public class NonRepeatedEnvironmentEdge extends BaseEnvironmentEdge {
 
   private final AtomicLong prevTime = new AtomicLong(0L);
 

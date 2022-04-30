@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.BaseEnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
@@ -112,13 +112,7 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupPurgeOldBackupsCommand() throws Exception {
     LOG.info("test backup delete (purge old backups) on a single table with data: command-line");
     List<TableName> tableList = Lists.newArrayList(table1);
-    EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
-      // time - 2 days
-      @Override
-      public long currentTime() {
-        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
-      }
-    });
+    EnvironmentEdgeManager.injectEdge(new TwoDaysBackEnvironmentEdge());
     String backupId = fullTableBackup(tableList);
     assertTrue(checkSucceeded(backupId));
 
@@ -160,4 +154,13 @@ public class TestBackupDelete extends TestBackupBase {
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
   }
+
+  static class TwoDaysBackEnvironmentEdge extends BaseEnvironmentEdge {
+    // time - 2 days
+    @Override
+    public long currentTime() {
+      return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
+    }
+  }
+
 }
