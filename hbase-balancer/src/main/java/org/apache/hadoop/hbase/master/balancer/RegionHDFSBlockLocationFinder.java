@@ -29,6 +29,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.thirdparty.com.google.common.cache.Weigher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +62,9 @@ class RegionHDFSBlockLocationFinder extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(RegionHDFSBlockLocationFinder.class);
   private static final long CACHE_TIME = 240 * 60 * 1000;
   private static final float EPSILON = 0.0001f;
+  // The max size of the cache,
+  private static final String BALANCER_REGIONBLOCKLOCATION_CACHE_MAX_SIZE =
+    "hbase.master.balancer.regionBlockLocation.cache.max.size";
   private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION =
     new HDFSBlocksDistribution();
   private volatile ClusterMetrics status;
@@ -91,7 +96,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
   // The cache for where regions are located.
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> cache = null;
 
-  RegionHDFSBlockLocationFinder() {
+  RegionHDFSBlockLocationFinder(Configuration conf) {
+    setConf(conf);
     this.cache = createCache();
     executor = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5,
       new ThreadFactoryBuilder().setDaemon(true).setNameFormat("region-location-%d").build()));
@@ -102,8 +108,28 @@ class RegionHDFSBlockLocationFinder extends Configured {
    * @return A new Cache.
    */
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> createCache() {
-    return CacheBuilder.newBuilder().expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
-      .build(loader);
+
+    long maximumWeight = getConf().getLong(
+      BALANCER_REGIONBLOCKLOCATION_CACHE_MAX_SIZE, 0);
+
+    if (maximumWeight > 0) {
+      return CacheBuilder.newBuilder()
+        .expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
+        .weigher(
+          new Weigher<RegionInfo, HDFSBlocksDistribution>() {
+            @Override
+            public int weigh(RegionInfo regionInfo, HDFSBlocksDistribution hdfsBlocksDistribution) {
+              return (int) (regionInfo.heapSize() +
+                hdfsBlocksDistribution.heapSize());
+            }
+          }
+        )
+        .maximumWeight(maximumWeight)
+        .build(loader);
+    } else {
+      return CacheBuilder.newBuilder().expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
+        .build(loader);
+    }
   }
 
   void setClusterInfoProvider(ClusterInfoProvider provider) {

@@ -178,9 +178,8 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         serverAssignments.put(sn, getTableRegionsFromServer(tableName, sn));
       }
     }
-    RegionHDFSBlockLocationFinder regionFinder = new RegionHDFSBlockLocationFinder();
+    RegionHDFSBlockLocationFinder regionFinder = new RegionHDFSBlockLocationFinder(conf);
     regionFinder.setClusterMetrics(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
-    regionFinder.setConf(conf);
     regionFinder.setClusterInfoProvider(
       new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
     BalancerClusterState cluster =

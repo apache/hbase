@@ -402,8 +402,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   private RegionHDFSBlockLocationFinder createRegionLocationFinder(Configuration conf) {
-    RegionHDFSBlockLocationFinder finder = new RegionHDFSBlockLocationFinder();
-    finder.setConf(conf);
+    RegionHDFSBlockLocationFinder finder = new RegionHDFSBlockLocationFinder(conf);
     finder.setClusterInfoProvider(provider);
     return finder;
   }

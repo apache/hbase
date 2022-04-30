@@ -638,6 +638,10 @@ public class TestRegionsRecoveryChore {
         return false;
       }
 
+      @Override
+      public long heapSize() {
+        return 0;
+      }
     };
     return regionInfo;
   }

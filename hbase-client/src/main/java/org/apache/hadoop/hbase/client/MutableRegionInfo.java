@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 class MutableRegionInfo implements RegionInfo {
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(MutableRegionInfo.class, false);
+
   private static final Logger LOG = LoggerFactory.getLogger(MutableRegionInfo.class);
   private static final int MAX_REPLICA_ID = 0xFFFF;
 
@@ -342,5 +345,19 @@ class MutableRegionInfo implements RegionInfo {
   @Override
   public int hashCode() {
     return this.hashCode;
+  }
+
+  @Override
+  public long heapSize() {
+    long size = FIXED_OVERHEAD;
+    size += ClassSize.STRING + 2 * this.encodedName.length();
+    size += ClassSize.sizeOfByteArray(this.encodedNameAsBytes.length);
+    size += ClassSize.sizeOfByteArray(this.regionName.length);
+    size += ClassSize.sizeOfByteArray(this.startKey.length);
+    size += ClassSize.sizeOfByteArray(this.endKey.length);
+
+    size += this.tableName.heapSize();
+
+    return ClassSize.align(size);
   }
 }

@@ -36,6 +36,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
@@ -96,8 +97,7 @@ public class TestRegionHDFSBlockLocationFinder {
 
   @Before
   public void setUp() {
-    finder = new RegionHDFSBlockLocationFinder();
-    finder.setClusterInfoProvider(new DummyClusterInfoProvider(null) {
+    DummyClusterInfoProvider provider = new DummyClusterInfoProvider(null) {
 
       @Override
       public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
@@ -114,7 +114,11 @@ public class TestRegionHDFSBlockLocationFinder {
         TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
         return generate(regionInfo);
       }
-    });
+    };
+
+    Configuration conf = HBaseConfiguration.create();
+    finder = new RegionHDFSBlockLocationFinder(conf);
+    finder.setClusterInfoProvider(provider);
   }
 
   @Test
