@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
@@ -31,10 +30,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -46,43 +41,42 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
- * Provides the common setup framework and runtime services for coprocessor
- * invocation from HBase services.
+ * Provides the common setup framework and runtime services for coprocessor invocation from HBase
+ * services.
  * @param <C> type of specific coprocessor this host will handle
- * @param <E> type of specific coprocessor environment this host requires.
- * provides
+ * @param <E> type of specific coprocessor environment this host requires. provides
  */
 @InterfaceAudience.Private
 public abstract class CoprocessorHost<C extends Coprocessor, E extends CoprocessorEnvironment<C>> {
-  public static final String REGION_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.region.classes";
+  public static final String REGION_COPROCESSOR_CONF_KEY = "hbase.coprocessor.region.classes";
   public static final String REGIONSERVER_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.regionserver.classes";
+    "hbase.coprocessor.regionserver.classes";
   public static final String USER_REGION_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.user.region.classes";
-  public static final String MASTER_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.master.classes";
-  public static final String WAL_COPROCESSOR_CONF_KEY =
-    "hbase.coprocessor.wal.classes";
+    "hbase.coprocessor.user.region.classes";
+  public static final String MASTER_COPROCESSOR_CONF_KEY = "hbase.coprocessor.master.classes";
+  public static final String WAL_COPROCESSOR_CONF_KEY = "hbase.coprocessor.wal.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
   public static final String COPROCESSORS_ENABLED_CONF_KEY = "hbase.coprocessor.enabled";
   public static final boolean DEFAULT_COPROCESSORS_ENABLED = true;
-  public static final String USER_COPROCESSORS_ENABLED_CONF_KEY =
-    "hbase.coprocessor.user.enabled";
+  public static final String USER_COPROCESSORS_ENABLED_CONF_KEY = "hbase.coprocessor.user.enabled";
   public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
   public static final String SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR =
-      "hbase.skip.load.duplicate.table.coprocessor";
+    "hbase.skip.load.duplicate.table.coprocessor";
   public static final boolean DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR = false;
 
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
   protected final SortedList<E> coprocEnvironments =
-      new SortedList<>(new EnvironmentPriorityComparator());
+    new SortedList<>(new EnvironmentPriorityComparator());
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
@@ -94,15 +88,13 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Not to be confused with the per-object _coprocessors_ (above),
-   * coprocessorNames is static and stores the set of all coprocessors ever
-   * loaded by any thread in this JVM. It is strictly additive: coprocessors are
-   * added to coprocessorNames, by checkAndLoadInstance() but are never removed, since
-   * the intention is to preserve a history of all loaded coprocessors for
-   * diagnosis in case of server crash (HBASE-4014).
+   * Not to be confused with the per-object _coprocessors_ (above), coprocessorNames is static and
+   * stores the set of all coprocessors ever loaded by any thread in this JVM. It is strictly
+   * additive: coprocessors are added to coprocessorNames, by checkAndLoadInstance() but are never
+   * removed, since the intention is to preserve a history of all loaded coprocessors for diagnosis
+   * in case of server crash (HBASE-4014).
    */
-  private static Set<String> coprocessorNames =
-      Collections.synchronizedSet(new HashSet<String>());
+  private static Set<String> coprocessorNames = Collections.synchronizedSet(new HashSet<String>());
 
   public static Set<String> getLoadedCoprocessors() {
     synchronized (coprocessorNames) {
@@ -111,27 +103,25 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Used to create a parameter to the HServerLoad constructor so that
-   * HServerLoad can provide information about the coprocessors loaded by this
-   * regionserver.
-   * (HBASE-4070: Improve region server metrics to report loaded coprocessors
-   * to master).
+   * Used to create a parameter to the HServerLoad constructor so that HServerLoad can provide
+   * information about the coprocessors loaded by this regionserver. (HBASE-4070: Improve region
+   * server metrics to report loaded coprocessors to master).
    */
   public Set<String> getCoprocessors() {
     Set<String> returnValue = new TreeSet<>();
-    for (E e: coprocEnvironments) {
+    for (E e : coprocEnvironments) {
       returnValue.add(e.getInstance().getClass().getSimpleName());
     }
     return returnValue;
   }
 
   /**
-   * Load system coprocessors once only. Read the class names from configuration.
-   * Called by constructor.
+   * Load system coprocessors once only. Read the class names from configuration. Called by
+   * constructor.
    */
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
-    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
-      DEFAULT_COPROCESSORS_ENABLED);
+    boolean coprocessorsEnabled =
+      conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY, DEFAULT_COPROCESSORS_ENABLED);
     if (!coprocessorsEnabled) {
       return;
     }
@@ -140,8 +130,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     // load default coprocessors from configure file
     String[] defaultCPClasses = conf.getStrings(confKey);
-    if (defaultCPClasses == null || defaultCPClasses.length == 0)
-      return;
+    if (defaultCPClasses == null || defaultCPClasses.length == 0) return;
 
     int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
@@ -196,16 +185,15 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
   /**
    * Load a coprocessor implementation into the host
-   * @param path path to implementation jar
+   * @param path      path to implementation jar
    * @param className the main class name
-   * @param priority chaining priority
-   * @param conf configuration for coprocessor
+   * @param priority  chaining priority
+   * @param conf      configuration for coprocessor
    * @throws java.io.IOException Exception
    */
-  public E load(Path path, String className, int priority,
-      Configuration conf) throws IOException {
+  public E load(Path path, String className, int priority, Configuration conf) throws IOException {
     String[] includedClassPrefixes = null;
-    if (conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY) != null){
+    if (conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY) != null) {
       String prefixes = conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY);
       includedClassPrefixes = prefixes.split(";");
     }
@@ -214,18 +202,18 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
   /**
    * Load a coprocessor implementation into the host
-   * @param path path to implementation jar
-   * @param className the main class name
-   * @param priority chaining priority
-   * @param conf configuration for coprocessor
+   * @param path                  path to implementation jar
+   * @param className             the main class name
+   * @param priority              chaining priority
+   * @param conf                  configuration for coprocessor
    * @param includedClassPrefixes class name prefixes to include
    * @throws java.io.IOException Exception
    */
-  public E load(Path path, String className, int priority,
-      Configuration conf, String[] includedClassPrefixes) throws IOException {
+  public E load(Path path, String className, int priority, Configuration conf,
+    String[] includedClassPrefixes) throws IOException {
     Class<?> implClass;
-    LOG.debug("Loading coprocessor class " + className + " with path " +
-        path + " and priority " + priority);
+    LOG.debug("Loading coprocessor class " + className + " with path " + path + " and priority "
+      + priority);
 
     boolean skipLoadDuplicateCoprocessor = conf.getBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR,
       DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR);
@@ -243,19 +231,19 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
         throw new IOException("No jar path specified for " + className);
       }
     } else {
-      cl = CoprocessorClassLoader.getClassLoader(
-        path, getClass().getClassLoader(), pathPrefix, conf);
+      cl =
+        CoprocessorClassLoader.getClassLoader(path, getClass().getClassLoader(), pathPrefix, conf);
       try {
-        implClass = ((CoprocessorClassLoader)cl).loadClass(className, includedClassPrefixes);
+        implClass = ((CoprocessorClassLoader) cl).loadClass(className, includedClassPrefixes);
       } catch (ClassNotFoundException e) {
         throw new IOException("Cannot load external coprocessor class " + className, e);
       }
     }
 
-    //load custom code for coprocessor
+    // load custom code for coprocessor
     Thread currentThread = Thread.currentThread();
     ClassLoader hostClassLoader = currentThread.getContextClassLoader();
-    try{
+    try {
       // switch temporarily to the thread classloader for custom CP
       currentThread.setContextClassLoader(cl);
       E cpInstance = checkAndLoadInstance(implClass, priority, conf);
@@ -267,19 +255,19 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   public void load(Class<? extends C> implClass, int priority, Configuration conf)
-      throws IOException {
+    throws IOException {
     E env = checkAndLoadInstance(implClass, priority, conf);
     coprocEnvironments.add(env);
   }
 
   /**
    * @param implClass Implementation class
-   * @param priority priority
-   * @param conf configuration
+   * @param priority  priority
+   * @param conf      configuration
    * @throws java.io.IOException Exception
    */
   public E checkAndLoadInstance(Class<?> implClass, int priority, Configuration conf)
-      throws IOException {
+    throws IOException {
     // create the instance
     C impl;
     try {
@@ -288,7 +276,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
         LOG.error("Cannot load coprocessor " + implClass.getSimpleName());
         return null;
       }
-    } catch (InstantiationException|IllegalAccessException e) {
+    } catch (InstantiationException | IllegalAccessException e) {
       throw new IOException(e);
     }
     // create the environment
@@ -307,14 +295,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public abstract E createEnvironment(C instance, int priority, int sequence, Configuration conf);
 
   /**
-   * Called when a new Coprocessor class needs to be loaded. Checks if type of the given class
-   * is what the corresponding host implementation expects. If it is of correct type, returns an
-   * instance of the coprocessor to be loaded. If not, returns null.
-   * If an exception occurs when trying to create instance of a coprocessor, it's passed up and
-   * eventually results into server aborting.
+   * Called when a new Coprocessor class needs to be loaded. Checks if type of the given class is
+   * what the corresponding host implementation expects. If it is of correct type, returns an
+   * instance of the coprocessor to be loaded. If not, returns null. If an exception occurs when
+   * trying to create instance of a coprocessor, it's passed up and eventually results into server
+   * aborting.
    */
   public abstract C checkAndGetInstance(Class<?> implClass)
-      throws InstantiationException, IllegalAccessException;
+    throws InstantiationException, IllegalAccessException;
 
   public void shutdown(E e) {
     assert e instanceof BaseEnvironment;
@@ -328,9 +316,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * Find coprocessors by full class name or simple name.
    */
   public C findCoprocessor(String className) {
-    for (E env: coprocEnvironments) {
-      if (env.getInstance().getClass().getName().equals(className) ||
-          env.getInstance().getClass().getSimpleName().equals(className)) {
+    for (E env : coprocEnvironments) {
+      if (
+        env.getInstance().getClass().getName().equals(className)
+          || env.getInstance().getClass().getSimpleName().equals(className)
+      ) {
         return env.getInstance();
       }
     }
@@ -338,7 +328,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   public <T extends C> T findCoprocessor(Class<T> cls) {
-    for (E env: coprocEnvironments) {
+    for (E env : coprocEnvironments) {
       if (cls.isAssignableFrom(env.getInstance().getClass())) {
         return (T) env.getInstance();
       }
@@ -354,12 +344,12 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public <T extends C> List<T> findCoprocessors(Class<T> cls) {
     ArrayList<T> ret = new ArrayList<>();
 
-    for (E env: coprocEnvironments) {
+    for (E env : coprocEnvironments) {
       C cp = env.getInstance();
 
-      if(cp != null) {
+      if (cp != null) {
         if (cls.isAssignableFrom(cp.getClass())) {
-          ret.add((T)cp);
+          ret.add((T) cp);
         }
       }
     }
@@ -372,9 +362,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * @return the coprocessor, or null if not found
    */
   public E findCoprocessorEnvironment(String className) {
-    for (E env: coprocEnvironments) {
-      if (env.getInstance().getClass().getName().equals(className) ||
-          env.getInstance().getClass().getSimpleName().equals(className)) {
+    for (E env : coprocEnvironments) {
+      if (
+        env.getInstance().getClass().getName().equals(className)
+          || env.getInstance().getClass().getSimpleName().equals(className)
+      ) {
         return env;
       }
     }
@@ -391,8 +383,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     final ClassLoader systemClassLoader = this.getClass().getClassLoader();
     for (E env : coprocEnvironments) {
       ClassLoader cl = env.getInstance().getClass().getClassLoader();
-      if (cl != systemClassLoader){
-        //do not include system classloader
+      if (cl != systemClassLoader) {
+        // do not include system classloader
         externalClassLoaders.add(cl);
       }
     }
@@ -400,13 +392,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Environment priority comparator.
-   * Coprocessors are chained in sorted order.
+   * Environment priority comparator. Coprocessors are chained in sorted order.
    */
   static class EnvironmentPriorityComparator implements Comparator<CoprocessorEnvironment> {
     @Override
-    public int compare(final CoprocessorEnvironment env1,
-        final CoprocessorEnvironment env2) {
+    public int compare(final CoprocessorEnvironment env1, final CoprocessorEnvironment env2) {
       if (env1.getPriority() < env2.getPriority()) {
         return -1;
       } else if (env1.getPriority() > env2.getPriority()) {
@@ -436,18 +426,15 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * This is used by coprocessor hooks which are declared to throw IOException
-   * (or its subtypes). For such hooks, we should handle throwable objects
-   * depending on the Throwable's type. Those which are instances of
-   * IOException should be passed on to the client. This is in conformance with
-   * the HBase idiom regarding IOException: that it represents a circumstance
-   * that should be passed along to the client for its own handling. For
-   * example, a coprocessor that implements access controls would throw a
-   * subclass of IOException, such as AccessDeniedException, in its preGet()
-   * method to prevent an unauthorized client's performing a Get on a particular
-   * table.
+   * This is used by coprocessor hooks which are declared to throw IOException (or its subtypes).
+   * For such hooks, we should handle throwable objects depending on the Throwable's type. Those
+   * which are instances of IOException should be passed on to the client. This is in conformance
+   * with the HBase idiom regarding IOException: that it represents a circumstance that should be
+   * passed along to the client for its own handling. For example, a coprocessor that implements
+   * access controls would throw a subclass of IOException, such as AccessDeniedException, in its
+   * preGet() method to prevent an unauthorized client's performing a Get on a particular table.
    * @param env Coprocessor Environment
-   * @param e Throwable object thrown by coprocessor.
+   * @param e   Throwable object thrown by coprocessor.
    * @exception IOException Exception
    */
   // Note to devs: Class comments of all observers ({@link MasterObserver}, {@link WALObserver},
@@ -456,7 +443,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   // update all classes' comments.
   protected void handleCoprocessorThrowable(final E env, final Throwable e) throws IOException {
     if (e instanceof IOException) {
-      throw (IOException)e;
+      throw (IOException) e;
     }
     // If we got here, e is not an IOException. A loaded coprocessor has a
     // fatal bug, and the server (master or regionserver) should remove the
@@ -469,24 +456,23 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       abortServer(env, e);
     } else {
       // If available, pull a table name out of the environment
-      if(env instanceof RegionCoprocessorEnvironment) {
-        String tableName = ((RegionCoprocessorEnvironment)env).getRegionInfo().getTable().getNameAsString();
-        LOG.error("Removing coprocessor '" + env.toString() + "' from table '"+ tableName + "'", e);
+      if (env instanceof RegionCoprocessorEnvironment) {
+        String tableName =
+          ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable().getNameAsString();
+        LOG.error("Removing coprocessor '" + env.toString() + "' from table '" + tableName + "'",
+          e);
       } else {
-        LOG.error("Removing coprocessor '" + env.toString() + "' from " +
-                "environment",e);
+        LOG.error("Removing coprocessor '" + env.toString() + "' from " + "environment", e);
       }
 
       coprocEnvironments.remove(env);
       try {
         shutdown(env);
       } catch (Exception x) {
-        LOG.error("Uncaught exception when shutting down coprocessor '"
-            + env.toString() + "'", x);
+        LOG.error("Uncaught exception when shutting down coprocessor '" + env.toString() + "'", x);
       }
-      throw new DoNotRetryIOException("Coprocessor: '" + env.toString() +
-          "' threw: '" + e + "' and has been removed from the active " +
-          "coprocessor set.", e);
+      throw new DoNotRetryIOException("Coprocessor: '" + env.toString() + "' threw: '" + e
+        + "' and has been removed from the active " + "coprocessor set.", e);
     }
   }
 
@@ -494,27 +480,26 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * Used to limit legacy handling to once per Coprocessor class per classloader.
    */
   private static final Set<Class<? extends Coprocessor>> legacyWarning =
-      new ConcurrentSkipListSet<>(
-          new Comparator<Class<? extends Coprocessor>>() {
-            @Override
-            public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {
-              if (c1.equals(c2)) {
-                return 0;
-              }
-              return c1.getName().compareTo(c2.getName());
-            }
-          });
+    new ConcurrentSkipListSet<>(new Comparator<Class<? extends Coprocessor>>() {
+      @Override
+      public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {
+        if (c1.equals(c2)) {
+          return 0;
+        }
+        return c1.getName().compareTo(c2.getName());
+      }
+    });
 
   /**
    * Implementations defined function to get an observer of type {@code O} from a coprocessor of
-   * type {@code C}. Concrete implementations of CoprocessorHost define one getter for each
-   * observer they can handle. For e.g. RegionCoprocessorHost will use 3 getters, one for
-   * each of RegionObserver, EndpointObserver and BulkLoadObserver.
-   * These getters are used by {@code ObserverOperation} to get appropriate observer from the
-   * coprocessor.
+   * type {@code C}. Concrete implementations of CoprocessorHost define one getter for each observer
+   * they can handle. For e.g. RegionCoprocessorHost will use 3 getters, one for each of
+   * RegionObserver, EndpointObserver and BulkLoadObserver. These getters are used by
+   * {@code ObserverOperation} to get appropriate observer from the coprocessor.
    */
   @FunctionalInterface
-  public interface ObserverGetter<C, O> extends Function<C, Optional<O>> {}
+  public interface ObserverGetter<C, O> extends Function<C, Optional<O>> {
+  }
 
   private abstract class ObserverOperation<O> extends ObserverContextImpl<E> {
     ObserverGetter<C, O> observerGetter;
@@ -532,12 +517,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
 
     ObserverOperation(ObserverGetter<C, O> observerGetter, User user, boolean bypassable) {
-      super(user != null? user: RpcServer.getRequestUser().orElse(null), bypassable);
+      super(user != null ? user : RpcServer.getRequestUser().orElse(null), bypassable);
       this.observerGetter = observerGetter;
     }
 
     abstract void callObserver() throws IOException;
-    protected void postEnvCall() {}
+
+    protected void postEnvCall() {
+    }
   }
 
   // Can't derive ObserverOperation from ObserverOperationWithResult (R = Void) because then all
@@ -555,15 +542,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
 
     public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user,
-        boolean bypassable) {
+      boolean bypassable) {
       super(observerGetter, user, bypassable);
     }
 
     /**
      * In case of coprocessors which have many kinds of observers (for eg, {@link RegionCoprocessor}
-     * has BulkLoadObserver, RegionObserver, etc), some implementations may not need all
-     * observers, in which case they will return null for that observer's getter.
-     * We simply ignore such cases.
+     * has BulkLoadObserver, RegionObserver, etc), some implementations may not need all observers,
+     * in which case they will return null for that observer's getter. We simply ignore such cases.
      */
     @Override
     void callObserver() throws IOException {
@@ -584,17 +570,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
 
     public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
-        boolean bypassable) {
+      boolean bypassable) {
       this(observerGetter, result, null, bypassable);
     }
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
-        User user) {
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user) {
       this(observerGetter, result, user, false);
     }
 
     private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user,
-        boolean bypassable) {
+      boolean bypassable) {
       super(observerGetter, user, bypassable);
       this.result = result;
     }
@@ -620,18 +605,18 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * Do not call with an observerOperation that is null! Have the caller check.
    */
   protected <O, R> R execOperationWithResult(
-      final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
+    final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
     boolean bypass = execOperation(observerOperation);
     R result = observerOperation.getResult();
-    return bypass == observerOperation.isBypassable()? result: null;
+    return bypass == observerOperation.isBypassable() ? result : null;
   }
 
   /**
    * @return True if we are to bypass (Can only be <code>true</code> if
-   * ObserverOperation#isBypassable().
+   *         ObserverOperation#isBypassable().
    */
   protected <O> boolean execOperation(final ObserverOperation<O> observerOperation)
-      throws IOException {
+    throws IOException {
     boolean bypass = false;
     if (observerOperation == null) {
       return bypass;
@@ -662,19 +647,18 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Coprocessor classes can be configured in any order, based on that priority is set and
-   * chained in a sorted order. Should be used preStop*() hooks i.e. when master/regionserver is
-   * going down. This function first calls coprocessor methods (using ObserverOperation.call())
-   * and then shutdowns the environment in postEnvCall(). <br>
+   * Coprocessor classes can be configured in any order, based on that priority is set and chained
+   * in a sorted order. Should be used preStop*() hooks i.e. when master/regionserver is going down.
+   * This function first calls coprocessor methods (using ObserverOperation.call()) and then
+   * shutdowns the environment in postEnvCall(). <br>
    * Need to execute all coprocessor methods first then postEnvCall(), otherwise some coprocessors
    * may remain shutdown if any exception occurs during next coprocessor execution which prevent
    * master/regionserver stop or cluster shutdown. (Refer:
    * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
-   * @return true if bypaas coprocessor execution, false if not.
-   * @throws IOException
+   * @return true if bypaas coprocessor execution, false if not. n
    */
   protected <O> boolean execShutdown(final ObserverOperation<O> observerOperation)
-      throws IOException {
+    throws IOException {
     if (observerOperation == null) return false;
     boolean bypass = false;
     List<E> envs = coprocEnvironments.get();

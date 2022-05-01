@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -43,34 +42,30 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  */
 public class HConnectionTestingUtility {
   /*
-   * Not part of {@link HBaseTestingUtility} because this class is not
-   * in same package as {@link ClusterConnection}.  Would have to reveal ugly
-   * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
+   * Not part of {@link HBaseTestingUtility} because this class is not in same package as {@link
+   * ClusterConnection}. Would have to reveal ugly {@link ConnectionImplementation} innards to
+   * HBaseTestingUtility to give it access.
    */
   /**
-<<<<<<< HEAD
-   * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
-   * configuration instance.  Minimally the mock will return
-   * &lt;code>conf&lt;/conf> when {@link ClusterConnection#getConfiguration()} is invoked.
-   * Be sure to shutdown the connection when done by calling
-   * {@link Connection#close()} else it will stick around; this is probably not what you want.
-=======
-   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code>
+   * <<<<<<< HEAD Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
    * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
-   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the
-   * connection when done by calling {@link Connection#close()} else it will stick around; this is
-   * probably not what you want.
->>>>>>> fabf2b8282... HBASE-22572 Javadoc Warnings: @link reference not found (#306)
+   * {@link ClusterConnection#getConfiguration()} is invoked. Be sure to shutdown the connection
+   * when done by calling {@link Connection#close()} else it will stick around; this is probably not
+   * what you want. ======= Get a Mocked {@link Connection} that goes with the passed
+   * <code>conf</code> configuration instance. Minimally the mock will return
+   * &lt;code>conf&lt;/conf> when {@link Connection#getConfiguration()} is invoked. Be sure to
+   * shutdown the connection when done by calling {@link Connection#close()} else it will stick
+   * around; this is probably not what you want. >>>>>>> fabf2b8282... HBASE-22572 Javadoc
+   * Warnings: @link reference not found (#306)
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @return ClusterConnection object for <code>conf</code> n
    */
   public static ClusterConnection getMockedConnection(final Configuration conf)
-  throws ZooKeeperConnectionException {
+    throws ZooKeeperConnectionException {
     ConnectionImplementation connection = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
-    Mockito.when(connection.getRpcControllerFactory()).thenReturn(
-      Mockito.mock(RpcControllerFactory.class));
+    Mockito.when(connection.getRpcControllerFactory())
+      .thenReturn(Mockito.mock(RpcControllerFactory.class));
     // we need a real retrying caller
     RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
     Mockito.when(connection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
@@ -78,37 +73,31 @@ public class HConnectionTestingUtility {
   }
 
   /**
-   * Calls {@link #getMockedConnection(Configuration)} and then mocks a few
-   * more of the popular {@link ClusterConnection} methods so they do 'normal'
-   * operation (see return doc below for list). Be sure to shutdown the
-   * connection when done by calling {@link Connection#close()} else it will stick around;
-   * this is probably not what you want.
-   *
-   * @param conf Configuration to use
-   * @param admin An AdminProtocol; can be null but is usually
-   * itself a mock.
-   * @param client A ClientProtocol; can be null but is usually
-   * itself a mock.
-   * @param sn ServerName to include in the region location returned by this
-   * <code>connection</code>
-   * @param hri RegionInfo to include in the location returned when
-   * getRegionLocator is called on the mocked connection
+   * Calls {@link #getMockedConnection(Configuration)} and then mocks a few more of the popular
+   * {@link ClusterConnection} methods so they do 'normal' operation (see return doc below for
+   * list). Be sure to shutdown the connection when done by calling {@link Connection#close()} else
+   * it will stick around; this is probably not what you want.
+   * @param conf   Configuration to use
+   * @param admin  An AdminProtocol; can be null but is usually itself a mock.
+   * @param client A ClientProtocol; can be null but is usually itself a mock.
+   * @param sn     ServerName to include in the region location returned by this
+   *               <code>connection</code>
+   * @param hri    RegionInfo to include in the location returned when getRegionLocator is called on
+   *               the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
-   * {@link ClusterConnection#getConfiguration()} is called, a 'location' when
-   * {@link ClusterConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)}
-   * is called,
-   * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
-   * {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
-   * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link Connection#close()} when done with this mocked Connection.
-   * @throws IOException
+   *         {@link ClusterConnection#getConfiguration()} is called, a 'location' when
+   *         {@link ClusterConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)}
+   *         is called, and that returns the passed
+   *         {@link AdminProtos.AdminService.BlockingInterface} instance when
+   *         {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
+   *         {@link ClientProtos.ClientService.BlockingInterface} instance when
+   *         {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
+   *         {@link Connection#close()} when done with this mocked Connection. n
    */
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
-      final AdminProtos.AdminService.BlockingInterface admin,
-      final ClientProtos.ClientService.BlockingInterface client,
-      final ServerName sn, final RegionInfo hri)
-  throws IOException {
+    final AdminProtos.AdminService.BlockingInterface admin,
+    final ClientProtos.ClientService.BlockingInterface client, final ServerName sn,
+    final RegionInfo hri) throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     ConnectionConfiguration connectionConfiguration = new ConnectionConfiguration(conf);
@@ -116,54 +105,45 @@ public class HConnectionTestingUtility {
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
-    Mockito.when(c.getRegionLocation((TableName) Mockito.any(),
-        (byte[]) Mockito.any(), Mockito.anyBoolean())).
-      thenReturn(loc);
-    Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any())).
-      thenReturn(loc);
+    Mockito.when(
+      c.getRegionLocation((TableName) Mockito.any(), (byte[]) Mockito.any(), Mockito.anyBoolean()))
+      .thenReturn(loc);
+    Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any())).thenReturn(loc);
     Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any(),
-        Mockito.anyBoolean(), Mockito.anyBoolean(),  Mockito.anyInt()))
-        .thenReturn(new RegionLocations(loc));
+      Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt()))
+      .thenReturn(new RegionLocations(loc));
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
-      Mockito.when(c.getAdmin(Mockito.any())).
-        thenReturn(admin);
+      Mockito.when(c.getAdmin(Mockito.any())).thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.
-      Mockito.when(c.getClient(Mockito.any())).
-        thenReturn(client);
+      Mockito.when(c.getClient(Mockito.any())).thenReturn(client);
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
-    AsyncProcess asyncProcess =
-      new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf),
-        RpcControllerFactory.instantiate(conf));
+    AsyncProcess asyncProcess = new AsyncProcess(c, conf,
+      RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
-    Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
-        RpcRetryingCallerFactory.instantiate(conf,
-            RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));
+    Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(RpcRetryingCallerFactory
+      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));
     Mockito.when(c.getRpcControllerFactory()).thenReturn(Mockito.mock(RpcControllerFactory.class));
     Table t = Mockito.mock(Table.class);
-    Mockito.when(c.getTable((TableName)Mockito.any())).thenReturn(t);
+    Mockito.when(c.getTable((TableName) Mockito.any())).thenReturn(t);
     ResultScanner rs = Mockito.mock(ResultScanner.class);
-    Mockito.when(t.getScanner((Scan)Mockito.any())).thenReturn(rs);
+    Mockito.when(t.getScanner((Scan) Mockito.any())).thenReturn(rs);
     return c;
   }
 
   /**
-   * Get a Mockito spied-upon {@link ClusterConnection} that goes with the passed
-   * <code>conf</code> configuration instance.
-   * Be sure to shutdown the connection when done by calling
+   * Get a Mockito spied-upon {@link ClusterConnection} that goes with the passed <code>conf</code>
+   * configuration instance. Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
-   * [Dead link]: See also
-   * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
+   * @return ClusterConnection object for <code>conf</code> n * [Dead link]: See also
+   *         {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
-  public static ClusterConnection getSpiedConnection(final Configuration conf)
-  throws IOException {
+  public static ClusterConnection getSpiedConnection(final Configuration conf) throws IOException {
     ConnectionImplementation connection =
       Mockito.spy(new ConnectionImplementation(conf, null, null));
     return connection;
@@ -174,8 +154,7 @@ public class HConnectionTestingUtility {
    */
   public static class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
     static final AtomicLong ct = new AtomicLong(0);
-    static final String SLEEP_TIME_CONF_KEY =
-        "hbase.coprocessor.SleepAtFirstRpcCall.sleepTime";
+    static final String SLEEP_TIME_CONF_KEY = "hbase.coprocessor.SleepAtFirstRpcCall.sleepTime";
     static final long DEFAULT_SLEEP_TIME = 2000;
     static final AtomicLong sleepTime = new AtomicLong(DEFAULT_SLEEP_TIME);
 
@@ -196,7 +175,7 @@ public class HConnectionTestingUtility {
 
     @Override
     public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Increment increment, final Result result) throws IOException {
+      final Increment increment, final Result result) throws IOException {
       if (ct.incrementAndGet() == 1) {
         Threads.sleep(sleepTime.get());
       }
@@ -205,7 +184,7 @@ public class HConnectionTestingUtility {
 
     @Override
     public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Append append, final Result result) throws IOException {
+      final Append append, final Result result) throws IOException {
       if (ct.incrementAndGet() == 1) {
         Threads.sleep(sleepTime.get());
       }

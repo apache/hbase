@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
@@ -98,15 +97,16 @@ import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
@@ -195,40 +195,38 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
     bulkLoadByFamily = conf.getBoolean(BulkLoadHFiles.BULK_LOAD_HFILES_BY_FAMILY, false);
-    nrThreads = conf.getInt("hbase.loadincremental.threads.max",
-      Runtime.getRuntime().availableProcessors());
+    nrThreads =
+      conf.getInt("hbase.loadincremental.threads.max", Runtime.getRuntime().availableProcessors());
     numRetries = new AtomicInteger(0);
     rpcControllerFactory = new RpcControllerFactory(conf);
   }
 
   private void usage() {
     System.err.println("Usage: " + "bin/hbase completebulkload [OPTIONS] "
-        + "</PATH/TO/HFILEOUTPUTFORMAT-OUTPUT> <TABLENAME>\n"
-        + "Loads directory of hfiles -- a region dir or product of HFileOutputFormat -- "
-        + "into an hbase table.\n"
-        + "OPTIONS (for other -D options, see source code):\n"
-        + " -D" + CREATE_TABLE_CONF_KEY + "=no whether to create table; when 'no', target "
-        + "table must exist.\n"
-        + " -D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes to ignore unmatched column families.\n"
-        + " -loadTable for when directory of files to load has a depth of 3; target table must "
-        + "exist;\n"
-        + " must be last of the options on command line.\n"
-        + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
-        + "documentation.\n");
+      + "</PATH/TO/HFILEOUTPUTFORMAT-OUTPUT> <TABLENAME>\n"
+      + "Loads directory of hfiles -- a region dir or product of HFileOutputFormat -- "
+      + "into an hbase table.\n" + "OPTIONS (for other -D options, see source code):\n" + " -D"
+      + CREATE_TABLE_CONF_KEY + "=no whether to create table; when 'no', target "
+      + "table must exist.\n" + " -D" + IGNORE_UNMATCHED_CF_CONF_KEY
+      + "=yes to ignore unmatched column families.\n"
+      + " -loadTable for when directory of files to load has a depth of 3; target table must "
+      + "exist;\n" + " must be last of the options on command line.\n"
+      + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
+      + "documentation.\n");
   }
 
   /**
    * Prepare a collection of {@link LoadQueueItem} from list of source hfiles contained in the
    * passed directory and validates whether the prepared queue has all the valid table column
    * families in it.
-   * @param hfilesDir directory containing list of hfiles to be loaded into the table
-   * @param table table to which hfiles should be loaded
-   * @param queue queue which needs to be loaded into the table
+   * @param hfilesDir     directory containing list of hfiles to be loaded into the table
+   * @param table         table to which hfiles should be loaded
+   * @param queue         queue which needs to be loaded into the table
    * @param validateHFile if true hfiles will be validated for its format
    * @throws IOException If any I/O or network error occurred
    */
   public void prepareHFileQueue(Path hfilesDir, Table table, Deque<LoadQueueItem> queue,
-      boolean validateHFile) throws IOException {
+    boolean validateHFile) throws IOException {
     prepareHFileQueue(hfilesDir, table, queue, validateHFile, false);
   }
 
@@ -236,15 +234,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Prepare a collection of {@link LoadQueueItem} from list of source hfiles contained in the
    * passed directory and validates whether the prepared queue has all the valid table column
    * families in it.
-   * @param hfilesDir directory containing list of hfiles to be loaded into the table
-   * @param table table to which hfiles should be loaded
-   * @param queue queue which needs to be loaded into the table
+   * @param hfilesDir     directory containing list of hfiles to be loaded into the table
+   * @param table         table to which hfiles should be loaded
+   * @param queue         queue which needs to be loaded into the table
    * @param validateHFile if true hfiles will be validated for its format
-   * @param silence true to ignore unmatched column families
+   * @param silence       true to ignore unmatched column families
    * @throws IOException If any I/O or network error occurred
    */
   public void prepareHFileQueue(Path hfilesDir, Table table, Deque<LoadQueueItem> queue,
-      boolean validateHFile, boolean silence) throws IOException {
+    boolean validateHFile, boolean silence) throws IOException {
     discoverLoadQueue(queue, hfilesDir, validateHFile);
     validateFamiliesInHFiles(table, queue, silence);
   }
@@ -253,14 +251,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Prepare a collection of {@link LoadQueueItem} from list of source hfiles contained in the
    * passed directory and validates whether the prepared queue has all the valid table column
    * families in it.
-   * @param map map of family to List of hfiles
-   * @param table table to which hfiles should be loaded
-   * @param queue queue which needs to be loaded into the table
+   * @param map     map of family to List of hfiles
+   * @param table   table to which hfiles should be loaded
+   * @param queue   queue which needs to be loaded into the table
    * @param silence true to ignore unmatched column families
    * @throws IOException If any I/O or network error occurred
    */
   public void prepareHFileQueue(Map<byte[], List<Path>> map, Table table,
-      Deque<LoadQueueItem> queue, boolean silence) throws IOException {
+    Deque<LoadQueueItem> queue, boolean silence) throws IOException {
     populateLoadQueue(queue, map);
     validateFamiliesInHFiles(table, queue, silence);
   }
@@ -268,32 +266,32 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   /**
    * Perform a bulk load of the given directory into the given pre-existing table. This method is
    * not threadsafe.
-   * @param hfofDir the directory that was provided as the output path of a job using
-   *          HFileOutputFormat
-   * @param admin the Admin
-   * @param table the table to load into
+   * @param hfofDir       the directory that was provided as the output path of a job using
+   *                      HFileOutputFormat
+   * @param admin         the Admin
+   * @param table         the table to load into
    * @param regionLocator region locator
    * @throws TableNotFoundException if table does not yet exist
    */
   public Map<LoadQueueItem, ByteBuffer> doBulkLoad(Path hfofDir, final Admin admin, Table table,
-      RegionLocator regionLocator) throws TableNotFoundException, IOException {
+    RegionLocator regionLocator) throws TableNotFoundException, IOException {
     return doBulkLoad(hfofDir, admin, table, regionLocator, false, false);
   }
 
   /**
    * Perform a bulk load of the given directory into the given pre-existing table. This method is
    * not threadsafe.
-   * @param map map of family to List of hfiles
-   * @param admin the Admin
-   * @param table the table to load into
+   * @param map           map of family to List of hfiles
+   * @param admin         the Admin
+   * @param table         the table to load into
    * @param regionLocator region locator
-   * @param silence true to ignore unmatched column families
-   * @param copyFile always copy hfiles if true
+   * @param silence       true to ignore unmatched column families
+   * @param copyFile      always copy hfiles if true
    * @throws TableNotFoundException if table does not yet exist
    */
   public Map<LoadQueueItem, ByteBuffer> doBulkLoad(Map<byte[], List<Path>> map, final Admin admin,
-      Table table, RegionLocator regionLocator, boolean silence, boolean copyFile)
-      throws TableNotFoundException, IOException {
+    Table table, RegionLocator regionLocator, boolean silence, boolean copyFile)
+    throws TableNotFoundException, IOException {
     if (!admin.isTableAvailable(regionLocator.getName())) {
       throw new TableNotFoundException("Table " + table.getName() + " is not currently available.");
     }
@@ -319,18 +317,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   /**
    * Perform a bulk load of the given directory into the given pre-existing table. This method is
    * not threadsafe.
-   * @param hfofDir the directory that was provided as the output path of a job using
-   *          HFileOutputFormat
-   * @param admin the Admin
-   * @param table the table to load into
+   * @param hfofDir       the directory that was provided as the output path of a job using
+   *                      HFileOutputFormat
+   * @param admin         the Admin
+   * @param table         the table to load into
    * @param regionLocator region locator
-   * @param silence true to ignore unmatched column families
-   * @param copyFile always copy hfiles if true
+   * @param silence       true to ignore unmatched column families
+   * @param copyFile      always copy hfiles if true
    * @throws TableNotFoundException if table does not yet exist
    */
   public Map<LoadQueueItem, ByteBuffer> doBulkLoad(Path hfofDir, final Admin admin, Table table,
-      RegionLocator regionLocator, boolean silence, boolean copyFile)
-      throws TableNotFoundException, IOException {
+    RegionLocator regionLocator, boolean silence, boolean copyFile)
+    throws TableNotFoundException, IOException {
     if (!admin.isTableAvailable(regionLocator.getName())) {
       throw new TableNotFoundException("Table " + table.getName() + " is not currently available.");
     }
@@ -341,10 +339,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
      */
     boolean validateHFile = getConf().getBoolean("hbase.loadincremental.validate.hfile", true);
     if (!validateHFile) {
-      LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
-          "are not correct. If you fail to read data from your table after using this " +
-          "option, consider removing the files and bulkload again without this option. " +
-          "See HBASE-13985");
+      LOG.warn("You are skipping HFiles validation, it might cause some data loss if files "
+        + "are not correct. If you fail to read data from your table after using this "
+        + "option, consider removing the files and bulkload again without this option. "
+        + "See HBASE-13985");
     }
     // LQI queue does not need to be threadsafe -- all operations on this queue
     // happen in this thread
@@ -356,9 +354,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       if (queue.isEmpty()) {
         LOG.warn(
-            "Bulk load operation did not find any files to load in directory {}. " +
-            "Does it contain files in subdirectories that correspond to column family names?",
-            (hfofDir != null ? hfofDir.toUri().toString() : ""));
+          "Bulk load operation did not find any files to load in directory {}. "
+            + "Does it contain files in subdirectories that correspond to column family names?",
+          (hfofDir != null ? hfofDir.toUri().toString() : ""));
         return Collections.emptyMap();
       }
       pool = createExecutorService();
@@ -376,13 +374,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * <li>LoadIncrementalHFiles#bulkLoadPhase(Table, Connection, ExecutorService, Deque, Multimap)
    * </li>
    * </ol>
-   * @param table Table to which these hfiles should be loaded to
-   * @param conn Connection to use
-   * @param queue {@link LoadQueueItem} has hfiles yet to be loaded
+   * @param table        Table to which these hfiles should be loaded to
+   * @param conn         Connection to use
+   * @param queue        {@link LoadQueueItem} has hfiles yet to be loaded
    * @param startEndKeys starting and ending row keys of the region
    */
   public void loadHFileQueue(Table table, Connection conn, Deque<LoadQueueItem> queue,
-      Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     loadHFileQueue(table, conn, queue, startEndKeys, false);
   }
 
@@ -393,18 +391,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * <li>LoadIncrementalHFiles#bulkLoadPhase(Table, Connection, ExecutorService, Deque, Multimap)
    * </li>
    * </ol>
-   * @param table Table to which these hfiles should be loaded to
-   * @param conn Connection to use
-   * @param queue {@link LoadQueueItem} has hfiles yet to be loaded
+   * @param table        Table to which these hfiles should be loaded to
+   * @param conn         Connection to use
+   * @param queue        {@link LoadQueueItem} has hfiles yet to be loaded
    * @param startEndKeys starting and ending row keys of the region
    */
   public void loadHFileQueue(Table table, Connection conn, Deque<LoadQueueItem> queue,
-      Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
+    Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
     ExecutorService pool = null;
     try {
       pool = createExecutorService();
       Multimap<ByteBuffer, LoadQueueItem> regionGroups =
-          groupOrSplitPhase(table, pool, queue, startEndKeys).getFirst();
+        groupOrSplitPhase(table, pool, queue, startEndKeys).getFirst();
       bulkLoadPhase(table, conn, pool, queue, regionGroups, copyFile, null);
     } finally {
       if (pool != null) {
@@ -414,8 +412,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private Map<LoadQueueItem, ByteBuffer> performBulkLoad(Admin admin, Table table,
-      RegionLocator regionLocator, Deque<LoadQueueItem> queue, ExecutorService pool,
-      SecureBulkLoadClient secureClient, boolean copyFile) throws IOException {
+    RegionLocator regionLocator, Deque<LoadQueueItem> queue, ExecutorService pool,
+    SecureBulkLoadClient secureClient, boolean copyFile) throws IOException {
     int count = 0;
 
     if (isSecureBulkLoadEndpointAvailable()) {
@@ -433,15 +431,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // need to reload split keys each iteration.
       final Pair<byte[][], byte[][]> startEndKeys = regionLocator.getStartEndKeys();
       if (count != 0) {
-        LOG.info("Split occurred while grouping HFiles, retry attempt " + count + " with " +
-            queue.size() + " files remaining to group or split");
+        LOG.info("Split occurred while grouping HFiles, retry attempt " + count + " with "
+          + queue.size() + " files remaining to group or split");
       }
 
       int maxRetries = getConf().getInt(HConstants.BULKLOAD_MAX_RETRIES_NUMBER, 10);
       maxRetries = Math.max(maxRetries, startEndKeys.getFirst().length + 1);
       if (maxRetries != 0 && count >= maxRetries) {
         throw new IOException(
-            "Retry attempted " + count + " times without completing, bailing out");
+          "Retry attempted " + count + " times without completing, bailing out");
       }
       count++;
 
@@ -451,8 +449,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       if (!checkHFilesCountPerRegionPerFamily(regionGroups)) {
         // Error is logged inside checkHFilesCountPerRegionPerFamily.
-        throw new IOException("Trying to load more than " + maxFilesPerRegionPerFamily +
-            " hfiles to one family of one region");
+        throw new IOException("Trying to load more than " + maxFilesPerRegionPerFamily
+          + " hfiles to one family of one region");
       }
 
       bulkLoadPhase(table, admin.getConnection(), pool, queue, regionGroups, copyFile,
@@ -464,17 +462,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     if (!queue.isEmpty()) {
-      throw new RuntimeException("Bulk load aborted with some files not yet loaded." +
-          "Please check log for more details.");
+      throw new RuntimeException(
+        "Bulk load aborted with some files not yet loaded." + "Please check log for more details.");
     }
     return item2RegionMap;
   }
 
   private Map<byte[], Collection<LoadQueueItem>>
-      groupByFamilies(Collection<LoadQueueItem> itemsInRegion) {
+    groupByFamilies(Collection<LoadQueueItem> itemsInRegion) {
     Map<byte[], Collection<LoadQueueItem>> families2Queue = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     itemsInRegion.forEach(item -> families2Queue
-        .computeIfAbsent(item.getFamily(), queue -> new ArrayList<>()).add(item));
+      .computeIfAbsent(item.getFamily(), queue -> new ArrayList<>()).add(item));
     return families2Queue;
   }
 
@@ -486,12 +484,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   @InterfaceAudience.Private
   protected void bulkLoadPhase(Table table, Connection conn, ExecutorService pool,
-      Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-      boolean copyFile, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+    Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups, boolean copyFile,
+    Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
     // atomically bulk load the groups.
     Set<Future<List<LoadQueueItem>>> loadingFutures = new HashSet<>();
     for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> e : regionGroups.asMap()
-        .entrySet()) {
+      .entrySet()) {
       byte[] first = e.getKey().array();
       Collection<LoadQueueItem> lqis = e.getValue();
       if (item2RegionMap != null) {
@@ -500,8 +498,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         }
       }
       if (bulkLoadByFamily) {
-        groupByFamilies(lqis).values().forEach(familyQueue -> loadingFutures.add(pool.submit(
-          () -> tryAtomicRegionLoad(conn, table.getName(), first, familyQueue, copyFile))));
+        groupByFamilies(lqis).values().forEach(familyQueue -> loadingFutures.add(pool
+          .submit(() -> tryAtomicRegionLoad(conn, table.getName(), first, familyQueue, copyFile))));
       } else {
         loadingFutures.add(
           pool.submit(() -> tryAtomicRegionLoad(conn, table.getName(), first, lqis, copyFile)));
@@ -539,28 +537,28 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   @InterfaceAudience.Private
   protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
-      TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
+    TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
     List<Pair<byte[], String>> famPaths =
-        lqis.stream().map(lqi -> Pair.newPair(lqi.getFamily(), lqi.getFilePath().toString()))
-            .collect(Collectors.toList());
+      lqis.stream().map(lqi -> Pair.newPair(lqi.getFamily(), lqi.getFilePath().toString()))
+        .collect(Collectors.toList());
     return new ClientServiceCallable<byte[]>(conn, tableName, first,
-        rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+      rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected byte[] rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;
         boolean success = false;
         try {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Going to connect to server " + getLocation() + " for row " +
-                Bytes.toStringBinary(getRow()) + " with hfile group " +
-                LoadIncrementalHFiles.this.toString(famPaths));
+            LOG.debug("Going to connect to server " + getLocation() + " for row "
+              + Bytes.toStringBinary(getRow()) + " with hfile group "
+              + LoadIncrementalHFiles.this.toString(famPaths));
           }
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
-            success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-              assignSeqIds, fsDelegationToken.getUserToken(),
-                bulkToken, copyFile, clusterIds, replicate);
+            success =
+              secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName, assignSeqIds,
+                fsDelegationToken.getUserToken(), bulkToken, copyFile, clusterIds, replicate);
           }
           return success ? regionName : null;
         } finally {
@@ -579,7 +577,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                 Path hfileOrigPath = new Path(el.getSecond());
                 try {
                   hfileStagingPath = new Path(new Path(bulkToken, Bytes.toString(el.getFirst())),
-                      hfileOrigPath.getName());
+                    hfileOrigPath.getName());
                   if (targetFs.rename(hfileStagingPath, hfileOrigPath)) {
                     LOG.debug("Moved back file " + hfileOrigPath + " from " + hfileStagingPath);
                   } else if (targetFs.exists(hfileStagingPath)) {
@@ -598,17 +596,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     };
   }
 
-  private boolean checkHFilesCountPerRegionPerFamily(
-      final Multimap<ByteBuffer, LoadQueueItem> regionGroups) {
+  private boolean
+    checkHFilesCountPerRegionPerFamily(final Multimap<ByteBuffer, LoadQueueItem> regionGroups) {
     for (Map.Entry<ByteBuffer, Collection<LoadQueueItem>> e : regionGroups.asMap().entrySet()) {
       Map<byte[], MutableInt> filesMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (LoadQueueItem lqi : e.getValue()) {
         MutableInt count = filesMap.computeIfAbsent(lqi.getFamily(), k -> new MutableInt());
         count.increment();
         if (count.intValue() > maxFilesPerRegionPerFamily) {
-          LOG.error("Trying to load more than " + maxFilesPerRegionPerFamily +
-              " hfiles to family " + Bytes.toStringBinary(lqi.getFamily()) +
-              " of region with start key " + Bytes.toStringBinary(e.getKey()));
+          LOG.error("Trying to load more than " + maxFilesPerRegionPerFamily + " hfiles to family "
+            + Bytes.toStringBinary(lqi.getFamily()) + " of region with start key "
+            + Bytes.toStringBinary(e.getKey()));
           return false;
         }
       }
@@ -617,22 +615,22 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
-   * @param table the table to load into
-   * @param pool the ExecutorService
-   * @param queue the queue for LoadQueueItem
+   * @param table        the table to load into
+   * @param pool         the ExecutorService
+   * @param queue        the queue for LoadQueueItem
    * @param startEndKeys start and end keys
    * @return A map that groups LQI by likely bulk load region targets and Set of missing hfiles.
    */
   private Pair<Multimap<ByteBuffer, LoadQueueItem>, Set<String>> groupOrSplitPhase(
-      final Table table, ExecutorService pool, Deque<LoadQueueItem> queue,
-      final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    final Table table, ExecutorService pool, Deque<LoadQueueItem> queue,
+    final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     // <region start key, LQI> need synchronized only within this scope of this
     // phase because of the puts that happen in futures.
     Multimap<ByteBuffer, LoadQueueItem> rgs = HashMultimap.create();
     final Multimap<ByteBuffer, LoadQueueItem> regionGroups = Multimaps.synchronizedMultimap(rgs);
     Set<String> missingHFiles = new HashSet<>();
     Pair<Multimap<ByteBuffer, LoadQueueItem>, Set<String>> pair =
-        new Pair<>(regionGroups, missingHFiles);
+      new Pair<>(regionGroups, missingHFiles);
 
     // drain LQIs and figure out bulk load groups
     Set<Future<Pair<List<LoadQueueItem>, String>>> splittingFutures = new HashSet<>();
@@ -640,14 +638,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       final LoadQueueItem item = queue.remove();
 
       final Callable<Pair<List<LoadQueueItem>, String>> call =
-          new Callable<Pair<List<LoadQueueItem>, String>>() {
-            @Override
-            public Pair<List<LoadQueueItem>, String> call() throws Exception {
-              Pair<List<LoadQueueItem>, String> splits =
-                  groupOrSplit(regionGroups, item, table, startEndKeys);
-              return splits;
-            }
-          };
+        new Callable<Pair<List<LoadQueueItem>, String>>() {
+          @Override
+          public Pair<List<LoadQueueItem>, String> call() throws Exception {
+            Pair<List<LoadQueueItem>, String> splits =
+              groupOrSplit(regionGroups, item, table, startEndKeys);
+            return splits;
+          }
+        };
       splittingFutures.add(pool.submit(call));
     }
     // get all the results. All grouping and splitting must finish before
@@ -679,7 +677,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private List<LoadQueueItem> splitStoreFile(final LoadQueueItem item, final Table table,
-      byte[] startKey, byte[] splitKey) throws IOException {
+    byte[] startKey, byte[] splitKey) throws IOException {
     Path hfilePath = item.getFilePath();
     byte[] family = item.getFamily();
     Path tmpDir = hfilePath.getParent();
@@ -723,8 +721,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   /**
    * @param startEndKeys the start/end keys of regions belong to this table, the list in ascending
-   *          order by start key
-   * @param key the key need to find which region belong to
+   *                     order by start key
+   * @param key          the key need to find which region belong to
    * @return region index
    */
   private int getRegionIndex(final Pair<byte[][], byte[][]> startEndKeys, byte[] key) {
@@ -738,25 +736,28 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
-   * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
-   * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
-   * region. 3) if the endkey of the last region is not empty.
+   * we can consider there is a region hole in following conditions. 1) if idx < 0,then first region
+   * info is lost. 2) if the endkey of a region is not equal to the startkey of the next region. 3)
+   * if the endkey of the last region is not empty.
    */
   private void checkRegionIndexValid(int idx, final Pair<byte[][], byte[][]> startEndKeys,
     TableName tableName) throws IOException {
     if (idx < 0) {
-      throw new IOException("The first region info for table " + tableName +
-        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if ((idx == startEndKeys.getFirst().length - 1) &&
-      !Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY)) {
-      throw new IOException("The last region info for table " + tableName +
-        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if (idx + 1 < startEndKeys.getFirst().length &&
-      !(Bytes.compareTo(startEndKeys.getSecond()[idx],
-        startEndKeys.getFirst()[idx + 1]) == 0)) {
-      throw new IOException("The endkey of one region for table " + tableName +
-        " is not equal to the startkey of the next region in hbase:meta." +
-        "Please use hbck tool to fix it first.");
+      throw new IOException("The first region info for table " + tableName
+        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if (
+      (idx == startEndKeys.getFirst().length - 1)
+        && !Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY)
+    ) {
+      throw new IOException("The last region info for table " + tableName
+        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if (
+      idx + 1 < startEndKeys.getFirst().length
+        && !(Bytes.compareTo(startEndKeys.getSecond()[idx], startEndKeys.getFirst()[idx + 1]) == 0)
+    ) {
+      throw new IOException("The endkey of one region for table " + tableName
+        + " is not equal to the startkey of the next region in hbase:meta."
+        + "Please use hbck tool to fix it first.");
     }
   }
 
@@ -770,8 +771,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   @InterfaceAudience.Private
   protected Pair<List<LoadQueueItem>, String> groupOrSplit(
-      Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
-      final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
+    final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     Path hfilePath = item.getFilePath();
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
@@ -784,7 +785,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     LOG.info("Trying to load hfile=" + hfilePath + " first=" + first.map(Bytes::toStringBinary)
-        + " last=" + last.map(Bytes::toStringBinary));
+      + " last=" + last.map(Bytes::toStringBinary));
     if (!first.isPresent() || !last.isPresent()) {
       assert !first.isPresent() && !last.isPresent();
       // TODO what if this is due to a bad HFile?
@@ -793,14 +794,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
     if (Bytes.compareTo(first.get(), last.get()) > 0) {
       throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get())
-          + " > " + Bytes.toStringBinary(last.get()));
+        + " > " + Bytes.toStringBinary(last.get()));
     }
 
     int firstKeyRegionIdx = getRegionIndex(startEndKeys, first.get());
     checkRegionIndexValid(firstKeyRegionIdx, startEndKeys, table.getName());
     boolean lastKeyInRange =
-        Bytes.compareTo(last.get(), startEndKeys.getSecond()[firstKeyRegionIdx]) < 0 || Bytes
-            .equals(startEndKeys.getSecond()[firstKeyRegionIdx], HConstants.EMPTY_BYTE_ARRAY);
+      Bytes.compareTo(last.get(), startEndKeys.getSecond()[firstKeyRegionIdx]) < 0
+        || Bytes.equals(startEndKeys.getSecond()[firstKeyRegionIdx], HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
       int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
       int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) >>> 1;
@@ -860,29 +861,27 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     try {
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf, null).<byte[]> newCaller()
-          .callWithRetries(serviceCallable, Integer.MAX_VALUE);
+        .callWithRetries(serviceCallable, Integer.MAX_VALUE);
       if (region == null) {
-        LOG.warn("Attempt to bulk load region containing " + Bytes.toStringBinary(first) +
-            " into table " + tableName + " with files " + lqis +
-            " failed.  This is recoverable and they will be retried.");
+        LOG.warn("Attempt to bulk load region containing " + Bytes.toStringBinary(first)
+          + " into table " + tableName + " with files " + lqis
+          + " failed.  This is recoverable and they will be retried.");
         toRetry.addAll(lqis); // return lqi's to retry
       }
       // success
       return toRetry;
     } catch (IOException e) {
-      LOG.error("Encountered unrecoverable error from region server, additional details: " +
-                      serviceCallable.getExceptionMessageAdditionalDetail(),
-              e);
-      LOG.warn(
-              "Received a " + e.getClass().getSimpleName()
-                      + " from region server: "
-                      + serviceCallable.getExceptionMessageAdditionalDetail(), e);
-      if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false)
-              && numRetries.get() < getConf().getInt(
-              HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-              HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
-        LOG.warn("Will attempt to retry loading failed HFiles. Retry #"
-                + numRetries.incrementAndGet());
+      LOG.error("Encountered unrecoverable error from region server, additional details: "
+        + serviceCallable.getExceptionMessageAdditionalDetail(), e);
+      LOG.warn("Received a " + e.getClass().getSimpleName() + " from region server: "
+        + serviceCallable.getExceptionMessageAdditionalDetail(), e);
+      if (
+        getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false)
+          && numRetries.get() < getConf().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)
+      ) {
+        LOG.warn(
+          "Will attempt to retry loading failed HFiles. Retry #" + numRetries.incrementAndGet());
         toRetry.addAll(lqis);
         return toRetry;
       }
@@ -906,27 +905,27 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       @Override
       public ColumnFamilyDescriptorBuilder bulkFamily(byte[] familyName) {
         ColumnFamilyDescriptorBuilder builder =
-            ColumnFamilyDescriptorBuilder.newBuilder(familyName);
+          ColumnFamilyDescriptorBuilder.newBuilder(familyName);
         familyBuilders.add(builder);
         return builder;
       }
 
       @Override
       public void bulkHFile(ColumnFamilyDescriptorBuilder builder, FileStatus hfileStatus)
-          throws IOException {
+        throws IOException {
         Path hfile = hfileStatus.getPath();
         try (HFile.Reader reader =
-            HFile.createReader(fs, hfile, CacheConfig.DISABLED, true, getConf())) {
+          HFile.createReader(fs, hfile, CacheConfig.DISABLED, true, getConf())) {
           if (builder.getCompressionType() != reader.getFileContext().getCompression()) {
             builder.setCompressionType(reader.getFileContext().getCompression());
-            LOG.info("Setting compression " + reader.getFileContext().getCompression().name() +
-                " for family " + builder.getNameAsString());
+            LOG.info("Setting compression " + reader.getFileContext().getCompression().name()
+              + " for family " + builder.getNameAsString());
           }
           byte[] first = reader.getFirstRowKey().get();
           byte[] last = reader.getLastRowKey().get();
 
-          LOG.info("Trying to figure out region boundaries hfile=" + hfile + " first=" +
-              Bytes.toStringBinary(first) + " last=" + Bytes.toStringBinary(last));
+          LOG.info("Trying to figure out region boundaries hfile=" + hfile + " first="
+            + Bytes.toStringBinary(first) + " last=" + Bytes.toStringBinary(last));
 
           // To eventually infer start key-end key boundaries
           Integer value = map.containsKey(first) ? map.get(first) : 0;
@@ -941,14 +940,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     byte[][] keys = inferBoundaries(map);
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     familyBuilders.stream().map(ColumnFamilyDescriptorBuilder::build)
-        .forEachOrdered(tdBuilder::setColumnFamily);
+      .forEachOrdered(tdBuilder::setColumnFamily);
     admin.createTable(tdBuilder.build(), keys);
 
     LOG.info("Table " + tableName + " is available!!");
   }
 
   private void cleanup(Admin admin, Deque<LoadQueueItem> queue, ExecutorService pool,
-      SecureBulkLoadClient secureClient) throws IOException {
+    SecureBulkLoadClient secureClient) throws IOException {
     fsDelegationToken.releaseDelegationToken();
     if (bulkToken != null && secureClient != null) {
       secureClient.cleanupBulkLoad(admin.getConnection(), bulkToken);
@@ -977,16 +976,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Checks whether there is any invalid family name in HFiles to be bulk loaded.
    */
   private void validateFamiliesInHFiles(Table table, Deque<LoadQueueItem> queue, boolean silence)
-      throws IOException {
+    throws IOException {
     Set<String> familyNames = Arrays.asList(table.getDescriptor().getColumnFamilies()).stream()
-        .map(f -> f.getNameAsString()).collect(Collectors.toSet());
+      .map(f -> f.getNameAsString()).collect(Collectors.toSet());
     List<String> unmatchedFamilies = queue.stream().map(item -> Bytes.toString(item.getFamily()))
-        .filter(fn -> !familyNames.contains(fn)).distinct().collect(Collectors.toList());
+      .filter(fn -> !familyNames.contains(fn)).distinct().collect(Collectors.toList());
     if (unmatchedFamilies.size() > 0) {
       String msg =
-          "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: " +
-              unmatchedFamilies + "; valid family names of table " + table.getName() + " are: " +
-              familyNames;
+        "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
+          + unmatchedFamilies + "; valid family names of table " + table.getName() + " are: "
+          + familyNames;
       LOG.error(msg);
       if (!silence) {
         throw new IOException(msg);
@@ -1005,7 +1004,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Walk the given directory for all HFiles, and return a Queue containing all such files.
    */
   private void discoverLoadQueue(final Deque<LoadQueueItem> ret, final Path hfofDir,
-      final boolean validateHFile) throws IOException {
+    final boolean validateHFile) throws IOException {
     visitBulkHFiles(hfofDir.getFileSystem(getConf()), hfofDir, new BulkHFileVisitor<byte[]>() {
       @Override
       public byte[] bulkFamily(final byte[] familyName) {
@@ -1015,10 +1014,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       @Override
       public void bulkHFile(final byte[] family, final FileStatus hfile) throws IOException {
         long length = hfile.getLen();
-        if (length > getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
-          HConstants.DEFAULT_MAX_FILE_SIZE)) {
-          LOG.warn("Trying to bulk load hfile " + hfile.getPath() + " with size: " + length +
-              " bytes can be problematic as it may lead to oversplitting.");
+        if (
+          length
+              > getConf().getLong(HConstants.HREGION_MAX_FILESIZE, HConstants.DEFAULT_MAX_FILE_SIZE)
+        ) {
+          LOG.warn("Trying to bulk load hfile " + hfile.getPath() + " with size: " + length
+            + " bytes can be problematic as it may lead to oversplitting.");
         }
         ret.add(new LoadQueueItem(family, hfile.getPath()));
       }
@@ -1037,7 +1038,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * non-valid hfiles.
    */
   private static <TFamily> void visitBulkHFiles(final FileSystem fs, final Path bulkDir,
-      final BulkHFileVisitor<TFamily> visitor) throws IOException {
+    final BulkHFileVisitor<TFamily> visitor) throws IOException {
     visitBulkHFiles(fs, bulkDir, visitor, true);
   }
 
@@ -1047,7 +1048,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * 'hbase.loadincremental.validate.hfile' to false.
    */
   private static <TFamily> void visitBulkHFiles(FileSystem fs, Path bulkDir,
-      BulkHFileVisitor<TFamily> visitor, boolean validateHFile) throws IOException {
+    BulkHFileVisitor<TFamily> visitor, boolean validateHFile) throws IOException {
     FileStatus[] familyDirStatuses = fs.listStatus(bulkDir);
     for (FileStatus familyStat : familyDirStatuses) {
       if (!familyStat.isDirectory()) {
@@ -1108,8 +1109,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   // Initialize a thread pool
   private ExecutorService createExecutorService() {
     ThreadPoolExecutor pool = new ThreadPoolExecutor(nrThreads, nrThreads, 60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("LoadIncrementalHFiles-%1$d").build());
+      new LinkedBlockingQueue<>(),
+      new ThreadFactoryBuilder().setNameFormat("LoadIncrementalHFiles-%1$d").build());
     pool.allowCoreThreadTimeOut(true);
     return pool;
   }
@@ -1119,7 +1120,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     sb.append('[');
     list.forEach(p -> {
       sb.append('{').append(Bytes.toStringBinary(p.getFirst())).append(',').append(p.getSecond())
-          .append('}');
+        .append('}');
     });
     sb.append(']');
     return sb.toString();
@@ -1136,7 +1137,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   @InterfaceAudience.Private
   static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
-      byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
+    byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
     // Open reader with no block cache, and not in-memory
     Reference topReference = Reference.createTopReference(splitKey);
     Reference bottomReference = Reference.createBottomReference(splitKey);
@@ -1149,7 +1150,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Copy half of an HFile into a new HFile.
    */
   private static void copyHFileHalf(Configuration conf, Path inFile, Path outFile,
-      Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
+    Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
     CacheConfig cacheConf = CacheConfig.DISABLED;
     HalfStoreFileReader halfReader = null;
@@ -1166,12 +1167,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Algorithm compression = familyDescriptor.getCompressionType();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
       HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-          .withChecksumType(StoreUtils.getChecksumType(conf))
-          .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
-          .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
-          .build();
+        .withChecksumType(StoreUtils.getChecksumType(conf))
+        .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
+        .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
+        .build();
       halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-          .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+        .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
@@ -1220,9 +1221,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   protected final Map<LoadQueueItem, ByteBuffer> run(Path hfofDir, TableName tableName)
-      throws IOException {
+    throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(getConf());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       if (!admin.tableExists(tableName)) {
         if (isCreateTable()) {
           createTable(tableName, hfofDir, admin);
@@ -1233,39 +1234,39 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         }
       }
       try (Table table = connection.getTable(tableName);
-          RegionLocator locator = connection.getRegionLocator(tableName)) {
-        return doBulkLoad(hfofDir, admin, table, locator, isSilence(),
-            isAlwaysCopyFiles());
+        RegionLocator locator = connection.getRegionLocator(tableName)) {
+        return doBulkLoad(hfofDir, admin, table, locator, isSilence(), isAlwaysCopyFiles());
       }
     }
   }
+
   /**
    * Perform bulk load on the given table.
-   * @param hfofDir the directory that was provided as the output path of a job using
-   *          HFileOutputFormat
+   * @param hfofDir   the directory that was provided as the output path of a job using
+   *                  HFileOutputFormat
    * @param tableName the table to load into
    */
   public Map<LoadQueueItem, ByteBuffer> run(String hfofDir, TableName tableName)
-      throws IOException {
+    throws IOException {
     return run(new Path(hfofDir), tableName);
   }
 
   /**
    * Perform bulk load on the given table.
    * @param family2Files map of family to List of hfiles
-   * @param tableName the table to load into
+   * @param tableName    the table to load into
    */
   public Map<LoadQueueItem, ByteBuffer> run(Map<byte[], List<Path>> family2Files,
-      TableName tableName) throws IOException {
+    TableName tableName) throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(getConf());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       if (!admin.tableExists(tableName)) {
         String errorMsg = format("Table '%s' does not exist.", tableName);
         LOG.error(errorMsg);
         throw new TableNotFoundException(errorMsg);
       }
       try (Table table = connection.getTable(tableName);
-          RegionLocator locator = connection.getRegionLocator(tableName)) {
+        RegionLocator locator = connection.getRegionLocator(tableName)) {
         return doBulkLoad(family2Files, admin, table, locator, isSilence(), isAlwaysCopyFiles());
       }
     }
@@ -1328,9 +1329,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   /**
    * Disables replication for these bulkloaded files.
    */
-  public void disableReplication(){
+  public void disableReplication() {
     this.replicate = false;
   }
+
   /**
    * Infers region boundaries for a new table.
    * <p>

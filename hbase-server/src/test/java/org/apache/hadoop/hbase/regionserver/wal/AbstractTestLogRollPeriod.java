@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -129,13 +128,12 @@ public abstract class AbstractTestLogRollPeriod {
     }
   }
 
-  private void checkMinLogRolls(final WAL log, final int minRolls)
-      throws Exception {
+  private void checkMinLogRolls(final WAL log, final int minRolls) throws Exception {
     final List<Path> paths = new ArrayList<>();
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void postLogRoll(Path oldFile, Path newFile) {
-        LOG.debug("postLogRoll: oldFile="+oldFile+" newFile="+newFile);
+        LOG.debug("postLogRoll: oldFile=" + oldFile + " newFile=" + newFile);
         paths.add(newFile);
       }
     });
@@ -151,7 +149,7 @@ public abstract class AbstractTestLogRollPeriod {
     }
     wtime = EnvironmentEdgeManager.currentTime() - wtime;
     LOG.info(String.format("got %d rolls after %dms (%dms each) - expected at least %d rolls",
-                           paths.size(), wtime, wtime / paths.size(), minRolls));
+      paths.size(), wtime, wtime / paths.size(), minRolls));
     assertFalse(paths.size() < minRolls);
   }
 }

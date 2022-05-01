@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.hbtop.terminal;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Represents the user pressing a key on the keyboard.
@@ -97,13 +96,8 @@ public class KeyPress {
 
   @Override
   public String toString() {
-    return "KeyPress{" +
-      "type=" + type +
-      ", character=" + escape(character) +
-      ", alt=" + alt +
-      ", ctrl=" + ctrl +
-      ", shift=" + shift +
-      '}';
+    return "KeyPress{" + "type=" + type + ", character=" + escape(character) + ", alt=" + alt
+      + ", ctrl=" + ctrl + ", shift=" + shift + '}';
   }
 
   private String escape(Character character) {

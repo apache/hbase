@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,12 @@ import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestProcedureFuture {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureFuture.class);
+    HBaseClassTestRule.forClass(TestProcedureFuture.class);
 
   private static class TestFuture extends HBaseAdmin.ProcedureFuture<Void> {
     private boolean postOperationResultCalled = false;
@@ -71,12 +71,11 @@ public class TestProcedureFuture {
     }
 
     @Override
-    protected GetProcedureResultResponse getProcedureResult(
-        final GetProcedureResultRequest request) throws IOException {
+    protected GetProcedureResultResponse getProcedureResult(final GetProcedureResultRequest request)
+      throws IOException {
       getProcedureResultCalled = true;
       return GetProcedureResultResponse.newBuilder()
-              .setState(GetProcedureResultResponse.State.FINISHED)
-              .build();
+        .setState(GetProcedureResultResponse.State.FINISHED).build();
     }
 
     @Override
@@ -86,23 +85,21 @@ public class TestProcedureFuture {
     }
 
     @Override
-    protected Void waitOperationResult(final long deadlineTs)
-        throws IOException, TimeoutException {
+    protected Void waitOperationResult(final long deadlineTs) throws IOException, TimeoutException {
       waitOperationResultCalled = true;
       return null;
     }
 
     @Override
     protected Void postOperationResult(final Void result, final long deadlineTs)
-        throws IOException, TimeoutException {
+      throws IOException, TimeoutException {
       postOperationResultCalled = true;
       return result;
     }
   }
 
   /**
-   * When a master return a result with procId,
-   * we are skipping the waitOperationResult() call,
+   * When a master return a result with procId, we are skipping the waitOperationResult() call,
    * since we are getting the procedure result.
    */
   @Test
@@ -126,13 +123,14 @@ public class TestProcedureFuture {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L) {
       @Override
-      protected GetProcedureResultResponse getProcedureResult(
-          final GetProcedureResultRequest request) throws IOException {
+      protected GetProcedureResultResponse
+        getProcedureResult(final GetProcedureResultRequest request) throws IOException {
         boolean done = spinCount.incrementAndGet() >= 10;
         return GetProcedureResultResponse.newBuilder()
-              .setState(done ? GetProcedureResultResponse.State.FINISHED :
-                GetProcedureResultResponse.State.RUNNING)
-              .build();
+          .setState(done
+            ? GetProcedureResultResponse.State.FINISHED
+            : GetProcedureResultResponse.State.RUNNING)
+          .build();
       }
     };
     f.get(1, TimeUnit.MINUTES);
@@ -144,8 +142,7 @@ public class TestProcedureFuture {
   }
 
   /**
-   * When a master return a result without procId,
-   * we are skipping the getProcedureResult() call.
+   * When a master return a result without procId, we are skipping the getProcedureResult() call.
    */
   @Test
   public void testWithoutProcId() throws Exception {
@@ -160,20 +157,19 @@ public class TestProcedureFuture {
   }
 
   /**
-   * When a new client with procedure support tries to ask an old-master without proc-support
-   * the procedure result we get a DoNotRetryIOException (which is an UnsupportedOperationException)
-   * The future should trap that and fallback to the waitOperationResult().
-   *
-   * This happens when the operation calls happens on a "new master" but while we are waiting
-   * the operation to be completed, we failover on an "old master".
+   * When a new client with procedure support tries to ask an old-master without proc-support the
+   * procedure result we get a DoNotRetryIOException (which is an UnsupportedOperationException) The
+   * future should trap that and fallback to the waitOperationResult(). This happens when the
+   * operation calls happens on a "new master" but while we are waiting the operation to be
+   * completed, we failover on an "old master".
    */
   @Test
   public void testOnServerWithNoProcedureSupport() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L) {
       @Override
-      protected GetProcedureResultResponse getProcedureResult(
-        final GetProcedureResultRequest request) throws IOException {
+      protected GetProcedureResultResponse
+        getProcedureResult(final GetProcedureResultRequest request) throws IOException {
         super.getProcedureResult(request);
         throw new DoNotRetryIOException(new UnsupportedOperationException("getProcedureResult"));
       }

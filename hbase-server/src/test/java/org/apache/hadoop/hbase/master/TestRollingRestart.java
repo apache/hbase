@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Tests the restarting of everything as done during rolling restarts.
  */
 @RunWith(Parameterized.class)
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRollingRestart {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRollingRestart.class);
+    HBaseClassTestRule.forClass(TestRollingRestart.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRollingRestart.class);
 
@@ -89,11 +89,10 @@ public class TestRollingRestart {
     // Start the cluster
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-        splitWALCoordinatedByZK);
+    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK, splitWALCoordinatedByZK);
     TEST_UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(NUM_MASTERS)
+      .numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
     TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
@@ -101,8 +100,8 @@ public class TestRollingRestart {
 
     // Create a table with regions
     final TableName tableName =
-        TableName.valueOf(name.getMethodName().replaceAll("[\\[|\\]]", "-"));
-    byte [] family = Bytes.toBytes("family");
+      TableName.valueOf(name.getMethodName().replaceAll("[\\[|\\]]", "-"));
+    byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
     int numRegions = -1;
@@ -119,7 +118,8 @@ public class TestRollingRestart {
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     log("Verifying only catalog and namespace regions are assigned\n");
     if (regions.size() != 2) {
-      for (String oregion : regions) log("Region still online: " + oregion);
+      for (String oregion : regions)
+        log("Region still online: " + oregion);
     }
     assertEquals(2, regions.size());
     log("Enabling table\n");
@@ -180,14 +180,12 @@ public class TestRollingRestart {
     // RegionServer Restarts
 
     // Bring them down, one at a time, waiting between each to complete
-    List<RegionServerThread> regionServers =
-      cluster.getLiveRegionServerThreads();
+    List<RegionServerThread> regionServers = cluster.getLiveRegionServerThreads();
     int num = 1;
     int total = regionServers.size();
     for (RegionServerThread rst : regionServers) {
       ServerName serverName = rst.getRegionServer().getServerName();
-      log("Stopping region server " + num + " of " + total + " [ " +
-          serverName + "]");
+      log("Stopping region server " + num + " of " + total + " [ " + serverName + "]");
       rst.getRegionServer().stop("Stopping RS during rolling restart");
       cluster.hbaseCluster.waitOnRegionServer(rst);
       log("Waiting for RS shutdown to be handled by master");
@@ -226,20 +224,20 @@ public class TestRollingRestart {
    */
   private boolean isDeadServerSCPExecuted(ServerName serverName) throws IOException {
     return TEST_UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
-        .anyMatch(p -> p instanceof ServerCrashProcedure
-            && ((ServerCrashProcedure) p).getServerName().equals(serverName));
+      .anyMatch(p -> p instanceof ServerCrashProcedure
+        && ((ServerCrashProcedure) p).getServerName().equals(serverName));
   }
 
-  private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster,
-      ServerName serverName) throws InterruptedException, IOException {
+  private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster, ServerName serverName)
+    throws InterruptedException, IOException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
     while (!sm.getDeadServers().isDeadServer(serverName)) {
       log("Waiting for [" + serverName + "] to be listed as dead in master");
       Thread.sleep(1);
     }
-    log("Server [" + serverName + "] marked as dead, waiting for it to " +
-        "finish dead processing");
+    log(
+      "Server [" + serverName + "] marked as dead, waiting for it to " + "finish dead processing");
 
     TEST_UTIL.waitFor(60000, () -> isDeadServerSCPExecuted(serverName));
 
@@ -265,14 +263,12 @@ public class TestRollingRestart {
     return numFound;
   }
 
-  private void assertRegionsAssigned(MiniHBaseCluster cluster,
-      Set<String> expectedRegions) throws IOException {
+  private void assertRegionsAssigned(MiniHBaseCluster cluster, Set<String> expectedRegions)
+    throws IOException {
     int numFound = getNumberOfOnlineRegions(cluster);
     if (expectedRegions.size() > numFound) {
-      log("Expected to find " + expectedRegions.size() + " but only found"
-          + " " + numFound);
-      NavigableSet<String> foundRegions =
-        HBaseTestingUtility.getAllOnlineRegions(cluster);
+      log("Expected to find " + expectedRegions.size() + " but only found" + " " + numFound);
+      NavigableSet<String> foundRegions = HBaseTestingUtility.getAllOnlineRegions(cluster);
       for (String region : expectedRegions) {
         if (!foundRegions.contains(region)) {
           log("Missing region: " + region);
@@ -281,8 +277,8 @@ public class TestRollingRestart {
       assertEquals(expectedRegions.size(), numFound);
     } else if (expectedRegions.size() < numFound) {
       int doubled = numFound - expectedRegions.size();
-      log("Expected to find " + expectedRegions.size() + " but found"
-          + " " + numFound + " (" + doubled + " double assignments?)");
+      log("Expected to find " + expectedRegions.size() + " but found" + " " + numFound + " ("
+        + doubled + " double assignments?)");
       NavigableSet<String> doubleRegions = getDoubleAssignedRegions(cluster);
       for (String region : doubleRegions) {
         log("Region is double assigned: " + region);
@@ -293,14 +289,14 @@ public class TestRollingRestart {
     }
   }
 
-  private NavigableSet<String> getDoubleAssignedRegions(
-      MiniHBaseCluster cluster) throws IOException {
+  private NavigableSet<String> getDoubleAssignedRegions(MiniHBaseCluster cluster)
+    throws IOException {
     NavigableSet<String> online = new TreeSet<>();
     NavigableSet<String> doubled = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (RegionInfo region : ProtobufUtil.getOnlineRegions(
-          rst.getRegionServer().getRSRpcServices())) {
-        if(!online.add(region.getRegionNameAsString())) {
+      for (RegionInfo region : ProtobufUtil
+        .getOnlineRegions(rst.getRegionServer().getRSRpcServices())) {
+        if (!online.add(region.getRegionNameAsString())) {
           doubled.add(region.getRegionNameAsString());
         }
       }
@@ -308,10 +304,8 @@ public class TestRollingRestart {
     return doubled;
   }
 
-
   @Parameterized.Parameters
   public static Collection coordinatedByZK() {
     return Arrays.asList(false, true);
   }
 }
-

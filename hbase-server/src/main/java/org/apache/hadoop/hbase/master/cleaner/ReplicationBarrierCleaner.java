@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
   private final ReplicationPeerManager peerManager;
 
   public ReplicationBarrierCleaner(Configuration conf, Stoppable stopper, Connection conn,
-      ReplicationPeerManager peerManager) {
+    ReplicationPeerManager peerManager) {
     super("ReplicationBarrierCleaner", stopper, conf.getInt(REPLICATION_BARRIER_CLEANER_INTERVAL,
       DEFAULT_REPLICATION_BARRIER_CLEANER_INTERVAL));
     this.conn = conn;
@@ -81,8 +81,8 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
     TableName tableName = null;
     List<String> peerIds = null;
     try (Table metaTable = conn.getTable(TableName.META_TABLE_NAME);
-        ResultScanner scanner = metaTable.getScanner(
-          new Scan().addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions())) {
+      ResultScanner scanner = metaTable.getScanner(
+        new Scan().addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions())) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {
@@ -141,7 +141,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           // check if the region has already been removed, i.e, no catalog family
           if (!metaTable.exists(new Get(regionName).addFamily(HConstants.CATALOG_FAMILY))) {
             ReplicationQueueStorage queueStorage = peerManager.getQueueStorage();
-            for (String peerId: peerIds) {
+            for (String peerId : peerIds) {
               queueStorage.removeLastSequenceIds(peerId, Arrays.asList(encodedRegionName));
               deletedLastPushedSeqIds++;
             }
@@ -169,9 +169,10 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
       LOG.warn("Failed to clean up replication barrier", e);
     }
     if (totalRows > 0) {
-      LOG.info("TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, " +
-          "deletedLastPushedSeqIds={}", totalRows, cleanedRows, deletedRows,
-          deletedBarriers, deletedLastPushedSeqIds);
+      LOG.info(
+        "TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, "
+          + "deletedLastPushedSeqIds={}",
+        totalRows, cleanedRows, deletedRows, deletedBarriers, deletedLastPushedSeqIds);
     }
   }
 }

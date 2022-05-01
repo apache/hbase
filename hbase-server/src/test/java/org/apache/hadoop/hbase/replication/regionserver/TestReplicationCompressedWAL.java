@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
@@ -43,7 +42,7 @@ public class TestReplicationCompressedWAL extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationCompressedWAL.class);
+    HBaseClassTestRule.forClass(TestReplicationCompressedWAL.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicationCompressedWAL.class);
   static final int NUM_BATCHES = 20;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,6 +38,6 @@ public class SnapshotDoesNotExistException extends HBaseSnapshotException {
    */
   public SnapshotDoesNotExistException(SnapshotDescription snapshotDescription) {
     super("Snapshot '" + snapshotDescription.getName() + "' doesn't exist on the filesystem",
-        snapshotDescription);
+      snapshotDescription);
   }
 }

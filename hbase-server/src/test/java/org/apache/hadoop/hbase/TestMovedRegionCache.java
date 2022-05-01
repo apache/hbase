@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -36,6 +35,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Test whether moved region cache is correct
@@ -45,7 +46,7 @@ public class TestMovedRegionCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMovedRegionCache.class);
+    HBaseClassTestRule.forClass(TestMovedRegionCache.class);
 
   @Rule
   public TestName name = new TestName();
@@ -95,10 +96,10 @@ public class TestMovedRegionCache {
         return dest.getOnlineRegion(movedRegionInfo.getRegionName()) != null;
       }
     });
-    assertNotNull("Moved region NOT in the cache!", source.getMovedRegion(
-      movedRegionInfo.getEncodedName()));
+    assertNotNull("Moved region NOT in the cache!",
+      source.getMovedRegion(movedRegionInfo.getEncodedName()));
     Thread.sleep(source.movedRegionCacheExpiredTime());
-    assertNull("Expired moved region exist in the cache!", source.getMovedRegion(
-      movedRegionInfo.getEncodedName()));
+    assertNull("Expired moved region exist in the cache!",
+      source.getMovedRegion(movedRegionInfo.getEncodedName()));
   }
 }

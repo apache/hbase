@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -243,10 +243,9 @@ public class TestAdmin3 extends TestAdminBase {
     ADMIN.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     TableDescriptor confirmedHtd = table.getDescriptor();
-    //HBASE-26246 introduced persist of store file tracker into table descriptor
+    // HBASE-26246 introduced persist of store file tracker into table descriptor
     htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACKER_IMPL,
-      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).
-      build();
+      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).build();
     assertEquals(0, TableDescriptor.COMPARATOR.compare(htd, confirmedHtd));
     MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
@@ -439,11 +438,8 @@ public class TestAdmin3 extends TestAdminBase {
     ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
       .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
         StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL,
-        StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL,
-        StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build());
+      .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+      .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build());
     ADMIN.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.FILE.name());
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.FILE.name());
@@ -452,11 +448,8 @@ public class TestAdmin3 extends TestAdminBase {
     ADMIN.modifyTable(TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
       .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
         StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL,
-        StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL,
-        StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .build());
+      .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+      .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build());
     ADMIN.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.DEFAULT.name());
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.DEFAULT.name());

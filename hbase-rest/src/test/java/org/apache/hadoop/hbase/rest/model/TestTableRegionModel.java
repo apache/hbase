@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableRegionModel.class);
+    HBaseClassTestRule.forClass(TestTableRegionModel.class);
 
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
@@ -47,21 +47,19 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
     super(TableRegionModel.class);
 
     AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Region endKey=\"enp5eng=\" " +
-          "id=\"8731042424\" location=\"testhost:9876\" " +
-          "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" " +
-          "startKey=\"YWJyYWNhZGJyYQ==\"/>";
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Region endKey=\"enp5eng=\" "
+        + "id=\"8731042424\" location=\"testhost:9876\" "
+        + "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" "
+        + "startKey=\"YWJyYWNhZGJyYQ==\"/>";
 
-    AS_JSON =
-      "{\"endKey\":\"enp5eng=\",\"id\":8731042424,\"location\":\"testhost:9876\"," +
-          "\"name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\"" +
-          "startKey\":\"YWJyYWNhZGJyYQ==\"}";
+    AS_JSON = "{\"endKey\":\"enp5eng=\",\"id\":8731042424,\"location\":\"testhost:9876\","
+      + "\"name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\""
+      + "startKey\":\"YWJyYWNhZGJyYQ==\"}";
   }
 
   @Override
   protected TableRegionModel buildTestModel() {
-    TableRegionModel model =
-      new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
+    TableRegionModel model = new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
     return model;
   }
 
@@ -71,17 +69,15 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
     assertTrue(Bytes.equals(model.getEndKey(), END_KEY));
     assertEquals(ID, model.getId());
     assertEquals(LOCATION, model.getLocation());
-    assertEquals(model.getName(),
-      TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
-      ".ad9860f031282c46ed431d7af8f94aca.");
+    assertEquals(model.getName(), TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID)
+      + ".ad9860f031282c46ed431d7af8f94aca.");
   }
 
   @Test
   public void testGetName() {
     TableRegionModel model = buildTestModel();
     String modelName = model.getName();
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(TABLE),
-      START_KEY, END_KEY, false, ID);
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(TABLE), START_KEY, END_KEY, false, ID);
     assertEquals(modelName, hri.getRegionNameAsString());
   }
 
@@ -95,7 +91,6 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
 
   @Override
   public void testFromPB() throws Exception {
-    //no pb ignore
+    // no pb ignore
   }
 }
-

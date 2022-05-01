@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,8 +59,9 @@ public class MobSnapshotTestingUtils {
       storeFileTracker, families);
   }
 
-  public static void createPreSplitMobTable(final HBaseTestingUtility util, final TableName tableName,
-    int nRegions, final byte[]... families) throws IOException, InterruptedException {
+  public static void createPreSplitMobTable(final HBaseTestingUtility util,
+    final TableName tableName, int nRegions, final byte[]... families)
+    throws IOException, InterruptedException {
     createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(nRegions), 1, families);
   }
 
@@ -77,9 +78,9 @@ public class MobSnapshotTestingUtils {
     createMobTable(util, tableName, splitKeys, regionReplication, storeFileTracker, null, families);
   }
 
-  public static void createMobTable(HBaseTestingUtility util, TableName tableName, byte[][] splitKeys,
-    int regionReplication, String storeFileTracker, String cpClassName, byte[]... families)
-    throws IOException, InterruptedException {
+  public static void createMobTable(HBaseTestingUtility util, TableName tableName,
+    byte[][] splitKeys, int regionReplication, String storeFileTracker, String cpClassName,
+    byte[]... families) throws IOException, InterruptedException {
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,7 @@ public class TestVisibilityLabelsReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsReplication.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVisibilityLabelsReplication.class);
   protected static final int NON_VIS_TAG_TYPE = 100;
@@ -103,8 +103,8 @@ public class TestVisibilityLabelsReplication {
   public static final String COPYRIGHT = "\u00A9ABC";
   public static final String ACCENT = "\u0941";
   public static final String SECRET = "secret";
-  public static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
-      + "\u0027&\\";
+  public static final String UNICODE_VIS_TAG =
+    COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\"" + "\u0027&\\";
   public static HBaseTestingUtility TEST_UTIL;
   public static HBaseTestingUtility TEST_UTIL1;
   public static final byte[] row1 = Bytes.toBytes("row1");
@@ -118,13 +118,12 @@ public class TestVisibilityLabelsReplication {
   protected static ZKWatcher zkw2;
   protected static int expected[] = { 4, 6, 4, 0, 3 };
   private static final String NON_VISIBILITY = "non-visibility";
-  protected static String[] expectedVisString = {
-      "(\"secret\"&\"topsecret\"&\"public\")|(\"topsecret\"&\"confidential\")",
+  protected static String[] expectedVisString =
+    { "(\"secret\"&\"topsecret\"&\"public\")|(\"topsecret\"&\"confidential\")",
       "(\"public\"&\"private\")|(\"topsecret\"&\"private\")|"
-          + "(\"confidential\"&\"public\")|(\"topsecret\"&\"confidential\")",
-      "(!\"topsecret\"&\"secret\")|(!\"topsecret\"&\"confidential\")",
-      "(\"secret\"&\"" + COPYRIGHT + "\\\"" + ACCENT + "\\\\" + SECRET + "\\\"" + "\u0027&\\\\"
-          + "\")" };
+        + "(\"confidential\"&\"public\")|(\"topsecret\"&\"confidential\")",
+      "(!\"topsecret\"&\"secret\")|(!\"topsecret\"&\"confidential\")", "(\"secret\"&\"" + COPYRIGHT
+        + "\\\"" + ACCENT + "\\\\" + SECRET + "\\\"" + "\u0027&\\\\" + "\")" };
 
   @Rule
   public final TestName TEST_NAME = new TestName();
@@ -149,16 +148,15 @@ public class TestVisibilityLabelsReplication {
     conf.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        VisibilityReplication.class.getName());
-    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        SimpleCP.class.getName());
+      VisibilityReplication.class.getName());
+    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY, SimpleCP.class.getName());
     // Have to reset conf1 in case zk cluster location different
     // than default
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", User.getCurrent().getShortName());
     SUPERUSER = User.createUserForTesting(conf, User.getCurrent().getShortName(),
-        new String[] { "supergroup" });
+      new String[] { "supergroup" });
     // User.createUserForTesting(conf, User.getCurrent().getShortName(), new
     // String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});
@@ -175,7 +173,7 @@ public class TestVisibilityLabelsReplication {
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTagsAtSink.class.getName());
+      TestCoprocessorForTagsAtSink.class.getName());
     // setVisibilityLabelServiceImpl(conf1);
     USER1 = User.createUserForTesting(conf1, "user1", new String[] {});
     TEST_UTIL1 = new HBaseTestingUtility(conf1);
@@ -219,19 +217,20 @@ public class TestVisibilityLabelsReplication {
 
   protected static void setVisibilityLabelServiceImpl(Configuration conf) {
     conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS,
-        DefaultVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
+      DefaultVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
   }
 
   @Test
   public void testVisibilityReplication() throws Exception {
     int retry = 0;
-    try (Table table = writeData(TABLE_NAME, "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
-            + ")&(" + TOPSECRET + ")", "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|"
-            + TOPSECRET + ")", "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
-        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);) {
+    try (Table table = writeData(TABLE_NAME,
+      "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL + ")&(" + TOPSECRET + ")",
+      "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|" + TOPSECRET + ")",
+      "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
+      CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);) {
       Scan s = new Scan();
-      s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL, PRIVATE, TOPSECRET,
-          UNICODE_VIS_TAG));
+      s.setAuthorizations(
+        new Authorizations(SECRET, CONFIDENTIAL, PRIVATE, TOPSECRET, UNICODE_VIS_TAG));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(4);
 
@@ -239,23 +238,23 @@ public class TestVisibilityLabelsReplication {
       CellScanner cellScanner = next[0].cellScanner();
       cellScanner.advance();
       Cell current = cellScanner.current();
-      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-          current.getRowLength(), row1, 0, row1.length));
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
+        row1, 0, row1.length));
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
-      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-          current.getRowLength(), row2, 0, row2.length));
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
+        row2, 0, row2.length));
       cellScanner = next[2].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
-      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-          current.getRowLength(), row3, 0, row3.length));
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
+        row3, 0, row3.length));
       cellScanner = next[3].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
-      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-          current.getRowLength(), row4, 0, row4.length));
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
+        row4, 0, row4.length));
       try (Table table2 = TEST_UTIL1.getConnection().getTable(TABLE_NAME);) {
         s = new Scan();
         // Ensure both rows are replicated
@@ -288,8 +287,10 @@ public class TestVisibilityLabelsReplication {
     Assert.assertEquals(4, cells.size());
     boolean tagFound = false;
     for (Cell cell : cells) {
-      if ((Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, 0,
-          row.length))) {
+      if (
+        (Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, 0,
+          row.length))
+      ) {
         List<Tag> tags = PrivateCellUtil.getTags(cell);
         for (Tag tag : tags) {
           if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
@@ -304,13 +305,12 @@ public class TestVisibilityLabelsReplication {
   }
 
   protected void verifyGet(final byte[] row, final String visString, final int expected,
-      final boolean nullExpected, final String... auths) throws IOException,
-      InterruptedException {
+    final boolean nullExpected, final String... auths) throws IOException, InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf1);
-             Table table2 = connection.getTable(TABLE_NAME)) {
+          Table table2 = connection.getTable(TABLE_NAME)) {
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -352,34 +352,34 @@ public class TestVisibilityLabelsReplication {
 
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, UNICODE_VIS_TAG };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, UNICODE_VIS_TAG };
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityClient.addLabels(conn, labels);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
   public static void setAuths(final Configuration conf) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.setAuths(conn, new String[] { SECRET,
-            CONFIDENTIAL, PRIVATE, TOPSECRET, UNICODE_VIS_TAG }, "user1");
-        } catch (Throwable e) {
-          throw new Exception(e);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            return VisibilityClient.setAuths(conn,
+              new String[] { SECRET, CONFIDENTIAL, PRIVATE, TOPSECRET, UNICODE_VIS_TAG }, "user1");
+          } catch (Throwable e) {
+            throw new Exception(e);
+          }
         }
-      }
-    };
+      };
     VisibilityLabelsResponse response = SUPERUSER.runAs(action);
   }
 
@@ -398,8 +398,9 @@ public class TestVisibilityLabelsReplication {
     table.put(puts);
     return table;
   }
+
   // A simple BaseRegionbserver impl that allows to add a non-visibility tag from the
-  // attributes of the Put mutation.  The existing cells in the put mutation is overwritten
+  // attributes of the Put mutation. The existing cells in the put mutation is overwritten
   // with a new cell that has the visibility tags and the non visibility tag
   public static class SimpleCP implements RegionCoprocessor, RegionObserver {
     @Override
@@ -409,7 +410,7 @@ public class TestVisibilityLabelsReplication {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       byte[] attribute = m.getAttribute(NON_VISIBILITY);
       byte[] cf = null;
       List<Cell> updatedCells = new ArrayList<>();
@@ -445,7 +446,7 @@ public class TestVisibilityLabelsReplication {
 
     @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
-        List<Cell> results) throws IOException {
+      List<Cell> results) throws IOException {
       if (results.size() > 0) {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
@@ -464,7 +465,7 @@ public class TestVisibilityLabelsReplication {
     static volatile List<Entry> lastEntries = null;
 
     public VisibilityReplicationEndPointForTest(ReplicationEndpoint endpoint,
-        VisibilityLabelService visibilityLabelsService) {
+      VisibilityLabelService visibilityLabelsService) {
       super(endpoint, visibilityLabelsService);
     }
 

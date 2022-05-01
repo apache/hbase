@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.JsonMapper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Superclass for any type that maps to a potentially application-level query.
- * (e.g. Put, Get, Delete, Scan, Next, etc.)
- * Contains methods for exposure to logging and debugging tools.
+ * Superclass for any type that maps to a potentially application-level query. (e.g. Put, Get,
+ * Delete, Scan, Next, etc.) Contains methods for exposure to logging and debugging tools.
  */
 @InterfaceAudience.Public
 public abstract class Operation {
@@ -36,15 +33,15 @@ public abstract class Operation {
   private static final int DEFAULT_MAX_COLS = 5;
 
   /**
-   * Produces a Map containing a fingerprint which identifies the type and 
-   * the static schema components of a query (i.e. column families)
+   * Produces a Map containing a fingerprint which identifies the type and the static schema
+   * components of a query (i.e. column families)
    * @return a map containing fingerprint information (i.e. column families)
    */
   public abstract Map<String, Object> getFingerprint();
 
   /**
-   * Produces a Map containing a summary of the details of a query 
-   * beyond the scope of the fingerprint (i.e. columns, rows...)
+   * Produces a Map containing a summary of the details of a query beyond the scope of the
+   * fingerprint (i.e. columns, rows...)
    * @param maxCols a limit on the number of columns output prior to truncation
    * @return a map containing parameters of a query (i.e. rows, columns...)
    */
@@ -59,8 +56,7 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a JSON object for fingerprint and details exposure in a
-   * parseable format.
+   * Produces a JSON object for fingerprint and details exposure in a parseable format.
    * @param maxCols a limit on the number of columns to include in the JSON
    * @return a JSONObject containing this Operation's information, as a string
    */
@@ -69,8 +65,7 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a JSON object sufficient for description of a query
-   * in a debugging or logging context.
+   * Produces a JSON object sufficient for description of a query in a debugging or logging context.
    * @return the produced JSON object, as a string
    */
   public String toJSON() throws IOException {
@@ -78,17 +73,16 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a string representation of this Operation. It defaults to a JSON
-   * representation, but falls back to a string representation of the 
-   * fingerprint and details in the case of a JSON encoding failure.
-   * @param maxCols a limit on the number of columns output in the summary
-   * prior to truncation
+   * Produces a string representation of this Operation. It defaults to a JSON representation, but
+   * falls back to a string representation of the fingerprint and details in the case of a JSON
+   * encoding failure.
+   * @param maxCols a limit on the number of columns output in the summary prior to truncation
    * @return a JSON-parseable String
    */
   public String toString(int maxCols) {
-    /* for now this is merely a wrapper from producing a JSON string, but 
-     * toJSON is kept separate in case this is changed to be a less parsable
-     * pretty printed representation.
+    /*
+     * for now this is merely a wrapper from producing a JSON string, but toJSON is kept separate in
+     * case this is changed to be a less parsable pretty printed representation.
      */
     try {
       return toJSON(maxCols);
@@ -98,10 +92,9 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a string representation of this Operation. It defaults to a JSON
-   * representation, but falls back to a string representation of the
-   * fingerprint and details in the case of a JSON encoding failure.
-   * @return String
+   * Produces a string representation of this Operation. It defaults to a JSON representation, but
+   * falls back to a string representation of the fingerprint and details in the case of a JSON
+   * encoding failure. n
    */
   @Override
   public String toString() {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Thread to handle rpc call.
- * Should only be used in {@link RpcExecutor} and its sub-classes.
+ * Thread to handle rpc call. Should only be used in {@link RpcExecutor} and its sub-classes.
  */
 @InterfaceAudience.Private
 public class RpcHandler extends Thread {
@@ -52,8 +51,8 @@ public class RpcHandler extends Thread {
   private boolean running;
 
   RpcHandler(final String name, final double handlerFailureThreshhold, final int handlerCount,
-      final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount,
-      final AtomicInteger failedHandlerCount, final Abortable abortable) {
+    final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount,
+    final AtomicInteger failedHandlerCount, final Abortable abortable) {
     super(name);
     setDaemon(true);
     this.q = q;
@@ -107,8 +106,10 @@ public class RpcHandler extends Thread {
     } catch (Throwable e) {
       if (e instanceof Error) {
         int failedCount = failedHandlerCount.incrementAndGet();
-        if (this.handlerFailureThreshhold >= 0
-          && failedCount > handlerCount * this.handlerFailureThreshhold) {
+        if (
+          this.handlerFailureThreshhold >= 0
+            && failedCount > handlerCount * this.handlerFailureThreshhold
+        ) {
           String message = "Number of failed RpcServer handler runs exceeded threshhold "
             + this.handlerFailureThreshhold + "; reason: " + StringUtils.stringifyException(e);
           if (abortable != null) {

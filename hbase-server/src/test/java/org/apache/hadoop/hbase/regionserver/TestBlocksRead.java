@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,19 +57,19 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestBlocksRead  {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestBlocksRead {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlocksRead.class);
+    HBaseClassTestRule.forClass(TestBlocksRead.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlocksRead.class);
   @Rule
   public TestName testName = new TestName();
 
-  static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
-    BloomType.ROW, BloomType.NONE };
+  static final BloomType[] BLOOM_TYPE =
+    new BloomType[] { BloomType.ROWCOL, BloomType.ROW, BloomType.NONE };
 
   HRegion region = null;
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -91,7 +92,7 @@ public class TestBlocksRead  {
    * @return created and initialized region.
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
-      String family) throws IOException {
+    String family) throws IOException {
     return initHRegion(tableName, callingMethod, conf, family, null);
   }
 
@@ -99,14 +100,14 @@ public class TestBlocksRead  {
    * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
-      String family, BlockCache blockCache) throws IOException {
+    String family, BlockCache blockCache) throws IOException {
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
       BloomType bloomType = BLOOM_TYPE[i];
       builder.setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family + "_" + bloomType))
-              .setBlocksize(1).setBloomFilterType(bloomType).build());
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family + "_" + bloomType))
+          .setBlocksize(1).setBloomFilterType(bloomType).build());
     }
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     Path path = new Path(DIR + callingMethod);
@@ -117,11 +118,9 @@ public class TestBlocksRead  {
     }
   }
 
-  private void putData(String family, String row, String col, long version)
-      throws IOException {
+  private void putData(String family, String row, String col, long version) throws IOException {
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
-      putData(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]), row, col, version,
-          version);
+      putData(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]), row, col, version, version);
     }
   }
 
@@ -130,9 +129,9 @@ public class TestBlocksRead  {
     return Bytes.toBytes("Value:" + row + "#" + col + "#" + version);
   }
 
-  private void putData(byte[] cf, String row, String col, long versionStart,
-      long versionEnd) throws IOException {
-    byte [] columnBytes = Bytes.toBytes(col);
+  private void putData(byte[] cf, String row, String col, long versionStart, long versionEnd)
+    throws IOException {
+    byte[] columnBytes = Bytes.toBytes(col);
     Put put = new Put(Bytes.toBytes(row));
     put.setDurability(Durability.SKIP_WAL);
 
@@ -142,14 +141,13 @@ public class TestBlocksRead  {
     region.put(put);
   }
 
-  private Cell[] getData(String family, String row, List<String> columns,
-      int expBlocks) throws IOException {
+  private Cell[] getData(String family, String row, List<String> columns, int expBlocks)
+    throws IOException {
     return getData(family, row, columns, expBlocks, expBlocks, expBlocks);
   }
 
-  private Cell[] getData(String family, String row, List<String> columns,
-      int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
-      throws IOException {
+  private Cell[] getData(String family, String row, List<String> columns, int expBlocksRowCol,
+    int expBlocksRow, int expBlocksNone) throws IOException {
     int[] expBlocks = new int[] { expBlocksRowCol, expBlocksRow, expBlocksNone };
     Cell[] kvs = null;
 
@@ -167,29 +165,26 @@ public class TestBlocksRead  {
       long blocksEnd = getBlkAccessCount(cf);
       if (expBlocks[i] != -1) {
         assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
-            blocksEnd - blocksStart);
+          blocksEnd - blocksStart);
       }
-      System.out.println("Blocks Read for Bloom: " + bloomType + " = "
-          + (blocksEnd - blocksStart) + "Expected = " + expBlocks[i]);
+      System.out.println("Blocks Read for Bloom: " + bloomType + " = " + (blocksEnd - blocksStart)
+        + "Expected = " + expBlocks[i]);
     }
     return kvs;
   }
 
-  private Cell[] getData(String family, String row, String column,
-      int expBlocks) throws IOException {
-    return getData(family, row, Arrays.asList(column), expBlocks, expBlocks,
-        expBlocks);
+  private Cell[] getData(String family, String row, String column, int expBlocks)
+    throws IOException {
+    return getData(family, row, Arrays.asList(column), expBlocks, expBlocks, expBlocks);
   }
 
-  private Cell[] getData(String family, String row, String column,
-      int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
-      throws IOException {
-    return getData(family, row, Arrays.asList(column), expBlocksRowCol,
-        expBlocksRow, expBlocksNone);
+  private Cell[] getData(String family, String row, String column, int expBlocksRowCol,
+    int expBlocksRow, int expBlocksNone) throws IOException {
+    return getData(family, row, Arrays.asList(column), expBlocksRowCol, expBlocksRow,
+      expBlocksNone);
   }
 
-  private void deleteFamily(String family, String row, long version)
-      throws IOException {
+  private void deleteFamily(String family, String row, long version) throws IOException {
     Delete del = new Delete(Bytes.toBytes(row));
     del.addFamily(Bytes.toBytes(family + "_ROWCOL"), version);
     del.addFamily(Bytes.toBytes(family + "_ROW"), version);
@@ -197,13 +192,13 @@ public class TestBlocksRead  {
     region.delete(del);
   }
 
-  private static void verifyData(Cell kv, String expectedRow,
-      String expectedCol, long expectedVersion) {
-    assertTrue("RowCheck", CellUtil.matchingRows(kv,  Bytes.toBytes(expectedRow)));
+  private static void verifyData(Cell kv, String expectedRow, String expectedCol,
+    long expectedVersion) {
+    assertTrue("RowCheck", CellUtil.matchingRows(kv, Bytes.toBytes(expectedRow)));
     assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
-    assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol,
-      expectedVersion)));
+    assertTrue("ValueCheck",
+      CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));
   }
 
   private static long getBlkAccessCount(byte[] cf) {
@@ -217,7 +212,7 @@ public class TestBlocksRead  {
   public void testBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
-    Cell [] kvs;
+    Cell[] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
@@ -271,7 +266,7 @@ public class TestBlocksRead  {
   public void testLazySeekBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
-    Cell [] kvs;
+    Cell[] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
@@ -357,7 +352,6 @@ public class TestBlocksRead  {
       putData(FAMILY, "row", "col3", 13);
       region.flush(true);
 
-
       // Expected blocks read: 8. [HBASE-4585, HBASE-13109]
       kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 8, 9, 9);
       assertEquals(3, kvs.length);
@@ -375,7 +369,7 @@ public class TestBlocksRead  {
    */
   @Test
   public void testBlocksStoredWhenCachingDisabled() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
+    byte[] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
     String FAMILY = "cf1";
 
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
@@ -422,7 +416,7 @@ public class TestBlocksRead  {
   public void testLazySeekBlocksReadWithDelete() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
-    Cell [] kvs;
+    Cell[] kvs;
     this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
     try {
       deleteFamily(FAMILY, "row", 200);

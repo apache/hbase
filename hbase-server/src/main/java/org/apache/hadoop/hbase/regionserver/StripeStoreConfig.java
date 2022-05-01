@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 
 /**
- * Configuration class for stripe store and compactions.
- * See {@link StripeStoreFileManager} for general documentation.
- * See getters for the description of each setting.
+ * Configuration class for stripe store and compactions. See {@link StripeStoreFileManager} for
+ * general documentation. See getters for the description of each setting.
  */
 @InterfaceAudience.Private
 public class StripeStoreConfig {
@@ -38,33 +36,42 @@ public class StripeStoreConfig {
   /** The minimum number of files to compact within a stripe; same as for regular compaction. */
   public static final String MIN_FILES_KEY = "hbase.store.stripe.compaction.minFiles";
 
-  /**  The minimum number of files to compact when compacting L0; same as minFiles for regular
+  /**
+   * The minimum number of files to compact when compacting L0; same as minFiles for regular
    * compaction. Given that L0 causes unnecessary overwriting of the data, should be higher than
-   * regular minFiles. */
+   * regular minFiles.
+   */
   public static final String MIN_FILES_L0_KEY = "hbase.store.stripe.compaction.minFilesL0";
 
-  /** The size the stripe should achieve to be considered for splitting into multiple stripes.
-   Stripe will be split when it can be fully compacted, and it is above this size. */
+  /**
+   * The size the stripe should achieve to be considered for splitting into multiple stripes. Stripe
+   * will be split when it can be fully compacted, and it is above this size.
+   */
   public static final String SIZE_TO_SPLIT_KEY = "hbase.store.stripe.sizeToSplit";
-  /** The target count of new stripes to produce when splitting a stripe. A floating point
-   number, default is 2. Values less than 1 will be converted to 1/x. Non-whole numbers will
-   produce unbalanced splits, which may be good for some cases. In this case the "smaller" of
-   the new stripes will always be the rightmost one. If the stripe is bigger than sizeToSplit
-   when splitting, this will be adjusted by a whole increment. */
+  /**
+   * The target count of new stripes to produce when splitting a stripe. A floating point number,
+   * default is 2. Values less than 1 will be converted to 1/x. Non-whole numbers will produce
+   * unbalanced splits, which may be good for some cases. In this case the "smaller" of the new
+   * stripes will always be the rightmost one. If the stripe is bigger than sizeToSplit when
+   * splitting, this will be adjusted by a whole increment.
+   */
   public static final String SPLIT_PARTS_KEY = "hbase.store.stripe.splitPartCount";
-  /** The initial stripe count to create. If the row distribution is roughly the same over time,
-   it's good to set this to a count of stripes that is expected to be achieved in most regions,
-   to get this count from the outset and prevent unnecessary splitting. */
+  /**
+   * The initial stripe count to create. If the row distribution is roughly the same over time, it's
+   * good to set this to a count of stripes that is expected to be achieved in most regions, to get
+   * this count from the outset and prevent unnecessary splitting.
+   */
   public static final String INITIAL_STRIPE_COUNT_KEY = "hbase.store.stripe.initialStripeCount";
 
   /** Whether to flush memstore to L0 files, or directly to stripes. */
   public static final String FLUSH_TO_L0_KEY = "hbase.store.stripe.compaction.flushToL0";
 
-  /** When splitting region, the maximum size imbalance to allow in an attempt to split at a
-   stripe boundary, so that no files go to both regions. Most users won't need to change that. */
+  /**
+   * When splitting region, the maximum size imbalance to allow in an attempt to split at a stripe
+   * boundary, so that no files go to both regions. Most users won't need to change that.
+   */
   public static final String MAX_REGION_SPLIT_IMBALANCE_KEY =
-      "hbase.store.stripe.region.split.max.imbalance";
-
+    "hbase.store.stripe.region.split.max.imbalance";
 
   private final float maxRegionSplitImbalance;
   private final int level0CompactMinFiles;
@@ -78,6 +85,7 @@ public class StripeStoreConfig {
   private final long splitPartSize; // derived from sizeToSplitAt and splitPartCount
 
   private static final double EPSILON = 0.001; // good enough for this, not a real epsilon.
+
   public StripeStoreConfig(Configuration config, StoreConfigInformation sci) {
     this.level0CompactMinFiles = config.getInt(MIN_FILES_L0_KEY, 4);
     this.flushIntoL0 = config.getBoolean(FLUSH_TO_L0_KEY, false);
@@ -85,7 +93,7 @@ public class StripeStoreConfig {
     int minFiles = config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, -1);
     this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, Math.max(minMinFiles, minFiles));
     this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY,
-        config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 10));
+      config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 10));
     this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
 
     float splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2f, true);
@@ -100,7 +108,7 @@ public class StripeStoreConfig {
     if (flushSize == 0) {
       flushSize = 128 * 1024 * 1024;
     }
-    long defaultSplitSize = (long)(flushSize * getLevel0MinFiles() * 4 * splitPartCount);
+    long defaultSplitSize = (long) (flushSize * getLevel0MinFiles() * 4 * splitPartCount);
     this.sizeToSplitAt = config.getLong(SIZE_TO_SPLIT_KEY, defaultSplitSize);
     int initialCount = config.getInt(INITIAL_STRIPE_COUNT_KEY, 1);
     if (initialCount == 0) {
@@ -108,15 +116,15 @@ public class StripeStoreConfig {
       initialCount = 1;
     }
     this.initialCount = initialCount;
-    this.splitPartSize = (long)(this.sizeToSplitAt / this.splitPartCount);
+    this.splitPartSize = (long) (this.sizeToSplitAt / this.splitPartCount);
   }
 
-  private static float getFloat(
-      Configuration config, String key, float defaultValue, boolean moreThanOne) {
+  private static float getFloat(Configuration config, String key, float defaultValue,
+    boolean moreThanOne) {
     float value = config.getFloat(key, defaultValue);
     if (value < EPSILON) {
-      LOG.warn(String.format(
-          "%s is set to 0 or negative; using default value of %f", key, defaultValue));
+      LOG.warn(
+        String.format("%s is set to 0 or negative; using default value of %f", key, defaultValue));
       value = defaultValue;
     } else if ((value > 1f) != moreThanOne) {
       value = 1f / value;
@@ -157,8 +165,8 @@ public class StripeStoreConfig {
   }
 
   /**
-   * @return the desired size of the target stripe when splitting, in bytes.
-   *         Derived from {@link #getSplitSize()} and {@link #getSplitCount()}.
+   * @return the desired size of the target stripe when splitting, in bytes. Derived from
+   *         {@link #getSplitSize()} and {@link #getSplitCount()}.
    */
   public long getSplitPartSize() {
     return splitPartSize;

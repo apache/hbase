@@ -50,7 +50,7 @@ public class TestScannersFromClientSide2 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannersFromClientSide2.class);
+    HBaseClassTestRule.forClass(TestScannersFromClientSide2.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -96,7 +96,7 @@ public class TestScannersFromClientSide2 {
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 1000; i++) {
       puts.add(new Put(Bytes.toBytes(String.format("%03d", i)))
-          .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)));
+        .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)));
     }
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     table.put(puts);
@@ -130,7 +130,7 @@ public class TestScannersFromClientSide2 {
   private List<Result> doScan(Scan scan) throws IOException {
     List<Result> results = new ArrayList<>();
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (Result r; (r = scanner.next()) != null;) {
         results.add(r);
       }
@@ -162,10 +162,10 @@ public class TestScannersFromClientSide2 {
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
+    int limit) throws Exception {
     Scan scan =
-        createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-            .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
     if (limit > 0) {
       scan.setLimit(limit);
     }
@@ -183,9 +183,9 @@ public class TestScannersFromClientSide2 {
   }
 
   private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
-    Scan scan = createScan()
-        .withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
+    int limit) throws Exception {
+    Scan scan =
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
         .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
     if (limit > 0) {
       scan.setLimit(limit);

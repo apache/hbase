@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,20 +38,18 @@ import org.mockito.Mockito;
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.io.Files;
 
-@Category({RPCTests.class, SmallTests.class})
+@Category({ RPCTests.class, SmallTests.class })
 public class TestBufferChain {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBufferChain.class);
+    HBaseClassTestRule.forClass(TestBufferChain.class);
 
   private File tmpFile;
 
-  private static final byte[][] HELLO_WORLD_CHUNKS = new byte[][] {
-      "hello".getBytes(Charsets.UTF_8),
-      " ".getBytes(Charsets.UTF_8),
-      "world".getBytes(Charsets.UTF_8)
-  };
+  private static final byte[][] HELLO_WORLD_CHUNKS =
+    new byte[][] { "hello".getBytes(Charsets.UTF_8), " ".getBytes(Charsets.UTF_8),
+      "world".getBytes(Charsets.UTF_8) };
 
   @Before
   public void setup() throws IOException {
@@ -88,21 +86,17 @@ public class TestBufferChain {
 
   @Test
   public void testLimitOffset() throws IOException {
-    ByteBuffer[] bufs = new ByteBuffer[] {
-        stringBuf("XXXhelloYYY", 3, 5),
-        stringBuf(" ", 0, 1),
-        stringBuf("XXXXworldY", 4, 5) };
+    ByteBuffer[] bufs = new ByteBuffer[] { stringBuf("XXXhelloYYY", 3, 5), stringBuf(" ", 0, 1),
+      stringBuf("XXXXworldY", 4, 5) };
     BufferChain chain = new BufferChain(bufs);
-    writeAndVerify(chain , "hello world", 3);
+    writeAndVerify(chain, "hello world", 3);
     assertNoRemaining(bufs);
   }
 
   @Test
   public void testWithSpy() throws IOException {
-    ByteBuffer[] bufs = new ByteBuffer[] {
-        stringBuf("XXXhelloYYY", 3, 5),
-        stringBuf(" ", 0, 1),
-        stringBuf("XXXXworldY", 4, 5) };
+    ByteBuffer[] bufs = new ByteBuffer[] { stringBuf("XXXhelloYYY", 3, 5), stringBuf(" ", 0, 1),
+      stringBuf("XXXXworldY", 4, 5) };
     BufferChain chain = new BufferChain(bufs);
     FileOutputStream fos = new FileOutputStream(tmpFile);
     FileChannel ch = Mockito.spy(fos.getChannel());
@@ -143,8 +137,7 @@ public class TestBufferChain {
     return ret;
   }
 
-  private void writeAndVerify(BufferChain chain, String string, int chunkSize)
-      throws IOException {
+  private void writeAndVerify(BufferChain chain, String string, int chunkSize) throws IOException {
     FileOutputStream fos = new FileOutputStream(tmpFile);
     FileChannel ch = fos.getChannel();
     try {

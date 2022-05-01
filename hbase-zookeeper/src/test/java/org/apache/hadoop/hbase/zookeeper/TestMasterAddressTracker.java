@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -91,7 +91,7 @@ public class TestMasterAddressTracker {
 
   /**
    * create an address tracker instance
-   * @param sn if not-null set the active master
+   * @param sn       if not-null set the active master
    * @param infoPort if there is an active master, set its info port.
    */
   private MasterAddressTracker setupMasterTracker(final ServerName sn, final int infoPort)

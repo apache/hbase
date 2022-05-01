@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,18 +27,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * When deal with OutputStream which is not ByteBufferWriter type, wrap it with this class. We will
  * have to write offheap ByteBuffer (DBB) data into the OS. This class is having a temp byte array
- * to which we can copy the DBB data for writing to the OS.
- * <br>
+ * to which we can copy the DBB data for writing to the OS. <br>
  * This is used while writing Cell data to WAL. In case of AsyncWAL, the OS created there is
  * ByteBufferWriter. But in case of FSHLog, the OS passed by DFS client, is not of type
  * ByteBufferWriter. We will need this temp solution until DFS client supports writing ByteBuffer
- * directly to the OS it creates.
- * <br>
+ * directly to the OS it creates. <br>
  * Note: This class is not thread safe.
  */
 @InterfaceAudience.Private
-public class ByteBufferWriterOutputStream extends OutputStream
-    implements ByteBufferWriter {
+public class ByteBufferWriterOutputStream extends OutputStream implements ByteBufferWriter {
 
   private static final int DEFAULT_BUFFER_SIZE = 4096;
 
@@ -58,19 +54,15 @@ public class ByteBufferWriterOutputStream extends OutputStream
   }
 
   /**
-   * Writes len bytes from the specified ByteBuffer starting at offset off to
-   * this OutputStream. If b is null, a NullPointerException is thrown. If off
-   * is negative or larger than the ByteBuffer then an ArrayIndexOutOfBoundsException
-   * is thrown. If len is greater than the length of the ByteBuffer, then an
-   * ArrayIndexOutOfBoundsException is thrown. This method does not change the
+   * Writes len bytes from the specified ByteBuffer starting at offset off to this OutputStream. If
+   * b is null, a NullPointerException is thrown. If off is negative or larger than the ByteBuffer
+   * then an ArrayIndexOutOfBoundsException is thrown. If len is greater than the length of the
+   * ByteBuffer, then an ArrayIndexOutOfBoundsException is thrown. This method does not change the
    * position of the ByteBuffer.
-   *
-   * @param b    the ByteBuffer
-   * @param off  the start offset in the data
-   * @param len  the number of bytes to write
-   * @throws IOException
-   *             if an I/O error occurs. In particular, an IOException is thrown
-   *             if the output stream is closed.
+   * @param b   the ByteBuffer
+   * @param off the start offset in the data
+   * @param len the number of bytes to write n * if an I/O error occurs. In particular, an
+   *            IOException is thrown if the output stream is closed.
    */
   @Override
   public void write(ByteBuffer b, int off, int len) throws IOException {
@@ -81,8 +73,7 @@ public class ByteBufferWriterOutputStream extends OutputStream
     int totalCopied = 0;
     while (totalCopied < len) {
       int bytesToCopy = Math.min((len - totalCopied), this.bufSize);
-      ByteBufferUtils.copyFromBufferToArray(this.buf, b, off + totalCopied, 0,
-          bytesToCopy);
+      ByteBufferUtils.copyFromBufferToArray(this.buf, b, off + totalCopied, 0, bytesToCopy);
       this.os.write(this.buf, 0, bytesToCopy);
       totalCopied += bytesToCopy;
     }

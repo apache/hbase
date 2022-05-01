@@ -1,31 +1,29 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferAllocator;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * IO engine that stores data in memory using an array of ByteBuffers {@link ByteBufferArray}.
@@ -66,9 +64,8 @@ public class ByteBufferIOEngine implements IOEngine {
   private final long capacity;
 
   /**
-   * Construct the ByteBufferIOEngine with the given capacity
-   * @param capacity
-   * @throws IOException ideally here no exception to be thrown from the allocator
+   * Construct the ByteBufferIOEngine with the given capacity n * @throws IOException ideally here
+   * no exception to be thrown from the allocator
    */
   public ByteBufferIOEngine(long capacity) throws IOException {
     this.capacity = capacity;
@@ -78,14 +75,12 @@ public class ByteBufferIOEngine implements IOEngine {
 
   @Override
   public String toString() {
-    return "ioengine=" + this.getClass().getSimpleName() + ", capacity=" +
-      String.format("%,d", this.capacity);
+    return "ioengine=" + this.getClass().getSimpleName() + ", capacity="
+      + String.format("%,d", this.capacity);
   }
 
   /**
-   * Memory IO engine is always unable to support persistent storage for the
-   * cache
-   * @return false
+   * Memory IO engine is always unable to support persistent storage for the cache n
    */
   @Override
   public boolean isPersistent() {
@@ -111,7 +106,7 @@ public class ByteBufferIOEngine implements IOEngine {
   /**
    * Transfers data from the given {@link ByteBuffer} to the buffer array. Position of source will
    * be advanced by the {@link ByteBuffer#remaining()}.
-   * @param src the given byte buffer from which bytes are to be read.
+   * @param src    the given byte buffer from which bytes are to be read.
    * @param offset The offset in the ByteBufferArray of the first byte to be written
    * @throws IOException throws IOException if writing to the array throws exception
    */
@@ -123,7 +118,7 @@ public class ByteBufferIOEngine implements IOEngine {
   /**
    * Transfers data from the given {@link ByteBuff} to the buffer array. Position of source will be
    * advanced by the {@link ByteBuffer#remaining()}.
-   * @param src the given byte buffer from which bytes are to be read.
+   * @param src    the given byte buffer from which bytes are to be read.
    * @param offset The offset in the ByteBufferArray of the first byte to be written
    * @throws IOException throws IOException if writing to the array throws exception
    */

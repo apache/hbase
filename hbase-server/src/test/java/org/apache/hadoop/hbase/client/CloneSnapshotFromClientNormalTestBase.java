@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
   }
 
   private void testCloneSnapshot(TableName tableName, byte[] snapshotName, int snapshotRows)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
     verifyRowCount(TEST_UTIL, tableName, snapshotRows);

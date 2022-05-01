@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,28 +44,25 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestFlushFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFlushFromClient.class);
+    HBaseClassTestRule.forClass(TestFlushFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushFromClient.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static AsyncConnection asyncConn;
-  private static final byte[][] SPLITS = new byte[][]{Bytes.toBytes("3"), Bytes.toBytes("7")};
-  private static final List<byte[]> ROWS = Arrays.asList(
-    Bytes.toBytes("1"),
-    Bytes.toBytes("4"),
-    Bytes.toBytes("8"));
+  private static final byte[][] SPLITS = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("7") };
+  private static final List<byte[]> ROWS =
+    Arrays.asList(Bytes.toBytes("1"), Bytes.toBytes("4"), Bytes.toBytes("8"));
   private static final byte[] FAMILY_1 = Bytes.toBytes("f1");
   private static final byte[] FAMILY_2 = Bytes.toBytes("f2");
-  public static final byte[][] FAMILIES = {FAMILY_1, FAMILY_2};
+  public static final byte[][] FAMILIES = { FAMILY_1, FAMILY_2 };
   @Rule
   public TestName name = new TestName();
 
@@ -122,8 +119,8 @@ public class TestFlushFromClient {
     try (Admin admin = TEST_UTIL.getAdmin()) {
       long sizeBeforeFlush = getRegionInfo().get(0).getMemStoreDataSize();
       admin.flush(tableName, FAMILY_1);
-      assertFalse(getRegionInfo().stream().
-        anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
+      assertFalse(
+        getRegionInfo().stream().anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
     }
   }
 
@@ -139,8 +136,8 @@ public class TestFlushFromClient {
     AsyncAdmin admin = asyncConn.getAdmin();
     long sizeBeforeFlush = getRegionInfo().get(0).getMemStoreDataSize();
     admin.flush(tableName, FAMILY_1).get();
-    assertFalse(getRegionInfo().stream().
-      anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
+    assertFalse(
+      getRegionInfo().stream().anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
   }
 
   @Test
@@ -190,10 +187,8 @@ public class TestFlushFromClient {
   @Test
   public void testFlushRegionServer() throws Exception {
     try (Admin admin = TEST_UTIL.getAdmin()) {
-      for (HRegionServer rs : TEST_UTIL.getHBaseCluster()
-            .getLiveRegionServerThreads()
-            .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-            .collect(Collectors.toList())) {
+      for (HRegionServer rs : TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+        .map(JVMClusterUtil.RegionServerThread::getRegionServer).collect(Collectors.toList())) {
         admin.flushRegionServer(rs.getServerName());
         assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
       }
@@ -203,10 +198,8 @@ public class TestFlushFromClient {
   @Test
   public void testAsyncFlushRegionServer() throws Exception {
     AsyncAdmin admin = asyncConn.getAdmin();
-    for (HRegionServer rs : TEST_UTIL.getHBaseCluster()
-      .getLiveRegionServerThreads()
-      .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .collect(Collectors.toList())) {
+    for (HRegionServer rs : TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+      .map(JVMClusterUtil.RegionServerThread::getRegionServer).collect(Collectors.toList())) {
       admin.flushRegionServer(rs.getServerName()).get();
       assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
     }

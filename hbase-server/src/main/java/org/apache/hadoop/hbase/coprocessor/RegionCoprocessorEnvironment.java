@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
@@ -111,14 +109,15 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
 
   /**
    * Returns a MetricRegistry that can be used to track metrics at the region server level. All
-   * metrics tracked at this level will be shared by all the coprocessor instances
-   * of the same class in the same region server process. Note that there will be one
-   * region coprocessor environment per region in the server, but all of these instances will share
-   * the same MetricRegistry. The metric instances (like Counter, Timer, etc) will also be shared
-   * among all of the region coprocessor instances.
-   *
-   * <p>See ExampleRegionObserverWithMetrics class in the hbase-examples modules to see examples of how
-   * metrics can be instantiated and used.</p>
+   * metrics tracked at this level will be shared by all the coprocessor instances of the same class
+   * in the same region server process. Note that there will be one region coprocessor environment
+   * per region in the server, but all of these instances will share the same MetricRegistry. The
+   * metric instances (like Counter, Timer, etc) will also be shared among all of the region
+   * coprocessor instances.
+   * <p>
+   * See ExampleRegionObserverWithMetrics class in the hbase-examples modules to see examples of how
+   * metrics can be instantiated and used.
+   * </p>
    * @return A MetricRegistry for the coprocessor class to track and export metrics.
    */
   // Note: we are not exposing getMetricRegistryForRegion(). per-region metrics are already costly

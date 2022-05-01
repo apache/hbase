@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public final class ThrottleQuotaTestUtil {
   }
 
   static int doPuts(int maxOps, int valueSize, byte[] family, byte[] qualifier,
-      final Table... tables) {
+    final Table... tables) {
     int count = 0;
     try {
       while (count < maxOps) {
@@ -103,37 +103,37 @@ public final class ThrottleQuotaTestUtil {
   }
 
   static void triggerUserCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
-      TableName... tables) throws Exception {
+    TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, true, false, false, false, false, tables);
   }
 
   static void triggerTableCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
-      TableName... tables) throws Exception {
+    TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, true, false, false, false, tables);
   }
 
   static void triggerNamespaceCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
-      TableName... tables) throws Exception {
+    TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, false, true, false, false, tables);
   }
 
   static void triggerRegionServerCacheRefresh(HBaseTestingUtility testUtil, boolean bypass)
-      throws Exception {
+    throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, false, false, true, false);
   }
 
   static void triggerExceedThrottleQuotaCacheRefresh(HBaseTestingUtility testUtil,
-      boolean exceedEnabled) throws Exception {
+    boolean exceedEnabled) throws Exception {
     triggerCacheRefresh(testUtil, exceedEnabled, false, false, false, false, true);
   }
 
   private static void triggerCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
-      boolean userLimiter, boolean tableLimiter, boolean nsLimiter, boolean rsLimiter,
-      boolean exceedThrottleQuota, final TableName... tables) throws Exception {
+    boolean userLimiter, boolean tableLimiter, boolean nsLimiter, boolean rsLimiter,
+    boolean exceedThrottleQuota, final TableName... tables) throws Exception {
     envEdge.incValue(2 * REFRESH_TIME);
     for (RegionServerThread rst : testUtil.getMiniHBaseCluster().getRegionServerThreads()) {
       RegionServerRpcQuotaManager quotaManager =
-          rst.getRegionServer().getRegionServerRpcQuotaManager();
+        rst.getRegionServer().getRegionServerRpcQuotaManager();
       QuotaCache quotaCache = quotaManager.getQuotaCache();
 
       quotaCache.triggerCacheRefresh();
@@ -167,7 +167,7 @@ public final class ThrottleQuotaTestUtil {
         }
         if (rsLimiter) {
           boolean rsIsBypass = quotaCache
-              .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY).isBypass();
+            .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY).isBypass();
           if (rsIsBypass != bypass) {
             envEdge.incValue(100);
             isUpdated = false;
@@ -196,7 +196,7 @@ public final class ThrottleQuotaTestUtil {
   static void clearQuotaCache(HBaseTestingUtility testUtil) {
     for (RegionServerThread rst : testUtil.getMiniHBaseCluster().getRegionServerThreads()) {
       RegionServerRpcQuotaManager quotaManager =
-          rst.getRegionServer().getRegionServerRpcQuotaManager();
+        rst.getRegionServer().getRegionServerRpcQuotaManager();
       QuotaCache quotaCache = quotaManager.getQuotaCache();
       quotaCache.getNamespaceQuotaCache().clear();
       quotaCache.getTableQuotaCache().clear();

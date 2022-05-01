@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Chain of ByteBuffers.
- * Used writing out an array of byte buffers.  Writes in chunks.
+ * Chain of ByteBuffers. Used writing out an array of byte buffers. Writes in chunks.
  */
 @InterfaceAudience.Private
 class BufferChain {
@@ -43,15 +41,15 @@ class BufferChain {
   }
 
   /**
-   * Expensive.  Makes a new buffer to hold a copy of what is in contained ByteBuffers.  This
-   * call drains this instance; it cannot be used subsequent to the call.
+   * Expensive. Makes a new buffer to hold a copy of what is in contained ByteBuffers. This call
+   * drains this instance; it cannot be used subsequent to the call.
    * @return A new byte buffer with the content of all contained ByteBuffers.
    */
-  byte [] getBytes() {
+  byte[] getBytes() {
     if (!hasRemaining()) throw new IllegalAccessError();
-    byte [] bytes = new byte [this.remaining];
+    byte[] bytes = new byte[this.remaining];
     int offset = 0;
-    for (ByteBuffer bb: this.buffers) {
+    for (ByteBuffer bb : this.buffers) {
       int length = bb.remaining();
       bb.get(bytes, offset, length);
       offset += length;
@@ -65,10 +63,9 @@ class BufferChain {
 
   /**
    * Write out our chain of buffers in chunks
-   * @param channel Where to write
+   * @param channel   Where to write
    * @param chunkSize Size of chunks to write.
-   * @return Amount written.
-   * @throws IOException
+   * @return Amount written. n
    */
   long write(GatheringByteChannel channel, int chunkSize) throws IOException {
     int chunkRemaining = chunkSize;

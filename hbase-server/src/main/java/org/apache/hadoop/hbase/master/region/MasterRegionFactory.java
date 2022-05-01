@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,8 +95,7 @@ public final class MasterRegionFactory {
       .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE).setBloomFilterType(BloomType.ROWCOL)
       .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
     .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY))
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY))
-    .build();
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY)).build();
 
   private static TableDescriptor withTrackerConfigs(Configuration conf) {
     String trackerImpl = conf.get(TRACKER_IMPL, conf.get(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -104,8 +103,8 @@ public final class MasterRegionFactory {
     Class<? extends StoreFileTracker> trackerClass =
       StoreFileTrackerFactory.getTrackerClass(trackerImpl);
     if (StoreFileTrackerFactory.isMigration(trackerClass)) {
-      throw new IllegalArgumentException("Should not set store file tracker to " +
-        StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
+      throw new IllegalArgumentException("Should not set store file tracker to "
+        + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
     }
     StoreFileTracker tracker = ReflectionUtils.newInstance(trackerClass, conf, true, null);
     return tracker.updateWithTrackerConfigs(TableDescriptorBuilder.newBuilder(TABLE_DESC)).build();

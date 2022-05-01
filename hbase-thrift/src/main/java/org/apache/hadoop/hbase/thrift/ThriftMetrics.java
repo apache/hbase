@@ -1,22 +1,20 @@
 /*
- * Copyright The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,11 +40,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class is for maintaining the various statistics of thrift server
- * and publishing them through the metrics interfaces.
+ * This class is for maintaining the various statistics of thrift server and publishing them through
+ * the metrics interfaces.
  */
 @InterfaceAudience.Private
-public class ThriftMetrics  {
+public class ThriftMetrics {
 
   private static final Logger LOG = LoggerFactory.getLogger(ThriftMetrics.class);
 
@@ -65,8 +63,7 @@ public class ThriftMetrics  {
 
   protected MetricsThriftServerSource source;
   protected final long slowResponseTime;
-  public static final String SLOW_RESPONSE_NANO_SEC =
-    "hbase.thrift.slow.response.nano.second";
+  public static final String SLOW_RESPONSE_NANO_SEC = "hbase.thrift.slow.response.nano.second";
   public static final long DEFAULT_SLOW_RESPONSE_NANO_SEC = 10 * 1000 * 1000;
   private final ThriftServerType thriftServerType;
 
@@ -74,9 +71,11 @@ public class ThriftMetrics  {
     slowResponseTime = conf.getLong(SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
     thriftServerType = t;
     if (t == ThriftServerType.ONE) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftOneSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+        .createThriftOneSource();
     } else if (t == ThriftServerType.TWO) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftTwoSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+        .createThriftTwoSource();
     }
 
   }
@@ -115,8 +114,8 @@ public class ThriftMetrics  {
   }
 
   /**
-   * Increment the count for a specific exception type.  This is called for each exception type
-   * that is returned to the thrift handler.
+   * Increment the count for a specific exception type. This is called for each exception type that
+   * is returned to the thrift handler.
    * @param rawThrowable type of exception
    */
   public void exception(Throwable rawThrowable) {
@@ -124,12 +123,9 @@ public class ThriftMetrics  {
 
     Throwable throwable = unwrap(rawThrowable);
     /**
-     * Keep some metrics for commonly seen exceptions
-     *
-     * Try and  put the most common types first.
-     * Place child types before the parent type that they extend.
-     *
-     * If this gets much larger we might have to go to a hashmap
+     * Keep some metrics for commonly seen exceptions Try and put the most common types first. Place
+     * child types before the parent type that they extend. If this gets much larger we might have
+     * to go to a hashmap
      */
     if (throwable != null) {
       if (throwable instanceof OutOfOrderScannerNextException) {

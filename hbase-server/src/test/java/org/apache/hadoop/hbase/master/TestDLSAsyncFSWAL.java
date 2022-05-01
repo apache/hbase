@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ public class TestDLSAsyncFSWAL extends AbstractTestDLS {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDLSAsyncFSWAL.class);
+    HBaseClassTestRule.forClass(TestDLSAsyncFSWAL.class);
 
   @Override
   protected String getWalProvider() {

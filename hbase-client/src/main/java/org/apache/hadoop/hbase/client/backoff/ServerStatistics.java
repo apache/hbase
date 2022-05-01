@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.client.backoff;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionLoadStats;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Track the statistics for a single region
@@ -33,14 +32,12 @@ public class ServerStatistics {
   private Map<byte[], RegionStatistics> stats = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
-   * Good enough attempt. Last writer wins. It doesn't really matter which one gets to update,
-   * as something gets set
-   * @param region
-   * @param currentStats
+   * Good enough attempt. Last writer wins. It doesn't really matter which one gets to update, as
+   * something gets set nn
    */
   public void update(byte[] region, RegionLoadStats currentStats) {
     RegionStatistics regionStat = this.stats.get(region);
-    if(regionStat == null){
+    if (regionStat == null) {
       regionStat = new RegionStatistics();
       this.stats.put(region, regionStat);
     }
@@ -49,7 +46,7 @@ public class ServerStatistics {
   }
 
   @InterfaceAudience.Private
-  public RegionStatistics getStatsForRegion(byte[] regionName){
+  public RegionStatistics getStatsForRegion(byte[] regionName) {
     return stats.get(regionName);
   }
 
@@ -64,11 +61,11 @@ public class ServerStatistics {
       this.compactionPressure = currentStats.getCompactionPressure();
     }
 
-    public int getMemStoreLoadPercent(){
+    public int getMemStoreLoadPercent() {
       return this.memstoreLoad;
     }
 
-    public int getHeapOccupancyPercent(){
+    public int getHeapOccupancyPercent() {
       return this.heapOccupancy;
     }
 

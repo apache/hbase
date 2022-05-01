@@ -41,9 +41,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * A cache of meta region location metadata. Registers a listener on ZK to track changes to the
- * meta table znodes. Clients are expected to retry if the meta information is stale. This class
- * is thread-safe (a single instance of this class can be shared by multiple threads without race
+ * A cache of meta region location metadata. Registers a listener on ZK to track changes to the meta
+ * table znodes. Clients are expected to retry if the meta information is stale. This class is
+ * thread-safe (a single instance of this class can be shared by multiple threads without race
  * conditions).
  */
 @InterfaceAudience.Private
@@ -61,14 +61,14 @@ public class MetaRegionLocationCache extends ZKListener {
   private static final int SLEEP_INTERVAL_MS_BETWEEN_RETRIES = 1000;
   private static final int SLEEP_INTERVAL_MS_MAX = 10000;
   private final RetryCounterFactory retryCounterFactory =
-      new RetryCounterFactory(MAX_ZK_META_FETCH_RETRIES, SLEEP_INTERVAL_MS_BETWEEN_RETRIES);
+    new RetryCounterFactory(MAX_ZK_META_FETCH_RETRIES, SLEEP_INTERVAL_MS_BETWEEN_RETRIES);
 
   /**
-   * Cached meta region locations indexed by replica ID.
-   * CopyOnWriteArrayMap ensures synchronization during updates and a consistent snapshot during
-   * client requests. Even though CopyOnWriteArrayMap copies the data structure for every write,
-   * that should be OK since the size of the list is often small and mutations are not too often
-   * and we do not need to block client requests while mutations are in progress.
+   * Cached meta region locations indexed by replica ID. CopyOnWriteArrayMap ensures synchronization
+   * during updates and a consistent snapshot during client requests. Even though
+   * CopyOnWriteArrayMap copies the data structure for every write, that should be OK since the size
+   * of the list is often small and mutations are not too often and we do not need to block client
+   * requests while mutations are in progress.
    */
   private final CopyOnWriteArrayMap<Integer, HRegionLocation> cachedMetaLocations;
 
@@ -132,25 +132,24 @@ public class MetaRegionLocationCache extends ZKListener {
       // No new meta znodes got added.
       return;
     }
-    for (String znode: znodes) {
+    for (String znode : znodes) {
       String path = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode);
       updateMetaLocation(path, opType);
     }
   }
 
   /**
-   * Gets the HRegionLocation for a given meta replica ID. Renews the watch on the znode for
-   * future updates.
+   * Gets the HRegionLocation for a given meta replica ID. Renews the watch on the znode for future
+   * updates.
    * @param replicaId ReplicaID of the region.
    * @return HRegionLocation for the meta replica.
    * @throws KeeperException if there is any issue fetching/parsing the serialized data.
    */
-  private HRegionLocation getMetaRegionLocation(int replicaId)
-      throws KeeperException {
+  private HRegionLocation getMetaRegionLocation(int replicaId) throws KeeperException {
     RegionState metaRegionState;
     try {
-      byte[] data = ZKUtil.getDataAndWatch(watcher,
-          watcher.getZNodePaths().getZNodeForReplica(replicaId));
+      byte[] data =
+        ZKUtil.getDataAndWatch(watcher, watcher.getZNodePaths().getZNodeForReplica(replicaId));
       metaRegionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
@@ -201,11 +200,10 @@ public class MetaRegionLocationCache extends ZKListener {
 
   /**
    * @return Optional list of HRegionLocations for meta replica(s), null if the cache is empty.
-   *
    */
   public Optional<List<HRegionLocation>> getMetaRegionLocations() {
     ConcurrentNavigableMap<Integer, HRegionLocation> snapshot =
-        cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());
+      cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());
     if (snapshot.isEmpty()) {
       // This could be possible if the master has not successfully initialized yet or meta region
       // is stuck in some weird state.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +23,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +46,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestInputStreamBlockDistribution {
 
   @ClassRule
@@ -67,7 +70,7 @@ public class TestInputStreamBlockDistribution {
 
     testPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
 
-    writeSomeData(fs, testPath, 256 << 20, (byte)2);
+    writeSomeData(fs, testPath, 256 << 20, (byte) 2);
   }
 
   @After
@@ -102,8 +105,8 @@ public class TestInputStreamBlockDistribution {
 
       HDFSBlocksDistribution initial = new HDFSBlocksDistribution();
 
-      InputStreamBlockDistribution test = new InputStreamBlockDistribution(stream,
-        getMockedStoreFileInfo(initial, true));
+      InputStreamBlockDistribution test =
+        new InputStreamBlockDistribution(stream, getMockedStoreFileInfo(initial, true));
 
       assertSame(initial, test.getHDFSBlockDistribution());
 
@@ -118,8 +121,8 @@ public class TestInputStreamBlockDistribution {
     FSDataInputStream fakeStream = mock(FSDataInputStream.class);
     HDFSBlocksDistribution initial = new HDFSBlocksDistribution();
 
-    InputStreamBlockDistribution test = new InputStreamBlockDistribution(fakeStream,
-      getMockedStoreFileInfo(initial, false));
+    InputStreamBlockDistribution test =
+      new InputStreamBlockDistribution(fakeStream, getMockedStoreFileInfo(initial, false));
 
     assertSame(initial, test.getHDFSBlockDistribution());
     test.setLastCachedAt(test.getCachePeriodMs() + 1);
@@ -136,8 +139,8 @@ public class TestInputStreamBlockDistribution {
 
     HDFSBlocksDistribution initial = new HDFSBlocksDistribution();
 
-    InputStreamBlockDistribution test = new InputStreamBlockDistribution(fakeStream,
-      getMockedStoreFileInfo(initial, false));
+    InputStreamBlockDistribution test =
+      new InputStreamBlockDistribution(fakeStream, getMockedStoreFileInfo(initial, false));
 
     assertSame(initial, test.getHDFSBlockDistribution());
     test.setLastCachedAt(test.getCachePeriodMs() + 1);
@@ -172,8 +175,7 @@ public class TestInputStreamBlockDistribution {
   private StoreFileInfo getMockedStoreFileInfo(HDFSBlocksDistribution distribution,
     boolean isFileLink) {
     StoreFileInfo mock = mock(StoreFileInfo.class);
-    when(mock.getHDFSBlockDistribution())
-      .thenReturn(distribution);
+    when(mock.getHDFSBlockDistribution()).thenReturn(distribution);
     when(mock.getConf()).thenReturn(conf);
     when(mock.isLink()).thenReturn(isFileLink);
     return mock;

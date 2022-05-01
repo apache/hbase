@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
@@ -64,16 +65,17 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A test over {@link RegionNormalizerWorker}. Being a background thread, the only points of
- * interaction we have to this class are its input source ({@link RegionNormalizerWorkQueue} and
- * its callbacks invoked against {@link RegionNormalizer} and {@link MasterServices}. The work
- * queue is simple enough to use directly; for {@link MasterServices}, use a mock because, as of
- * now, the worker only invokes 4 methods.
+ * interaction we have to this class are its input source ({@link RegionNormalizerWorkQueue} and its
+ * callbacks invoked against {@link RegionNormalizer} and {@link MasterServices}. The work queue is
+ * simple enough to use directly; for {@link MasterServices}, use a mock because, as of now, the
+ * worker only invokes 4 methods.
  */
-@Category({ MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionNormalizerWorker {
 
   @ClassRule
@@ -109,11 +111,8 @@ public class TestRegionNormalizerWorker {
 
     final String threadNameFmt =
       TestRegionNormalizerWorker.class.getSimpleName() + "-" + testName.getMethodName() + "-%d";
-    final ThreadFactory threadFactory = new ThreadFactoryBuilder()
-      .setNameFormat(threadNameFmt)
-      .setDaemon(true)
-      .setUncaughtExceptionHandler((t, e) -> workerThreadThrowable.set(e))
-      .build();
+    final ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat(threadNameFmt)
+      .setDaemon(true).setUncaughtExceptionHandler((t, e) -> workerThreadThrowable.set(e)).build();
     workerPool = Executors.newSingleThreadExecutor(threadFactory);
   }
 
@@ -129,17 +128,13 @@ public class TestRegionNormalizerWorker {
   @Test
   public void testMergeCounter() throws Exception {
     final TableName tn = tableName.getTableName();
-    final TableDescriptor tnDescriptor = TableDescriptorBuilder.newBuilder(tn)
-      .setNormalizationEnabled(true)
-      .build();
+    final TableDescriptor tnDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
-    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong()))
-      .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tnDescriptor))
-      .thenReturn(singletonList(new MergeNormalizationPlan.Builder()
-        .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 10)
-        .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 20)
-        .build()));
+    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong())).thenReturn(1L);
+    when(regionNormalizer.computePlansForTable(tnDescriptor)).thenReturn(singletonList(
+      new MergeNormalizationPlan.Builder().addTarget(RegionInfoBuilder.newBuilder(tn).build(), 10)
+        .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 20).build()));
 
     final RegionNormalizerWorker worker = new RegionNormalizerWorker(
       testingUtility.getConfiguration(), masterServices, regionNormalizer, queue);
@@ -147,22 +142,19 @@ public class TestRegionNormalizerWorker {
     workerPool.submit(worker);
     queue.put(tn);
 
-    assertThatEventually("executing work should see plan count increase",
-      worker::getMergePlanCount, greaterThan(beforeMergePlanCount));
+    assertThatEventually("executing work should see plan count increase", worker::getMergePlanCount,
+      greaterThan(beforeMergePlanCount));
   }
 
   @Test
   public void testSplitCounter() throws Exception {
     final TableName tn = tableName.getTableName();
-    final TableDescriptor tnDescriptor = TableDescriptorBuilder.newBuilder(tn)
-      .setNormalizationEnabled(true)
-      .build();
+    final TableDescriptor tnDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
-    when(masterServices.splitRegion(any(), any(), anyLong(), anyLong()))
-      .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tnDescriptor))
-      .thenReturn(singletonList(
-        new SplitNormalizationPlan(RegionInfoBuilder.newBuilder(tn).build(), 10)));
+    when(masterServices.splitRegion(any(), any(), anyLong(), anyLong())).thenReturn(1L);
+    when(regionNormalizer.computePlansForTable(tnDescriptor)).thenReturn(
+      singletonList(new SplitNormalizationPlan(RegionInfoBuilder.newBuilder(tn).build(), 10)));
 
     final RegionNormalizerWorker worker = new RegionNormalizerWorker(
       testingUtility.getConfiguration(), masterServices, regionNormalizer, queue);
@@ -170,8 +162,8 @@ public class TestRegionNormalizerWorker {
     workerPool.submit(worker);
     queue.put(tn);
 
-    assertThatEventually("executing work should see plan count increase",
-      worker::getSplitPlanCount, greaterThan(beforeSplitPlanCount));
+    assertThatEventually("executing work should see plan count increase", worker::getSplitPlanCount,
+      greaterThan(beforeSplitPlanCount));
   }
 
   /**
@@ -181,25 +173,18 @@ public class TestRegionNormalizerWorker {
   @Test
   public void testRateLimit() throws Exception {
     final TableName tn = tableName.getTableName();
-    final TableDescriptor tnDescriptor = TableDescriptorBuilder.newBuilder(tn)
-      .setNormalizationEnabled(true)
-      .build();
+    final TableDescriptor tnDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
     final RegionInfo splitRegionInfo = RegionInfoBuilder.newBuilder(tn).build();
     final RegionInfo mergeRegionInfo1 = RegionInfoBuilder.newBuilder(tn).build();
     final RegionInfo mergeRegionInfo2 = RegionInfoBuilder.newBuilder(tn).build();
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
-    when(masterServices.splitRegion(any(), any(), anyLong(), anyLong()))
-      .thenReturn(1L);
-    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong()))
-      .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tnDescriptor))
-      .thenReturn(Arrays.asList(
-        new SplitNormalizationPlan(splitRegionInfo, 2),
-        new MergeNormalizationPlan.Builder()
-          .addTarget(mergeRegionInfo1, 1)
-          .addTarget(mergeRegionInfo2, 2)
-          .build(),
-        new SplitNormalizationPlan(splitRegionInfo, 1)));
+    when(masterServices.splitRegion(any(), any(), anyLong(), anyLong())).thenReturn(1L);
+    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong())).thenReturn(1L);
+    when(regionNormalizer.computePlansForTable(tnDescriptor)).thenReturn(Arrays.asList(
+      new SplitNormalizationPlan(splitRegionInfo, 2), new MergeNormalizationPlan.Builder()
+        .addTarget(mergeRegionInfo1, 1).addTarget(mergeRegionInfo2, 2).build(),
+      new SplitNormalizationPlan(splitRegionInfo, 1)));
 
     final Configuration conf = testingUtility.getConfiguration();
     conf.set("hbase.normalizer.throughput.max_bytes_per_sec", "1m");
@@ -220,30 +205,25 @@ public class TestRegionNormalizerWorker {
   }
 
   /**
-   * Repeatedly evaluates {@code matcher} against the result of calling {@code actualSupplier}
-   * until the matcher succeeds or the timeout period of 30 seconds is exhausted.
+   * Repeatedly evaluates {@code matcher} against the result of calling {@code actualSupplier} until
+   * the matcher succeeds or the timeout period of 30 seconds is exhausted.
    */
-  private <T> void assertThatEventually(
-    final String reason,
-    final Supplier<? extends T> actualSupplier,
-    final Matcher<? super T> matcher
-  ) throws Exception {
+  private <T> void assertThatEventually(final String reason,
+    final Supplier<? extends T> actualSupplier, final Matcher<? super T> matcher) throws Exception {
     testingUtility.waitFor(TimeUnit.SECONDS.toMillis(30),
       new Waiter.ExplainingPredicate<Exception>() {
         private T lastValue = null;
 
         @Override
         public String explainFailure() {
-          final Description description = new StringDescription()
-            .appendText(reason)
-            .appendText("\nExpected: ")
-            .appendDescriptionOf(matcher)
-            .appendText("\n     but: ");
+          final Description description = new StringDescription().appendText(reason)
+            .appendText("\nExpected: ").appendDescriptionOf(matcher).appendText("\n     but: ");
           matcher.describeMismatch(lastValue, description);
           return description.toString();
         }
 
-        @Override public boolean evaluate() {
+        @Override
+        public boolean evaluate() {
           lastValue = actualSupplier.get();
           return matcher.matches(lastValue);
         }

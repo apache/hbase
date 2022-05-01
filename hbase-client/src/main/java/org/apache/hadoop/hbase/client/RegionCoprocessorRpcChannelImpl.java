@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 
@@ -57,7 +59,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   private final long operationTimeoutNs;
 
   RegionCoprocessorRpcChannelImpl(AsyncConnectionImpl conn, TableName tableName, RegionInfo region,
-      byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
+    byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
     this.conn = conn;
     this.tableName = tableName;
     this.region = region;
@@ -67,15 +69,16 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   }
 
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
-      Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
-      ClientService.Interface stub) {
+    Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
+    ClientService.Interface stub) {
     final Context context = Context.current();
     CompletableFuture<Message> future = new CompletableFuture<>();
-    if (region != null
-        && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())) {
+    if (
+      region != null && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())
+    ) {
       future.completeExceptionally(new DoNotRetryIOException(
-          "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
-              + loc.getRegionInfo().getRegionNameAsString()));
+        "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
+          + loc.getRegionInfo().getRegionNameAsString()));
       return future;
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
@@ -98,18 +101,15 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+    Message responsePrototype, RpcCallback<Message> done) {
     final Context context = Context.current();
-    addListener(
-      conn.callerFactory.<Message> single().table(tableName).row(row)
-        .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .action((c, l, s) -> {
-          try (Scope ignored = context.makeCurrent()) {
-            return rpcCall(method, request, responsePrototype, c, l, s);
-          }
-        }).call(),
-      (r, e) -> {
+    addListener(conn.callerFactory.<Message> single().table(tableName).row(row)
+      .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+      .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS).action((c, l, s) -> {
+        try (Scope ignored = context.makeCurrent()) {
+          return rpcCall(method, request, responsePrototype, c, l, s);
+        }
+      }).call(), (r, e) -> {
         try (Scope ignored = context.makeCurrent()) {
           if (e != null) {
             ((ClientCoprocessorRpcController) controller).setFailed(e);

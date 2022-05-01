@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -115,8 +115,8 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
       try {
         FileStatus[] fses1 = fs.listStatus(store1ArchiveDir);
         FileStatus[] fses2 = fs.listStatus(store2ArchiveDir);
-        return fses1 != null && fses1.length == compactMin && fses2 != null &&
-          fses2.length == compactMin - 1;
+        return fses1 != null && fses1.length == compactMin && fses2 != null
+          && fses2.length == compactMin - 1;
       } catch (FileNotFoundException e) {
         return false;
       }

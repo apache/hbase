@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -44,16 +43,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestModifyTableWhileMerging {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestModifyTableWhileMerging.class);
+    HBaseClassTestRule.forClass(TestModifyTableWhileMerging.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestModifyTableWhileMerging.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestModifyTableWhileMerging.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = TableName.valueOf("test");
@@ -64,7 +61,7 @@ public class TestModifyTableWhileMerging {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
-    //Set procedure executor thread to 1, making reproducing this issue of HBASE-20921 easier
+    // Set procedure executor thread to 1, making reproducing this issue of HBASE-20921 easier
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     UTIL.startMiniCluster(1);
     admin = UTIL.getHBaseAdmin();
@@ -86,24 +83,23 @@ public class TestModifyTableWhileMerging {
   @Test
   public void test() throws Exception {
     TableDescriptor tableDescriptor = client.getDescriptor();
-    ProcedureExecutor<MasterProcedureEnv> executor = UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterProcedureExecutor();
+    ProcedureExecutor<MasterProcedureEnv> executor =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     MasterProcedureEnv env = executor.getEnvironment();
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-        .getEnvironment(), new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(),
+      new RegionInfo[] { regionInfos.get(0), regionInfos.get(1) }, false);
     ModifyTableProcedure modifyTableProcedure = new ModifyTableProcedure(env, tableDescriptor);
     long procModify = executor.submitProcedure(modifyTableProcedure);
-    UTIL.waitFor(30000, () -> executor.getProcedures().stream()
-      .filter(p -> p instanceof ModifyTableProcedure)
-      .map(p -> (ModifyTableProcedure) p)
-      .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
+    UTIL.waitFor(30000,
+      () -> executor.getProcedures().stream().filter(p -> p instanceof ModifyTableProcedure)
+        .map(p -> (ModifyTableProcedure) p).anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
     long proc = executor.submitProcedure(mergeTableRegionsProcedure);
-    UTIL.waitFor(3000000, () -> UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterProcedureExecutor().isFinished(procModify));
+    UTIL.waitFor(3000000, () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
+      .isFinished(procModify));
     Assert.assertEquals("Modify Table procedure should success!",
-        ProcedureProtos.ProcedureState.SUCCESS, modifyTableProcedure.getState());
+      ProcedureProtos.ProcedureState.SUCCESS, modifyTableProcedure.getState());
   }
 
 }

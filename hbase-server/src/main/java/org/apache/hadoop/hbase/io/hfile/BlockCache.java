@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +18,18 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Block cache interface. Anything that implements the {@link Cacheable}
- * interface can be put in the cache.
+ * Block cache interface. Anything that implements the {@link Cacheable} interface can be put in the
+ * cache.
  */
 @InterfaceAudience.Private
 public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * Add block to cache.
    * @param cacheKey The block's cache key.
-   * @param buf The block contents wrapped in a ByteBuffer.
+   * @param buf      The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
   void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
@@ -39,16 +37,16 @@ public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * Add block to cache (defaults to not in-memory).
    * @param cacheKey The block's cache key.
-   * @param buf The object to cache.
+   * @param buf      The object to cache.
    */
   void cacheBlock(BlockCacheKey cacheKey, Cacheable buf);
 
   /**
    * Fetch block from cache.
-   * @param cacheKey Block to fetch.
-   * @param caching Whether this request has caching enabled (used for stats)
-   * @param repeat Whether this is a repeat lookup for the same block
-   *        (used to avoid double counting cache misses when doing double-check locking)
+   * @param cacheKey           Block to fetch.
+   * @param caching            Whether this request has caching enabled (used for stats)
+   * @param repeat             Whether this is a repeat lookup for the same block (used to avoid
+   *                           double counting cache misses when doing double-check locking)
    * @param updateCacheMetrics Whether to update cache metrics or not
    * @return Block or null if block is not in 2 cache.
    */
@@ -64,14 +62,12 @@ public interface BlockCache extends Iterable<CachedBlock> {
 
   /**
    * Evicts all blocks for the given HFile.
-   *
    * @return the number of blocks evicted
    */
   int evictBlocksByHfileName(String hfileName);
 
   /**
-   * Get the statistics for this block cache.
-   * @return Stats
+   * Get the statistics for this block cache. n
    */
   CacheStats getStats();
 
@@ -116,11 +112,11 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   long getBlockCount();
 
- /**
-  * Returns the number of data blocks currently cached in the block cache.
-  * @return number of blocks in the cache
-  */
- long getDataBlockCount();
+  /**
+   * Returns the number of data blocks currently cached in the block cache.
+   * @return number of blocks in the cache
+   */
+  long getDataBlockCount();
 
   /**
    * @return Iterator over the blocks in the cache.
@@ -131,7 +127,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
    */
-  BlockCache [] getBlockCaches();
+  BlockCache[] getBlockCaches();
 
   /**
    * Check if block type is meta or index block

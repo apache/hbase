@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,11 +61,11 @@ public class TestLoadProcedureError {
   private static volatile boolean FAIL_LOAD;
 
   public static final class TestProcedure extends NoopProcedure<MasterProcedureEnv>
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
 
     @Override
     protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       if (ARRIVE != null) {
         ARRIVE.countDown();
         ARRIVE = null;

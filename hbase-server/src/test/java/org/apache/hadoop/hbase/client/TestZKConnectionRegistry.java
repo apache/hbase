@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -41,8 +42,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -61,6 +60,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestZKConnectionRegistry {
@@ -117,8 +119,8 @@ public class TestZKConnectionRegistry {
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, MiniZooKeeperCluster.HOST);
       try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
-        assertNotSame("Using a different configuration / quorum should result in " +
-            "different backing zk connection.", zk1, zk2);
+        assertNotSame("Using a different configuration / quorum should result in "
+          + "different backing zk connection.", zk1, zk2);
         assertNotEquals(
           "Using a different configrution / quorum should be reflected in the zk connection.",
           zk1.getConnectString(), zk2.getConnectString());
@@ -143,25 +145,28 @@ public class TestZKConnectionRegistry {
   }
 
   /**
-   * Pass discontinuous list of znodes to registry getMetaRegionLocation. Should work fine.
-   * It used to throw ArrayOutOfBoundsException. See HBASE-25280.
+   * Pass discontinuous list of znodes to registry getMetaRegionLocation. Should work fine. It used
+   * to throw ArrayOutOfBoundsException. See HBASE-25280.
    */
   @Test
-  public void testDiscontinuousLocations()
-    throws ExecutionException, InterruptedException, IOException, KeeperException,
-    TimeoutException {
+  public void testDiscontinuousLocations() throws ExecutionException, InterruptedException,
+    IOException, KeeperException, TimeoutException {
     // Write discontinuous meta replica locations to a zk namespace particular to this test to
     // avoid polluting other tests.
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + this.name.getMethodName());
     ZooKeeperProtos.MetaRegionServer pbrsr = ZooKeeperProtos.MetaRegionServer.newBuilder()
       .setServer(ProtobufUtil.toServerName(ServerName.valueOf("example.org,1,1")))
-      .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
-      .setState(RegionState.State.OPEN.convert()).build();
+      .setRpcVersion(HConstants.RPC_CURRENT_VERSION).setState(RegionState.State.OPEN.convert())
+      .build();
     byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
     try (ZKWatcher zkw = new ZKWatcher(conf, this.name.getMethodName(), new Abortable() {
-      @Override public void abort(String why, Throwable e) {}
-      @Override public boolean isAborted() {
+      @Override
+      public void abort(String why, Throwable e) {
+      }
+
+      @Override
+      public boolean isAborted() {
         return false;
       }
     })) {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,35 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * This filter is used for selecting only those keys with columns that matches
- * a particular prefix. For example, if prefix is 'an', it will pass keys with
- * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
+ * This filter is used for selecting only those keys with columns that matches a particular prefix.
+ * For example, if prefix is 'an', it will pass keys with columns like 'and', 'anti' but not keys
+ * with columns like 'ball', 'act'.
  */
 @InterfaceAudience.Public
 public class ColumnPrefixFilter extends FilterBase {
-  protected byte [] prefix = null;
+  protected byte[] prefix = null;
 
-  public ColumnPrefixFilter(final byte [] prefix) {
+  public ColumnPrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
   }
 
@@ -97,16 +95,16 @@ public class ColumnPrefixFilter extends FilterBase {
   private static int compareQualifierPart(Cell cell, int length, byte[] prefix) {
     if (cell instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getQualifierPosition(), length, prefix, 0, length);
+        ((ByteBufferExtendedCell) cell).getQualifierPosition(), length, prefix, 0, length);
     }
     return Bytes.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(), length, prefix, 0,
-        length);
+      length);
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 1,
-                                "Expected 1 but got: %s", filterArguments.size());
-    byte [] columnPrefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
+      filterArguments.size());
+    byte[] columnPrefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     return new ColumnPrefixFilter(columnPrefix);
   }
 
@@ -114,9 +112,8 @@ public class ColumnPrefixFilter extends FilterBase {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.ColumnPrefixFilter.Builder builder =
-      FilterProtos.ColumnPrefixFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.ColumnPrefixFilter.Builder builder = FilterProtos.ColumnPrefixFilter.newBuilder();
     if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
     return builder.build().toByteArray();
   }
@@ -127,8 +124,7 @@ public class ColumnPrefixFilter extends FilterBase {
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
-  public static ColumnPrefixFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static ColumnPrefixFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnPrefixFilter proto;
     try {
       proto = FilterProtos.ColumnPrefixFilter.parseFrom(pbBytes);
@@ -140,15 +136,15 @@ public class ColumnPrefixFilter extends FilterBase {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-   if (o == this) return true;
-   if (!(o instanceof ColumnPrefixFilter)) return false;
+    if (o == this) return true;
+    if (!(o instanceof ColumnPrefixFilter)) return false;
 
-   ColumnPrefixFilter other = (ColumnPrefixFilter)o;
+    ColumnPrefixFilter other = (ColumnPrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
   }
 

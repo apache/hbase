@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,8 +89,8 @@ public class TestExceptionInAssignRegion {
     HRegionServer rs = rsThread.getRegionServer();
     RegionInfo hri = rs.getRegions(TABLE_NAME).get(0).getRegionInfo();
     TransitRegionStateProcedure assignRegionProcedure = TransitRegionStateProcedure.move(
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(),
-      hri, null);
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(), hri,
+      null);
     RegionStateNode regionNode = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
       .getRegionStates().getOrCreateRegionStateNode(hri);
     regionNode.setProcedure(assignRegionProcedure);
@@ -113,7 +113,8 @@ public class TestExceptionInAssignRegion {
   }
 
   public static class ThrowInOpenCP implements RegionCoprocessor, RegionObserver {
-    @Override public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+    @Override
+    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
       if (countDownLatch.getCount() == 1) {
         // We want to throw exception only first time in move region call
         // After that RS aborts and we don't want to throw in any other open region

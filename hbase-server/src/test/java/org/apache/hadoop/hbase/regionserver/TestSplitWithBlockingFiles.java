@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -50,9 +51,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class})
+@Category({ MediumTests.class })
 public class TestSplitWithBlockingFiles {
 
   @ClassRule
@@ -67,7 +69,6 @@ public class TestSplitWithBlockingFiles {
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
 
-
   @BeforeClass
   public static void setupCluster() throws Exception {
     UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 8 * 2 * 10240L);
@@ -78,8 +79,8 @@ public class TestSplitWithBlockingFiles {
     UTIL.startMiniCluster(1);
     ADMIN = UTIL.getAdmin();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(CF).setBlocksize(1000).build()).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).setBlocksize(1000).build())
+      .build();
     TABLE = UTIL.createTable(td, null);
     UTIL.waitTableAvailable(TABLE_NAME);
   }

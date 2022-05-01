@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,22 +37,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Unit testing for CallQueue, a part of the
- * org.apache.hadoop.hbase.thrift package.
+ * Unit testing for CallQueue, a part of the org.apache.hadoop.hbase.thrift package.
  */
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
 public class TestCallQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCallQueue.class);
+    HBaseClassTestRule.forClass(TestCallQueue.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCallQueue.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final MetricsAssertHelper metricsHelper =
-      CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
+    CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
 
   private int elementsAdded;
   private int elementsRemoved;
@@ -60,9 +59,9 @@ public class TestCallQueue {
   @Parameters
   public static Collection<Object[]> getParameters() {
     Collection<Object[]> parameters = new ArrayList<>();
-    for (int elementsAdded : new int[] {100, 200, 300}) {
-      for (int elementsRemoved : new int[] {0, 20, 100}) {
-        parameters.add(new Object[]{ elementsAdded, elementsRemoved });
+    for (int elementsAdded : new int[] { 100, 200, 300 }) {
+      for (int elementsRemoved : new int[] { 0, 20, 100 }) {
+        parameters.add(new Object[] { elementsAdded, elementsRemoved });
       }
     }
     return parameters;
@@ -71,8 +70,7 @@ public class TestCallQueue {
   public TestCallQueue(int elementsAdded, int elementsRemoved) {
     this.elementsAdded = elementsAdded;
     this.elementsRemoved = elementsRemoved;
-    LOG.debug("elementsAdded:" + elementsAdded +
-              " elementsRemoved:" + elementsRemoved);
+    LOG.debug("elementsAdded:" + elementsAdded + " elementsRemoved:" + elementsRemoved);
 
   }
 
@@ -109,9 +107,8 @@ public class TestCallQueue {
     return m;
   }
 
-
   private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
-      throws Exception {
+    throws Exception {
     metricsHelper.assertCounter(name, expectValue, metrics.getSource());
   }
 
@@ -123,4 +120,3 @@ public class TestCallQueue {
     };
   }
 }
-

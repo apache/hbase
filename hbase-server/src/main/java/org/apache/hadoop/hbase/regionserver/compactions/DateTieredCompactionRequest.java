@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,8 +24,8 @@ import java.util.Map;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
-  justification="It is intended to use the same equal method as superclass")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_DOESNT_OVERRIDE_EQUALS",
+    justification = "It is intended to use the same equal method as superclass")
 @InterfaceAudience.Private
 public class DateTieredCompactionRequest extends CompactionRequestImpl {
   private List<Long> boundaries;
@@ -33,7 +33,7 @@ public class DateTieredCompactionRequest extends CompactionRequestImpl {
   private Map<Long, String> boundariesPolicies;
 
   public DateTieredCompactionRequest(Collection<HStoreFile> files, List<Long> boundaryList,
-      Map<Long, String> boundaryPolicyMap) {
+    Map<Long, String> boundaryPolicyMap) {
     super(files);
     boundaries = boundaryList;
     boundariesPolicies = boundaryPolicyMap;
@@ -50,6 +50,6 @@ public class DateTieredCompactionRequest extends CompactionRequestImpl {
   @Override
   public String toString() {
     return super.toString() + " boundaries=" + Arrays.toString(boundaries.toArray())
-      + " boundariesPolicies="+boundariesPolicies.toString();
+      + " boundariesPolicies=" + boundariesPolicies.toString();
   }
 }

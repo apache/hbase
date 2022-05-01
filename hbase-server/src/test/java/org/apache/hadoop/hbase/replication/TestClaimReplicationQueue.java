@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,8 +93,8 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master,
-      RegionServerList storage) throws IOException {
+    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+      throws IOException {
       setupClusterConnection();
       return new ServerManagerForTest(master, storage);
     }

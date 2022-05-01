@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,7 +75,7 @@ public class TestInitializeStoreFileTracker {
 
   @Test
   public void testMigrateStoreFileTracker() throws IOException, InterruptedException {
-    //create tables to test
+    // create tables to test
     for (int i = 0; i < tables.length; i++) {
       tableDescriptor = HTU.createTableDescriptor(tables[i]);
       tableDescriptor.addFamily(new HColumnDescriptor(fam));
@@ -85,9 +84,9 @@ public class TestInitializeStoreFileTracker {
     TableDescriptors tableDescriptors = HTU.getMiniHBaseCluster().getMaster().getTableDescriptors();
     for (int i = 0; i < tables.length; i++) {
       TableDescriptor tdAfterCreated = tableDescriptors.get(TableName.valueOf(tables[i]));
-      //make sure that TRACKER_IMPL was set by default after tables have been created.
+      // make sure that TRACKER_IMPL was set by default after tables have been created.
       Assert.assertNotNull(tdAfterCreated.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
-      //Remove StoreFileTracker impl from tableDescriptor
+      // Remove StoreFileTracker impl from tableDescriptor
       TableDescriptor tdRemovedSFT = TableDescriptorBuilder.newBuilder(tdAfterCreated)
         .removeValue(StoreFileTrackerFactory.TRACKER_IMPL).build();
       tableDescriptors.update(tdRemovedSFT);

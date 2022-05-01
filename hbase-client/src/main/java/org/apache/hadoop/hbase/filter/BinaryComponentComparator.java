@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import com.google.protobuf.ByteString;
@@ -27,18 +25,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A comparator which compares against a specified byte array, but only
- * compares specific portion of the byte array. For the rest it is similar to
- * {@link BinaryComparator}.
+ * A comparator which compares against a specified byte array, but only compares specific portion of
+ * the byte array. For the rest it is similar to {@link BinaryComparator}.
  */
 @InterfaceAudience.Public
 @SuppressWarnings("ComparableType")
 public class BinaryComponentComparator extends ByteArrayComparable {
-  private int offset; //offset of component from beginning.
+  private int offset; // offset of component from beginning.
 
   /**
    * Constructor
-   *
    * @param value  value of the component
    * @param offset offset of the component from begining
    */
@@ -55,20 +51,19 @@ public class BinaryComponentComparator extends ByteArrayComparable {
   @Override
   public int compareTo(byte[] value, int offset, int length) {
     return Bytes.compareTo(this.value, 0, this.value.length, value, offset + this.offset,
-        this.value.length);
+      this.value.length);
   }
 
   @Override
   public boolean equals(Object other) {
-    if (other == this){
+    if (other == this) {
       return true;
     }
-    if (!(other instanceof BinaryComponentComparator)){
+    if (!(other instanceof BinaryComponentComparator)) {
       return false;
     }
-    BinaryComponentComparator bcc = (BinaryComponentComparator)other;
-    return offset == bcc.offset &&
-         (compareTo(bcc.value) == 0);
+    BinaryComponentComparator bcc = (BinaryComponentComparator) other;
+    return offset == bcc.offset && (compareTo(bcc.value) == 0);
   }
 
   @Override
@@ -84,7 +79,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryComponentComparator.Builder builder =
-        ComparatorProtos.BinaryComponentComparator.newBuilder();
+      ComparatorProtos.BinaryComponentComparator.newBuilder();
     builder.setValue(ByteString.copyFrom(this.value));
     builder.setOffset(this.offset);
     return builder.build().toByteArray();
@@ -97,7 +92,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
    * @see #toByteArray
    */
   public static BinaryComponentComparator parseFrom(final byte[] pbBytes)
-      throws DeserializationException {
+    throws DeserializationException {
     ComparatorProtos.BinaryComponentComparator proto;
     try {
       proto = ComparatorProtos.BinaryComponentComparator.parseFrom(pbBytes);
@@ -109,15 +104,15 @@ public class BinaryComponentComparator extends ByteArrayComparable {
 
   /**
    * @param other paramemter to compare against
-   * @return true if and only if the fields of the comparator that are
-   *         serialized are equal to the corresponding fields in other. Used for testing.
+   * @return true if and only if the fields of the comparator that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this){
+    if (other == this) {
       return true;
     }
-    if (!(other instanceof BinaryComponentComparator)){
+    if (!(other instanceof BinaryComponentComparator)) {
       return false;
     }
     return super.areSerializedFieldsEqual(other);

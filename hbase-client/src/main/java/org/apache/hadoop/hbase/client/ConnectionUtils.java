@@ -98,22 +98,22 @@ public final class ConnectionUtils {
 
   /**
    * @param conn The connection for which to replace the generator.
-   * @param cnm Replaces the nonce generator used, for testing.
+   * @param cnm  Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
   public static NonceGenerator injectNonceGeneratorForTesting(ClusterConnection conn,
-      NonceGenerator cnm) {
+    NonceGenerator cnm) {
     return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
   }
 
   /**
    * Changes the configuration to set the number of retries needed when using Connection internally,
    * e.g. for updating catalog tables, etc. Call this method before we create any Connections.
-   * @param c The Configuration instance to set the retries into.
+   * @param c   The Configuration instance to set the retries into.
    * @param log Used to log what we set in here.
    */
   public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
-      final Logger log) {
+    final Logger log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -381,7 +381,7 @@ public final class ConnectionUtils {
   }
 
   static void updateResultsMetrics(ScanMetrics scanMetrics, Result[] rrs,
-      boolean isRegionServerRemote) {
+    boolean isRegionServerRemote) {
     if (scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
@@ -424,7 +424,7 @@ public final class ConnectionUtils {
    * increase the hedge read related metrics.
    */
   private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture,
-      Optional<MetricsConnection> metrics) {
+    Optional<MetricsConnection> metrics) {
     addListener(srcFuture, (r, e) -> {
       if (e != null) {
         dstFuture.completeExceptionally(e);
@@ -443,8 +443,8 @@ public final class ConnectionUtils {
   }
 
   private static <T> void sendRequestsToSecondaryReplicas(
-      Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
-      CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
+    Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
+    CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
     if (future.isDone()) {
       // do not send requests to secondary replicas if the future is done, i.e, the primary request
       // has already been finished.
@@ -458,9 +458,9 @@ public final class ConnectionUtils {
   }
 
   static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
-      TableName tableName, Query query, byte[] row, RegionLocateType locateType,
-      Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
-      long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
+    TableName tableName, Query query, byte[] row, RegionLocateType locateType,
+    Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
+    long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
     if (query.getConsistency() != Consistency.TIMELINE) {
       return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
@@ -480,8 +480,8 @@ public final class ConnectionUtils {
       (locs, error) -> {
         if (error != null) {
           LOG.warn(
-            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
-              " give up timeline consistent read",
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}"
+              + " give up timeline consistent read",
             tableName, Bytes.toStringBinary(row), locateType, error);
           return;
         }
@@ -536,7 +536,7 @@ public final class ConnectionUtils {
    * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
    * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
    * </ol>
-   * @param priority the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
+   * @param priority  the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
    * @param tableName the table we operate on
    */
   static int calcPriority(int priority, TableName tableName) {
@@ -556,8 +556,8 @@ public final class ConnectionUtils {
   }
 
   static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cacheRef,
-      AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
-      Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
+    AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
+    Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
     for (;;) {
       if (!reload) {
         T value = cacheRef.get();
@@ -600,7 +600,7 @@ public final class ConnectionUtils {
   }
 
   static void updateStats(Optional<ServerStatisticTracker> optStats,
-      Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
+    Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
     if (!optStats.isPresent() && !optMetrics.isPresent()) {
       // ServerStatisticTracker and MetricsConnection are both not present, just return
       return;

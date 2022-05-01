@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,17 +23,13 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Data structure to hold RegionInfo and the address for the hosting
- * HRegionServer.  Immutable.  Comparable, but we compare the 'location' only:
- * i.e. the hostname and port, and *not* the regioninfo.  This means two
- * instances are the same if they refer to the same 'location' (the same
- * hostname and port), though they may be carrying different regions.
- *
- * On a big cluster, each client will have thousands of instances of this object, often
- *  100 000 of them if not million. It's important to keep the object size as small
- *  as possible.
- *
- * <br>This interface has been marked InterfaceAudience.Public in 0.96 and 0.98.
+ * Data structure to hold RegionInfo and the address for the hosting HRegionServer. Immutable.
+ * Comparable, but we compare the 'location' only: i.e. the hostname and port, and *not* the
+ * regioninfo. This means two instances are the same if they refer to the same 'location' (the same
+ * hostname and port), though they may be carrying different regions. On a big cluster, each client
+ * will have thousands of instances of this object, often 100 000 of them if not million. It's
+ * important to keep the object size as small as possible. <br>
+ * This interface has been marked InterfaceAudience.Public in 0.96 and 0.98.
  */
 @InterfaceAudience.Public
 public class HRegionLocation implements Comparable<HRegionLocation> {
@@ -58,7 +53,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   @Override
   public String toString() {
     return "region=" + (this.regionInfo == null ? "null" : this.regionInfo.getRegionNameAsString())
-        + ", hostname=" + this.serverName + ", seqNum=" + seqNum;
+      + ", hostname=" + this.serverName + ", seqNum=" + seqNum;
   }
 
   /**
@@ -75,7 +70,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     if (!(o instanceof HRegionLocation)) {
       return false;
     }
-    return this.compareTo((HRegionLocation)o) == 0;
+    return this.compareTo((HRegionLocation) o) == 0;
   }
 
   /**
@@ -87,19 +82,18 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   *
    * @return Immutable HRegionInfo
    * @deprecated Since 2.0.0. Will remove in 3.0.0. Use {@link #getRegion()}} instead.
    */
   @Deprecated
-  public HRegionInfo getRegionInfo(){
+  public HRegionInfo getRegionInfo() {
     return regionInfo == null ? null : new ImmutableHRegionInfo(regionInfo);
   }
 
   /**
-   * @return regionInfo
+   * n
    */
-  public RegionInfo getRegion(){
+  public RegionInfo getRegion() {
     return regionInfo;
   }
 
@@ -116,8 +110,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   * @return String made of hostname and port formatted as
-   * per {@link Addressing#createHostAndPortStr(String, int)}
+   * @return String made of hostname and port formatted as per
+   *         {@link Addressing#createHostAndPortStr(String, int)}
    */
   public String getHostnamePort() {
     return Addressing.createHostAndPortStr(this.getHostname(), this.getPort());

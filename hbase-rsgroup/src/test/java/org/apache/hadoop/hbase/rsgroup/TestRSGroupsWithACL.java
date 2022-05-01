@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -51,15 +50,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Performs authorization checks for rsgroup operations, according to different
- * levels of authorized users.
+ * Performs authorization checks for rsgroup operations, according to different levels of authorized
+ * users.
  */
-@Category({SecurityTests.class, MediumTests.class})
-public class TestRSGroupsWithACL extends SecureTestUtil{
+@Category({ SecurityTests.class, MediumTests.class })
+public class TestRSGroupsWithACL extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsWithACL.class);
+    HBaseClassTestRule.forClass(TestRSGroupsWithACL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsWithACL.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
@@ -100,8 +99,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        RSGroupBasedLoadBalancer.class.getName());
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
     // Enable security
     enableSecurity(conf);
     // Verify enableSecurity sets up what we require
@@ -112,11 +110,11 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     TEST_UTIL.startMiniCluster();
 
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    TEST_UTIL.waitFor(60000, (Predicate<Exception>) () ->
-        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+    TEST_UTIL.waitFor(60000, (Predicate<Exception>) () -> master.isInitialized()
+      && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
 
-    rsGroupAdminEndpoint = (RSGroupAdminEndpoint) TEST_UTIL.getMiniHBaseCluster().getMaster().
-        getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
+    rsGroupAdminEndpoint = (RSGroupAdminEndpoint) TEST_UTIL.getMiniHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
     TEST_UTIL.waitUntilAllRegionsAssigned(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
@@ -132,13 +130,13 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
 
     USER_GROUP_ADMIN =
-        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+      User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
     USER_GROUP_CREATE =
-        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+      User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
-        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+      User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
-        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+      User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
@@ -150,31 +148,21 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     cfd.setMaxVersions(100);
     tableBuilder.setColumnFamily(cfd.build());
     tableBuilder.setValue(TableDescriptorBuilder.OWNER, USER_OWNER.getShortName());
-    createTable(TEST_UTIL, tableBuilder.build(),
-        new byte[][] { Bytes.toBytes("s") });
+    createTable(TEST_UTIL, tableBuilder.build(), new byte[][] { Bytes.toBytes("s") });
 
     // Set up initial grants
-    grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
-        Permission.Action.ADMIN,
-        Permission.Action.CREATE,
-        Permission.Action.READ,
-        Permission.Action.WRITE);
+    grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(), Permission.Action.ADMIN,
+      Permission.Action.CREATE, Permission.Action.READ, Permission.Action.WRITE);
 
-    grantOnTable(TEST_UTIL, USER_RW.getShortName(),
-        TEST_TABLE, TEST_FAMILY, null,
-        Permission.Action.READ,
-        Permission.Action.WRITE);
+    grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+      Permission.Action.READ, Permission.Action.WRITE);
 
     // USER_CREATE is USER_RW plus CREATE permissions
-    grantOnTable(TEST_UTIL, USER_CREATE.getShortName(),
-        TEST_TABLE, null, null,
-        Permission.Action.CREATE,
-        Permission.Action.READ,
-        Permission.Action.WRITE);
+    grantOnTable(TEST_UTIL, USER_CREATE.getShortName(), TEST_TABLE, null, null,
+      Permission.Action.CREATE, Permission.Action.READ, Permission.Action.WRITE);
 
-    grantOnTable(TEST_UTIL, USER_RO.getShortName(),
-        TEST_TABLE, TEST_FAMILY, null,
-        Permission.Action.READ);
+    grantOnTable(TEST_UTIL, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+      Permission.Action.READ);
 
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
@@ -183,8 +171,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
 
     assertEquals(4, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     try {
-      assertEquals(4, AccessControlClient.getUserPermissions(systemUserConnection,
-          TEST_TABLE.toString()).size());
+      assertEquals(4,
+        AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString()).size());
     } catch (AssertionError e) {
       fail(e.getMessage());
     } catch (Throwable e) {
@@ -219,8 +207,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
       coprocessors += "," + currentCoprocessors;
     }
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, coprocessors);
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        RSGroupBasedLoadBalancer.class.getName());
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
   }
 
   @Test
@@ -231,8 +218,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -243,8 +230,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -255,8 +242,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -267,8 +254,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -279,8 +266,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -291,8 +278,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -303,8 +290,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -315,8 +302,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -327,8 +314,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -339,8 +326,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -351,7 +338,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
-      USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 }

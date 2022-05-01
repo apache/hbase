@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -66,6 +67,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -77,7 +79,7 @@ public class TestLoadIncrementalHFiles {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLoadIncrementalHFiles.class);
+    HBaseClassTestRule.forClass(TestLoadIncrementalHFiles.class);
 
   @Rule
   public TestName tn = new TestName();
@@ -90,7 +92,7 @@ public class TestLoadIncrementalHFiles {
   static final int MAX_FILES_PER_REGION_PER_FAMILY = 4;
 
   private static final byte[][] SPLIT_KEYS =
-      new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
+    new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
 
   static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -120,7 +122,7 @@ public class TestLoadIncrementalHFiles {
   public void testSimpleLoadWithMap() throws Exception {
     runTest("testSimpleLoadWithMap", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
+        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
       true);
   }
 
@@ -131,16 +133,16 @@ public class TestLoadIncrementalHFiles {
   public void testSimpleLoad() throws Exception {
     runTest("testSimpleLoad", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, });
+        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, });
   }
 
   @Test
   public void testSimpleLoadWithFileCopy() throws Exception {
     String testName = tn.getMethodName();
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
-    runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE),
-        false, null, new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-          new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
+    runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE), false, null,
+      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, },
       false, true, 2);
   }
 
@@ -151,7 +153,7 @@ public class TestLoadIncrementalHFiles {
   public void testRegionCrossingLoad() throws Exception {
     runTest("testRegionCrossingLoad", BloomType.NONE,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -161,7 +163,7 @@ public class TestLoadIncrementalHFiles {
   public void testRegionCrossingRowBloom() throws Exception {
     runTest("testRegionCrossingLoadRowBloom", BloomType.ROW,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -171,7 +173,7 @@ public class TestLoadIncrementalHFiles {
   public void testRegionCrossingRowColBloom() throws Exception {
     runTest("testRegionCrossingLoadRowColBloom", BloomType.ROWCOL,
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -182,9 +184,9 @@ public class TestLoadIncrementalHFiles {
   public void testSimpleHFileSplit() throws Exception {
     runTest("testHFileSplit", BloomType.NONE,
       new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
-          Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
+        Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("lll") },
-          new byte[][] { Bytes.toBytes("mmm"), Bytes.toBytes("zzz") }, });
+        new byte[][] { Bytes.toBytes("mmm"), Bytes.toBytes("zzz") }, });
   }
 
   /**
@@ -218,46 +220,46 @@ public class TestLoadIncrementalHFiles {
   public void testSplitALot() throws Exception {
     runTest("testSplitALot", BloomType.NONE,
       new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"), Bytes.toBytes("ccc"),
-          Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"), Bytes.toBytes("ggg"),
-          Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
-          Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
-          Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
-          Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), },
+        Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"), Bytes.toBytes("ggg"),
+        Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
+        Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+        Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
+        Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("zzz") }, });
   }
 
   private void testRegionCrossingHFileSplit(BloomType bloomType) throws Exception {
     runTest("testHFileSplit" + bloomType + "Bloom", bloomType,
       new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
-          Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
+        Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
+        new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
   }
 
   private TableDescriptor buildHTD(TableName tableName, BloomType bloomType) {
     return TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
-        .build();
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
+      .build();
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges)
-      throws Exception {
+    throws Exception {
     runTest(testName, bloomType, null, hfileRanges);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges, boolean useMap)
-      throws Exception {
+    throws Exception {
     runTest(testName, bloomType, null, hfileRanges, useMap);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges) throws Exception {
+    byte[][][] hfileRanges) throws Exception {
     runTest(testName, bloomType, tableSplitKeys, hfileRanges, false);
   }
 
   private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap) throws Exception {
+    byte[][][] hfileRanges, boolean useMap) throws Exception {
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
     final boolean preCreateTable = tableSplitKeys != null;
 
@@ -266,44 +268,40 @@ public class TestLoadIncrementalHFiles {
     runTest(testName, TABLE_WITHOUT_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, 2);
 
-
-    /* Run the test bulkloading the table from a depth of 3
-      directory structure is now
-      baseDirectory
-          -- regionDir
-            -- familyDir
-              -- storeFileDir
-    */
+    /*
+     * Run the test bulkloading the table from a depth of 3 directory structure is now baseDirectory
+     * -- regionDir -- familyDir -- storeFileDir
+     */
     if (preCreateTable) {
-      runTest(testName + 2, TABLE_WITHOUT_NS, bloomType, true, tableSplitKeys, hfileRanges,
-          false, 3);
+      runTest(testName + 2, TABLE_WITHOUT_NS, bloomType, true, tableSplitKeys, hfileRanges, false,
+        3);
     }
 
     // Run the test bulkloading the table to the specified namespace
     final TableName TABLE_WITH_NS = TableName.valueOf(Bytes.toBytes(NAMESPACE), TABLE_NAME);
-    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, 2);
+    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges, useMap,
+      2);
   }
 
   private void runTest(String testName, TableName tableName, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges,
-      boolean useMap, int depth) throws Exception {
+    boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
+    int depth) throws Exception {
     TableDescriptor htd = buildHTD(tableName, bloomType);
     runTest(testName, htd, preCreateTable, tableSplitKeys, hfileRanges, useMap, false, depth);
   }
 
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor) throws Exception {
+    byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
+    byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
+    int factor) throws Exception {
     return loadHFiles(testName, htd, util, fam, qual, preCreateTable, tableSplitKeys, hfileRanges,
-        useMap, deleteFile, copyFiles, initRowCount, factor, 2);
+      useMap, deleteFile, copyFiles, initRowCount, factor, 2);
   }
 
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor, int depth) throws Exception {
+    byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
+    byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
+    int factor, int depth) throws Exception {
     Path baseDirectory = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
     baseDirectory = baseDirectory.makeQualified(fs.getUri(), fs.getWorkingDirectory());
@@ -385,9 +383,9 @@ public class TestLoadIncrementalHFiles {
     return expectedRows;
   }
 
-  private void runTest(String testName, TableDescriptor htd,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
-      boolean copyFiles, int depth) throws Exception {
+  private void runTest(String testName, TableDescriptor htd, boolean preCreateTable,
+    byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
+    throws Exception {
     loadHFiles(testName, htd, util, FAMILY, QUALIFIER, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, true, copyFiles, 0, 1000, depth);
 
@@ -420,7 +418,7 @@ public class TestLoadIncrementalHFiles {
     Path familyDir = new Path(dir, Bytes.toString(FAMILY));
     // table has these split points
     byte[][] tableSplitKeys = new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"),
-        Bytes.toBytes("jjj"), Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), };
+      Bytes.toBytes("jjj"), Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), };
 
     // creating an hfile that has values that span the split points.
     byte[] from = Bytes.toBytes("ddd");
@@ -455,16 +453,16 @@ public class TestLoadIncrementalHFiles {
   public void testNonexistentColumnFamilyLoad() throws Exception {
     String testName = tn.getMethodName();
     byte[][][] hFileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
-            new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, };
+      new byte[][][] { new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
+        new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ooo") }, };
 
     byte[] TABLE = Bytes.toBytes("mytable_" + testName);
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder
-            .of(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT))))
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .of(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT))))
+      .build();
 
     try {
       runTest(testName, htd, true, SPLIT_KEYS, hFileRanges, false, false, 2);
@@ -474,8 +472,8 @@ public class TestLoadIncrementalHFiles {
       // further check whether the exception message is correct
       String errMsg = e.getMessage();
       assertTrue(
-        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY +
-            "], current message: [" + errMsg + "]",
+        "Incorrect exception message, expected message: [" + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY
+          + "], current message: [" + errMsg + "]",
         errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
     }
   }
@@ -590,12 +588,12 @@ public class TestLoadIncrementalHFiles {
   }
 
   private void testSplitStoreFileWithDifferentEncoding(DataBlockEncoding bulkloadEncoding,
-      DataBlockEncoding cfEncoding) throws IOException {
+    DataBlockEncoding cfEncoding) throws IOException {
     Path dir = util.getDataTestDirOnTestFS("testSplitHFileWithDifferentEncoding");
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     ColumnFamilyDescriptor familyDesc =
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setDataBlockEncoding(cfEncoding).build();
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setDataBlockEncoding(cfEncoding).build();
     HFileTestUtil.createHFileWithDataBlockEncoding(util.getConfiguration(), fs, testIn,
       bulkloadEncoding, FAMILY, QUALIFIER, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
@@ -716,7 +714,7 @@ public class TestLoadIncrementalHFiles {
       fail("Bulk loading too many files should fail");
     } catch (IOException ie) {
       assertTrue(ie.getMessage()
-          .contains("Trying to load more than " + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
+        .contains("Trying to load more than " + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
     }
   }
 
@@ -777,7 +775,7 @@ public class TestLoadIncrementalHFiles {
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration()) {
       @Override
       protected List<LoadQueueItem> tryAtomicRegionLoad(Connection connection, TableName tableName,
-          final byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) throws IOException {
+        final byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) throws IOException {
         attmptedCalls.incrementAndGet();
         return super.tryAtomicRegionLoad(connection, tableName, first, lqis, copyFile);
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,19 +53,18 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestSchemaResource {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSchemaResource.class);
+    HBaseClassTestRule.forClass(TestSchemaResource.class);
 
   private static String TABLE1 = "TestSchemaResource1";
   private static String TABLE2 = "TestSchemaResource2";
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;
@@ -93,12 +92,9 @@ public class TestSchemaResource {
     extraHdr = new BasicHeader(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     testTableSchemaModel = new TestTableSchemaModel();
-    context = JAXBContext.newInstance(
-      ColumnSchemaModel.class,
-      TableSchemaModel.class);
+    context = JAXBContext.newInstance(ColumnSchemaModel.class, TableSchemaModel.class);
   }
 
   @AfterClass
@@ -111,7 +107,7 @@ public class TestSchemaResource {
   public void tearDown() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 
-    for (String table : new String[] {TABLE1, TABLE2}) {
+    for (String table : new String[] { TABLE1, TABLE2 }) {
       TableName t = TableName.valueOf(table);
       if (admin.tableExists(t)) {
         admin.disableTable(t);
@@ -128,8 +124,7 @@ public class TestSchemaResource {
     return Bytes.toBytes(writer.toString());
   }
 
-  private static TableSchemaModel fromXML(byte[] content)
-      throws JAXBException {
+  private static TableSchemaModel fromXML(byte[] content) throws JAXBException {
     return (TableSchemaModel) context.createUnmarshaller()
       .unmarshal(new ByteArrayInputStream(content));
   }
@@ -142,7 +137,7 @@ public class TestSchemaResource {
 
     Admin admin = TEST_UTIL.getAdmin();
     assertFalse("Table " + TABLE1 + " should not exist",
-        admin.tableExists(TableName.valueOf(TABLE1)));
+      admin.tableExists(TableName.valueOf(TABLE1)));
 
     // create the table
     model = testTableSchemaModel.buildTestModel(TABLE1);
@@ -154,8 +149,8 @@ public class TestSchemaResource {
     }
 
     response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model), extraHdr);
-    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"),
-       201, response.getCode());
+    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"), 201,
+      response.getCode());
 
     // recall the same put operation but in read-only mode
     conf.set("hbase.rest.readonly", "true");
@@ -213,15 +208,15 @@ public class TestSchemaResource {
       response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       assertEquals(400, response.getCode());
     }
-    response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput(), extraHdr);
-    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"),
-        201, response.getCode());
+    response =
+      client.put(schemaPath, Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput(), extraHdr);
+    assertEquals("put failed with csrf " + (csrfEnabled ? "enabled" : "disabled"), 201,
+      response.getCode());
 
     // recall the same put operation but in read-only mode
     conf.set("hbase.rest.readonly", "true");
-    response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput(), extraHdr);
+    response =
+      client.put(schemaPath, Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput(), extraHdr);
     assertNotNull(extraHdr);
     assertEquals(403, response.getCode());
 

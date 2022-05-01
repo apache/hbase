@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,19 +76,19 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
 /**
- * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this
- * class contains lower level tests using callables.
+ * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this class
+ * contains lower level tests using callables.
  */
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestRegionReplicaReplicationEndpointNoMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicaReplicationEndpointNoMaster.class);
+    HBaseClassTestRule.forClass(TestRegionReplicaReplicationEndpointNoMaster.class);
 
   private static final int NB_SERVERS = 2;
-  private static TableName tableName = TableName.valueOf(
-    TestRegionReplicaReplicationEndpointNoMaster.class.getSimpleName());
+  private static TableName tableName =
+    TableName.valueOf(TestRegionReplicaReplicationEndpointNoMaster.class.getSimpleName());
   private static Table table;
   private static final byte[] row = "TestRegionReplicaReplicator".getBytes();
 
@@ -114,15 +114,14 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     } else {
       walCoprocs += "," + WALEditCopro.class.getName();
     }
-    HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-      walCoprocs);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1).
-        numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY, walCoprocs);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
+      .numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
     HTableDescriptor htd = HTU.createTableDescriptor(tableName.getNameAsString());
-    table = HTU.createTable(htd, new byte[][]{f}, null);
+    table = HTU.createTable(htd, new byte[][] { f }, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
       hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
@@ -130,7 +129,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     // mock a secondary region info to open
     hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),
-        hriPrimary.getEndKey(), hriPrimary.isSplit(), hriPrimary.getRegionId(), 1);
+      hriPrimary.getEndKey(), hriPrimary.isSplit(), hriPrimary.getRegionId(), 1);
 
     // No master
     TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
@@ -168,11 +167,11 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-                             RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       // only keep primary region's edits
       if (logKey.getTableName().equals(tableName) && info.getReplicaId() == 0) {
         // Presume type is a WALKeyImpl
-        entries.add(new Entry((WALKeyImpl)logKey, logEdit));
+        entries.add(new Entry((WALKeyImpl) logKey, logEdit));
       }
     }
   }
@@ -182,9 +181,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
+      (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
 
-    //load some data to primary
+    // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
     Assert.assertEquals(1000, entries.size());
@@ -200,19 +199,18 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   }
 
   private void replicateUsingCallable(ClusterConnection connection, Queue<Entry> entries)
-      throws IOException, RuntimeException {
+    throws IOException, RuntimeException {
     Entry entry;
     while ((entry = entries.poll()) != null) {
       byte[] row = CellUtil.cloneRow(entry.getEdit().getCells().get(0));
       RegionLocations locations = connection.locateRegion(tableName, row, true, true);
       RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
-        RpcControllerFactory.instantiate(connection.getConfiguration()),
-        table.getName(), locations.getRegionLocation(1),
-        locations.getRegionLocation(1).getRegionInfo(), row, Lists.newArrayList(entry),
-        new AtomicLong());
+        RpcControllerFactory.instantiate(connection.getConfiguration()), table.getName(),
+        locations.getRegionLocation(1), locations.getRegionLocation(1).getRegionInfo(), row,
+        Lists.newArrayList(entry), new AtomicLong());
 
-      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(
-        connection.getConfiguration());
+      RpcRetryingCallerFactory factory =
+        RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
       factory.<ReplicateWALEntryResponse> newCaller().callWithRetries(callable, 10000);
     }
   }
@@ -223,8 +221,8 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // the region is moved to another location.It tests handling of RME.
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
-    //load some data to primary
+      (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
+    // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
     Assert.assertEquals(1000, entries.size());
@@ -257,7 +255,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
+      (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     RegionReplicaReplicationEndpoint replicator = new RegionReplicaReplicationEndpoint();
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
@@ -267,14 +265,14 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     replicator.init(context);
     replicator.startAsync();
 
-    //load some data to primary
+    // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
     Assert.assertEquals(1000, entries.size());
     // replay the edits to the secondary using replay callable
     final String fakeWalGroupId = "fakeWALGroup";
-    replicator.replicate(new ReplicateContext().setEntries(Lists.newArrayList(entries))
-        .setWalGroupId(fakeWalGroupId));
+    replicator.replicate(
+      new ReplicateContext().setEntries(Lists.newArrayList(entries)).setWalGroupId(fakeWalGroupId));
 
     Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);

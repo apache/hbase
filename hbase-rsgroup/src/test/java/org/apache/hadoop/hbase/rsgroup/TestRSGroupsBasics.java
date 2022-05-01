@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -216,7 +216,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     // move region servers from default group to new group
     final int serverCountToMoveToNewGroup = 3;
     final RSGroupInfo newGroup =
-        addGroup(getGroupName(name.getMethodName()), serverCountToMoveToNewGroup);
+      addGroup(getGroupName(name.getMethodName()), serverCountToMoveToNewGroup);
 
     // get the existing dead servers
     NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
@@ -235,8 +235,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS &&
-          !master.getServerManager().areDeadServersInProgress();
+        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS
+          && !master.getServerManager().areDeadServersInProgress();
       }
     });
 
@@ -264,8 +264,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     // move region servers from default group to "dead server" group
     final int serverCountToMoveToDeadServerGroup = 1;
-    RSGroupInfo deadServerGroup =
-        addGroup("deadServerGroup", serverCountToMoveToDeadServerGroup);
+    RSGroupInfo deadServerGroup = addGroup("deadServerGroup", serverCountToMoveToDeadServerGroup);
 
     // stop 1 region server in "dead server" group
     ServerName serverToStop = getServerName(deadServerGroup.getServers().iterator().next());
@@ -284,7 +283,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     });
 
     Set<Address> ServersInDeadServerGroup =
-        rsGroupAdmin.getRSGroupInfo(deadServerGroup.getName()).getServers();
+      rsGroupAdmin.getRSGroupInfo(deadServerGroup.getName()).getServers();
     assertEquals(serverCountToMoveToDeadServerGroup, ServersInDeadServerGroup.size());
     assertTrue(ServersInDeadServerGroup.contains(serverToStop.getAddress()));
   }

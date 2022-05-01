@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -82,7 +82,7 @@ public abstract class TestReplicationKillRS extends TestReplicationBase {
         while (true) {
           if (i == NB_RETRIES - 1) {
             fail("Waited too much time for queueFailover replication. " + "Waited "
-                + (EnvironmentEdgeManager.currentTime() - start) + "ms.");
+              + (EnvironmentEdgeManager.currentTime() - start) + "ms.");
           }
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {
@@ -107,7 +107,7 @@ public abstract class TestReplicationKillRS extends TestReplicationBase {
   }
 
   private static Thread killARegionServer(final HBaseTestingUtility utility, final long timeout,
-      final int rs) {
+    final int rs) {
     Thread killer = new Thread() {
       @Override
       public void run() {

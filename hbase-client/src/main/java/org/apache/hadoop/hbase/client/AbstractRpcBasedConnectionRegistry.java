@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -222,7 +222,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   Set<ServerName> getParsedServers() {
     return addr2Stub.keySet();
   }
@@ -244,8 +244,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
         .<GetMetaRegionLocationsResponse> call(
           (c, s, d) -> s.getMetaRegionLocations(c,
             GetMetaRegionLocationsRequest.getDefaultInstance(), d),
-          r -> r.getMetaLocationsCount() != 0,
-        "getMetaLocationsCount")
+          r -> r.getMetaLocationsCount() != 0, "getMetaLocationsCount")
         .thenApply(AbstractRpcBasedConnectionRegistry::transformMetaRegionLocations),
       getClass().getSimpleName() + ".getMetaRegionLocations");
   }
@@ -265,7 +264,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   public CompletableFuture<ServerName> getActiveMaster() {
     return tracedFuture(
       () -> this
-        .<GetActiveMasterResponse>call(
+        .<GetActiveMasterResponse> call(
           (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),

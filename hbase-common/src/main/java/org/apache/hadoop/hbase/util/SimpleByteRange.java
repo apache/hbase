@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *  A read only version of the {@link ByteRange}.
+ * A read only version of the {@link ByteRange}.
  */
 @InterfaceAudience.Public
 public class SimpleByteRange extends AbstractByteRange {
@@ -41,9 +41,8 @@ public class SimpleByteRange extends AbstractByteRange {
 
   /**
    * Create a new {@code ByteRange} over the provided {@code bytes}.
-   * @param bytes The array to wrap.
-   * @param offset The offset into {@code bytes} considered the beginning
-   *          of this range.
+   * @param bytes  The array to wrap.
+   * @param offset The offset into {@code bytes} considered the beginning of this range.
    * @param length The length of this range.
    */
   public SimpleByteRange(byte[] bytes, int offset, int length) {
@@ -116,8 +115,7 @@ public class SimpleByteRange extends AbstractByteRange {
 
   @Override
   public ByteRange shallowCopySubRange(int innerOffset, int copyLength) {
-    SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset,
-        copyLength);
+    SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset, copyLength);
     if (isHashCached()) {
       clone.hash = hash;
     }
@@ -126,7 +124,7 @@ public class SimpleByteRange extends AbstractByteRange {
 
   @Override
   public boolean equals(Object thatObject) {
-    if (thatObject == null){
+    if (thatObject == null) {
       return false;
     }
     if (this == thatObject) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,23 +49,22 @@ import org.junit.rules.ExpectedException;
 /**
  * Tests for global coprocessor loading configuration
  */
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestCoprocessorConfiguration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorConfiguration.class);
+    HBaseClassTestRule.forClass(TestCoprocessorConfiguration.class);
 
-  @Rule public ExpectedException thrown = ExpectedException.none();
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   private static final Configuration CONF = HBaseConfiguration.create();
   static {
-    CONF.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      SystemCoprocessor.class.getName());
+    CONF.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, SystemCoprocessor.class.getName());
     CONF.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       SystemCoprocessor.class.getName());
-    CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      SystemCoprocessor.class.getName());
+    CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, SystemCoprocessor.class.getName());
   }
   private static final TableName TABLENAME = TableName.valueOf("TestCoprocessorConfiguration");
   private static final HRegionInfo REGIONINFO = new HRegionInfo(TABLENAME);
@@ -83,15 +82,16 @@ public class TestCoprocessorConfiguration {
   private static final AtomicBoolean systemCoprocessorLoaded = new AtomicBoolean();
   private static final AtomicBoolean tableCoprocessorLoaded = new AtomicBoolean();
 
-  public static class SystemCoprocessor implements MasterCoprocessor, RegionCoprocessor,
-      RegionServerCoprocessor {
+  public static class SystemCoprocessor
+    implements MasterCoprocessor, RegionCoprocessor, RegionServerCoprocessor {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       systemCoprocessorLoaded.set(true);
     }
 
     @Override
-    public void stop(CoprocessorEnvironment env) throws IOException { }
+    public void stop(CoprocessorEnvironment env) throws IOException {
+    }
   }
 
   public static class TableCoprocessor implements RegionCoprocessor {
@@ -101,7 +101,8 @@ public class TestCoprocessorConfiguration {
     }
 
     @Override
-    public void stop(CoprocessorEnvironment env) throws IOException { }
+    public void stop(CoprocessorEnvironment env) throws IOException {
+    }
   }
 
   @Test
@@ -115,10 +116,11 @@ public class TestCoprocessorConfiguration {
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
+      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
     assertEquals("Table coprocessors loading default was not honored",
-        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
-        CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED, tableCoprocessorLoaded.get());
+      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED
+        && CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED,
+      tableCoprocessorLoaded.get());
   }
 
   @Test
@@ -128,7 +130,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new RegionServerCoprocessorHost(rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
+      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test
@@ -138,7 +140,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new MasterCoprocessorHost(masterServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
+      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test
@@ -152,10 +154,8 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertFalse("System coprocessors should not have been loaded",
-      systemCoprocessorLoaded.get());
-    assertFalse("Table coprocessors should not have been loaded",
-      tableCoprocessorLoaded.get());
+    assertFalse("System coprocessors should not have been loaded", systemCoprocessorLoaded.get());
+    assertFalse("Table coprocessors should not have been loaded", tableCoprocessorLoaded.get());
   }
 
   @Test
@@ -170,15 +170,13 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue("System coprocessors should have been loaded",
-      systemCoprocessorLoaded.get());
-    assertFalse("Table coprocessors should not have been loaded",
-      tableCoprocessorLoaded.get());
+    assertTrue("System coprocessors should have been loaded", systemCoprocessorLoaded.get());
+    assertFalse("Table coprocessors should not have been loaded", tableCoprocessorLoaded.get());
   }
 
   /**
-   * Rough test that Coprocessor Environment is Read-Only.
-   * Just check a random CP and see that it returns a read-only config.
+   * Rough test that Coprocessor Environment is Read-Only. Just check a random CP and see that it
+   * returns a read-only config.
    */
   @Test
   public void testReadOnlyConfiguration() throws Exception {
@@ -189,7 +187,7 @@ public class TestCoprocessorConfiguration {
     RegionServerServices rsServices = mock(RegionServerServices.class);
     RegionCoprocessorHost rcp = new RegionCoprocessorHost(region, rsServices, conf);
     boolean found = false;
-    for (String cpStr: rcp.getCoprocessors()) {
+    for (String cpStr : rcp.getCoprocessors()) {
       CoprocessorEnvironment cpenv = rcp.findCoprocessorEnvironment(cpStr);
       if (cpenv != null) {
         found = true;

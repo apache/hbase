@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,12 +22,12 @@ import com.google.protobuf.RpcChannel;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base interface which provides clients with an RPC connection to
- * call coprocessor endpoint {@link com.google.protobuf.Service}s.
- * Note that clients should not use this class directly, except through
- * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
+ * Base interface which provides clients with an RPC connection to call coprocessor endpoint
+ * {@link com.google.protobuf.Service}s. Note that clients should not use this class directly,
+ * except through {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public
-public interface CoprocessorRpcChannel extends RpcChannel, BlockingRpcChannel {}
+public interface CoprocessorRpcChannel extends RpcChannel, BlockingRpcChannel {
+}
 // This Interface is part of our public, client-facing API!!!
 // This belongs in client package but it is exposed in our public API so we cannot relocate.

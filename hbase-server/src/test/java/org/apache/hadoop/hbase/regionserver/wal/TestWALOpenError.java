@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -52,7 +50,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test WAL Init ERROR
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALOpenError {
 
   @ClassRule
@@ -89,8 +87,8 @@ public class TestWALOpenError {
     try {
       wals.close();
     } catch (IOException exception) {
-      LOG.warn("Encountered exception while closing wal factory. If you have other errors, this" +
-        " may be the cause. Message: " + exception);
+      LOG.warn("Encountered exception while closing wal factory. If you have other errors, this"
+        + " may be the cause. Message: " + exception);
       LOG.debug("Exception details for failure to close wal factory.", exception);
     }
     FileStatus[] entries = fs.listStatus(new Path("/"));
@@ -115,7 +113,6 @@ public class TestWALOpenError {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
-
 
   private static MyFSLog myFSLogCreated;
   private static boolean throwExceptionWhenCloseFSLogClose = false;
@@ -149,7 +146,6 @@ public class TestWALOpenError {
     }
     Assert.assertTrue(failedCloseWalException);
   }
-
 
   public static class MyFSWalProvider extends FSHLogProvider {
 

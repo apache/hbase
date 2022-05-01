@@ -15,21 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
+import com.google.protobuf.ByteString;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
-
-import com.google.protobuf.ByteString;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Represents the identity information stored in an HBase authentication token.
@@ -51,8 +48,8 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
     this.username = username;
   }
 
-  public AuthenticationTokenIdentifier(String username, int keyId,
-      long issueDate, long expirationDate) {
+  public AuthenticationTokenIdentifier(String username, int keyId, long issueDate,
+    long expirationDate) {
     this.username = username;
     this.keyId = keyId;
     this.issueDate = issueDate;
@@ -114,15 +111,13 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
 
   public byte[] toBytes() {
     AuthenticationProtos.TokenIdentifier.Builder builder =
-        AuthenticationProtos.TokenIdentifier.newBuilder();
+      AuthenticationProtos.TokenIdentifier.newBuilder();
     builder.setKind(AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN);
     if (username != null) {
       builder.setUsername(ByteString.copyFromUtf8(username));
     }
-    builder.setIssueDate(issueDate)
-        .setExpirationDate(expirationDate)
-        .setKeyId(keyId)
-        .setSequenceNumber(sequenceNumber);
+    builder.setIssueDate(issueDate).setExpirationDate(expirationDate).setKeyId(keyId)
+      .setSequenceNumber(sequenceNumber);
     return builder.build().toByteArray();
   }
 
@@ -143,9 +138,11 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
     ProtobufUtil.mergeFrom(builder, inBytes);
     AuthenticationProtos.TokenIdentifier identifier = builder.build();
     // sanity check on type
-    if (!identifier.hasKind() ||
-        identifier.getKind() != AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN) {
-      throw new IOException("Invalid TokenIdentifier kind from input "+identifier.getKind());
+    if (
+      !identifier.hasKind()
+        || identifier.getKind() != AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN
+    ) {
+      throw new IOException("Invalid TokenIdentifier kind from input " + identifier.getKind());
     }
 
     // copy the field values
@@ -172,26 +169,22 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
       return false;
     }
     if (other instanceof AuthenticationTokenIdentifier) {
-      AuthenticationTokenIdentifier ident = (AuthenticationTokenIdentifier)other;
-      return sequenceNumber == ident.getSequenceNumber()
-          && keyId == ident.getKeyId()
-          && issueDate == ident.getIssueDate()
-          && expirationDate == ident.getExpirationDate()
-          && (username == null ? ident.getUsername() == null :
-              username.equals(ident.getUsername()));
+      AuthenticationTokenIdentifier ident = (AuthenticationTokenIdentifier) other;
+      return sequenceNumber == ident.getSequenceNumber() && keyId == ident.getKeyId()
+        && issueDate == ident.getIssueDate() && expirationDate == ident.getExpirationDate()
+        && (username == null ? ident.getUsername() == null : username.equals(ident.getUsername()));
     }
     return false;
   }
 
   @Override
   public int hashCode() {
-    return (int)sequenceNumber;
+    return (int) sequenceNumber;
   }
 
   @Override
   public String toString() {
-    return "(username=" + username + ", keyId="
-            + keyId + ", issueDate=" + issueDate
-            + ", expirationDate=" + expirationDate + ", sequenceNumber=" + sequenceNumber + ")";
+    return "(username=" + username + ", keyId=" + keyId + ", issueDate=" + issueDate
+      + ", expirationDate=" + expirationDate + ", sequenceNumber=" + sequenceNumber + ")";
   }
 }

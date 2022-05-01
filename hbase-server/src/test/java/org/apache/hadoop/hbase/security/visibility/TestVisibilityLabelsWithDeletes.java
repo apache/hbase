@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   protected Table createTable(byte[] fam) throws IOException {
     TableName tableName = TableName.valueOf(testName.getMethodName());
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build());
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build());
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 
@@ -100,7 +100,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d.addColumns(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
@@ -144,7 +144,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testVisibilityLabelsWithDeleteColumnsWithMultipleVersionsNoTimestamp()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -167,7 +167,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
             Delete d3 = new Delete(row1);
             d3.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d3.addColumns(fam, qual);
             table.delete(d3);
           } catch (Throwable t) {
@@ -193,7 +193,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testVisibilityLabelsWithDeleteColumnsNoMatchVisExpWithMultipleVersionsNoTimestamp()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -215,7 +215,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d.addColumns(fam, qual);
             table.delete(d);
           } catch (Throwable t) {
@@ -246,7 +246,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testVisibilityLabelsWithDeleteFamilyWithMultipleVersionsNoTimestamp()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -268,7 +268,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
             Delete d3 = new Delete(row1);
             d3.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d3.addFamily(fam);
             table.delete(d3);
           } catch (Throwable t) {
@@ -743,7 +743,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testVisibilityLabelsWithDeleteColumnWithSpecificVersionWithPutsReAppearing()
-      throws Exception {
+    throws Exception {
     TableName tableName = createTable(5);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put1 = new Put(Bytes.toBytes("row1"));
@@ -798,7 +798,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testVisibilityLabelsWithDeleteFamilyNoMatchingVisExpWithMultipleVersionsNoTimestamp()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -816,7 +816,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
           Delete d3 = new Delete(row1);
           d3.setCellVisibility(new CellVisibility(
-              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+            "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
           d3.addFamily(fam);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
@@ -911,7 +911,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private Table doPuts(TableName tableName) throws IOException, InterruptedIOException,
-      RetriesExhaustedWithDetailsException, InterruptedException {
+    RetriesExhaustedWithDetailsException, InterruptedException {
     createTable(tableName, 5);
 
     List<Put> puts = new ArrayList<>(5);
@@ -923,7 +923,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual, 124L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
@@ -934,20 +934,20 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual, 126L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual, 127L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     TEST_UTIL.getAdmin().flush(tableName);
     put = new Put(Bytes.toBytes("row2"));
     put.addColumn(fam, qual, 127L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -956,7 +956,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private Table doPutsWithDiffCols(TableName tableName) throws IOException, InterruptedIOException,
-      RetriesExhaustedWithDetailsException, InterruptedException {
+    RetriesExhaustedWithDetailsException, InterruptedException {
     createTable(tableName, 5);
 
     List<Put> puts = new ArrayList<>(5);
@@ -968,7 +968,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual, 124L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
@@ -984,7 +984,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual2, 127L, value);
     put.setCellVisibility(new CellVisibility(
-        "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+      "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
     puts.add(put);
 
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -993,7 +993,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private Table doPutsWithoutVisibility(TableName tableName) throws IOException,
-      InterruptedIOException, RetriesExhaustedWithDetailsException, InterruptedException {
+    InterruptedIOException, RetriesExhaustedWithDetailsException, InterruptedException {
     createTable(tableName, 5);
     List<Put> puts = new ArrayList<>(5);
     Put put = new Put(Bytes.toBytes("row1"));
@@ -1030,7 +1030,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testDeleteColumnWithSpecificTimeStampUsingMultipleVersionsUnMatchingVisExpression()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -1042,7 +1042,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
@@ -1242,7 +1242,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testDeleteColumnWithLatestTimeStampUsingMultipleVersionsAfterCompaction()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPuts(tableName)) {
@@ -1540,7 +1540,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testDeleteFamilyLatestTimeStampWithMulipleVersionsWithoutCellVisibilityInPuts()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     try (Table table = doPutsWithoutVisibility(tableName)) {
@@ -1614,7 +1614,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d.addFamily(fam, 126L);
             table.delete(d);
           } catch (Throwable t) {
@@ -1669,7 +1669,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + SECRET + "&" + TOPSECRET + ")"));
             d.addFamily(fam, 126L);
             table.delete(d);
           } catch (Throwable t) {
@@ -1722,7 +1722,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addFamily(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
@@ -1774,7 +1774,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addFamily(fam, 127L);
             table.delete(d);
           } catch (Throwable t) {
@@ -1886,7 +1886,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 126L);
             table.delete(d);
             d = new Delete(row1);
@@ -1985,7 +1985,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual);
             table.delete(d);
 
@@ -2124,7 +2124,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2178,7 +2178,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")" + "|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")" + "|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2289,7 +2289,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2346,7 +2346,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2394,7 +2394,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
 
   @Test
   public void testDeleteColumnAndDeleteFamilylSpecificTimeStampWithMulipleVersion()
-      throws Exception {
+    throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
     // Do not flush here.
@@ -2457,7 +2457,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addFamily(fam, 124L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2506,7 +2506,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumns(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2558,7 +2558,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(
-                "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
+              "(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET + "&" + SECRET + ")"));
             d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
@@ -2940,7 +2940,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private enum DeleteMark {
-    ROW, FAMILY, FAMILY_VERSION, COLUMN, CELL
+    ROW,
+    FAMILY,
+    FAMILY_VERSION,
+    COLUMN,
+    CELL
   }
 
   private static Delete addDeleteMark(Delete d, DeleteMark mark, long now) {
@@ -2973,7 +2977,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private void testDeleteCellWithoutVisibility(DeleteMark mark)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     setAuths();
     TableName tableName = TableName.valueOf("testDeleteCellWithoutVisibility-" + mark.name());
     createTable(tableName, 5);
@@ -3009,7 +3013,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private void testDeleteCellWithVisibility(DeleteMark mark)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     setAuths();
     TableName tableName = TableName.valueOf("testDeleteCellWithVisibility-" + mark.name());
     createTable(tableName, 5);
@@ -3058,7 +3062,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   private void testDeleteCellWithVisibilityV2(DeleteMark mark)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     setAuths();
     TableName tableName = TableName.valueOf("testDeleteCellWithVisibilityV2-" + mark.name());
     createTable(tableName, 5);

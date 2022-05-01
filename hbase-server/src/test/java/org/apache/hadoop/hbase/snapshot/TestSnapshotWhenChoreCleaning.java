@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
@@ -61,7 +60,7 @@ public class TestSnapshotWhenChoreCleaning {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotWhenChoreCleaning.class);
+    HBaseClassTestRule.forClass(TestSnapshotWhenChoreCleaning.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration CONF = TEST_UTIL.getConfiguration();
@@ -107,15 +106,15 @@ public class TestSnapshotWhenChoreCleaning {
 
   private static void loadDataAndFlush() throws IOException {
     for (int i = 0; i < MAX_SPLIT_KEYS_NUM; i++) {
-      Put put = new Put(integerToBytes(i)).addColumn(FAMILY, QUALIFIER,
-        Bytes.add(VALUE, Bytes.toBytes(i)));
+      Put put =
+        new Put(integerToBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.add(VALUE, Bytes.toBytes(i)));
       TABLE.put(put);
     }
     TEST_UTIL.flush(TABLE_NAME);
   }
 
   private static List<Path> listHFileNames(final FileSystem fs, final Path tableDir)
-      throws IOException {
+    throws IOException {
     final List<Path> hfiles = new ArrayList<>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, (region, family, hfileName) -> {
       hfiles.add(new Path(new Path(new Path(tableDir, region), family), hfileName));
@@ -150,7 +149,7 @@ public class TestSnapshotWhenChoreCleaning {
 
     FileSystem fs = CommonFSUtils.getCurrentFileSystem(CONF);
     List<Path> fileNames =
-        listHFileNames(fs, CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(CONF), TABLE_NAME));
+      listHFileNames(fs, CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(CONF), TABLE_NAME));
     List<FileStatus> files = new ArrayList<>();
     for (Path fileName : fileNames) {
       files.add(fs.getFileStatus(fileName));

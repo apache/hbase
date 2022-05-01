@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,7 +33,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({SmallTests.class,ReplicationTests.class})
+@Category({ SmallTests.class, ReplicationTests.class })
 public class TestReplicationSourceLogQueue {
 
   @ClassRule
@@ -40,8 +41,8 @@ public class TestReplicationSourceLogQueue {
     HBaseClassTestRule.forClass(TestReplicationSourceLogQueue.class);
 
   /*
-    Testing enqueue and dequeuing of wal and check age of oldest wal.
-  */
+   * Testing enqueue and dequeuing of wal and check age of oldest wal.
+   */
   @Test
   public void testEnqueueDequeue() {
     try {
@@ -58,7 +59,7 @@ public class TestReplicationSourceLogQueue {
       ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metrics, source);
       final Path log1 = new Path("log-walgroup-a.8");
       manualEdge.setValue(10);
-      // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
+      // Diff of current time (10) and log-walgroup-a.8 timestamp will be 2.
       logQueue.enqueueLog(log1, walGroupId1);
       assertEquals(2, logQueue.getOldestWalAge());
 

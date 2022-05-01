@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,9 +50,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will
- * randomly try and mutate the cluster to Cprime. If F(Cprime) &lt; F(C) then the
- * new cluster state becomes the plan. It includes costs functions to compute the cost of:</p>
+ * <p>
+ * This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will randomly try and
+ * mutate the cluster to Cprime. If F(Cprime) &lt; F(C) then the new cluster state becomes the plan.
+ * It includes costs functions to compute the cost of:
+ * </p>
  * <ul>
  * <li>Region Load</li>
  * <li>Table Load</li>
@@ -60,44 +62,46 @@ import org.slf4j.LoggerFactory;
  * <li>Memstore Sizes</li>
  * <li>Storefile Sizes</li>
  * </ul>
- *
- *
- * <p>Every cost function returns a number between 0 and 1 inclusive; where 0 is the lowest cost
- * best solution, and 1 is the highest possible cost and the worst solution.  The computed costs are
- * scaled by their respective multipliers:</p>
- *
+ * <p>
+ * Every cost function returns a number between 0 and 1 inclusive; where 0 is the lowest cost best
+ * solution, and 1 is the highest possible cost and the worst solution. The computed costs are
+ * scaled by their respective multipliers:
+ * </p>
  * <ul>
- *   <li>hbase.master.balancer.stochastic.regionLoadCost</li>
- *   <li>hbase.master.balancer.stochastic.moveCost</li>
- *   <li>hbase.master.balancer.stochastic.tableLoadCost</li>
- *   <li>hbase.master.balancer.stochastic.localityCost</li>
- *   <li>hbase.master.balancer.stochastic.memstoreSizeCost</li>
- *   <li>hbase.master.balancer.stochastic.storefileSizeCost</li>
+ * <li>hbase.master.balancer.stochastic.regionLoadCost</li>
+ * <li>hbase.master.balancer.stochastic.moveCost</li>
+ * <li>hbase.master.balancer.stochastic.tableLoadCost</li>
+ * <li>hbase.master.balancer.stochastic.localityCost</li>
+ * <li>hbase.master.balancer.stochastic.memstoreSizeCost</li>
+ * <li>hbase.master.balancer.stochastic.storefileSizeCost</li>
  * </ul>
- *
- * <p>You can also add custom Cost function by setting the the following configuration value:</p>
+ * <p>
+ * You can also add custom Cost function by setting the the following configuration value:
+ * </p>
  * <ul>
- *     <li>hbase.master.balancer.stochastic.additionalCostFunctions</li>
+ * <li>hbase.master.balancer.stochastic.additionalCostFunctions</li>
  * </ul>
- *
- * <p>All custom Cost Functions needs to extends {@link CostFunction}</p>
- *
- * <p>In addition to the above configurations, the balancer can be tuned by the following
- * configuration values:</p>
+ * <p>
+ * All custom Cost Functions needs to extends {@link CostFunction}
+ * </p>
+ * <p>
+ * In addition to the above configurations, the balancer can be tuned by the following configuration
+ * values:
+ * </p>
  * <ul>
- *   <li>hbase.master.balancer.stochastic.maxMoveRegions which
- *   controls what the max number of regions that can be moved in a single invocation of this
- *   balancer.</li>
- *   <li>hbase.master.balancer.stochastic.stepsPerRegion is the coefficient by which the number of
- *   regions is multiplied to try and get the number of times the balancer will
- *   mutate all servers.</li>
- *   <li>hbase.master.balancer.stochastic.maxSteps which controls the maximum number of times that
- *   the balancer will try and mutate all the servers. The balancer will use the minimum of this
- *   value and the above computation.</li>
+ * <li>hbase.master.balancer.stochastic.maxMoveRegions which controls what the max number of regions
+ * that can be moved in a single invocation of this balancer.</li>
+ * <li>hbase.master.balancer.stochastic.stepsPerRegion is the coefficient by which the number of
+ * regions is multiplied to try and get the number of times the balancer will mutate all
+ * servers.</li>
+ * <li>hbase.master.balancer.stochastic.maxSteps which controls the maximum number of times that the
+ * balancer will try and mutate all the servers. The balancer will use the minimum of this value and
+ * the above computation.</li>
  * </ul>
- *
- * <p>This balancer is best used with hbase.master.loadbalance.bytable set to false
- * so that the balancer gets the full picture of all loads on the cluster.</p>
+ * <p>
+ * This balancer is best used with hbase.master.loadbalance.bytable set to false so that the
+ * balancer gets the full picture of all loads on the cluster.
+ * </p>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StochasticLoadBalancer extends BaseLoadBalancer {
@@ -105,26 +109,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
 
   protected static final String STEPS_PER_REGION_KEY =
-      "hbase.master.balancer.stochastic.stepsPerRegion";
+    "hbase.master.balancer.stochastic.stepsPerRegion";
   protected static final int DEFAULT_STEPS_PER_REGION = 800;
-  protected static final String MAX_STEPS_KEY =
-      "hbase.master.balancer.stochastic.maxSteps";
+  protected static final String MAX_STEPS_KEY = "hbase.master.balancer.stochastic.maxSteps";
   protected static final int DEFAULT_MAX_STEPS = 1000000;
-  protected static final String RUN_MAX_STEPS_KEY =
-      "hbase.master.balancer.stochastic.runMaxSteps";
+  protected static final String RUN_MAX_STEPS_KEY = "hbase.master.balancer.stochastic.runMaxSteps";
   protected static final boolean DEFAULT_RUN_MAX_STEPS = false;
   protected static final String MAX_RUNNING_TIME_KEY =
-      "hbase.master.balancer.stochastic.maxRunningTime";
+    "hbase.master.balancer.stochastic.maxRunningTime";
   protected static final long DEFAULT_MAX_RUNNING_TIME = 30 * 1000; // 30 seconds.
   protected static final String KEEP_REGION_LOADS =
-      "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
+    "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
   protected static final int DEFAULT_KEEP_REGION_LOADS = 15;
   private static final String TABLE_FUNCTION_SEP = "_";
   protected static final String MIN_COST_NEED_BALANCE_KEY =
-      "hbase.master.balancer.stochastic.minCostNeedBalance";
+    "hbase.master.balancer.stochastic.minCostNeedBalance";
   protected static final float DEFAULT_MIN_COST_NEED_BALANCE = 0.025f;
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
-          "hbase.master.balancer.stochastic.additionalCostFunctions";
+    "hbase.master.balancer.stochastic.additionalCostFunctions";
   public static final String OVERALL_COST_FUNCTION_NAME = "Overall";
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
@@ -142,8 +144,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   protected List<CandidateGenerator> candidateGenerators;
 
   public enum GeneratorType {
-    RANDOM, LOAD, LOCALITY, RACK
+    RANDOM,
+    LOAD,
+    LOCALITY,
+    RACK
   }
+
   private double[] weightsOfGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
   // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
@@ -175,7 +181,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public StochasticLoadBalancer(MetricsStochasticBalancer metricsStochasticBalancer) {
     super(metricsStochasticBalancer);
   }
@@ -212,7 +218,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   List<CandidateGenerator> getCandidateGenerators() {
     return this.candidateGenerators;
   }
@@ -269,17 +275,17 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
         BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
 
-    if (this.namedQueueRecorder == null &&
-      (isBalancerDecisionRecording || isBalancerRejectionRecording)) {
+    if (
+      this.namedQueueRecorder == null
+        && (isBalancerDecisionRecording || isBalancerRejectionRecording)
+    ) {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
     }
 
-    LOG.info(
-      "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
-        ", stepsPerRegion=" + stepsPerRegion +
-        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable +
-        ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) +
-        " , sum of multiplier of cost functions = " + sumMultiplier + " etc.");
+    LOG.info("Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps
+      + ", stepsPerRegion=" + stepsPerRegion + ", maxRunningTime=" + maxRunningTime + ", isByTable="
+      + isByTable + ", CostFunctions=" + Arrays.toString(getCostFunctionNames())
+      + " , sum of multiplier of cost functions = " + sumMultiplier + " etc.");
   }
 
   @Override
@@ -302,8 +308,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private void updateBalancerTableLoadInfo(TableName tableName,
     Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     RegionLocationFinder finder = null;
-    if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
-      || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
+    if (
+      (this.localityCost != null && this.localityCost.getMultiplier() > 0)
+        || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)
+    ) {
       finder = this.regionFinder;
     }
     BalancerClusterState cluster =
@@ -316,8 +324,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public void updateBalancerLoadInfo(
-    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  public void
+    updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
     if (isByTable) {
       loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
         updateBalancerTableLoadInfo(tableName, loadOfOneTable);
@@ -332,10 +340,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Update the number of metrics that are reported to JMX
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void updateMetricsSize(int size) {
     if (metricsBalancer instanceof MetricsStochasticBalancer) {
-        ((MetricsStochasticBalancer) metricsBalancer).updateMetricsSize(size);
+      ((MetricsStochasticBalancer) metricsBalancer).updateMetricsSize(size);
     }
   }
 
@@ -348,32 +356,31 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      LOG.info("Not running balancer because only " + cs.getNumServers() +
-        " active regionserver(s)");
-      sendRejectionReasonToRingBuffer(
-        "The number of RegionServers " + cs.getNumServers() + " < MIN_SERVER_BALANCE(" +
-          MIN_SERVER_BALANCE + ")", null);
+      LOG.info(
+        "Not running balancer because only " + cs.getNumServers() + " active regionserver(s)");
+      sendRejectionReasonToRingBuffer("The number of RegionServers " + cs.getNumServers()
+        + " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
-      LOG.info("Running balancer because at least one server hosts replicas of the same region." +
-        " function cost={}", functionCost());
+      LOG.info("Running balancer because at least one server hosts replicas of the same region."
+        + " function cost={}", functionCost());
       return true;
     }
 
-    if (idleRegionServerExist(cluster)){
-      LOG.info("Running balancer because cluster has idle server(s)."+
-        " function cost={}", functionCost());
+    if (idleRegionServerExist(cluster)) {
+      LOG.info("Running balancer because cluster has idle server(s)." + " function cost={}",
+        functionCost());
       return true;
     }
 
     if (sloppyRegionServerExist(cs)) {
-      LOG.info("Running balancer because cluster has sloppy server(s)."+
-        " function cost={}", functionCost());
+      LOG.info("Running balancer because cluster has sloppy server(s)." + " function cost={}",
+        functionCost());
       return true;
     }
 
@@ -391,32 +398,33 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (isBalancerRejectionRecording) {
         String reason = "";
         if (total <= 0) {
-          reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " +
-            total + " <= 0";
+          reason =
+            "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
         } else if (sumMultiplier <= 0) {
           reason = "sumMultiplier = " + sumMultiplier + " <= 0";
         } else if ((total / sumMultiplier) < minCostNeedBalance) {
           reason =
-            "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " +
-              (total / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
+            "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = "
+              + (total / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
         }
         sendRejectionReasonToRingBuffer(reason, costFunctions);
       }
-      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= "
-        + "threshold({}). If you want more aggressive balancing, either lower "
-        + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
-        + "multiplier(s) of the specific cost function(s). functionCost={}",
-        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", total / sumMultiplier,
+      LOG.info(
+        "{} - skipping load balancing because weighted average imbalance={} <= "
+          + "threshold({}). If you want more aggressive balancing, either lower "
+          + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
+          + "multiplier(s) of the specific cost function(s). functionCost={}",
+        isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", total / sumMultiplier,
         minCostNeedBalance, minCostNeedBalance, functionCost());
     } else {
       LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
-        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
+        isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", maxRunningTime);
     }
     return !balanced;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   BalanceAction nextAction(BalancerClusterState cluster) {
     return getRandomGenerator().generate(cluster);
   }
@@ -448,7 +456,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   void setRackManager(RackManager rackManager) {
     this.rackManager = rackManager;
   }
@@ -458,12 +466,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   /**
-   * Given the cluster state this will try and approach an optimal balance. This
-   * should always approach the optimal state given enough steps.
+   * Given the cluster state this will try and approach an optimal balance. This should always
+   * approach the optimal state given enough steps.
    */
   @Override
-  protected List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
-    List<RegionInfo>> loadOfOneTable) {
+  protected List<RegionPlan> balanceTable(TableName tableName,
+    Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
     if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
       return plans;
@@ -482,13 +490,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionLocationFinder finder = null;
-    if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
-        || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
+    if (
+      (this.localityCost != null && this.localityCost.getMultiplier() > 0)
+        || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)
+    ) {
       finder = this.regionFinder;
     }
 
-    //The clusterState that is given to this method contains the state
-    //of all the regions in the table(s) (that's true today)
+    // The clusterState that is given to this method contains the state
+    // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
     BalancerClusterState cluster =
       new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
@@ -498,7 +508,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     initCosts(cluster);
     sumMultiplier = 0;
     for (CostFunction c : costFunctions) {
-      if(c.isNeeded()) {
+      if (c.isNeeded()) {
         sumMultiplier += c.getMultiplier();
       }
     }
@@ -526,15 +536,17 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       long calculatedMaxSteps = calculateMaxSteps(cluster);
       computedMaxSteps = Math.min(this.maxSteps, calculatedMaxSteps);
       if (calculatedMaxSteps > maxSteps) {
-        LOG.warn("calculatedMaxSteps:{} for loadbalancer's stochastic walk is larger than "
+        LOG.warn(
+          "calculatedMaxSteps:{} for loadbalancer's stochastic walk is larger than "
             + "maxSteps:{}. Hence load balancing may not work well. Setting parameter "
             + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true can overcome this issue."
-            + "(This config change does not require service restart)", calculatedMaxSteps,
-            maxSteps);
+            + "(This config change does not require service restart)",
+          calculatedMaxSteps, maxSteps);
       }
     }
-    LOG.info("Start StochasticLoadBalancer.balancer, initial weighted average imbalance={}, "
-      + "functionCost={} computedMaxSteps={}",
+    LOG.info(
+      "Start StochasticLoadBalancer.balancer, initial weighted average imbalance={}, "
+        + "functionCost={} computedMaxSteps={}",
       currentCost / sumMultiplier, functionCost(), computedMaxSteps);
 
     final String initFunctionTotalCosts = totalCostsPerFunc();
@@ -568,8 +580,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateCostsAndWeightsWithAction(cluster, undoAction);
       }
 
-      if (EnvironmentEdgeManager.currentTime() - startTime >
-          maxRunningTime) {
+      if (EnvironmentEdgeManager.currentTime() - startTime > maxRunningTime) {
         break;
       }
     }
@@ -580,26 +591,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (initCost > currentCost) {
       updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
       plans = createRegionPlans(cluster);
-      LOG.info("Finished computing new moving plan. Computation took {} ms" +
-          " to try {} different iterations.  Found a solution that moves " +
-          "{} regions; Going from a computed imbalance of {}" +
-          " to a new imbalance of {}. funtionCost={}",
-        endTime - startTime, step, plans.size(),
-        initCost / sumMultiplier, currentCost / sumMultiplier, functionCost());
+      LOG.info(
+        "Finished computing new moving plan. Computation took {} ms"
+          + " to try {} different iterations.  Found a solution that moves "
+          + "{} regions; Going from a computed imbalance of {}"
+          + " to a new imbalance of {}. funtionCost={}",
+        endTime - startTime, step, plans.size(), initCost / sumMultiplier,
+        currentCost / sumMultiplier, functionCost());
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
-    LOG.info("Could not find a better moving plan.  Tried {} different configurations in " +
-        "{} ms, and did not find anything with an imbalance score less than {}", step,
-      endTime - startTime, initCost / sumMultiplier);
+    LOG.info(
+      "Could not find a better moving plan.  Tried {} different configurations in "
+        + "{} ms, and did not find anything with an imbalance score less than {}",
+      step, endTime - startTime, initCost / sumMultiplier);
     return null;
   }
 
-  private void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions){
-    if (this.isBalancerRejectionRecording){
-      BalancerRejection.Builder builder =
-        new BalancerRejection.Builder()
-        .setReason(reason);
+  private void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions) {
+    if (this.isBalancerRejectionRecording) {
+      BalancerRejection.Builder builder = new BalancerRejection.Builder().setReason(reason);
       if (costFunctions != null) {
         for (CostFunction c : costFunctions) {
           if (!c.isNeeded()) {
@@ -613,22 +624,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private void sendRegionPlansToRingBuffer(List<RegionPlan> plans, double currentCost,
-      double initCost, String initFunctionTotalCosts, long step) {
+    double initCost, String initFunctionTotalCosts, long step) {
     if (this.isBalancerDecisionRecording) {
       List<String> regionPlans = new ArrayList<>();
       for (RegionPlan plan : plans) {
-        regionPlans.add(
-          "table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName()
+        regionPlans
+          .add("table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName()
             + " , source: " + plan.getSource() + " , destination: " + plan.getDestination());
       }
-      BalancerDecision balancerDecision =
-        new BalancerDecision.Builder()
-          .setInitTotalCost(initCost)
-          .setInitialFunctionCosts(initFunctionTotalCosts)
-          .setComputedTotalCost(currentCost)
-          .setFinalFunctionCosts(totalCostsPerFunc())
-          .setComputedSteps(step)
-          .setRegionPlans(regionPlans).build();
+      BalancerDecision balancerDecision = new BalancerDecision.Builder().setInitTotalCost(initCost)
+        .setInitialFunctionCosts(initFunctionTotalCosts).setComputedTotalCost(currentCost)
+        .setFinalFunctionCosts(totalCostsPerFunc()).setComputedSteps(step)
+        .setRegionPlans(regionPlans).build();
       namedQueueRecorder.addRecord(new BalancerDecisionDetails(balancerDecision));
     }
   }
@@ -645,8 +652,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (metricsBalancer instanceof MetricsStochasticBalancer) {
       MetricsStochasticBalancer balancer = (MetricsStochasticBalancer) metricsBalancer;
       // overall cost
-      balancer.updateStochasticCost(tableName.getNameAsString(),
-        OVERALL_COST_FUNCTION_NAME, "Overall cost", overall);
+      balancer.updateStochasticCost(tableName.getNameAsString(), OVERALL_COST_FUNCTION_NAME,
+        "Overall cost", overall);
 
       // each cost function
       for (int i = 0; i < costFunctions.size(); i++) {
@@ -712,14 +719,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   /**
    * Create all of the RegionPlan's needed to move from the initial cluster state to the desired
    * state.
-   *
    * @param cluster The state of the cluster
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
   private List<RegionPlan> createRegionPlans(BalancerClusterState cluster) {
     List<RegionPlan> plans = new ArrayList<>();
-    for (int regionIndex = 0;
-         regionIndex < cluster.regionIndexToServerIndex.length; regionIndex++) {
+    for (int regionIndex = 0; regionIndex
+        < cluster.regionIndexToServerIndex.length; regionIndex++) {
       int initialServerIndex = cluster.initialRegionIndexToServerIndex[regionIndex];
       int newServerIndex = cluster.regionIndexToServerIndex[regionIndex];
 
@@ -730,7 +736,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
         if (LOG.isTraceEnabled()) {
           LOG.trace("Moving Region " + region.getEncodedName() + " from server "
-              + initialServer.getHostname() + " to " + newServer.getHostname());
+            + initialServer.getHostname() + " to " + newServer.getHostname());
         }
         RegionPlan rp = new RegionPlan(region, initialServer, newServer);
         plans.add(rp);
@@ -764,7 +770,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void initCosts(BalancerClusterState cluster) {
     // Initialize the weights of generator every time
     weightsOfGenerators = new double[this.candidateGenerators.size()];
@@ -775,7 +781,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action) {
     // Reset all the weights to 0
     for (int i = 0; i < weightsOfGenerators.length; i++) {
@@ -793,7 +799,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Get the names of the cost functions
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   String[] getCostFunctionNames() {
     String[] ret = new String[costFunctions.size()];
     for (int i = 0; i < costFunctions.size(); i++) {
@@ -805,16 +811,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   /**
-   * This is the main cost function.  It will compute a cost associated with a proposed cluster
-   * state.  All different costs will be combined with their multipliers to produce a double cost.
-   *
-   * @param cluster The state of the cluster
+   * This is the main cost function. It will compute a cost associated with a proposed cluster
+   * state. All different costs will be combined with their multipliers to produce a double cost.
+   * @param cluster      The state of the cluster
    * @param previousCost the previous cost. This is used as an early out.
-   * @return a double of a cost associated with the proposed cluster state.  This cost is an
+   * @return a double of a cost associated with the proposed cluster state. This cost is an
    *         aggregate of all individual cost functions.
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   double computeCost(BalancerClusterState cluster, double previousCost) {
     double total = 0;
 

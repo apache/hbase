@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -26,7 +24,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,32 +42,37 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
  * <li>The average cluster load.</li>
  * <li>The number of regions deployed on the cluster.</li>
  * <li>The number of requests since last report.</li>
- * <li>Detailed region server loading and resource usage information,
- *  per server and per region.</li>
+ * <li>Detailed region server loading and resource usage information, per server and per
+ * region.</li>
  * <li>Regions in transition at master</li>
  * <li>The unique cluster ID</li>
  * </ul>
  * <tt>{@link ClusterMetrics.Option}</tt> provides a way to get desired ClusterStatus information.
  * The following codes will get all the cluster information.
+ *
  * <pre>
- * {@code
- * // Original version still works
- * Admin admin = connection.getAdmin();
- * ClusterStatus status = admin.getClusterStatus();
- * // or below, a new version which has the same effects
- * ClusterStatus status = admin.getClusterStatus(EnumSet.allOf(Option.class));
+ * {
+ *   &#64;code
+ *   // Original version still works
+ *   Admin admin = connection.getAdmin();
+ *   ClusterStatus status = admin.getClusterStatus();
+ *   // or below, a new version which has the same effects
+ *   ClusterStatus status = admin.getClusterStatus(EnumSet.allOf(Option.class));
  * }
  * </pre>
- * If information about live servers is the only wanted.
- * then codes in the following way:
+ *
+ * If information about live servers is the only wanted. then codes in the following way:
+ *
  * <pre>
- * {@code
- * Admin admin = connection.getAdmin();
- * ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+ * {
+ *   &#64;code
+ *   Admin admin = connection.getAdmin();
+ *   ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
  * }
  * </pre>
- * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
- *             Use {@link ClusterMetrics} instead.
+ *
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use {@link ClusterMetrics}
+ *             instead.
  */
 @InterfaceAudience.Public
 @Deprecated
@@ -86,26 +88,18 @@ public class ClusterStatus implements ClusterMetrics {
    */
   @Deprecated
   public ClusterStatus(final String hbaseVersion, final String clusterid,
-      final Map<ServerName, ServerLoad> servers,
-      final Collection<ServerName> deadServers,
-      final ServerName master,
-      final Collection<ServerName> backupMasters,
-      final List<RegionState> rit,
-      final String[] masterCoprocessors,
-      final Boolean balancerOn,
-      final int masterInfoPort) {
+    final Map<ServerName, ServerLoad> servers, final Collection<ServerName> deadServers,
+    final ServerName master, final Collection<ServerName> backupMasters,
+    final List<RegionState> rit, final String[] masterCoprocessors, final Boolean balancerOn,
+    final int masterInfoPort) {
     // TODO: make this constructor private
     this(ClusterMetricsBuilder.newBuilder().setHBaseVersion(hbaseVersion)
       .setDeadServerNames(new ArrayList<>(deadServers))
-      .setLiveServerMetrics(servers.entrySet().stream()
-      .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue())))
+      .setLiveServerMetrics(
+        servers.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue())))
       .setBackerMasterNames(new ArrayList<>(backupMasters)).setBalancerOn(balancerOn)
-      .setClusterId(clusterid)
-      .setMasterCoprocessorNames(Arrays.asList(masterCoprocessors))
-      .setMasterName(master)
-      .setMasterInfoPort(masterInfoPort)
-      .setRegionsInTransition(rit)
-      .build());
+      .setClusterId(clusterid).setMasterCoprocessorNames(Arrays.asList(masterCoprocessors))
+      .setMasterName(master).setMasterInfoPort(masterInfoPort).setRegionsInTransition(rit).build());
   }
 
   @InterfaceAudience.Private
@@ -127,10 +121,10 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-  * @return the number of region servers in the cluster
-  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-  *             Use {@link #getLiveServerMetrics()}.
-  */
+   * @return the number of region servers in the cluster
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getLiveServerMetrics()}.
+   */
   @Deprecated
   public int getServersSize() {
     return metrics.getLiveServerMetrics().size();
@@ -139,8 +133,8 @@ public class ClusterStatus implements ClusterMetrics {
   /**
    * @return the number of dead region servers in the cluster
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13656">HBASE-13656</a>).
-   *             Use {@link #getDeadServerNames()}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13656">HBASE-13656</a>). Use
+   *             {@link #getDeadServerNames()}.
    */
   @Deprecated
   public int getDeadServers() {
@@ -149,8 +143,8 @@ public class ClusterStatus implements ClusterMetrics {
 
   /**
    * @return the number of dead region servers in the cluster
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getDeadServerNames()}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getDeadServerNames()}.
    */
   @Deprecated
   public int getDeadServersSize() {
@@ -159,8 +153,8 @@ public class ClusterStatus implements ClusterMetrics {
 
   /**
    * @return the number of regions deployed on the cluster
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionCount()}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionCount()}.
    */
   @Deprecated
   public int getRegionsCount() {
@@ -169,8 +163,8 @@ public class ClusterStatus implements ClusterMetrics {
 
   /**
    * @return the number of requests since last report
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRequestCount()} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRequestCount()} instead.
    */
   @Deprecated
   public int getRequestsCount() {
@@ -214,14 +208,14 @@ public class ClusterStatus implements ClusterMetrics {
       return false;
     }
     ClusterStatus other = (ClusterStatus) o;
-    return Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
-      Objects.equal(getLiveServerLoads(), other.getLiveServerLoads()) &&
-      getDeadServerNames().containsAll(other.getDeadServerNames()) &&
-      Arrays.equals(getMasterCoprocessors(), other.getMasterCoprocessors()) &&
-      Objects.equal(getMaster(), other.getMaster()) &&
-      getBackupMasters().containsAll(other.getBackupMasters()) &&
-      Objects.equal(getClusterId(), other.getClusterId()) &&
-      getMasterInfoPort() == other.getMasterInfoPort();
+    return Objects.equal(getHBaseVersion(), other.getHBaseVersion())
+      && Objects.equal(getLiveServerLoads(), other.getLiveServerLoads())
+      && getDeadServerNames().containsAll(other.getDeadServerNames())
+      && Arrays.equals(getMasterCoprocessors(), other.getMasterCoprocessors())
+      && Objects.equal(getMaster(), other.getMaster())
+      && getBackupMasters().containsAll(other.getBackupMasters())
+      && Objects.equal(getClusterId(), other.getClusterId())
+      && getMasterInfoPort() == other.getMasterInfoPort();
   }
 
   @Override
@@ -239,8 +233,8 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getLiveServerMetrics()} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getLiveServerMetrics()} instead.
    */
   @Deprecated
   public Collection<ServerName> getServers() {
@@ -250,8 +244,8 @@ public class ClusterStatus implements ClusterMetrics {
   /**
    * Returns detailed information about the current master {@link ServerName}.
    * @return current master information if it exists
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getMasterName} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use {@link #getMasterName}
+   *             instead.
    */
   @Deprecated
   public ServerName getMaster() {
@@ -260,8 +254,8 @@ public class ClusterStatus implements ClusterMetrics {
 
   /**
    * @return the number of backup masters in the cluster
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getBackupMasterNames} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getBackupMasterNames} instead.
    */
   @Deprecated
   public int getBackupMastersSize() {
@@ -270,8 +264,8 @@ public class ClusterStatus implements ClusterMetrics {
 
   /**
    * @return the names of backup masters
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getBackupMasterNames} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getBackupMasterNames} instead.
    */
   @Deprecated
   public List<ServerName> getBackupMasters() {
@@ -279,10 +273,9 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @param sn
-   * @return Server's load or null if not found.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getLiveServerMetrics} instead.
+   * n * @return Server's load or null if not found.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getLiveServerMetrics} instead.
    */
   @Deprecated
   public ServerLoad getLoad(final ServerName sn) {
@@ -300,8 +293,8 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getMasterCoprocessorNames} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getMasterCoprocessorNames} instead.
    */
   @Deprecated
   public String[] getMasterCoprocessors() {
@@ -310,8 +303,8 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getLastMajorCompactionTimestamp(TableName)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getLastMajorCompactionTimestamp(TableName)} instead.
    */
   @Deprecated
   public long getLastMajorCompactionTsForTable(TableName table) {
@@ -319,8 +312,8 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getLastMajorCompactionTimestamp(byte[])} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getLastMajorCompactionTimestamp(byte[])} instead.
    */
   @Deprecated
   public long getLastMajorCompactionTsForRegion(final byte[] region) {
@@ -328,8 +321,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             No flag in 2.0
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated
   public boolean isBalancerOn() {
@@ -369,15 +361,15 @@ public class ClusterStatus implements ClusterMetrics {
     int backupMastersSize = getBackupMastersSize();
     sb.append("\nNumber of backup masters: " + backupMastersSize);
     if (backupMastersSize > 0) {
-      for (ServerName serverName: metrics.getBackupMasterNames()) {
+      for (ServerName serverName : metrics.getBackupMasterNames()) {
         sb.append("\n  " + serverName);
       }
     }
 
     int serversSize = getServersSize();
     int serversNameSize = getServersName().size();
-    sb.append("\nNumber of live region servers: "
-        + (serversSize > 0 ? serversSize : serversNameSize));
+    sb.append(
+      "\nNumber of live region servers: " + (serversSize > 0 ? serversSize : serversNameSize));
     if (serversSize > 0) {
       for (ServerName serverName : metrics.getLiveServerMetrics().keySet()) {
         sb.append("\n  " + serverName.getServerName());
@@ -403,7 +395,7 @@ public class ClusterStatus implements ClusterMetrics {
     int ritSize = metrics.getRegionStatesInTransition().size();
     sb.append("\nNumber of regions in transition: " + ritSize);
     if (ritSize > 0) {
-      for (RegionState state: metrics.getRegionStatesInTransition()) {
+      for (RegionState state : metrics.getRegionStatesInTransition()) {
         sb.append("\n  " + state.toDescriptiveString());
       }
     }

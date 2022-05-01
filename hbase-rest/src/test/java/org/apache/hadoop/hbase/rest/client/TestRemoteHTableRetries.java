@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,11 +49,11 @@ import org.junit.experimental.categories.Category;
 /**
  * Test RemoteHTable retries.
  */
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestRemoteHTableRetries {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRemoteHTableRetries.class);
+    HBaseClassTestRule.forClass(TestRemoteHTableRetries.class);
 
   private static final int SLEEP_TIME = 50;
   private static final int RETRIES = 3;
@@ -75,17 +75,14 @@ public class TestRemoteHTableRetries {
     Response response = new Response(509);
     when(client.get(anyString(), anyString())).thenReturn(response);
     when(client.delete(anyString())).thenReturn(response);
-    when(client.put(anyString(), anyString(), any())).thenReturn(
-        response);
-    when(client.post(anyString(), anyString(), any())).thenReturn(
-        response);
+    when(client.put(anyString(), anyString(), any())).thenReturn(response);
+    when(client.post(anyString(), anyString(), any())).thenReturn(response);
 
     Configuration configuration = TEST_UTIL.getConfiguration();
     configuration.setInt("hbase.rest.client.max.retries", RETRIES);
     configuration.setInt("hbase.rest.client.sleep", SLEEP_TIME);
 
-    remoteTable = new RemoteHTable(client, TEST_UTIL.getConfiguration(),
-        "MyTable");
+    remoteTable = new RemoteHTable(client, TEST_UTIL.getConfiguration(), "MyTable");
   }
 
   @After
@@ -156,8 +153,8 @@ public class TestRemoteHTableRetries {
       public void run() throws Exception {
         Put put = new Put(ROW_1);
         put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
-        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
-            .ifEquals(VALUE_1).thenPut(put);
+        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1).ifEquals(VALUE_1)
+          .thenPut(put);
       }
     });
     verify(client, times(RETRIES)).put(anyString(), anyString(), any());
@@ -170,9 +167,9 @@ public class TestRemoteHTableRetries {
       public void run() throws Exception {
         Put put = new Put(ROW_1);
         put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
-        Delete delete= new Delete(ROW_1);
-        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
-            .ifEquals(VALUE_1).thenDelete(delete);
+        Delete delete = new Delete(ROW_1);
+        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1).ifEquals(VALUE_1)
+          .thenDelete(delete);
       }
     });
   }

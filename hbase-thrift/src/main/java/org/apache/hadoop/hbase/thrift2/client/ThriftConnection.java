@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,9 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-
 import javax.net.ssl.SSLException;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -87,7 +84,7 @@ public class ThriftConnection implements Connection {
   private int connectTimeout;
 
   public ThriftConnection(Configuration conf, ExecutorService pool, final User user)
-      throws IOException {
+    throws IOException {
     this.conf = conf;
     this.user = user;
     this.host = conf.get(Constants.HBASE_THRIFT_SERVER_NAME);
@@ -97,18 +94,17 @@ public class ThriftConnection implements Connection {
     this.isFramed = conf.getBoolean(Constants.FRAMED_CONF_KEY, Constants.FRAMED_CONF_DEFAULT);
     this.isCompact = conf.getBoolean(Constants.COMPACT_CONF_KEY, Constants.COMPACT_CONF_DEFAULT);
     this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+      HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     this.connectTimeout = conf.getInt(SOCKET_TIMEOUT_CONNECT, DEFAULT_SOCKET_TIMEOUT_CONNECT);
 
     String className = conf.get(Constants.HBASE_THRIFT_CLIENT_BUIDLER_CLASS,
-        DefaultThriftClientBuilder.class.getName());
+      DefaultThriftClientBuilder.class.getName());
     try {
       Class<?> clazz = Class.forName(className);
-      Constructor<?> constructor = clazz
-          .getDeclaredConstructor(ThriftConnection.class);
+      Constructor<?> constructor = clazz.getDeclaredConstructor(ThriftConnection.class);
       constructor.setAccessible(true);
       clientBuilder = (ThriftClientBuilder) constructor.newInstance(this);
-    }catch (Exception e) {
+    } catch (Exception e) {
       throw new IOException(e);
     }
   }
@@ -151,12 +147,10 @@ public class ThriftConnection implements Connection {
   }
 
   /**
-   * the default thrift client builder.
-   * One can extend the ThriftClientBuilder to builder custom client, implement
-   * features like authentication(hbase-examples/thrift/DemoClient)
-   *
+   * the default thrift client builder. One can extend the ThriftClientBuilder to builder custom
+   * client, implement features like authentication(hbase-examples/thrift/DemoClient)
    */
-  public static class DefaultThriftClientBuilder extends ThriftClientBuilder  {
+  public static class DefaultThriftClientBuilder extends ThriftClientBuilder {
 
     @Override
     public Pair<THBaseService.Client, TTransport> getClient() throws IOException {
@@ -190,13 +184,12 @@ public class ThriftConnection implements Connection {
   }
 
   /**
-   * the default thrift http client builder.
-   * One can extend the ThriftClientBuilder to builder custom http client, implement
-   * features like authentication or 'DoAs'(hbase-examples/thrift/HttpDoAsClient)
-   *
+   * the default thrift http client builder. One can extend the ThriftClientBuilder to builder
+   * custom http client, implement features like authentication or
+   * 'DoAs'(hbase-examples/thrift/HttpDoAsClient)
    */
   public static class HTTPThriftClientBuilder extends ThriftClientBuilder {
-    Map<String,String> customHeader = new HashMap<>();
+    Map<String, String> customHeader = new HashMap<>();
 
     public HTTPThriftClientBuilder(ThriftConnection connection) {
       super(connection);
@@ -209,7 +202,7 @@ public class ThriftConnection implements Connection {
     @Override
     public Pair<THBaseService.Client, TTransport> getClient() throws IOException {
       Preconditions.checkArgument(connection.getHost().startsWith("http"),
-          "http client host must start with http or https");
+        "http client host must start with http or https");
       String url = connection.getHost() + ":" + connection.getPort();
       try {
         THttpClient httpClient = new THttpClient(url, connection.getHttpClient());
@@ -242,10 +235,8 @@ public class ThriftConnection implements Connection {
     private long pause;
 
     public DelayRetryHandler(int retryCount, long pause) {
-      super(retryCount, true, Arrays.asList(
-          InterruptedIOException.class,
-          UnknownHostException.class,
-          SSLException.class));
+      super(retryCount, true, Arrays.asList(InterruptedIOException.class,
+        UnknownHostException.class, SSLException.class));
       this.pause = pause;
     }
 
@@ -257,7 +248,7 @@ public class ThriftConnection implements Connection {
           long sleepTime = ConnectionUtils.getPauseTime(pause, executionCount - 1);
           Thread.sleep(sleepTime);
         } catch (InterruptedException ie) {
-          //reset interrupt marker
+          // reset interrupt marker
           Thread.currentThread().interrupt();
         }
       }
@@ -275,7 +266,7 @@ public class ThriftConnection implements Connection {
       return httpClient;
     }
     int retry = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, 5);
     HttpClientBuilder builder = HttpClientBuilder.create();
     RequestConfig.Builder requestBuilder = RequestConfig.custom();

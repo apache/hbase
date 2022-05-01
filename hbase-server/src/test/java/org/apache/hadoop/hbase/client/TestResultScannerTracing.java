@@ -76,20 +76,20 @@ public class TestResultScannerTracing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResultScannerTracing.class);
+    HBaseClassTestRule.forClass(TestResultScannerTracing.class);
 
   private static final TableName TABLE_NAME =
-      TableName.valueOf(TestResultScannerTracing.class.getSimpleName());
+    TableName.valueOf(TestResultScannerTracing.class.getSimpleName());
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] CQ = Bytes.toBytes("q");
   private static final int COUNT = 1000;
 
   private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
   private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-      .setMiniClusterOption(StartMiniClusterOption.builder().numRegionServers(3).build()).build();
+    .setMiniClusterOption(StartMiniClusterOption.builder().numRegionServers(3).build()).build();
 
   private static final ConnectionRule connectionRule =
-      ConnectionRule.createConnectionRule(miniClusterRule::createConnection);
+    ConnectionRule.createConnectionRule(miniClusterRule::createConnection);
 
   private static final class Setup extends ExternalResource {
 
@@ -109,7 +109,7 @@ public class TestResultScannerTracing {
       try (final Table table = conn.getTable(TABLE_NAME)) {
         table.put(
           IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
-              .addColumn(FAMILY, CQ, Bytes.toBytes(i))).collect(Collectors.toList()));
+            .addColumn(FAMILY, CQ, Bytes.toBytes(i))).collect(Collectors.toList()));
       }
     }
 
@@ -129,7 +129,7 @@ public class TestResultScannerTracing {
 
   @ClassRule
   public static final TestRule classRule = RuleChain.outerRule(otelClassRule)
-      .around(miniClusterRule).around(connectionRule).around(new Setup());
+    .around(miniClusterRule).around(connectionRule).around(new Setup());
 
   @Rule
   public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
@@ -148,12 +148,12 @@ public class TestResultScannerTracing {
   private static void waitForSpan(final Matcher<SpanData> parentSpanMatcher) {
     final Configuration conf = miniClusterRule.getTestingUtility().getConfiguration();
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-        "Span for test failed to complete.", otelClassRule::getSpans, hasItem(parentSpanMatcher)));
+      "Span for test failed to complete.", otelClassRule::getSpans, hasItem(parentSpanMatcher)));
   }
 
   private Scan buildDefaultScan() {
     return new Scan().withStartRow(Bytes.toBytes(String.format("%03d", 1)))
-        .withStopRow(Bytes.toBytes(String.format("%03d", 998)));
+      .withStopRow(Bytes.toBytes(String.format("%03d", 998)));
   }
 
   private void assertDefaultScan(final Scan scan) {
@@ -163,7 +163,7 @@ public class TestResultScannerTracing {
 
   private Scan buildAsyncPrefetchScan() {
     return new Scan().withStartRow(Bytes.toBytes(String.format("%03d", 1)))
-        .withStopRow(Bytes.toBytes(String.format("%03d", 998))).setAsyncPrefetch(true);
+      .withStopRow(Bytes.toBytes(String.format("%03d", 998))).setAsyncPrefetch(true);
   }
 
   private void assertAsyncPrefetchScan(final Scan scan) {
@@ -173,7 +173,7 @@ public class TestResultScannerTracing {
 
   private Scan buildReversedScan() {
     return new Scan().withStartRow(Bytes.toBytes(String.format("%03d", 998)))
-        .withStopRow(Bytes.toBytes(String.format("%03d", 1))).setReversed(true);
+      .withStopRow(Bytes.toBytes(String.format("%03d", 1))).setReversed(true);
   }
 
   private void assertReversedScan(final Scan scan) {
@@ -182,12 +182,12 @@ public class TestResultScannerTracing {
   }
 
   private void doScan(final Supplier<Scan> spanSupplier, final Consumer<Scan> scanAssertions)
-      throws Exception {
+    throws Exception {
     final Connection conn = connectionRule.getConnection();
     final Scan scan = spanSupplier.get();
     scanAssertions.accept(scan);
     try (final Table table = conn.getTable(TABLE_NAME);
-        final ResultScanner scanner = table.getScanner(scan)) {
+      final ResultScanner scanner = table.getScanner(scan)) {
       final List<Result> results = new ArrayList<>(COUNT);
       scanner.forEach(results::add);
       assertThat(results, not(emptyIterable()));
@@ -201,25 +201,25 @@ public class TestResultScannerTracing {
 
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher =
-        allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (LOG.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(LOG::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
     final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> childMetaScanSpanMatcher = allOf(hasName(startsWith("SCAN hbase:meta")),
       hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
@@ -233,25 +233,25 @@ public class TestResultScannerTracing {
 
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher =
-        allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (LOG.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(LOG::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
     final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> childMetaScanSpanMatcher = allOf(hasName(startsWith("SCAN hbase:meta")),
       hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
@@ -265,25 +265,25 @@ public class TestResultScannerTracing {
 
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher =
-        allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (LOG.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(LOG::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
     final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> childMetaScanSpanMatcher = allOf(hasName(startsWith("SCAN hbase:meta")),
       hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());

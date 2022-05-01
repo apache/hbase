@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,18 +46,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Replication with dropped table will stuck as the default REPLICATION_DROP_ON_DELETED_TABLE_KEY
- * is false.
+ * Replication with dropped table will stuck as the default REPLICATION_DROP_ON_DELETED_TABLE_KEY is
+ * false.
  */
 @Category({ LargeTests.class })
 public class TestReplicationStuckWithDroppedTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationStuckWithDroppedTable.class);
+    HBaseClassTestRule.forClass(TestReplicationStuckWithDroppedTable.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationEditsDroppedWithDroppedTable.class);
+    LoggerFactory.getLogger(TestReplicationEditsDroppedWithDroppedTable.class);
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2 = HBaseConfiguration.create();
@@ -107,9 +107,10 @@ public class TestReplicationStuckWithDroppedTable {
   }
 
   private void createTable(TableName tableName) throws Exception {
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setScope(REPLICATION_SCOPE_GLOBAL).build()
-    ).build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setScope(REPLICATION_SCOPE_GLOBAL).build())
+      .build();
     admin1.createTable(desc);
     admin2.createTable(desc);
     utility1.waitUntilAllRegionsAssigned(tableName);
@@ -120,8 +121,7 @@ public class TestReplicationStuckWithDroppedTable {
   public void testEditsStuckBehindDroppedTable() throws Exception {
     // add peer
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(utility2.getClusterKey())
-        .setReplicateAllUserTables(true).build();
+      .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
     admin1.addReplicationPeer(PEER_ID, rpc);
 
     // create table
@@ -164,8 +164,8 @@ public class TestReplicationStuckWithDroppedTable {
       for (int i = 0; i < NB_RETRIES; i++) {
         Result result = normalTable.get(new Get(ROW).addColumn(FAMILY, QUALIFIER));
         if (result != null && !result.isEmpty()) {
-          fail("Edit should have been stuck behind dropped tables, but value is " + Bytes
-              .toString(result.getValue(FAMILY, QUALIFIER)));
+          fail("Edit should have been stuck behind dropped tables, but value is "
+            + Bytes.toString(result.getValue(FAMILY, QUALIFIER)));
         } else {
           LOG.info("Row not replicated, let's wait a bit more...");
           Thread.sleep(SLEEP_TIME);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,24 +58,21 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Tests for the master status page and its template.
  */
-@Category({MasterTests.class,MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterStatusServlet {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterStatusServlet.class);
+    HBaseClassTestRule.forClass(TestMasterStatusServlet.class);
 
   private HMaster master;
   private Configuration conf;
   private Admin admin;
 
-  static final ServerName FAKE_HOST =
-      ServerName.valueOf("fakehost", 12345, 1234567890);
-  static final HTableDescriptor FAKE_TABLE =
-    new HTableDescriptor(TableName.valueOf("mytable"));
+  static final ServerName FAKE_HOST = ServerName.valueOf("fakehost", 12345, 1234567890);
+  static final HTableDescriptor FAKE_TABLE = new HTableDescriptor(TableName.valueOf("mytable"));
   static final HRegionInfo FAKE_HRI =
-      new HRegionInfo(FAKE_TABLE.getTableName(),
-          Bytes.toBytes("a"), Bytes.toBytes("b"));
+    new HRegionInfo(FAKE_TABLE.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("b"));
 
   @Before
   public void setupBasicMocks() {
@@ -85,7 +82,7 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(FAKE_HOST).when(master).getServerName();
     Mockito.doReturn(conf).when(master).getConfiguration();
 
-    //Fake DeadServer
+    // Fake DeadServer
     DeadServer deadServer = Mockito.mock(DeadServer.class);
     // Fake serverManager
     ServerManager serverManager = Mockito.mock(ServerManager.class);
@@ -97,7 +94,8 @@ public class TestMasterStatusServlet {
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
     RegionStates rs = Mockito.mock(RegionStates.class);
     List<RegionState> regionsInTransition = new ArrayList<>();
-    regionsInTransition.add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
+    regionsInTransition
+      .add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
@@ -126,10 +124,9 @@ public class TestMasterStatusServlet {
   }
 
   private void setupMockTables() throws IOException {
-    HTableDescriptor tables[] = new HTableDescriptor[] {
-        new HTableDescriptor(TableName.valueOf("foo")),
-        new HTableDescriptor(TableName.valueOf("bar"))
-    };
+    HTableDescriptor tables[] =
+      new HTableDescriptor[] { new HTableDescriptor(TableName.valueOf("foo")),
+        new HTableDescriptor(TableName.valueOf("bar")) };
     Mockito.doReturn(tables).when(admin).listTables();
   }
 
@@ -142,8 +139,7 @@ public class TestMasterStatusServlet {
   public void testStatusTemplateMetaAvailable() throws IOException {
     setupMockTables();
 
-    new MasterStatusTmpl()
-      .setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
+    new MasterStatusTmpl().setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
       .render(new StringWriter(), master);
   }
 
@@ -151,19 +147,13 @@ public class TestMasterStatusServlet {
   public void testStatusTemplateWithServers() throws IOException {
     setupMockTables();
 
-    List<ServerName> servers = Lists.newArrayList(
-        ServerName.valueOf("rootserver,123,12345"),
-        ServerName.valueOf("metaserver,123,12345"));
-    Set<ServerName> deadServers = new HashSet<>(
-        Lists.newArrayList(
-            ServerName.valueOf("badserver,123,12345"),
-            ServerName.valueOf("uglyserver,123,12345"))
-    );
+    List<ServerName> servers = Lists.newArrayList(ServerName.valueOf("rootserver,123,12345"),
+      ServerName.valueOf("metaserver,123,12345"));
+    Set<ServerName> deadServers =
+      new HashSet<>(Lists.newArrayList(ServerName.valueOf("badserver,123,12345"),
+        ServerName.valueOf("uglyserver,123,12345")));
 
-    new MasterStatusTmpl()
-      .setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
-      .setServers(servers)
-      .setDeadServers(deadServers)
-      .render(new StringWriter(), master);
+    new MasterStatusTmpl().setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
+      .setServers(servers).setDeadServers(deadServers).render(new StringWriter(), master);
   }
 }

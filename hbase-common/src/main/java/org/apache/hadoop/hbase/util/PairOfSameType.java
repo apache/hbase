@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.Iterator;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,41 +43,35 @@ public class PairOfSameType<T> implements Iterable<T> {
   }
 
   /**
-   * Return the first element stored in the pair.
-   * @return T
+   * Return the first element stored in the pair. n
    */
   public T getFirst() {
     return first;
   }
 
   /**
-   * Return the second element stored in the pair.
-   * @return T
+   * Return the second element stored in the pair. n
    */
   public T getSecond() {
     return second;
   }
 
   private static boolean equals(Object x, Object y) {
-     return (x == null && y == null) || (x != null && x.equals(y));
+    return (x == null && y == null) || (x != null && x.equals(y));
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public boolean equals(Object other) {
-    return other instanceof PairOfSameType &&
-      equals(first, ((PairOfSameType)other).first) &&
-      equals(second, ((PairOfSameType)other).second);
+    return other instanceof PairOfSameType && equals(first, ((PairOfSameType) other).first)
+      && equals(second, ((PairOfSameType) other).second);
   }
 
   @Override
   public int hashCode() {
-    if (first == null)
-      return (second == null) ? 0 : second.hashCode() + 1;
-    else if (second == null)
-      return first.hashCode() + 2;
-    else
-      return first.hashCode() * 17 + second.hashCode();
+    if (first == null) return (second == null) ? 0 : second.hashCode() + 1;
+    else if (second == null) return first.hashCode() + 2;
+    else return first.hashCode() * 17 + second.hashCode();
   }
 
   @Override

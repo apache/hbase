@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,15 +33,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestConnectionId {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-          HBaseClassTestRule.forClass(TestConnectionId.class);
+    HBaseClassTestRule.forClass(TestConnectionId.class);
 
   private Configuration testConfig = HBaseConfiguration.create();
-  private User testUser1 = User.createUserForTesting(testConfig, "test", new String[]{"testgroup"});
-  private User testUser2 = User.createUserForTesting(testConfig, "test", new String[]{"testgroup"});
+  private User testUser1 =
+    User.createUserForTesting(testConfig, "test", new String[] { "testgroup" });
+  private User testUser2 =
+    User.createUserForTesting(testConfig, "test", new String[] { "testgroup" });
   private String serviceName = "test";
   private Address address = Address.fromParts("localhost", 999);
   private ConnectionId connectionId1 = new ConnectionId(testUser1, serviceName, address);
@@ -71,9 +73,8 @@ public class TestConnectionId {
   }
 
   /**
-   * Test if the over-ridden equals method satisfies all the properties
-   * (reflexive, symmetry, transitive and null)
-   * along with their hashcode
+   * Test if the over-ridden equals method satisfies all the properties (reflexive, symmetry,
+   * transitive and null) along with their hashcode
    */
   @Test
   public void testEqualsWithHashCode() {
@@ -87,8 +88,8 @@ public class TestConnectionId {
 
     // Test the Transitive Property
     ConnectionId connectionId3 = new ConnectionId(testUser1, serviceName, address);
-    assertTrue(connectionId1.equals(connectionId) && connectionId.equals(connectionId3) &&
-            connectionId1.equals(connectionId3));
+    assertTrue(connectionId1.equals(connectionId) && connectionId.equals(connectionId3)
+      && connectionId1.equals(connectionId3));
     assertEquals(connectionId.hashCode(), connectionId3.hashCode());
 
     // Test For null
@@ -99,8 +100,8 @@ public class TestConnectionId {
   }
 
   /**
-   * Test the hashcode for same object and different object with both hashcode
-   * function and static hashcode function
+   * Test the hashcode for same object and different object with both hashcode function and static
+   * hashcode function
    */
   @Test
   public void testHashCode() {

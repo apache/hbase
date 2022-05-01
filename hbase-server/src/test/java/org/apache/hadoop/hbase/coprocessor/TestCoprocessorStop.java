@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,20 +40,19 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tests for master and regionserver coprocessor stop method
- *
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestCoprocessorStop {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorStop.class);
+    HBaseClassTestRule.forClass(TestCoprocessorStop.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorStop.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String MASTER_FILE = "master" + EnvironmentEdgeManager.currentTime();
-  private static final String REGIONSERVER_FILE = "regionserver" +
-    EnvironmentEdgeManager.currentTime();
+  private static final String REGIONSERVER_FILE =
+    "regionserver" + EnvironmentEdgeManager.currentTime();
 
   public static class FooCoprocessor implements MasterCoprocessor, RegionServerCoprocessor {
     @Override
@@ -97,10 +96,8 @@ public class TestCoprocessorStop {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      FooCoprocessor.class.getName());
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      FooCoprocessor.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, FooCoprocessor.class.getName());
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, FooCoprocessor.class.getName());
 
     UTIL.startMiniCluster();
   }
@@ -112,7 +109,7 @@ public class TestCoprocessorStop {
 
   @Test
   public void testStopped() throws Exception {
-    //shutdown hbase only. then check flag file.
+    // shutdown hbase only. then check flag file.
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     LOG.info("shutdown hbase cluster...");
     cluster.shutdown();
@@ -123,9 +120,9 @@ public class TestCoprocessorStop {
     FileSystem fs = FileSystem.get(conf);
 
     Path resultFile = new Path(UTIL.getDataTestDirOnTestFS(), MASTER_FILE);
-    assertTrue("Master flag file should have been created",fs.exists(resultFile));
+    assertTrue("Master flag file should have been created", fs.exists(resultFile));
 
     resultFile = new Path(UTIL.getDataTestDirOnTestFS(), REGIONSERVER_FILE);
-    assertTrue("RegionServer flag file should have been created",fs.exists(resultFile));
+    assertTrue("RegionServer flag file should have been created", fs.exists(resultFile));
   }
 }

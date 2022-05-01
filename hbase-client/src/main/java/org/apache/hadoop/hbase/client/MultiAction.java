@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,8 +29,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
- * regionName. Intended to be used with {@link AsyncProcess}.
+ * Container for Actions (i.e. Get, Delete, or Put), which are grouped by regionName. Intended to be
+ * used with {@link AsyncProcess}.
  */
 @InterfaceAudience.Private
 public final class MultiAction {
@@ -48,7 +47,6 @@ public final class MultiAction {
 
   /**
    * Get the total number of Actions
-   *
    * @return total number of Actions for all groups in this container.
    */
   public int size() {
@@ -60,26 +58,20 @@ public final class MultiAction {
   }
 
   /**
-   * Add an Action to this container based on it's regionName. If the regionName
-   * is wrong, the initial execution will fail, but will be automatically
-   * retried after looking up the correct region.
-   *
-   * @param regionName
-   * @param a
+   * Add an Action to this container based on it's regionName. If the regionName is wrong, the
+   * initial execution will fail, but will be automatically retried after looking up the correct
+   * region. nn
    */
   public void add(byte[] regionName, Action a) {
     add(regionName, Collections.singletonList(a));
   }
 
   /**
-   * Add an Action to this container based on it's regionName. If the regionName
-   * is wrong, the initial execution will fail, but will be automatically
-   * retried after looking up the correct region.
-   *
-   * @param regionName
-   * @param actionList list of actions to add for the region
+   * Add an Action to this container based on it's regionName. If the regionName is wrong, the
+   * initial execution will fail, but will be automatically retried after looking up the correct
+   * region. n * @param actionList list of actions to add for the region
    */
-  public void add(byte[] regionName, List<Action> actionList){
+  public void add(byte[] regionName, List<Action> actionList) {
     List<Action> rsActions = actions.get(regionName);
     if (rsActions == null) {
       rsActions = new ArrayList<>(actionList.size());
@@ -107,7 +99,7 @@ public final class MultiAction {
   // returns the max priority of all the actions
   public int getPriority() {
     Optional<Action> result = actions.values().stream().flatMap(List::stream)
-        .max((action1, action2) -> Math.max(action1.getPriority(), action2.getPriority()));
+      .max((action1, action2) -> Math.max(action1.getPriority(), action2.getPriority()));
     return result.isPresent() ? result.get().getPriority() : HConstants.PRIORITY_UNSET;
   }
 }

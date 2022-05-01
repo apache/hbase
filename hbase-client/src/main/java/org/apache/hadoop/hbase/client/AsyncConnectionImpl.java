@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Optional;
@@ -56,8 +57,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -116,7 +119,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final ClusterStatusListener clusterStatusListener;
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-      User user) {
+    User user) {
     this.conf = conf;
     this.user = user;
 
@@ -175,8 +178,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   /**
-   * If choreService has not been created yet, create the ChoreService.
-   * @return ChoreService
+   * If choreService has not been created yet, create the ChoreService. n
    */
   synchronized ChoreService getChoreService() {
     if (isClosed()) {

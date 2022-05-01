@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,12 +51,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the load balancer that is created by default.
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleLoadBalancer.class);
+    HBaseClassTestRule.forClass(TestSimpleLoadBalancer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSimpleLoadBalancer.class);
 
@@ -76,65 +76,42 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   // int[testnum][servernumber] -> numregions
   int[][] clusterStateMocks = new int[][] {
-      // 1 node
-      new int[] { 0 },
-      new int[] { 1 },
-      new int[] { 10 },
-      // 2 node
-      new int[] { 0, 0 },
-      new int[] { 2, 0 },
-      new int[] { 2, 1 },
-      new int[] { 2, 2 },
-      new int[] { 2, 3 },
-      new int[] { 2, 4 },
-      new int[] { 1, 1 },
-      new int[] { 0, 1 },
-      new int[] { 10, 1 },
-      new int[] { 14, 1432 },
-      new int[] { 47, 53 },
-      // 3 node
-      new int[] { 0, 1, 2 },
-      new int[] { 1, 2, 3 },
-      new int[] { 0, 2, 2 },
-      new int[] { 0, 3, 0 },
-      new int[] { 0, 4, 0 },
-      new int[] { 20, 20, 0 },
-      // 4 node
-      new int[] { 0, 1, 2, 3 },
-      new int[] { 4, 0, 0, 0 },
-      new int[] { 5, 0, 0, 0 },
-      new int[] { 6, 6, 0, 0 },
-      new int[] { 6, 2, 0, 0 },
-      new int[] { 6, 1, 0, 0 },
-      new int[] { 6, 0, 0, 0 },
-      new int[] { 4, 4, 4, 7 },
-      new int[] { 4, 4, 4, 8 },
-      new int[] { 0, 0, 0, 7 },
-      // 5 node
-      new int[] { 1, 1, 1, 1, 4 },
-      // more nodes
-      new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 }, new int[] { 6, 6, 5, 6, 6, 6, 6, 6, 6, 1 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 54 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 55 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 56 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 16 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 8 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 9 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 10 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 123 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 155 },
-      new int[] { 0, 0, 144, 1, 1, 1, 1, 1123, 133, 138, 12, 1444 },
-      new int[] { 0, 0, 144, 1, 0, 4, 1, 1123, 133, 138, 12, 1444 },
-      new int[] { 1538, 1392, 1561, 1557, 1535, 1553, 1385, 1542, 1619 } };
+    // 1 node
+    new int[] { 0 }, new int[] { 1 }, new int[] { 10 },
+    // 2 node
+    new int[] { 0, 0 }, new int[] { 2, 0 }, new int[] { 2, 1 }, new int[] { 2, 2 },
+    new int[] { 2, 3 }, new int[] { 2, 4 }, new int[] { 1, 1 }, new int[] { 0, 1 },
+    new int[] { 10, 1 }, new int[] { 14, 1432 }, new int[] { 47, 53 },
+    // 3 node
+    new int[] { 0, 1, 2 }, new int[] { 1, 2, 3 }, new int[] { 0, 2, 2 }, new int[] { 0, 3, 0 },
+    new int[] { 0, 4, 0 }, new int[] { 20, 20, 0 },
+    // 4 node
+    new int[] { 0, 1, 2, 3 }, new int[] { 4, 0, 0, 0 }, new int[] { 5, 0, 0, 0 },
+    new int[] { 6, 6, 0, 0 }, new int[] { 6, 2, 0, 0 }, new int[] { 6, 1, 0, 0 },
+    new int[] { 6, 0, 0, 0 }, new int[] { 4, 4, 4, 7 }, new int[] { 4, 4, 4, 8 },
+    new int[] { 0, 0, 0, 7 },
+    // 5 node
+    new int[] { 1, 1, 1, 1, 4 },
+    // more nodes
+    new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+    new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 }, new int[] { 6, 6, 5, 6, 6, 6, 6, 6, 6, 1 },
+    new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 54 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 55 },
+    new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 56 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 16 },
+    new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 8 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 9 },
+    new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 10 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 123 },
+    new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 155 },
+    new int[] { 0, 0, 144, 1, 1, 1, 1, 1123, 133, 138, 12, 1444 },
+    new int[] { 0, 0, 144, 1, 0, 4, 1, 1123, 133, 138, 12, 1444 },
+    new int[] { 1538, 1392, 1561, 1557, 1535, 1553, 1385, 1542, 1619 } };
 
-  int [] mockUniformCluster = new int[] { 5, 5, 5, 5, 5 ,0};
+  int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };
 
   @Rule
   public TestName name = new TestName();
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
-   *
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level
    */
   @Test
   public void testBalanceClusterOverall() throws Exception {
@@ -144,18 +121,18 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
       clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
       HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result =
-          mockClusterServersWithTables(clusterServers);
+        mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
       List<RegionPlan> clusterplans = new ArrayList<>();
       List<Pair<TableName, Integer>> regionAmountList = new ArrayList<>();
       for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : result
-          .entrySet()) {
+        .entrySet()) {
         TableName tableName = mapEntry.getKey();
         TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
         List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
-        if(partialplans != null) clusterplans.addAll(partialplans);
+        if (partialplans != null) clusterplans.addAll(partialplans);
         List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
         LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
         assertClusterAsBalanced(balancedClusterPerTable);
@@ -170,13 +147,10 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
-   * Deliberately generate a special case to show the overall strategy can achieve cluster
-   * level balance while the bytable strategy cannot
-   * @throws Exception
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level Deliberately generate
+   * a special case to show the overall strategy can achieve cluster level balance while the bytable
+   * strategy cannot n
    */
   @Test
   public void testImpactOfBalanceClusterOverall() throws Exception {
@@ -191,12 +165,12 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   private void testImpactOfBalanceClusterOverall(boolean useLoadOfAllTable) throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
     Map<ServerName, List<RegionInfo>> clusterServers =
-        mockUniformClusterServers(mockUniformCluster);
+      mockUniformClusterServers(mockUniformCluster);
     List<ServerAndLoad> clusterList = convertToList(clusterServers);
     clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
     // use overall can achieve both table and cluster level balance
     HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
-        mockClusterServersWithTables(clusterServers);
+      mockClusterServersWithTables(clusterServers);
     if (useLoadOfAllTable) {
       loadBalancer.setClusterLoad((Map) LoadOfAllTable);
     } else {
@@ -205,7 +179,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     List<RegionPlan> clusterplans1 = new ArrayList<RegionPlan>();
     List<Pair<TableName, Integer>> regionAmountList = new ArrayList<Pair<TableName, Integer>>();
     for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : LoadOfAllTable
-        .entrySet()) {
+      .entrySet()) {
       TableName tableName = mapEntry.getKey();
       TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
       List<ServerAndLoad> list = convertToList(servers);
@@ -226,20 +200,18 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   @Test
   public void testBalanceClusterOverallStrictly() {
-    int[][] regionsPerServerPerTable = new int[][]{
-      new int[]{ 3, 3, 4, 4, 4, 4, 5, 5, 5 },
-      new int[]{ 2, 2, 2, 2, 2, 2, 2, 2, 1 },
-    };
+    int[][] regionsPerServerPerTable = new int[][] { new int[] { 3, 3, 4, 4, 4, 4, 5, 5, 5 },
+      new int[] { 2, 2, 2, 2, 2, 2, 2, 2, 1 }, };
     TreeMap<ServerName, List<RegionInfo>> serverRegionInfo =
       mockClusterServers(regionsPerServerPerTable);
     List<ServerAndLoad> serverAndLoads = convertToList(serverRegionInfo);
     Map<TableName, TreeMap<ServerName, List<RegionInfo>>> loadOfAllTable =
-        mockClusterServersWithTables(serverRegionInfo);
+      mockClusterServersWithTables(serverRegionInfo);
     loadBalancer.setClusterLoad((Map) loadOfAllTable);
     List<RegionPlan> partialplans = loadBalancer.balanceTable(TableName.valueOf("table0"),
       loadOfAllTable.get(TableName.valueOf("table0")));
     List<ServerAndLoad> balancedServerLoads =
-        reconcile(serverAndLoads, partialplans, serverRegionInfo);
+      reconcile(serverAndLoads, partialplans, serverRegionInfo);
     for (ServerAndLoad serverAndLoad : balancedServerLoads) {
       assertEquals(6, serverAndLoad.getLoad());
     }

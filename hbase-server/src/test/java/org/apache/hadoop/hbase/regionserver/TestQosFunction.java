@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,20 +35,19 @@ import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 
 /**
- * Basic test that qos function is sort of working; i.e. a change in method naming style
- * over in pb doesn't break it.
+ * Basic test that qos function is sort of working; i.e. a change in method naming style over in pb
+ * doesn't break it.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestQosFunction extends QosTestHelper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQosFunction.class);
+    HBaseClassTestRule.forClass(TestQosFunction.class);
 
   private Configuration conf;
   private RSRpcServices rpcServices;
   private AnnotationReadingPriorityFunction qosFunction;
-
 
   @Before
   public void setUp() {
@@ -66,10 +65,9 @@ public class TestQosFunction extends QosTestHelper {
     checkMethod(conf, "OpenRegion", HConstants.ADMIN_QOS, qosFunction);
     // Check multi works.
     checkMethod(conf, "Multi", HConstants.NORMAL_QOS, qosFunction,
-        MultiRequest.getDefaultInstance());
+      MultiRequest.getDefaultInstance());
 
   }
-
 
   @Test
   public void testAnnotations() {

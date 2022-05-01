@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionState {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionState.class);
+    HBaseClassTestRule.forClass(TestRegionState.class);
 
   @Rule
   public TestName name = new TestName();
@@ -45,7 +45,7 @@ public class TestRegionState {
   @Test
   public void testSerializeDeserialize() {
     final TableName tableName = TableName.valueOf("testtb");
-    for (RegionState.State state: RegionState.State.values()) {
+    for (RegionState.State state : RegionState.State.values()) {
       testSerializeDeserialize(tableName, state);
     }
   }

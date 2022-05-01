@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,17 +61,18 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This test tests whether parallel {@link StoreScanner#close()} and
- * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring
- * that there are no references on the existing Storescanner readers.
+ * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring that there are no
+ * references on the existing Storescanner readers.
  */
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestStoreScannerClosure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStoreScannerClosure.class);
+    HBaseClassTestRule.forClass(TestStoreScannerClosure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScannerClosure.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
@@ -86,19 +87,19 @@ public class TestStoreScannerClosure {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFile").toString();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
-      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+    KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
   private final static byte[] fam = Bytes.toBytes("cf_1");
   private static final KeyValue[] kvs =
-      new KeyValue[] { create("R1", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "b", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "d", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "e", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "f", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "g", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "h", 11, KeyValue.Type.Put, "dont-care"),
-          create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
-          create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"), };
+    new KeyValue[] { create("R1", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "b", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "d", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "e", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "f", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "g", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "h", 11, KeyValue.Type.Put, "dont-care"),
+      create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
+      create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"), };
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -121,14 +122,14 @@ public class TestStoreScannerClosure {
     // create the store scanner here.
     // for easiness, use Long.MAX_VALUE as read pt
     try (ExtendedStoreScanner scan = new ExtendedStoreScanner(region.getStore(fam), scanInfo,
-        new Scan(), getCols("q1"), Long.MAX_VALUE)) {
+      new Scan(), getCols("q1"), Long.MAX_VALUE)) {
       p = new Put(Bytes.toBytes("row1"));
       p.addColumn(fam, Bytes.toBytes("q1"), Bytes.toBytes("val"));
       region.put(p);
       HStore store = region.getStore(fam);
       // use the lock to manually get a new memstore scanner. this is what
       // HStore#notifyChangedReadersObservers does under the lock.(lock is not needed here
-      //since it is just a testcase).
+      // since it is just a testcase).
       store.getStoreEngine().readLock();
       final List<KeyValueScanner> memScanners = store.memstore.getScanners(Long.MAX_VALUE);
       store.getStoreEngine().readUnlock();
@@ -181,7 +182,7 @@ public class TestStoreScannerClosure {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(CONF, fs).withOutputDir(storeFileParentDir)
-        .withFileContext(meta).build();
+      .withFileContext(meta).build();
 
     final int rowLen = 32;
     Random rand = ThreadLocalRandom.current();
@@ -190,7 +191,7 @@ public class TestStoreScannerClosure {
       byte[] v = RandomKeyValueUtil.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
       KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
-          k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
     }
 
@@ -206,7 +207,7 @@ public class TestStoreScannerClosure {
       KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
       if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
         throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
-            + "Probably the layout of KeyValue.Type has changed.");
+          + "Probably the layout of KeyValue.Type has changed.");
       }
       return keyType;
     }
@@ -219,7 +220,7 @@ public class TestStoreScannerClosure {
   }
 
   private void testScannerCloseAndUpdateReaderInternal(boolean awaitUpdate, boolean awaitClose)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // start write to store file.
     Path path = writeStoreFile();
     HStoreFile file = null;
@@ -234,7 +235,7 @@ public class TestStoreScannerClosure {
     scanFixture(kvs);
     // scanners.add(storeFileScanner);
     try (ExtendedStoreScanner scan = new ExtendedStoreScanner(region.getStore(fam), scanInfo,
-        new Scan(), getCols("a", "d"), 100L)) {
+      new Scan(), getCols("a", "d"), 100L)) {
       Thread closeThread = new Thread() {
         public void run() {
           scan.close(awaitClose, true);
@@ -269,12 +270,12 @@ public class TestStoreScannerClosure {
     private CountDownLatch latch = new CountDownLatch(1);
 
     public ExtendedStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
-        NavigableSet<byte[]> columns, long readPt) throws IOException {
+      NavigableSet<byte[]> columns, long readPt) throws IOException {
       super(store, scanInfo, scan, columns, readPt);
     }
 
     public void updateReaders(boolean await, List<HStoreFile> sfs,
-        List<KeyValueScanner> memStoreScanners) throws IOException {
+      List<KeyValueScanner> memStoreScanners) throws IOException {
       if (await) {
         try {
           latch.await();

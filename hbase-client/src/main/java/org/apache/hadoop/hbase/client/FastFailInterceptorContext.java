@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,8 +78,7 @@ class FastFailInterceptorContext extends RetryingCallerInterceptorContext {
     return retryDespiteFastFailMode;
   }
 
-  public void setCouldNotCommunicateWithServer(
-      MutableBoolean couldNotCommunicateWithServer) {
+  public void setCouldNotCommunicateWithServer(MutableBoolean couldNotCommunicateWithServer) {
     this.couldNotCommunicateWithServer = couldNotCommunicateWithServer;
   }
 

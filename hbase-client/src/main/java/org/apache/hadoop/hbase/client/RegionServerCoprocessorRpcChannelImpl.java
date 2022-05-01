@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,14 +48,13 @@ public class RegionServerCoprocessorRpcChannelImpl implements RpcChannel {
   }
 
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
-      Message responsePrototype, HBaseRpcController controller, ClientService.Interface stub) {
+    Message responsePrototype, HBaseRpcController controller, ClientService.Interface stub) {
     CompletableFuture<Message> future = new CompletableFuture<>();
     CoprocessorServiceRequest csr =
-        CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
-    stub.execRegionServerService(
-      controller,
-      csr,
-      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
+    stub.execRegionServerService(controller, csr,
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<
+        CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {
@@ -75,7 +74,7 @@ public class RegionServerCoprocessorRpcChannelImpl implements RpcChannel {
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+    Message responsePrototype, RpcCallback<Message> done) {
     addListener(
       callerBuilder.action((c, s) -> rpcCall(method, request, responsePrototype, c, s)).call(),
       ((r, e) -> {

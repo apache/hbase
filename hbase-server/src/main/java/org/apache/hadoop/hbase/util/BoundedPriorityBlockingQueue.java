@@ -15,35 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.AbstractQueue;
-
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-
 /**
- * A generic bounded blocking Priority-Queue.
- *
- * The elements of the priority queue are ordered according to the Comparator
- * provided at queue construction time.
- *
- * If multiple elements have the same priority this queue orders them in
- * FIFO (first-in-first-out) manner.
- * The head of this queue is the least element with respect to the specified
- * ordering. If multiple elements are tied for least value, the head is the
- * first one inserted.
- * The queue retrieval operations poll, remove, peek, and element access the
- * element at the head of the queue.
+ * A generic bounded blocking Priority-Queue. The elements of the priority queue are ordered
+ * according to the Comparator provided at queue construction time. If multiple elements have the
+ * same priority this queue orders them in FIFO (first-in-first-out) manner. The head of this queue
+ * is the least element with respect to the specified ordering. If multiple elements are tied for
+ * least value, the head is the first one inserted. The queue retrieval operations poll, remove,
+ * peek, and element access the element at the head of the queue.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
@@ -57,7 +48,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
 
     @SuppressWarnings("unchecked")
     public PriorityQueue(int capacity, Comparator<? super E> comparator) {
-      this.objects = (E[])new Object[capacity];
+      this.objects = (E[]) new Object[capacity];
       this.comparator = comparator;
     }
 
@@ -132,7 +123,6 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
-
   // Lock used for all operations
   private final ReentrantLock lock = new ReentrantLock();
 
@@ -145,13 +135,12 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
   private final PriorityQueue<E> queue;
 
   /**
-   * Creates a PriorityQueue with the specified capacity that orders its
-   * elements according to the specified comparator.
-   * @param capacity the capacity of this queue
+   * Creates a PriorityQueue with the specified capacity that orders its elements according to the
+   * specified comparator.
+   * @param capacity   the capacity of this queue
    * @param comparator the comparator that will be used to order this priority queue
    */
-  public BoundedPriorityBlockingQueue(int capacity,
-      Comparator<? super E> comparator) {
+  public BoundedPriorityBlockingQueue(int capacity, Comparator<? super E> comparator) {
     this.queue = new PriorityQueue<>(capacity, comparator);
   }
 
@@ -189,16 +178,14 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
   }
 
   @Override
-  public boolean offer(E e, long timeout, TimeUnit unit)
-      throws InterruptedException {
+  public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException {
     if (e == null) throw new NullPointerException();
     long nanos = unit.toNanos(timeout);
 
     lock.lockInterruptibly();
     try {
       while (queue.remainingCapacity() == 0) {
-        if (nanos <= 0)
-          return false;
+        if (nanos <= 0) return false;
         nanos = notFull.awaitNanos(nanos);
       }
       this.queue.add(e);
@@ -241,8 +228,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
   }
 
   @Override
-  public E poll(long timeout, TimeUnit unit)
-      throws InterruptedException {
+  public E poll(long timeout, TimeUnit unit) throws InterruptedException {
     long nanos = unit.toNanos(timeout);
     lock.lockInterruptibly();
     E result = null;
@@ -321,12 +307,9 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
 
   @Override
   public int drainTo(Collection<? super E> c, int maxElements) {
-    if (c == null)
-        throw new NullPointerException();
-    if (c == this)
-        throw new IllegalArgumentException();
-    if (maxElements <= 0)
-        return 0;
+    if (c == null) throw new NullPointerException();
+    if (c == this) throw new IllegalArgumentException();
+    if (maxElements <= 0) return 0;
     lock.lock();
     try {
       int n = Math.min(queue.size(), maxElements);

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,19 +38,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Sample Uploader MapReduce
  * <p>
- * This is EXAMPLE code.  You will need to change it to work for your context.
+ * This is EXAMPLE code. You will need to change it to work for your context.
  * <p>
- * Uses {@link TableReducer} to put the data into HBase. Change the InputFormat
- * to suit your data.  In this example, we are importing a CSV file.
+ * Uses {@link TableReducer} to put the data into HBase. Change the InputFormat to suit your data.
+ * In this example, we are importing a CSV file.
  * <p>
- * <pre>row,family,qualifier,value</pre>
+ *
+ * <pre>
+ * row,family,qualifier,value
+ * </pre>
  * <p>
  * The table and columnfamily we're to insert into must preexist.
  * <p>
- * There is no reducer in this example as it is not necessary and adds
- * significant overhead.  If you need to do any massaging of data before
- * inserting into HBase, you can do this in the map as well.
- * <p>Do the following to start the MR job:
+ * There is no reducer in this example as it is not necessary and adds significant overhead. If you
+ * need to do any massaging of data before inserting into HBase, you can do this in the map as well.
+ * <p>
+ * Do the following to start the MR job:
+ *
  * <pre>
  * ./bin/hadoop org.apache.hadoop.hbase.mapreduce.SampleUploader /tmp/input.csv TABLE_NAME
  * </pre>
@@ -74,16 +77,16 @@ public class SampleUploader extends Configured implements Tool {
       // Each line is comma-delimited; row,family,qualifier,value
 
       // Split CSV line
-      String [] values = line.toString().split(",");
-      if(values.length != 4) {
+      String[] values = line.toString().split(",");
+      if (values.length != 4) {
         return;
       }
 
       // Extract each value
-      byte [] row = Bytes.toBytes(values[0]);
-      byte [] family = Bytes.toBytes(values[1]);
-      byte [] qualifier = Bytes.toBytes(values[2]);
-      byte [] value = Bytes.toBytes(values[3]);
+      byte[] row = Bytes.toBytes(values[0]);
+      byte[] family = Bytes.toBytes(values[1]);
+      byte[] qualifier = Bytes.toBytes(values[2]);
+      byte[] value = Bytes.toBytes(values[3]);
 
       // Create Put
       Put put = new Put(row);
@@ -100,7 +103,7 @@ public class SampleUploader extends Configured implements Tool {
       }
 
       // Set status every checkpoint lines
-      if(++count % checkpoint == 0) {
+      if (++count % checkpoint == 0) {
         context.setStatus("Emitting Put " + count);
       }
     }
@@ -109,7 +112,7 @@ public class SampleUploader extends Configured implements Tool {
   /**
    * Job configuration.
    */
-  public static Job configureJob(Configuration conf, String [] args) throws IOException {
+  public static Job configureJob(Configuration conf, String[] args) throws IOException {
     Path inputPath = new Path(args[0]);
     String tableName = args[1];
     Job job = new Job(conf, NAME + "_" + tableName);
@@ -117,7 +120,7 @@ public class SampleUploader extends Configured implements Tool {
     FileInputFormat.setInputPaths(job, inputPath);
     job.setInputFormatClass(SequenceFileInputFormat.class);
     job.setMapperClass(Uploader.class);
-    // No reducers.  Just write straight to table.  Call initTableReducerJob
+    // No reducers. Just write straight to table. Call initTableReducerJob
     // because it sets up the TableOutputFormat.
     TableMapReduceUtil.initTableReducerJob(tableName, null, job);
     job.setNumReduceTasks(0);
@@ -126,12 +129,11 @@ public class SampleUploader extends Configured implements Tool {
 
   /**
    * Main entry point.
-   *
-   * @param otherArgs  The command line parameters after ToolRunner handles standard.
+   * @param otherArgs The command line parameters after ToolRunner handles standard.
    * @throws Exception When running the job fails.
    */
   public int run(String[] otherArgs) throws Exception {
-    if(otherArgs.length != 2) {
+    if (otherArgs.length != 2) {
       System.err.println("Wrong number of arguments: " + otherArgs.length);
       System.err.println("Usage: " + NAME + " <input> <tablename>");
       return -1;

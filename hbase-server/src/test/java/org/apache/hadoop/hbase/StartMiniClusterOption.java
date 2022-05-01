@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * The options include HDFS options to build mini dfs cluster, Zookeeper options to build mini zk
  * cluster, and mostly HBase options to build mini hbase cluster. To create an object, use a
  * {@link Builder}. Example usage:
- * 
+ *
  * <pre>
  *    StartMiniClusterOption option = StartMiniClusterOption.builder().
  *        .numMasters(3).rsClass(MyRegionServer.class).createWALDir(true).build();
@@ -104,9 +104,9 @@ public final class StartMiniClusterOption {
    * Private constructor. Use {@link Builder#build()}.
    */
   private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
-      Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
-      String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
+    Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
+    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
+    String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -167,10 +167,10 @@ public final class StartMiniClusterOption {
   @Override
   public String toString() {
     return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
-        + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
-        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts="
-        + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir="
-        + createRootDir + ", createWALDir=" + createWALDir + '}';
+      + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
+      + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts="
+      + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir="
+      + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
@@ -206,8 +206,8 @@ public final class StartMiniClusterOption {
         numDataNodes = dataNodeHosts.length;
       }
       return new StartMiniClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-          createRootDir, createWALDir);
+        numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
+        createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {

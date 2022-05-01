@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,12 +31,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestExportSnapshot using ExportSnapshot in secure mode.
  */
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestSecureExportSnapshot extends TestExportSnapshot {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureExportSnapshot.class);
+    HBaseClassTestRule.forClass(TestSecureExportSnapshot.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

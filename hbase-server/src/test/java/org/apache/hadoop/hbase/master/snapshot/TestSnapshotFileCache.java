@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Test that we correctly reload the cache, filter directories, etc.
  */
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestSnapshotFileCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
+    HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -165,20 +165,20 @@ public class TestSnapshotFileCache {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, period,
       10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles()) {
       @Override
-      List<String> getSnapshotsInProgress()
-              throws IOException {
+      List<String> getSnapshotsInProgress() throws IOException {
         List<String> result = super.getSnapshotsInProgress();
         count.incrementAndGet();
         return result;
       }
 
-      @Override public void triggerCacheRefreshForTesting() {
+      @Override
+      public void triggerCacheRefreshForTesting() {
         super.triggerCacheRefreshForTesting();
       }
     };
 
     SnapshotMock.SnapshotBuilder complete =
-        createAndTestSnapshotV1(cache, "snapshot", false, false, false);
+      createAndTestSnapshotV1(cache, "snapshot", false, false, false);
 
     int countBeforeCheck = count.get();
 
@@ -199,17 +199,17 @@ public class TestSnapshotFileCache {
   }
 
   private List<FileStatus> getStoreFilesForSnapshot(SnapshotMock.SnapshotBuilder builder)
-      throws IOException {
+    throws IOException {
     final List<FileStatus> allStoreFiles = Lists.newArrayList();
-    SnapshotReferenceUtil
-        .visitReferencedFiles(conf, fs, builder.getSnapshotsDir(),
-            new SnapshotReferenceUtil.SnapshotVisitor() {
-              @Override public void storeFile(RegionInfo regionInfo, String familyName,
-                  SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-                FileStatus status = mockStoreFile(storeFile.getName());
-                allStoreFiles.add(status);
-              }
-            });
+    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, builder.getSnapshotsDir(),
+      new SnapshotReferenceUtil.SnapshotVisitor() {
+        @Override
+        public void storeFile(RegionInfo regionInfo, String familyName,
+          SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          FileStatus status = mockStoreFile(storeFile.getName());
+          allStoreFiles.add(status);
+        }
+      });
     return allStoreFiles;
   }
 
@@ -223,17 +223,17 @@ public class TestSnapshotFileCache {
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     @Override
-    public Collection<String> filesUnderSnapshot(final FileSystem workingFs,
-      final Path snapshotDir) throws IOException {
-      Collection<String> files =  new HashSet<>();
+    public Collection<String> filesUnderSnapshot(final FileSystem workingFs, final Path snapshotDir)
+      throws IOException {
+      Collection<String> files = new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(conf, workingFs, snapshotDir));
       return files;
     }
   };
 
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
-      final String name, final boolean tmp, final boolean removeOnExit, boolean setFolderTime)
-      throws IOException {
+    final String name, final boolean tmp, final boolean removeOnExit, boolean setFolderTime)
+    throws IOException {
     SnapshotMock snapshotMock = new SnapshotMock(conf, fs, rootDir);
     SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit, setFolderTime);
@@ -241,18 +241,18 @@ public class TestSnapshotFileCache {
   }
 
   private void createAndTestSnapshotV2(final SnapshotFileCache cache, final String name,
-      final boolean tmp, final boolean removeOnExit, boolean setFolderTime) throws IOException {
+    final boolean tmp, final boolean removeOnExit, boolean setFolderTime) throws IOException {
     SnapshotMock snapshotMock = new SnapshotMock(conf, fs, rootDir);
     SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit, setFolderTime);
   }
 
   private void createAndTestSnapshot(final SnapshotFileCache cache,
-      final SnapshotMock.SnapshotBuilder builder,
-      final boolean tmp, final boolean removeOnExit, boolean setFolderTime) throws IOException {
+    final SnapshotMock.SnapshotBuilder builder, final boolean tmp, final boolean removeOnExit,
+    boolean setFolderTime) throws IOException {
     List<Path> files = new ArrayList<>();
     for (int i = 0; i < 3; ++i) {
-      for (Path filePath: builder.addRegion()) {
+      for (Path filePath : builder.addRegion()) {
         if (tmp) {
           // We should be able to find all the files while the snapshot creation is in-progress
           CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -273,7 +273,7 @@ public class TestSnapshotFileCache {
     }
 
     // Make sure that all files are still present
-    for (Path path: files) {
+    for (Path path : files) {
       assertFalse("Cache didn't find " + path, contains(getNonSnapshotFiles(cache, path), path));
     }
 
@@ -295,7 +295,7 @@ public class TestSnapshotFileCache {
   }
 
   private static boolean contains(Iterable<FileStatus> files, Path filePath) {
-    for (FileStatus status: files) {
+    for (FileStatus status : files) {
       LOG.debug("debug in contains, 3.1: " + status.getPath() + " filePath:" + filePath);
       if (filePath.equals(status.getPath())) {
         return true;

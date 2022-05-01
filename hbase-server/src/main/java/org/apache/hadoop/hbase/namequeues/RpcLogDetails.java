@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * RpcCall details that would be passed on to ring buffer of slow log responses
@@ -41,7 +40,7 @@ public class RpcLogDetails extends NamedQueuePayload {
   private final boolean isLargeLog;
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
-      String className, boolean isSlowLog, boolean isLargeLog) {
+    String className, boolean isSlowLog, boolean isLargeLog) {
     super(SLOW_LOG_EVENT);
     this.rpcCall = rpcCall;
     this.param = param;
@@ -82,14 +81,9 @@ public class RpcLogDetails extends NamedQueuePayload {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("rpcCall", rpcCall)
-      .append("param", param)
-      .append("clientAddress", clientAddress)
-      .append("responseSize", responseSize)
-      .append("className", className)
-      .append("isSlowLog", isSlowLog)
-      .append("isLargeLog", isLargeLog)
-      .toString();
+    return new ToStringBuilder(this).append("rpcCall", rpcCall).append("param", param)
+      .append("clientAddress", clientAddress).append("responseSize", responseSize)
+      .append("className", className).append("isSlowLog", isSlowLog)
+      .append("isLargeLog", isLargeLog).toString();
   }
 }

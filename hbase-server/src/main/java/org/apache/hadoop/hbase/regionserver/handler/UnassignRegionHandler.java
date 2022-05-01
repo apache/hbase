@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -62,7 +63,7 @@ public class UnassignRegionHandler extends EventHandler {
   private final RetryCounter retryCounter;
 
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
-      boolean abort, @Nullable ServerName destination, EventType eventType) {
+    boolean abort, @Nullable ServerName destination, EventType eventType) {
     super(server, eventType);
     this.encodedName = encodedName;
     this.closeProcId = closeProcId;
@@ -86,12 +87,14 @@ public class UnassignRegionHandler extends EventHandler {
         // reportRegionStateTransition, so the HMaster will think the region is online, before we
         // actually open the region, as reportRegionStateTransition is part of the opening process.
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-        LOG.warn("Received CLOSE for {} which we are already " +
-          "trying to OPEN; try again after {}ms", encodedName, backoff);
+        LOG.warn(
+          "Received CLOSE for {} which we are already " + "trying to OPEN; try again after {}ms",
+          encodedName, backoff);
         rs.getExecutorService().delayedSubmit(this, backoff, TimeUnit.MILLISECONDS);
       } else {
-        LOG.info("Received CLOSE for {} which we are already trying to CLOSE," +
-          " but not completed yet", encodedName);
+        LOG.info(
+          "Received CLOSE for {} which we are already trying to CLOSE," + " but not completed yet",
+          encodedName);
       }
       return;
     }
@@ -121,18 +124,21 @@ public class UnassignRegionHandler extends EventHandler {
     }
 
     rs.removeRegion(region, destination);
-    if (ServerRegionReplicaUtil.isMetaRegionReplicaReplicationEnabled(rs.getConfiguration(),
-        region.getTableDescriptor().getTableName())) {
+    if (
+      ServerRegionReplicaUtil.isMetaRegionReplicaReplicationEnabled(rs.getConfiguration(),
+        region.getTableDescriptor().getTableName())
+    ) {
       if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo().getReplicaId())) {
         // If hbase:meta read replicas enabled, remove replication source for hbase:meta Regions.
         // See assign region handler where we add the replication source on open.
-        rs.getReplicationSourceService().getReplicationManager().
-          removeCatalogReplicationSource(region.getRegionInfo());
+        rs.getReplicationSourceService().getReplicationManager()
+          .removeCatalogReplicationSource(region.getRegionInfo());
       }
     }
-    if (!rs.reportRegionStateTransition(
-      new RegionStateTransitionContext(TransitionCode.CLOSED, HConstants.NO_SEQNUM, closeProcId,
-        -1, region.getRegionInfo()))) {
+    if (
+      !rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
+        HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo()))
+    ) {
       throw new IOException("Failed to report close to master: " + regionName);
     }
     // Cache the close region procedure id after report region transition succeed.
@@ -151,13 +157,13 @@ public class UnassignRegionHandler extends EventHandler {
   }
 
   public static UnassignRegionHandler create(HRegionServer server, String encodedName,
-      long closeProcId, boolean abort, @Nullable ServerName destination) {
+    long closeProcId, boolean abort, @Nullable ServerName destination) {
     // Just try our best to determine whether it is for closing meta. It is not the end of the world
     // if we put the handler into a wrong executor.
     Region region = server.getRegion(encodedName);
-    EventType eventType =
-      region != null && region.getRegionInfo().isMetaRegion() ? EventType.M_RS_CLOSE_META
-        : EventType.M_RS_CLOSE_REGION;
+    EventType eventType = region != null && region.getRegionInfo().isMetaRegion()
+      ? EventType.M_RS_CLOSE_META
+      : EventType.M_RS_CLOSE_REGION;
     return new UnassignRegionHandler(server, encodedName, closeProcId, abort, destination,
       eventType);
   }

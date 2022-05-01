@@ -45,11 +45,12 @@ import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 /**
  * The asynchronous region locator.
@@ -98,11 +99,8 @@ class AsyncRegionLocator {
     return TableName.isMetaTableName(tableName);
   }
 
-  private <T> CompletableFuture<T> tracedLocationFuture(
-    Supplier<CompletableFuture<T>> action,
-    Function<T, List<String>> getRegionNames,
-    Supplier<Span> spanSupplier
-  ) {
+  private <T> CompletableFuture<T> tracedLocationFuture(Supplier<CompletableFuture<T>> action,
+    Function<T, List<String>> getRegionNames, Supplier<Span> spanSupplier) {
     final Span span = spanSupplier.get();
     try (Scope scope = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
@@ -126,50 +124,44 @@ class AsyncRegionLocator {
     if (locs == null || locs.getRegionLocations() == null) {
       return Collections.emptyList();
     }
-    return Arrays.stream(locs.getRegionLocations())
-      .filter(Objects::nonNull)
-      .map(HRegionLocation::getRegion)
-      .map(RegionInfo::getRegionNameAsString)
+    return Arrays.stream(locs.getRegionLocations()).filter(Objects::nonNull)
+      .map(HRegionLocation::getRegion).map(RegionInfo::getRegionNameAsString)
       .collect(Collectors.toList());
   }
 
   static List<String> getRegionNames(HRegionLocation location) {
-    return Optional.ofNullable(location)
-      .map(HRegionLocation::getRegion)
-      .map(RegionInfo::getRegionNameAsString)
-      .map(Collections::singletonList)
+    return Optional.ofNullable(location).map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString).map(Collections::singletonList)
       .orElseGet(Collections::emptyList);
   }
 
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
     RegionLocateType type, boolean reload, long timeoutNs) {
     final Supplier<Span> supplier = new TableSpanBuilder(conn)
-      .setName("AsyncRegionLocator.getRegionLocations")
-      .setTableName(tableName);
+      .setName("AsyncRegionLocator.getRegionLocations").setTableName(tableName);
     return tracedLocationFuture(() -> {
-      CompletableFuture<RegionLocations> future = isMeta(tableName) ?
-        metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload) :
-        nonMetaRegionLocator.getRegionLocations(tableName, row,
+      CompletableFuture<RegionLocations> future = isMeta(tableName)
+        ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
+        : nonMetaRegionLocator.getRegionLocations(tableName, row,
           RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
       return withTimeout(future, timeoutNs,
-        () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
-          "ms) waiting for region locations for " + tableName + ", row='" +
-          Bytes.toStringBinary(row) + "'");
+        () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+          + "ms) waiting for region locations for " + tableName + ", row='"
+          + Bytes.toStringBinary(row) + "'");
     }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
     int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
     final Supplier<Span> supplier = new TableSpanBuilder(conn)
-      .setName("AsyncRegionLocator.getRegionLocation")
-      .setTableName(tableName);
+      .setName("AsyncRegionLocator.getRegionLocation").setTableName(tableName);
     return tracedLocationFuture(() -> {
       // meta region can not be split right now so we always call the same method.
       // Change it later if the meta table can have more than one regions.
       CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
-      CompletableFuture<RegionLocations> locsFuture =
-        isMeta(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload) :
-          nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
+      CompletableFuture<RegionLocations> locsFuture = isMeta(tableName)
+        ? metaRegionLocator.getRegionLocations(replicaId, reload)
+        : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
       addListener(locsFuture, (locs, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
@@ -178,21 +170,21 @@ class AsyncRegionLocator {
         HRegionLocation loc = locs.getRegionLocation(replicaId);
         if (loc == null) {
           future.completeExceptionally(
-            new RegionOfflineException("No location for " + tableName + ", row='" +
-              Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
+            new RegionOfflineException("No location for " + tableName + ", row='"
+              + Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
         } else if (loc.getServerName() == null) {
           future.completeExceptionally(
-            new RegionOfflineException("No server address listed for region '" +
-              loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row) +
-              "', locateType=" + type + ", replicaId=" + replicaId));
+            new RegionOfflineException("No server address listed for region '"
+              + loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row)
+              + "', locateType=" + type + ", replicaId=" + replicaId));
         } else {
           future.complete(loc);
         }
       });
       return withTimeout(future, timeoutNs,
-        () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
-          "ms) waiting for region location for " + tableName + ", row='" +
-          Bytes.toStringBinary(row) + "', replicaId=" + replicaId);
+        () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+          + "ms) waiting for region location for " + tableName + ", row='"
+          + Bytes.toStringBinary(row) + "', replicaId=" + replicaId);
     }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
@@ -221,9 +213,8 @@ class AsyncRegionLocator {
   }
 
   void clearCache(TableName tableName) {
-    Supplier<Span> supplier = new TableSpanBuilder(conn)
-      .setName("AsyncRegionLocator.clearCache")
-      .setTableName(tableName);
+    Supplier<Span> supplier =
+      new TableSpanBuilder(conn).setName("AsyncRegionLocator.clearCache").setTableName(tableName);
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", tableName);
       if (tableName.equals(META_TABLE_NAME)) {
@@ -235,9 +226,9 @@ class AsyncRegionLocator {
   }
 
   void clearCache(ServerName serverName) {
-    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
-      .setName("AsyncRegionLocator.clearCache")
-      .addAttribute(SERVER_NAME_KEY, serverName.getServerName());
+    Supplier<Span> supplier =
+      new ConnectionSpanBuilder(conn).setName("AsyncRegionLocator.clearCache")
+        .addAttribute(SERVER_NAME_KEY, serverName.getServerName());
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", serverName);
       metaRegionLocator.clearCache(serverName);
@@ -247,8 +238,8 @@ class AsyncRegionLocator {
   }
 
   void clearCache() {
-    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
-      .setName("AsyncRegionLocator.clearCache");
+    Supplier<Span> supplier =
+      new ConnectionSpanBuilder(conn).setName("AsyncRegionLocator.clearCache");
     TraceUtil.trace(() -> {
       metaRegionLocator.clearCache();
       nonMetaRegionLocator.clearCache();

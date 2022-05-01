@@ -71,7 +71,7 @@ public class TestRaceBetweenSCPAndDTP {
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
     public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master,masterRegion);
+      super(master, masterRegion);
     }
 
     @Override
@@ -144,8 +144,8 @@ public class TestRaceBetweenSCPAndDTP {
     RESUME_GET_REGIONS_ON_SERVER.countDown();
 
     long dtpProcId =
-        procExec.getProcedures().stream().filter(p -> p instanceof DisableTableProcedure)
-            .map(p -> (DisableTableProcedure) p).findAny().get().getProcId();
+      procExec.getProcedures().stream().filter(p -> p instanceof DisableTableProcedure)
+        .map(p -> (DisableTableProcedure) p).findAny().get().getProcId();
     UTIL.waitFor(60000, () -> procExec.isFinished(dtpProcId));
   }
 
@@ -153,8 +153,8 @@ public class TestRaceBetweenSCPAndDTP {
    * @return Returns {@link Procedure#NO_PROC_ID} if no SCP found else actual pid.
    */
   private long getSCPPID(ProcedureExecutor<?> e) {
-    Optional<ServerCrashProcedure> optional = e.getProcedures().stream().
-      filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p).findAny();
-    return optional.isPresent()? optional.get().getProcId(): Procedure.NO_PROC_ID;
+    Optional<ServerCrashProcedure> optional = e.getProcedures().stream()
+      .filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p).findAny();
+    return optional.isPresent() ? optional.get().getProcId() : Procedure.NO_PROC_ID;
   }
 }

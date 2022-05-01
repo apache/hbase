@@ -212,7 +212,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<CheckAndMutateResult>>
-      checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    checkAndMutate(List<CheckAndMutate> checkAndMutates) {
     return rawTable.checkAndMutate(checkAndMutates).stream().map(this::wrap).collect(toList());
   }
 
@@ -279,14 +279,14 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, byte[] row) {
+    ServiceCaller<S, R> callable, byte[] row) {
     return wrap(rawTable.coprocessorService(stubMaker, callable, row));
   }
 
   @Override
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
-      Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
-      CoprocessorCallback<R> callback) {
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    CoprocessorCallback<R> callback) {
     final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
@@ -311,7 +311,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
       }
     };
     CoprocessorServiceBuilder<S, R> builder =
-        rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
+      rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
     return new CoprocessorServiceBuilder<S, R>() {
 
       @Override

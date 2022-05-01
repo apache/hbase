@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,17 +49,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestBlocksScanned {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlocksScanned.class);
+    HBaseClassTestRule.forClass(TestBlocksScanned.class);
 
-  private static byte [] FAMILY = Bytes.toBytes("family");
-  private static byte [] COL = Bytes.toBytes("col");
-  private static byte [] START_KEY = Bytes.toBytes("aaa");
-  private static byte [] END_KEY = Bytes.toBytes("zzz");
+  private static byte[] FAMILY = Bytes.toBytes("family");
+  private static byte[] COL = Bytes.toBytes("col");
+  private static byte[] START_KEY = Bytes.toBytes("aaa");
+  private static byte[] END_KEY = Bytes.toBytes("zzz");
   private static int BLOCK_SIZE = 70;
 
   private static HBaseTestingUtility TEST_UTIL = null;
@@ -75,40 +75,29 @@ public class TestBlocksScanned {
 
   @Test
   public void testBlocksScanned() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScanned");
+    byte[] tableName = Bytes.toBytes("TestBlocksScanned");
     HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
 
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    table.addFamily(new HColumnDescriptor(FAMILY).setMaxVersions(10).setBlockCacheEnabled(true)
+      .setBlocksize(BLOCK_SIZE).setCompressionType(Compression.Algorithm.NONE));
     _testBlocksScanned(table);
   }
 
   @Test
   public void testBlocksScannedWithEncoding() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
+    byte[] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
     HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
 
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    table.addFamily(new HColumnDescriptor(FAMILY).setMaxVersions(10).setBlockCacheEnabled(true)
+      .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).setBlocksize(BLOCK_SIZE)
+      .setCompressionType(Compression.Algorithm.NONE));
     _testBlocksScanned(table);
   }
 
   private void _testBlocksScanned(TableDescriptor td) throws Exception {
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    RegionInfo regionInfo =
-        RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY).setEndKey(END_KEY)
-            .build();
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY)
+      .setEndKey(END_KEY).build();
     HRegion r = HBaseTestingUtility.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
     addContent(r, FAMILY, COL);
     r.flush(true);
@@ -117,26 +106,27 @@ public class TestBlocksScanned {
     long before = stats.getHitCount() + stats.getMissCount();
     // Do simple test of getting one row only first.
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
-        .setReadType(Scan.ReadType.PREAD);
+      .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
     scan.setMaxVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();
-    while (s.next(results));
+    while (s.next(results))
+      ;
     s.close();
 
     int expectResultSize = 'z' - 'a';
     assertEquals(expectResultSize, results.size());
 
-    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE /
-        (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
+    int kvPerBlock = (int) Math
+      .ceil(BLOCK_SIZE / (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
     assertEquals(2, kvPerBlock);
 
     long expectDataBlockRead = (long) Math.ceil(expectResultSize / (double) kvPerBlock);
     long expectIndexBlockRead = expectDataBlockRead;
 
     assertEquals(expectIndexBlockRead + expectDataBlockRead,
-        stats.getHitCount() + stats.getMissCount() - before);
+      stats.getHitCount() + stats.getMissCount() - before);
   }
 }

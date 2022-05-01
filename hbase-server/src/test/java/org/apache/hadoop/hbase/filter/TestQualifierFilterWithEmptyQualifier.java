@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,37 +57,36 @@ import org.slf4j.LoggerFactory;
 /**
  * Test qualifierFilter with empty qualifier column
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestQualifierFilterWithEmptyQualifier {
 
-  private final static Logger LOG
-      = LoggerFactory.getLogger(TestQualifierFilterWithEmptyQualifier.class);
+  private final static Logger LOG =
+    LoggerFactory.getLogger(TestQualifierFilterWithEmptyQualifier.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQualifierFilterWithEmptyQualifier.class);
+    HBaseClassTestRule.forClass(TestQualifierFilterWithEmptyQualifier.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HRegion region;
 
   @Rule
   public TestName name = new TestName();
 
-  private static final byte[][] ROWS =
-    { Bytes.toBytes("testRowOne-0"), Bytes.toBytes("testRowOne-1"),
-        Bytes.toBytes("testRowOne-2"), Bytes.toBytes("testRowOne-3") };
+  private static final byte[][] ROWS = { Bytes.toBytes("testRowOne-0"),
+    Bytes.toBytes("testRowOne-1"), Bytes.toBytes("testRowOne-2"), Bytes.toBytes("testRowOne-3") };
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
-  private static final byte[][] QUALIFIERS = {HConstants.EMPTY_BYTE_ARRAY,
-      Bytes.toBytes("testQualifier")};
+  private static final byte[][] QUALIFIERS =
+    { HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("testQualifier") };
   private static final byte[] VALUE = Bytes.toBytes("testValueOne");
   private long numRows = (long) ROWS.length;
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptor htd = TableDescriptorBuilder
-        .newBuilder(TableName.valueOf("TestQualifierFilter"))
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("TestQualifierFilter"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    this.region = HBaseTestingUtility
-        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
 
     // Insert data
     for (byte[] ROW : ROWS) {
@@ -111,55 +111,48 @@ public class TestQualifierFilterWithEmptyQualifier {
   public void testQualifierFilterWithEmptyColumn() throws IOException {
     long colsPerRow = 2;
     long expectedKeys = colsPerRow / 2;
-    Filter f = new QualifierFilter(CompareOperator.EQUAL,
-        new BinaryComparator(QUALIFIERS[0]));
+    Filter f = new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIERS[0]));
     Scan s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, this.numRows, expectedKeys);
 
     expectedKeys = colsPerRow / 2;
-    f = new QualifierFilter(CompareOperator.EQUAL,
-        new BinaryComparator(QUALIFIERS[1]));
+    f = new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIERS[1]));
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, this.numRows, expectedKeys);
 
     expectedKeys = colsPerRow / 2;
-    f = new QualifierFilter(CompareOperator.GREATER,
-        new BinaryComparator(QUALIFIERS[0]));
+    f = new QualifierFilter(CompareOperator.GREATER, new BinaryComparator(QUALIFIERS[0]));
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, this.numRows, expectedKeys);
 
     expectedKeys = colsPerRow;
-    f = new QualifierFilter(CompareOperator.GREATER_OR_EQUAL,
-        new BinaryComparator(QUALIFIERS[0]));
+    f = new QualifierFilter(CompareOperator.GREATER_OR_EQUAL, new BinaryComparator(QUALIFIERS[0]));
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, this.numRows, expectedKeys);
   }
 
-  private void verifyScanNoEarlyOut(Scan s, long expectedRows,
-      long expectedKeys)
-      throws IOException {
+  private void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys)
+    throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<Cell> results = new ArrayList<>();
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new Cell[results.size()]),
-          CellComparator.getInstance());
+      Arrays.sort(results.toArray(new Cell[results.size()]), CellComparator.getInstance());
       LOG.info("counter=" + i + ", " + results);
-      if(results.isEmpty()) {
+      if (results.isEmpty()) {
         break;
       }
-      assertTrue("Scanned too many rows! Only expected " + expectedRows +
-          " total but already scanned " + (i+1), expectedRows > i);
-      assertEquals("Expected " + expectedKeys + " keys per row but " +
-          "returned " + results.size(), expectedKeys, results.size());
+      assertTrue("Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1), expectedRows > i);
+      assertEquals("Expected " + expectedKeys + " keys per row but " + "returned " + results.size(),
+        expectedKeys, results.size());
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i +
-        " rows", expectedRows, i);
+    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -55,10 +54,11 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
-      "Current number of Regions In Transition over threshold time (Gauge).";
-  String RIT_OLDEST_AGE_DESC = "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
+    "Current number of Regions In Transition over threshold time (Gauge).";
+  String RIT_OLDEST_AGE_DESC =
+    "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
   String RIT_DURATION_DESC =
-      "Total durations in milliseconds for all Regions in Transition (Histogram).";
+    "Total durations in milliseconds for all Regions in Transition (Histogram).";
 
   // HBCK report metrics
   String ORPHAN_REGIONS_ON_RS = "orphanRegionsOnRS";
@@ -79,7 +79,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String OVERLAPS_DESC = "Current number of Overlaps (Gauge).";
   String UNKNOWN_SERVER_REGIONS_DESC = "Current number of Unknown Server Regions (Gauge).";
   String EMPTY_REGION_INFO_REGIONS_DESC =
-      "Current number of Regions with Empty Region Info (Gauge).";
+    "Current number of Regions with Empty Region Info (Gauge).";
 
   String ASSIGN_METRIC_PREFIX = "assign";
   String UNASSIGN_METRIC_PREFIX = "unassign";
@@ -94,21 +94,18 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   /**
    * Set the number of regions in transition.
-   *
    * @param ritCount count of the regions in transition.
    */
   void setRIT(int ritCount);
 
   /**
    * Set the count of the number of regions that have been in transition over the threshold time.
-   *
    * @param ritCountOverThreshold number of regions in transition for longer than threshold.
    */
   void setRITCountOverThreshold(int ritCountOverThreshold);
 
   /**
    * Set the oldest region in transition.
-   *
    * @param age age of the oldest RIT.
    */
   void setRITOldestAge(long age);
@@ -121,35 +118,30 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   /**
    * Set the number of orphan regions on RS.
-   *
    * @param orphanRegionsOnRs count of the orphan regions on RS in HBCK chore report.
    */
   void setOrphanRegionsOnRs(int orphanRegionsOnRs);
 
   /**
    * Set the number of orphan regions on FS.
-   *
    * @param orphanRegionsOnFs count of the orphan regions on FS in HBCK chore report.
    */
   void setOrphanRegionsOnFs(int orphanRegionsOnFs);
 
   /**
    * Set the number of inconsistent regions.
-   *
    * @param inconsistentRegions count of the inconsistent regions in HBCK chore report.
    */
   void setInconsistentRegions(int inconsistentRegions);
 
   /**
    * Set the number of holes.
-   *
    * @param holes count of the holes in CatalogJanitor Consistency report.
    */
   void setHoles(int holes);
 
   /**
    * Set the number of overlaps.
-   *
    * @param overlaps count of the overlaps in CatalogJanitor Consistency report.
    */
   void setOverlaps(int overlaps);
@@ -157,14 +149,14 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   /**
    * Set the number of unknown server regions.
    * @param unknownServerRegions count of the unknown server regions in CatalogJanitor Consistency
-   *          report.
+   *                             report.
    */
   void setUnknownServerRegions(int unknownServerRegions);
 
   /**
    * Set the number of regions with empty region info.
    * @param emptyRegionInfoRegions count of the regions with empty region info in CatalogJanitor
-   *          Consistency report.
+   *                               Consistency report.
    */
   void setEmptyRegionInfoRegions(int emptyRegionInfoRegions);
 

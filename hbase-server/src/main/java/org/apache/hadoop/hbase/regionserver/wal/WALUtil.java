@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.function.Function;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,16 +36,18 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 
 /**
- * Helper methods to ease Region Server integration with the Write Ahead Log (WAL).
- * Note that methods in this class specifically should not require access to anything
- * other than the API found in {@link WAL}. For internal use only.
+ * Helper methods to ease Region Server integration with the Write Ahead Log (WAL). Note that
+ * methods in this class specifically should not require access to anything other than the API found
+ * in {@link WAL}. For internal use only.
  */
 @InterfaceAudience.Private
 public class WALUtil {
@@ -100,11 +100,10 @@ public class WALUtil {
    * only. Not for external client consumption.
    */
   public static WALKeyImpl writeRegionEventMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, RegionEventDescriptor r,
-      MultiVersionConcurrencyControl mvcc)
-    throws IOException {
-    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
-        WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, RegionEventDescriptor r,
+    MultiVersionConcurrencyControl mvcc) throws IOException {
+    WALKeyImpl walKey =
+      writeMarker(wal, replicationScope, hri, WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -112,21 +111,22 @@ public class WALUtil {
   }
 
   /**
-   * Write a log marker that a bulk load has succeeded and is about to be committed.
-   * This write is for internal use only. Not for external client consumption.
-   * @param wal The log to write into.
+   * Write a log marker that a bulk load has succeeded and is about to be committed. This write is
+   * for internal use only. Not for external client consumption.
+   * @param wal              The log to write into.
    * @param replicationScope The replication scope of the families in the HRegion
-   * @param hri A description of the region in the table that we are bulk loading into.
-   * @param desc A protocol buffers based description of the client's bulk loading request
+   * @param hri              A description of the region in the table that we are bulk loading into.
+   * @param desc             A protocol buffers based description of the client's bulk loading
+   *                         request
    * @return walKey with sequenceid filled out for this bulk load marker
    * @throws IOException We will throw an IOException if we can not append to the HLog.
    */
   public static WALKeyImpl writeBulkLoadMarkerAndSync(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
-      final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
+    final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
+    final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
     throws IOException {
-    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
-      WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
+    WALKeyImpl walKey =
+      writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
@@ -134,12 +134,12 @@ public class WALUtil {
   }
 
   private static WALKeyImpl writeMarker(final WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, WALEdit edit, MultiVersionConcurrencyControl mvcc,
-      Map<String, byte[]> extendedAttributes)
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, WALEdit edit,
+    MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes)
     throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
-    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, mvcc,
-      extendedAttributes, true);
+    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, mvcc, extendedAttributes,
+      true);
   }
 
   /**
@@ -151,8 +151,8 @@ public class WALUtil {
    * @return WALKeyImpl that was added to the WAL.
    */
   private static WALKeyImpl doFullMarkerAppendTransaction(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final WALEdit edit,
-      MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes, boolean sync)
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final WALEdit edit,
+    MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes, boolean sync)
     throws IOException {
     // TODO: Pass in current time to use?
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
@@ -181,17 +181,17 @@ public class WALUtil {
    * @return Blocksize to use writing WALs.
    */
   public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir)
-      throws IOException {
+    throws IOException {
     return getWALBlockSize(conf, fs, dir, false);
   }
 
   /**
    * Public because of FSHLog. Should be package-private
    * @param isRecoverEdits the created writer is for recovered edits or WAL. For recovered edits, it
-   *          is true and for WAL it is false.
+   *                       is true and for WAL it is false.
    */
   public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir,
-      boolean isRecoverEdits) throws IOException {
+    boolean isRecoverEdits) throws IOException {
     long defaultBlockSize = CommonFSUtils.getDefaultBlockSize(fs, dir) * 2;
     if (isRecoverEdits) {
       return conf.getLong("hbase.regionserver.recoverededits.blocksize", defaultBlockSize);

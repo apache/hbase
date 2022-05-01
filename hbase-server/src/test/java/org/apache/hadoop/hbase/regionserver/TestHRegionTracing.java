@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -116,8 +116,8 @@ public class TestHRegionTracing {
         return false;
       }
       List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
-      return regionNames != null && regionNames.size() == 1 &&
-        regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
+      return regionNames != null && regionNames.size() == 1
+        && regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
     }));
   }
 

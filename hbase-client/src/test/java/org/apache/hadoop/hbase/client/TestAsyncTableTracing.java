@@ -104,7 +104,7 @@ public class TestAsyncTableTracing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableTracing.class);
+    HBaseClassTestRule.forClass(TestAsyncTableTracing.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -129,18 +129,18 @@ public class TestAsyncTableTracing {
         RpcCallback<ScanResponse> done = invocation.getArgument(2);
         if (!req.hasScannerId()) {
           done.run(ScanResponse.newBuilder().setScannerId(1).setTtl(800)
-              .setMoreResultsInRegion(true).setMoreResults(true).build());
+            .setMoreResultsInRegion(true).setMoreResults(true).build());
         } else {
           if (req.hasCloseScanner() && req.getCloseScanner()) {
             done.run(ScanResponse.getDefaultInstance());
           } else {
             Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
-                .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
-                .setValue(Bytes.toBytes("v")).build();
+              .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+              .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
+              .setValue(Bytes.toBytes("v")).build();
             Result result = Result.create(Arrays.asList(cell));
             ScanResponse.Builder builder = ScanResponse.newBuilder().setScannerId(1).setTtl(800)
-                .addResults(ProtobufUtil.toResult(result));
+              .addResults(ProtobufUtil.toResult(result));
             if (req.getLimitOfRows() == 1) {
               builder.setMoreResultsInRegion(false).setMoreResults(false);
             } else {
@@ -183,12 +183,12 @@ public class TestAsyncTableTracing {
             ColumnValue value = req.getColumnValue(0);
             QualifierValue qvalue = value.getQualifierValue(0);
             Cell cell =
-                CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
-                    .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
-                    .setQualifier(qvalue.getQualifier().toByteArray())
-                    .setValue(qvalue.getValue().toByteArray()).build();
+              CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+                .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
+                .setQualifier(qvalue.getQualifier().toByteArray())
+                .setValue(qvalue.getValue().toByteArray()).build();
             resp = MutateResponse.newBuilder()
-                .setResult(ProtobufUtil.toResult(Result.create(Arrays.asList(cell)))).build();
+              .setResult(ProtobufUtil.toResult(Result.create(Arrays.asList(cell)))).build();
             break;
           default:
             resp = MutateResponse.getDefaultInstance();
@@ -215,18 +215,18 @@ public class TestAsyncTableTracing {
       AsyncRegionLocator getLocator() {
         AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
         Answer<CompletableFuture<HRegionLocation>> answer =
-            new Answer<CompletableFuture<HRegionLocation>>() {
+          new Answer<CompletableFuture<HRegionLocation>>() {
 
-              @Override
-              public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-                  throws Throwable {
-                TableName tableName = invocation.getArgument(0);
-                RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-                ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
-                HRegionLocation loc = new HRegionLocation(info, serverName);
-                return CompletableFuture.completedFuture(loc);
-              }
-            };
+            @Override
+            public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
+              throws Throwable {
+              TableName tableName = invocation.getArgument(0);
+              RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+              ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
+              HRegionLocation loc = new HRegionLocation(info, serverName);
+              return CompletableFuture.completedFuture(loc);
+            }
+          };
         doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
           any(RegionLocateType.class), anyLong());
         doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
@@ -256,13 +256,13 @@ public class TestAsyncTableTracing {
     // TestHTableTracing
     final TableName tableName = table.getName();
     final Matcher<SpanData> spanLocator =
-        allOf(hasName(containsString(tableOperation)), hasEnded());
+      allOf(hasName(containsString(tableOperation)), hasEnded());
     final String expectedName = tableOperation + " " + tableName.getNameWithNamespaceInclAsString();
 
     Waiter.waitFor(CONF, 1000, new MatcherPredicate<>("waiting for span to emit",
-        () -> traceRule.getSpans(), hasItem(spanLocator)));
+      () -> traceRule.getSpans(), hasItem(spanLocator)));
     List<SpanData> candidateSpans =
-        traceRule.getSpans().stream().filter(spanLocator::matches).collect(Collectors.toList());
+      traceRule.getSpans().stream().filter(spanLocator::matches).collect(Collectors.toList());
     assertThat(candidateSpans, hasSize(1));
     SpanData data = candidateSpans.iterator().next();
     assertThat(data,
@@ -305,16 +305,16 @@ public class TestAsyncTableTracing {
   @Test
   public void testIncrement() {
     table
-        .increment(
-          new Increment(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1))
-        .join();
+      .increment(
+        new Increment(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1))
+      .join();
     assertTrace("INCREMENT");
   }
 
   @Test
   public void testIncrementColumnValue1() {
     table.incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1)
-        .join();
+      .join();
     assertTrace("INCREMENT");
   }
 
@@ -328,18 +328,18 @@ public class TestAsyncTableTracing {
   @Test
   public void testCheckAndMutate() {
     table.checkAndMutate(CheckAndMutate.newBuilder(Bytes.toBytes(0))
-        .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
-        .build(new Delete(Bytes.toBytes(0)))).join();
+      .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
+      .build(new Delete(Bytes.toBytes(0)))).join();
     assertTrace("CHECK_AND_MUTATE");
   }
 
   @Test
   public void testCheckAndMutateList() {
     CompletableFuture
-        .allOf(table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
-            .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
-            .build(new Delete(Bytes.toBytes(0))))).toArray(new CompletableFuture[0]))
-        .join();
+      .allOf(table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
+        .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
+        .build(new Delete(Bytes.toBytes(0))))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations",
         "CHECK_AND_MUTATE", "DELETE")));
@@ -348,8 +348,8 @@ public class TestAsyncTableTracing {
   @Test
   public void testCheckAndMutateAll() {
     table.checkAndMutateAll(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
-        .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
-        .build(new Delete(Bytes.toBytes(0))))).join();
+      .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
+      .build(new Delete(Bytes.toBytes(0))))).join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations",
         "CHECK_AND_MUTATE", "DELETE")));
@@ -357,8 +357,8 @@ public class TestAsyncTableTracing {
 
   private void testCheckAndMutateBuilder(Row op) {
     AsyncTable.CheckAndMutateBuilder builder =
-        table.checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-            .ifEquals(Bytes.toBytes("v"));
+      table.checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
+        .ifEquals(Bytes.toBytes("v"));
     if (op instanceof Put) {
       Put put = (Put) op;
       builder.thenPut(put).join();
@@ -388,18 +388,17 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateBuilderThenMutations() throws IOException {
-    RowMutations mutations =
-        new RowMutations(Bytes.toBytes(0))
-            .add((Mutation) (new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"),
-              Bytes.toBytes("cq"), Bytes.toBytes("v"))))
-            .add((Mutation) new Delete(Bytes.toBytes(0)));
+    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add((Mutation) (new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
+        Bytes.toBytes("v"))))
+      .add((Mutation) new Delete(Bytes.toBytes(0)));
     testCheckAndMutateBuilder(mutations);
   }
 
   private void testCheckAndMutateWithFilterBuilder(Row op) {
     // use of `PrefixFilter` is completely arbitrary here.
     AsyncTable.CheckAndMutateWithFilterBuilder builder =
-        table.checkAndMutate(Bytes.toBytes(0), new PrefixFilter(Bytes.toBytes(0)));
+      table.checkAndMutate(Bytes.toBytes(0), new PrefixFilter(Bytes.toBytes(0)));
     if (op instanceof Put) {
       Put put = (Put) op;
       builder.thenPut(put).join();
@@ -429,21 +428,19 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateWithFilterBuilderThenMutations() throws IOException {
-    RowMutations mutations =
-        new RowMutations(Bytes.toBytes(0))
-            .add((Mutation) new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"),
-              Bytes.toBytes("cq"), Bytes.toBytes("v")))
-            .add((Mutation) new Delete(Bytes.toBytes(0)));
+    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add((Mutation) new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
+        Bytes.toBytes("v")))
+      .add((Mutation) new Delete(Bytes.toBytes(0)));
     testCheckAndMutateWithFilterBuilder(mutations);
   }
 
   @Test
   public void testMutateRow() throws IOException {
-    final RowMutations mutations =
-        new RowMutations(Bytes.toBytes(0))
-            .add((Mutation) new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
-              Bytes.toBytes("cq"), Bytes.toBytes("v")))
-            .add((Mutation) new Delete(Bytes.toBytes(0)));
+    final RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add((Mutation) new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"),
+        Bytes.toBytes("v")))
+      .add((Mutation) new Delete(Bytes.toBytes(0)));
     table.mutateRow(mutations).join();
     assertTrace("BATCH", hasAttributes(
       containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE", "PUT")));
@@ -508,9 +505,9 @@ public class TestAsyncTableTracing {
   @Test
   public void testExistsList() {
     CompletableFuture
-        .allOf(
-          table.exists(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
-        .join();
+      .allOf(
+        table.exists(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
@@ -525,9 +522,8 @@ public class TestAsyncTableTracing {
   @Test
   public void testGetList() {
     CompletableFuture
-        .allOf(
-          table.get(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
-        .join();
+      .allOf(table.get(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
@@ -542,9 +538,9 @@ public class TestAsyncTableTracing {
   @Test
   public void testPutList() {
     CompletableFuture
-        .allOf(table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
-          Bytes.toBytes("cq"), Bytes.toBytes("v")))).toArray(new CompletableFuture[0]))
-        .join();
+      .allOf(table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
+        Bytes.toBytes("cq"), Bytes.toBytes("v")))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
   }
@@ -559,9 +555,10 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testDeleteList() {
-    CompletableFuture.allOf(
-      table.delete(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
-        .join();
+    CompletableFuture
+      .allOf(
+        table.delete(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
@@ -575,9 +572,10 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testBatch() {
-    CompletableFuture.allOf(
-      table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
-        .join();
+    CompletableFuture
+      .allOf(
+        table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
+      .join();
     assertTrace("BATCH",
       hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }

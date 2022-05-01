@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -84,8 +83,10 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
         return false;
       } else if (isArchiveNamespaceDir(dir) && namespaceExists(dir.getName())) {
         return false;
-      } else if (isArchiveTableDir(dir)
-          && tableExists(TableName.valueOf(dir.getParent().getName(), dir.getName()))) {
+      } else if (
+        isArchiveTableDir(dir)
+          && tableExists(TableName.valueOf(dir.getParent().getName(), dir.getName()))
+      ) {
         return false;
       }
       return true;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -115,18 +115,19 @@ public class TestHRegionReplayEvents {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionReplayEvents.class);
+    HBaseClassTestRule.forClass(TestHRegionReplayEvents.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static HBaseTestingUtility TEST_UTIL;
 
   public static Configuration CONF;
   private String dir;
 
-  private byte[][] families = new byte[][] {
-      Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")};
+  private byte[][] families =
+    new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
 
   // Test names
   protected byte[] tableName;
@@ -173,12 +174,12 @@ public class TestHRegionReplayEvents {
     htd = builder.build();
 
     long time = EnvironmentEdgeManager.currentTime();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     primaryHri =
-        RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(0).build();
+      RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(0).build();
     secondaryHri =
-        RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(1).build();
+      RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(1).build();
 
     WALFactory wals = TestHRegion.createWALFactory(CONF, rootDir);
     walPrimary = wals.getWAL(primaryHri);
@@ -188,11 +189,11 @@ public class TestHRegionReplayEvents {
     when(rss.getServerName()).thenReturn(ServerName.valueOf("foo", 1, 1));
     when(rss.getConfiguration()).thenReturn(CONF);
     when(rss.getRegionServerAccounting()).thenReturn(new RegionServerAccounting(CONF));
-    String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
-        .toString();
+    String string =
+      org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER.toString();
     ExecutorService es = new ExecutorService(string);
-    es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1).setExecutorType(
-        ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
+    es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1)
+      .setExecutorType(ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
@@ -247,7 +248,7 @@ public class TestHRegionReplayEvents {
     verifyData(secondaryRegion, 0, 1000, cq, families);
 
     // flush region
-    FlushResultImpl flush = (FlushResultImpl)secondaryRegion.flush(true);
+    FlushResultImpl flush = (FlushResultImpl) secondaryRegion.flush(true);
     assertEquals(FlushResultImpl.Result.CANNOT_FLUSH, flush.result);
 
     verifyData(secondaryRegion, 0, 1000, cq, families);
@@ -268,7 +269,7 @@ public class TestHRegionReplayEvents {
   public void testOnlyReplayingFlushStartDoesNotHoldUpRegionClose() throws IOException {
     // load some data to primary and flush
     int start = 0;
-    LOG.info("-- Writing some data to primary from " +  start + " to " + (start+100));
+    LOG.info("-- Writing some data to primary from " + start + " to " + (start + 100));
     putData(primaryRegion, Durability.SYNC_WAL, start, 100, cq, families);
     LOG.info("-- Flushing primary, creating 3 files for 3 stores");
     primaryRegion.flush(true);
@@ -282,8 +283,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-        = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           LOG.info("-- Replaying flush start in secondary");
@@ -309,18 +309,17 @@ public class TestHRegionReplayEvents {
       return 0; // handled elsewhere
     }
     Put put = new Put(CellUtil.cloneRow(entry.getEdit().getCells().get(0)));
-    for (Cell cell : entry.getEdit().getCells()) put.add(cell);
+    for (Cell cell : entry.getEdit().getCells())
+      put.add(cell);
     put.setDurability(Durability.SKIP_WAL);
     MutationReplay mutation = new MutationReplay(MutationType.PUT, put, 0, 0);
-    region.batchReplay(new MutationReplay[] {mutation},
-      entry.getKey().getSequenceId());
+    region.batchReplay(new MutationReplay[] { mutation }, entry.getKey().getSequenceId());
     return Integer.parseInt(Bytes.toString(put.getRow()));
   }
 
   WAL.Reader createWALReaderForPrimary() throws FileNotFoundException, IOException {
     return WALFactory.createReader(TEST_UTIL.getTestFileSystem(),
-      AbstractFSWALProvider.getCurrentFileName(walPrimary),
-      TEST_UTIL.getConfiguration());
+      AbstractFSWALProvider.getCurrentFileName(walPrimary), TEST_UTIL.getConfiguration());
   }
 
   @Test
@@ -353,8 +352,7 @@ public class TestHRegionReplayEvents {
 
     // compaction from primary
     LOG.info("-- Compacting primary, only 1 store");
-    primaryRegion.compactStore(Bytes.toBytes("cf1"),
-      NoLimitThroughputController.INSTANCE);
+    primaryRegion.compactStore(Bytes.toBytes("cf1"), NoLimitThroughputController.INSTANCE);
 
     // now replay the edits and the flush marker
     reader = createWALReaderForPrimary();
@@ -367,10 +365,9 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
-      CompactionDescriptor compactionDesc
-      = WALEdit.getCompaction(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      CompactionDescriptor compactionDesc =
+        WALEdit.getCompaction(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         // first verify that everything is replayed and visible before flush event replay
         verifyData(secondaryRegion, 0, lastReplayed, cq, families);
@@ -389,7 +386,7 @@ public class TestHRegionReplayEvents {
           // assert that the store memstore is smaller now
           long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
-              + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
+            + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
 
         } else if (flushDesc.getAction() == FlushAction.COMMIT_FLUSH) {
@@ -414,7 +411,7 @@ public class TestHRegionReplayEvents {
           assertEquals(store.getSize(), store.getStorefilesSize());
         }
         // after replay verify that everything is still visible
-        verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+        verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
       } else if (compactionDesc != null) {
         secondaryRegion.replayWALCompactionMarker(compactionDesc, true, false, Long.MAX_VALUE);
 
@@ -427,11 +424,12 @@ public class TestHRegionReplayEvents {
           }
         }
       } else {
-        lastReplayed = replayEdit(secondaryRegion, entry);;
+        lastReplayed = replayEdit(secondaryRegion, entry);
+        ;
       }
     }
 
-    assertEquals(400-1, lastReplayed);
+    assertEquals(400 - 1, lastReplayed);
     LOG.info("-- Verifying edits from secondary");
     verifyData(secondaryRegion, 0, 400, cq, families);
 
@@ -457,7 +455,7 @@ public class TestHRegionReplayEvents {
     int numRows = 200;
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
 
     LOG.info("-- Replaying edits and flush events in secondary");
 
@@ -469,8 +467,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         // first verify that everything is replayed and visible before flush event replay
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
@@ -490,13 +487,13 @@ public class TestHRegionReplayEvents {
           // assert that the store memstore is smaller now
           long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
-              + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
+            + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
-          verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+          verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
 
         }
         // after replay verify that everything is still visible
-        verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+        verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
       } else {
         lastReplayed = replayEdit(secondaryRegion, entry);
       }
@@ -519,8 +516,8 @@ public class TestHRegionReplayEvents {
     verifyData(secondaryRegion, 0, numRows, cq, families);
 
     // Test case 2: replay a flush start marker with a smaller seqId
-    FlushDescriptor startFlushDescSmallerSeqId
-      = clone(startFlushDesc, startFlushDesc.getFlushSequenceNumber() - 50);
+    FlushDescriptor startFlushDescSmallerSeqId =
+      clone(startFlushDesc, startFlushDesc.getFlushSequenceNumber() - 50);
     LOG.info("-- Replaying same flush start in secondary again " + startFlushDescSmallerSeqId);
     result = secondaryRegion.replayWALFlushStartMarker(startFlushDescSmallerSeqId);
     assertNull(result); // this should return null. Ignoring the flush start marker
@@ -532,8 +529,8 @@ public class TestHRegionReplayEvents {
     verifyData(secondaryRegion, 0, numRows, cq, families);
 
     // Test case 3: replay a flush start marker with a larger seqId
-    FlushDescriptor startFlushDescLargerSeqId
-      = clone(startFlushDesc, startFlushDesc.getFlushSequenceNumber() + 50);
+    FlushDescriptor startFlushDescLargerSeqId =
+      clone(startFlushDesc, startFlushDesc.getFlushSequenceNumber() + 50);
     LOG.info("-- Replaying same flush start in secondary again " + startFlushDescLargerSeqId);
     result = secondaryRegion.replayWALFlushStartMarker(startFlushDescLargerSeqId);
     assertNull(result); // this should return null. Ignoring the flush start marker
@@ -562,7 +559,7 @@ public class TestHRegionReplayEvents {
     int numRows = 300;
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
 
     LOG.info("-- Replaying edits and flush events in secondary");
     FlushDescriptor startFlushDesc = null;
@@ -575,8 +572,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           // don't replay the first flush start marker, hold on to it, replay the second one
@@ -595,7 +591,7 @@ public class TestHRegionReplayEvents {
           }
         }
         // after replay verify that everything is still visible
-        verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+        verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
       } else {
         lastReplayed = replayEdit(secondaryRegion, entry);
       }
@@ -614,7 +610,7 @@ public class TestHRegionReplayEvents {
 
     // Test case 1: replay the a flush commit marker smaller than what we have prepared
     LOG.info("Testing replaying flush COMMIT " + commitFlushDesc + " on top of flush START"
-        + startFlushDesc);
+      + startFlushDesc);
     assertTrue(commitFlushDesc.getFlushSequenceNumber() < startFlushDesc.getFlushSequenceNumber());
 
     LOG.info("-- Replaying flush commit in secondary" + commitFlushDesc);
@@ -653,7 +649,7 @@ public class TestHRegionReplayEvents {
     int numRows = 200;
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
 
     LOG.info("-- Replaying edits and flush events in secondary");
     FlushDescriptor startFlushDesc = null;
@@ -665,8 +661,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           if (startFlushDesc == null) {
@@ -679,13 +674,11 @@ public class TestHRegionReplayEvents {
           // do not replay any flush commit yet
           // hold on to the flush commit marker but simulate a larger
           // flush commit seqId
-          commitFlushDesc =
-              FlushDescriptor.newBuilder(flushDesc)
-              .setFlushSequenceNumber(flushDesc.getFlushSequenceNumber() + 50)
-              .build();
+          commitFlushDesc = FlushDescriptor.newBuilder(flushDesc)
+            .setFlushSequenceNumber(flushDesc.getFlushSequenceNumber() + 50).build();
         }
         // after replay verify that everything is still visible
-        verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+        verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
       } else {
         lastReplayed = replayEdit(secondaryRegion, entry);
       }
@@ -704,7 +697,7 @@ public class TestHRegionReplayEvents {
 
     // Test case 1: replay the a flush commit marker larger than what we have prepared
     LOG.info("Testing replaying flush COMMIT " + commitFlushDesc + " on top of flush START"
-        + startFlushDesc);
+      + startFlushDesc);
     assertTrue(commitFlushDesc.getFlushSequenceNumber() > startFlushDesc.getFlushSequenceNumber());
 
     LOG.info("-- Replaying flush commit in secondary" + commitFlushDesc);
@@ -734,24 +727,24 @@ public class TestHRegionReplayEvents {
   }
 
   /**
-   * Tests the case where we receive a flush commit before receiving any flush prepare markers.
-   * The memstore edits should be dropped after the flush commit replay since they should be in
-   * flushed files
+   * Tests the case where we receive a flush commit before receiving any flush prepare markers. The
+   * memstore edits should be dropped after the flush commit replay since they should be in flushed
+   * files
    */
   @Test
   public void testReplayFlushCommitMarkerWithoutFlushStartMarkerDroppableMemstore()
-      throws IOException {
+    throws IOException {
     testReplayFlushCommitMarkerWithoutFlushStartMarker(true);
   }
 
   /**
-   * Tests the case where we receive a flush commit before receiving any flush prepare markers.
-   * The memstore edits should be not dropped after the flush commit replay since not every edit
-   * will be in flushed files (based on seqId)
+   * Tests the case where we receive a flush commit before receiving any flush prepare markers. The
+   * memstore edits should be not dropped after the flush commit replay since not every edit will be
+   * in flushed files (based on seqId)
    */
   @Test
   public void testReplayFlushCommitMarkerWithoutFlushStartMarkerNonDroppableMemstore()
-      throws IOException {
+    throws IOException {
     testReplayFlushCommitMarkerWithoutFlushStartMarker(false);
   }
 
@@ -759,14 +752,14 @@ public class TestHRegionReplayEvents {
    * Tests the case where we receive a flush commit before receiving any flush prepare markers
    */
   public void testReplayFlushCommitMarkerWithoutFlushStartMarker(boolean droppableMemstore)
-      throws IOException {
+    throws IOException {
     // load some data to primary and flush. 1 flushes and some more unflushed data.
     // write more data after flush depending on whether droppableSnapshot
     putDataWithFlushes(primaryRegion, 100, 100, droppableMemstore ? 0 : 100);
     int numRows = droppableMemstore ? 100 : 200;
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
 
     LOG.info("-- Replaying edits and flush events in secondary");
     FlushDescriptor commitFlushDesc = null;
@@ -777,8 +770,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           // do not replay flush start marker
@@ -786,7 +778,7 @@ public class TestHRegionReplayEvents {
           commitFlushDesc = flushDesc; // hold on to the flush commit marker
         }
         // after replay verify that everything is still visible
-        verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
+        verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
       } else {
         lastReplayed = replayEdit(secondaryRegion, entry);
       }
@@ -845,9 +837,7 @@ public class TestHRegionReplayEvents {
   }
 
   private FlushDescriptor clone(FlushDescriptor flush, long flushSeqId) {
-    return FlushDescriptor.newBuilder(flush)
-        .setFlushSequenceNumber(flushSeqId)
-        .build();
+    return FlushDescriptor.newBuilder(flush).setFlushSequenceNumber(flushSeqId).build();
   }
 
   /**
@@ -863,7 +853,7 @@ public class TestHRegionReplayEvents {
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
     List<RegionEventDescriptor> regionEvents = Lists.newArrayList();
 
     LOG.info("-- Replaying edits and region events in secondary");
@@ -872,10 +862,9 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-        = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
-      RegionEventDescriptor regionEventDesc
-        = WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      RegionEventDescriptor regionEventDesc =
+        WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
 
       if (flushDesc != null) {
         // don't replay flush events
@@ -920,7 +909,8 @@ public class TestHRegionReplayEvents {
     long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(newRegionMemstoreSize == 0);
 
-    assertNull(secondaryRegion.getPrepareFlushResult()); //prepare snapshot should be dropped if any
+    assertNull(secondaryRegion.getPrepareFlushResult()); // prepare snapshot should be dropped if
+                                                         // any
 
     LOG.info("-- Verifying edits from secondary");
     verifyData(secondaryRegion, 0, numRows, cq, families);
@@ -943,7 +933,7 @@ public class TestHRegionReplayEvents {
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
     List<RegionEventDescriptor> regionEvents = Lists.newArrayList();
 
     LOG.info("-- Replaying edits and region events in secondary");
@@ -952,10 +942,9 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-        = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
-      RegionEventDescriptor regionEventDesc
-        = WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      RegionEventDescriptor regionEventDesc =
+        WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
 
       if (flushDesc != null) {
         // only replay flush start
@@ -999,7 +988,8 @@ public class TestHRegionReplayEvents {
     long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(newRegionMemstoreSize == 0);
 
-    assertNull(secondaryRegion.getPrepareFlushResult()); //prepare snapshot should be dropped if any
+    assertNull(secondaryRegion.getPrepareFlushResult()); // prepare snapshot should be dropped if
+                                                         // any
 
     LOG.info("-- Verifying edits from secondary");
     verifyData(secondaryRegion, 0, numRows, cq, families);
@@ -1022,7 +1012,7 @@ public class TestHRegionReplayEvents {
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
     List<RegionEventDescriptor> regionEvents = Lists.newArrayList();
     List<WAL.Entry> edits = Lists.newArrayList();
 
@@ -1032,10 +1022,9 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-        = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
-      RegionEventDescriptor regionEventDesc
-        = WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      RegionEventDescriptor regionEventDesc =
+        WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
 
       if (flushDesc != null) {
         // don't replay flushes
@@ -1048,14 +1037,12 @@ public class TestHRegionReplayEvents {
 
     // replay the region open of first open, but with the seqid of the second open
     // this way non of the flush files will be picked up.
-    secondaryRegion.replayWALRegionEventMarker(
-      RegionEventDescriptor.newBuilder(regionEvents.get(0)).setLogSequenceNumber(
-        regionEvents.get(2).getLogSequenceNumber()).build());
-
+    secondaryRegion.replayWALRegionEventMarker(RegionEventDescriptor.newBuilder(regionEvents.get(0))
+      .setLogSequenceNumber(regionEvents.get(2).getLogSequenceNumber()).build());
 
     // replay edits from the before region close. If replay does not
     // skip these the following verification will NOT fail.
-    for (WAL.Entry entry: edits) {
+    for (WAL.Entry entry : edits) {
       replayEdit(secondaryRegion, entry);
     }
 
@@ -1074,13 +1061,13 @@ public class TestHRegionReplayEvents {
   public void testReplayFlushSeqIds() throws IOException {
     // load some data to primary and flush
     int start = 0;
-    LOG.info("-- Writing some data to primary from " +  start + " to " + (start+100));
+    LOG.info("-- Writing some data to primary from " + start + " to " + (start + 100));
     putData(primaryRegion, Durability.SYNC_WAL, start, 100, cq, families);
     LOG.info("-- Flushing primary, creating 3 files for 3 stores");
     primaryRegion.flush(true);
 
     // now replay the flush marker
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
 
     long flushSeqId = -1;
     LOG.info("-- Replaying flush events in secondary");
@@ -1089,8 +1076,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-        = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           LOG.info("-- Replaying flush start in secondary");
@@ -1152,9 +1138,8 @@ public class TestHRegionReplayEvents {
   }
 
   /**
-   * Tests that a region opened in secondary mode would not write region open / close
-   * events to its WAL.
-   * @throws IOException
+   * Tests that a region opened in secondary mode would not write region open / close events to its
+   * WAL. n
    */
   @Test
   public void testSecondaryRegionDoesNotWriteRegionEventsToWAL() throws IOException {
@@ -1168,15 +1153,14 @@ public class TestHRegionReplayEvents {
 
     // test for replay prepare flush
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
-    secondaryRegion.replayWALFlushStartMarker(FlushDescriptor.newBuilder().
-      setFlushSequenceNumber(10)
-      .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDescriptor().getTableName().getName()))
+    secondaryRegion.replayWALFlushStartMarker(FlushDescriptor.newBuilder()
+      .setFlushSequenceNumber(10)
+      .setTableName(UnsafeByteOperations
+        .unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
       .setAction(FlushAction.START_FLUSH)
       .setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setRegionName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getRegionInfo().getRegionName()))
+        UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
     verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
@@ -1202,7 +1186,7 @@ public class TestHRegionReplayEvents {
     try {
       verifyData(secondaryRegion, 0, 100, cq, families);
       fail("Should have failed with IOException");
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       // expected
     }
 
@@ -1252,9 +1236,9 @@ public class TestHRegionReplayEvents {
 
   /**
    * Test the case where the secondary region replica is not in reads enabled state because it is
-   * waiting for a flush or region open marker from primary region. Replaying CANNOT_FLUSH
-   * flush marker entry should restore the reads enabled status in the region and allow the reads
-   * to continue.
+   * waiting for a flush or region open marker from primary region. Replaying CANNOT_FLUSH flush
+   * marker entry should restore the reads enabled status in the region and allow the reads to
+   * continue.
    */
   @Test
   public void testReplayingFlushRequestRestoresReadsEnabledState() throws IOException {
@@ -1282,8 +1266,7 @@ public class TestHRegionReplayEvents {
   /**
    * Test the case where the secondary region replica is not in reads enabled state because it is
    * waiting for a flush or region open marker from primary region. Replaying flush start and commit
-   * entries should restore the reads enabled status in the region and allow the reads
-   * to continue.
+   * entries should restore the reads enabled status in the region and allow the reads to continue.
    */
   @Test
   public void testReplayingFlushRestoresReadsEnabledState() throws IOException {
@@ -1324,8 +1307,7 @@ public class TestHRegionReplayEvents {
   /**
    * Test the case where the secondary region replica is not in reads enabled state because it is
    * waiting for a flush or region open marker from primary region. Replaying flush start and commit
-   * entries should restore the reads enabled status in the region and allow the reads
-   * to continue.
+   * entries should restore the reads enabled status in the region and allow the reads to continue.
    */
   @Test
   public void testReplayingFlushWithEmptyMemstoreRestoresReadsEnabledState() throws IOException {
@@ -1356,8 +1338,8 @@ public class TestHRegionReplayEvents {
   /**
    * Test the case where the secondary region replica is not in reads enabled state because it is
    * waiting for a flush or region open marker from primary region. Replaying region open event
-   * entry from primary should restore the reads enabled status in the region and allow the reads
-   * to continue.
+   * entry from primary should restore the reads enabled status in the region and allow the reads to
+   * continue.
    */
   @Test
   public void testReplayingRegionOpenEventRestoresReadsEnabledState() throws IOException {
@@ -1374,8 +1356,8 @@ public class TestHRegionReplayEvents {
         break;
       }
 
-      RegionEventDescriptor regionEventDesc
-        = WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
+      RegionEventDescriptor regionEventDesc =
+        WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
 
       if (regionEventDesc != null) {
         secondaryRegion.replayWALRegionEventMarker(regionEventDesc);
@@ -1448,7 +1430,7 @@ public class TestHRegionReplayEvents {
     putDataWithFlushes(primaryRegion, 400, 400, 0);
     numRows = 400;
 
-    reader =  createWALReaderForPrimary();
+    reader = createWALReaderForPrimary();
     while (true) {
       WAL.Entry entry = reader.next();
       if (entry == null) {
@@ -1494,7 +1476,7 @@ public class TestHRegionReplayEvents {
     try {
       verifyData(region, 0, 1, cq, families);
       fail("Should have failed with IOException");
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       // expected
     }
   }
@@ -1502,7 +1484,7 @@ public class TestHRegionReplayEvents {
   private void replay(HRegion region, Put put, long replaySeqId) throws IOException {
     put.setDurability(Durability.SKIP_WAL);
     MutationReplay mutation = new MutationReplay(MutationType.PUT, put, 0, 0);
-    region.batchReplay(new MutationReplay[] {mutation}, replaySeqId);
+    region.batchReplay(new MutationReplay[] { mutation }, replaySeqId);
   }
 
   /**
@@ -1553,7 +1535,6 @@ public class TestHRegionReplayEvents {
     // replay the bulk load event
     secondaryRegion.replayWALBulkLoadEventMarker(bulkloadEvent);
 
-
     List<String> storeFileName = new ArrayList<>();
     for (StoreDescriptor storeDesc : bulkloadEvent.getStoresList()) {
       storeFileName.addAll(storeDesc.getStoreFileList());
@@ -1576,19 +1557,17 @@ public class TestHRegionReplayEvents {
   public void testReplayingFlushCommitWithFileAlreadyDeleted() throws IOException {
     // tests replaying flush commit marker, but the flush file has already been compacted
     // from primary and also deleted from the archive directory
-    secondaryRegion.replayWALFlushCommitMarker(FlushDescriptor.newBuilder().
-      setFlushSequenceNumber(Long.MAX_VALUE)
-      .setTableName(UnsafeByteOperations.unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
+    secondaryRegion.replayWALFlushCommitMarker(FlushDescriptor.newBuilder()
+      .setFlushSequenceNumber(Long.MAX_VALUE)
+      .setTableName(UnsafeByteOperations
+        .unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
       .setAction(FlushAction.COMMIT_FLUSH)
       .setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setRegionName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getRegionInfo().getRegionName()))
+        UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
       .addStoreFlushes(StoreFlushDescriptor.newBuilder()
         .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
-        .setStoreHomeDir("/store_home_dir")
-        .addFlushOutput("/foo/baz/123")
-        .build())
+        .setStoreHomeDir("/store_home_dir").addFlushOutput("/foo/baz/123").build())
       .build());
   }
 
@@ -1596,18 +1575,19 @@ public class TestHRegionReplayEvents {
   public void testReplayingCompactionWithFileAlreadyDeleted() throws IOException {
     // tests replaying compaction marker, but the compaction output file has already been compacted
     // from primary and also deleted from the archive directory
-    secondaryRegion.replayWALCompactionMarker(CompactionDescriptor.newBuilder()
-      .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDescriptor().getTableName().getName()))
-      .setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
-      .addCompactionInput("/123")
-      .addCompactionOutput("/456")
-      .setStoreHomeDir("/store_home_dir")
-      .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
-      .build()
-      , true, true, Long.MAX_VALUE);
+    secondaryRegion
+      .replayWALCompactionMarker(
+        CompactionDescriptor.newBuilder()
+          .setTableName(UnsafeByteOperations
+            .unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
+          .setEncodedRegionName(
+            UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+          .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0])).addCompactionInput("/123")
+          .addCompactionOutput("/456").setStoreHomeDir("/store_home_dir")
+          .setRegionName(
+            UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
+          .build(),
+        true, true, Long.MAX_VALUE);
   }
 
   @Test
@@ -1615,19 +1595,17 @@ public class TestHRegionReplayEvents {
     // tests replaying region open event marker, but the region files have already been compacted
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALRegionEventMarker(RegionEventDescriptor.newBuilder()
-      .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDescriptor().getTableName().getName()))
+      .setTableName(UnsafeByteOperations
+        .unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
       .setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+        UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
       .setEventType(EventType.REGION_OPEN)
       .setServer(ProtobufUtil.toServerName(ServerName.valueOf("foo", 1, 1)))
       .setLogSequenceNumber(Long.MAX_VALUE)
-      .addStores(StoreDescriptor.newBuilder()
-        .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
-        .setStoreHomeDir("/store_home_dir")
-        .addStoreFile("/123")
-        .build())
+      .addStores(
+        StoreDescriptor.newBuilder().setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
+          .setStoreHomeDir("/store_home_dir").addStoreFile("/123").build())
       .build());
   }
 
@@ -1636,20 +1614,19 @@ public class TestHRegionReplayEvents {
     // tests replaying bulk load event marker, but the bulk load files have already been compacted
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALBulkLoadEventMarker(BulkLoadDescriptor.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(primaryRegion.getTableDescriptor().getTableName()))
+      .setTableName(
+        ProtobufUtil.toProtoTableName(primaryRegion.getTableDescriptor().getTableName()))
       .setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+        UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setBulkloadSeqNum(Long.MAX_VALUE)
-      .addStores(StoreDescriptor.newBuilder()
-        .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
-        .setStoreHomeDir("/store_home_dir")
-        .addStoreFile("/123")
-        .build())
+      .addStores(
+        StoreDescriptor.newBuilder().setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
+          .setStoreHomeDir("/store_home_dir").addStoreFile("/123").build())
       .build());
   }
 
-  private String createHFileForFamilies(Path testPath, byte[] family,
-      byte[] valueBytes) throws IOException {
+  private String createHFileForFamilies(Path testPath, byte[] family, byte[] valueBytes)
+    throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(TEST_UTIL.getConfiguration());
     // TODO We need a way to do this without creating files
     Path testFile = new Path(testPath, TEST_UTIL.getRandomUUID().toString());
@@ -1670,15 +1647,16 @@ public class TestHRegionReplayEvents {
     return testFile.toString();
   }
 
-  /** Puts a total of numRows + numRowsAfterFlush records indexed with numeric row keys. Does
-   * a flush every flushInterval number of records. Then it puts numRowsAfterFlush number of
-   * more rows but does not execute flush after
-   * @throws IOException */
-  private void putDataWithFlushes(HRegion region, int flushInterval,
-      int numRows, int numRowsAfterFlush) throws IOException {
+  /**
+   * Puts a total of numRows + numRowsAfterFlush records indexed with numeric row keys. Does a flush
+   * every flushInterval number of records. Then it puts numRowsAfterFlush number of more rows but
+   * does not execute flush after n
+   */
+  private void putDataWithFlushes(HRegion region, int flushInterval, int numRows,
+    int numRowsAfterFlush) throws IOException {
     int start = 0;
     for (; start < numRows; start += flushInterval) {
-      LOG.info("-- Writing some data to primary from " +  start + " to " + (start+flushInterval));
+      LOG.info("-- Writing some data to primary from " + start + " to " + (start + flushInterval));
       putData(region, Durability.SYNC_WAL, start, flushInterval, cq, families);
       LOG.info("-- Flushing primary, creating 3 files for 3 stores");
       region.flush(true);
@@ -1687,27 +1665,27 @@ public class TestHRegionReplayEvents {
     putData(region, Durability.SYNC_WAL, start, numRowsAfterFlush, cq, families);
   }
 
-  private void putDataByReplay(HRegion region,
-      int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
+  private void putDataByReplay(HRegion region, int startRow, int numRows, byte[] qf,
+    byte[]... families) throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
       for (byte[] family : families) {
         put.addColumn(family, qf, EnvironmentEdgeManager.currentTime(), null);
       }
-      replay(region, put, i+1);
+      replay(region, put, i + 1);
     }
   }
 
-  private static HRegion initHRegion(byte[] tableName,
-      String callingMethod, byte[]... families) throws IOException {
+  private static HRegion initHRegion(byte[] tableName, String callingMethod, byte[]... families)
+    throws IOException {
     return initHRegion(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
       callingMethod, TEST_UTIL.getConfiguration(), false, Durability.SYNC_WAL, null, families);
   }
 
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
+    String callingMethod, Configuration conf, boolean isReadOnly, Durability durability, WAL wal,
+    byte[]... families) throws IOException {
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, callingMethod, conf,
       isReadOnly, durability, wal, families);
   }

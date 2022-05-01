@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.wal.AbstractWALRoller;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,13 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Runs periodically to determine if the WAL should be rolled.
- *
- * NOTE: This class extends Thread rather than Chore because the sleep time
- * can be interrupted when there is something to do, rather than the Chore
- * sleep time which is invariant.
- *
- * TODO: change to a pool of threads
+ * Runs periodically to determine if the WAL should be rolled. NOTE: This class extends Thread
+ * rather than Chore because the sleep time can be interrupted when there is something to do, rather
+ * than the Chore sleep time which is invariant. TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
 public class LogRoller extends AbstractWALRoller<RegionServerServices> {

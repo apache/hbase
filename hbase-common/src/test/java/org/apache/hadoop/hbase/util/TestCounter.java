@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,14 +26,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCounter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCounter.class);
+    HBaseClassTestRule.forClass(TestCounter.class);
 
-  private static final int[] THREAD_COUNTS = {1, 10, 100};
+  private static final int[] THREAD_COUNTS = { 1, 10, 100 };
   private static final int DATA_COUNT = 1000000;
 
   private interface Operation {
@@ -42,7 +42,7 @@ public class TestCounter {
 
   @Test
   public void testIncrement() throws Exception {
-    for(int threadCount : THREAD_COUNTS) {
+    for (int threadCount : THREAD_COUNTS) {
       final Counter counter = new Counter();
 
       execute(new Operation() {
@@ -52,13 +52,13 @@ public class TestCounter {
         }
       }, threadCount);
 
-      Assert.assertEquals(threadCount * (long)DATA_COUNT, counter.get());
+      Assert.assertEquals(threadCount * (long) DATA_COUNT, counter.get());
     }
   }
 
   @Test
   public void testIncrementAndGet() throws Exception {
-    for(int threadCount: THREAD_COUNTS) {
+    for (int threadCount : THREAD_COUNTS) {
       final Counter counter = new Counter();
 
       execute(new Operation() {
@@ -69,12 +69,11 @@ public class TestCounter {
         }
       }, threadCount);
 
-      Assert.assertEquals(threadCount * (long)DATA_COUNT, counter.get());
+      Assert.assertEquals(threadCount * (long) DATA_COUNT, counter.get());
     }
   }
 
-  private static void execute(final Operation op, int threadCount)
-      throws InterruptedException {
+  private static void execute(final Operation op, int threadCount) throws InterruptedException {
 
     final CountDownLatch prepareLatch = new CountDownLatch(threadCount);
     final CountDownLatch startLatch = new CountDownLatch(1);
@@ -87,17 +86,18 @@ public class TestCounter {
           prepareLatch.countDown();
           startLatch.await();
 
-          for(int i=0; i<DATA_COUNT; i++) {
+          for (int i = 0; i < DATA_COUNT; i++) {
             op.execute();
           }
 
           endLatch.countDown();
 
-        } catch(Exception e) {}
+        } catch (Exception e) {
+        }
       }
     }
 
-    for(int j=0; j<threadCount; j++) {
+    for (int j = 0; j < threadCount; j++) {
       new OperationThread().start();
     }
 

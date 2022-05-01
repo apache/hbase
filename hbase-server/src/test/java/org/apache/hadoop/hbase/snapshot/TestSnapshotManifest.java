@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSnapshotManifest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotManifest.class);
+    HBaseClassTestRule.forClass(TestSnapshotManifest.class);
 
   private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -86,7 +86,7 @@ public class TestSnapshotManifest {
 
   @After
   public void tearDown() throws Exception {
-    fs.delete(rootDir,true);
+    fs.delete(rootDir, true);
   }
 
   @Test
@@ -127,23 +127,22 @@ public class TestSnapshotManifest {
   }
 
   private Path createDataManifest() throws IOException {
-    SnapshotDataManifest.Builder dataManifestBuilder =
-        SnapshotDataManifest.newBuilder();
+    SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
     byte[] startKey = null;
     byte[] stopKey = null;
     for (int i = 1; i <= TEST_NUM_REGIONS; i++) {
       stopKey = Bytes.toBytes(String.format("%016d", i));
       HRegionInfo regionInfo = new HRegionInfo(TABLE_NAME, startKey, stopKey, false);
       SnapshotRegionManifest.Builder dataRegionManifestBuilder =
-          SnapshotRegionManifest.newBuilder();
+        SnapshotRegionManifest.newBuilder();
 
-      for (ColumnFamilyDescriptor hcd: builder.getTableDescriptor().getColumnFamilies()) {
+      for (ColumnFamilyDescriptor hcd : builder.getTableDescriptor().getColumnFamilies()) {
         SnapshotRegionManifest.FamilyFiles.Builder family =
-            SnapshotRegionManifest.FamilyFiles.newBuilder();
+          SnapshotRegionManifest.FamilyFiles.newBuilder();
         family.setFamilyName(UnsafeByteOperations.unsafeWrap(hcd.getName()));
         for (int j = 0; j < 100; ++j) {
           SnapshotRegionManifest.StoreFile.Builder sfManifest =
-              SnapshotRegionManifest.StoreFile.newBuilder();
+            SnapshotRegionManifest.StoreFile.newBuilder();
           sfManifest.setName(String.format("%032d", i));
           sfManifest.setFileSize((1 + i) * (1 + i) * 1024);
           family.addStoreFiles(sfManifest.build());
@@ -157,8 +156,7 @@ public class TestSnapshotManifest {
       startKey = stopKey;
     }
 
-    dataManifestBuilder
-        .setTableSchema(ProtobufUtil.toTableSchema(builder.getTableDescriptor()));
+    dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(builder.getTableDescriptor()));
 
     SnapshotDataManifest dataManifest = dataManifestBuilder.build();
     return writeDataManifest(dataManifest);
@@ -171,13 +169,13 @@ public class TestSnapshotManifest {
     SnapshotRegionManifest.Builder dataRegionManifestBuilder = SnapshotRegionManifest.newBuilder();
     dataRegionManifestBuilder.setRegionInfo(HRegionInfo.convert(regionInfo));
 
-    for (ColumnFamilyDescriptor hcd: builder.getTableDescriptor().getColumnFamilies()) {
+    for (ColumnFamilyDescriptor hcd : builder.getTableDescriptor().getColumnFamilies()) {
       SnapshotRegionManifest.FamilyFiles.Builder family =
-          SnapshotRegionManifest.FamilyFiles.newBuilder();
+        SnapshotRegionManifest.FamilyFiles.newBuilder();
       family.setFamilyName(UnsafeByteOperations.unsafeWrap(hcd.getName()));
       for (int j = 0; j < TEST_NUM_REGIONFILES; ++j) {
         SnapshotRegionManifest.StoreFile.Builder sfManifest =
-              SnapshotRegionManifest.StoreFile.newBuilder();
+          SnapshotRegionManifest.StoreFile.newBuilder();
         sfManifest.setName(String.format("%064d", j));
         sfManifest.setFileSize(j * 1024);
         family.addStoreFiles(sfManifest.build());
@@ -187,7 +185,7 @@ public class TestSnapshotManifest {
 
     SnapshotRegionManifest manifest = dataRegionManifestBuilder.build();
     Path regionPath = new Path(snapshotDir,
-        SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX + regionInfo.getEncodedName());
+      SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX + regionInfo.getEncodedName());
 
     FSDataOutputStream stream = fs.create(regionPath);
     try {
@@ -199,8 +197,7 @@ public class TestSnapshotManifest {
     return regionPath;
   }
 
-  private Path writeDataManifest(final SnapshotDataManifest manifest)
-      throws IOException {
+  private Path writeDataManifest(final SnapshotDataManifest manifest) throws IOException {
     Path dataRegionPath = new Path(snapshotDir, SnapshotManifest.DATA_MANIFEST_NAME);
     FSDataOutputStream stream = fs.create(dataRegionPath);
     try {

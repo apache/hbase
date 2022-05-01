@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public class TestNoWritesViolationPolicyEnforcement extends BaseViolationPolicyE
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNoWritesViolationPolicyEnforcement.class);
+    HBaseClassTestRule.forClass(TestNoWritesViolationPolicyEnforcement.class);
 
   private NoWritesViolationPolicyEnforcement enforcement;
 

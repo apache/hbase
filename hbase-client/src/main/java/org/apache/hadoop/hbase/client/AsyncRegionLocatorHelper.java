@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
+
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -50,14 +51,14 @@ final class AsyncRegionLocatorHelper {
     if (oldLoc == null || oldLoc.getServerName() == null) {
       return false;
     }
-    return oldLoc.getSeqNum() <= loc.getSeqNum() &&
-      oldLoc.getServerName().equals(loc.getServerName());
+    return oldLoc.getSeqNum() <= loc.getSeqNum()
+      && oldLoc.getServerName().equals(loc.getServerName());
   }
 
   static void updateCachedLocationOnError(HRegionLocation loc, Throwable exception,
-      Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
-      Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
-      MetricsConnection metrics) {
+    Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
+    Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
+    MetricsConnection metrics) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,

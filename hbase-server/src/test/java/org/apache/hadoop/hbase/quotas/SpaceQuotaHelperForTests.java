@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +29,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,6 +67,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
@@ -86,8 +87,8 @@ public class SpaceQuotaHelperForTests {
   private final AtomicLong counter;
   private static final int NUM_RETRIES = 10;
 
-  public SpaceQuotaHelperForTests(
-      HBaseTestingUtility testUtil, TestName testName, AtomicLong counter) {
+  public SpaceQuotaHelperForTests(HBaseTestingUtility testUtil, TestName testName,
+    AtomicLong counter) {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
     this.counter = Objects.requireNonNull(counter);
@@ -133,20 +134,19 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
-   * Writes the given mutation into a table until it violates the given policy.
-   * Verifies that the policy has been violated & then returns the name of
-   * the table created & written into.
+   * Writes the given mutation into a table until it violates the given policy. Verifies that the
+   * policy has been violated & then returns the name of the table created & written into.
    */
-  TableName writeUntilViolationAndVerifyViolation(
-      SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+  TableName writeUntilViolationAndVerifyViolation(SpaceViolationPolicy policyToViolate, Mutation m)
+    throws Exception {
     final TableName tn = writeUntilViolation(policyToViolate);
     verifyViolation(policyToViolate, tn, m);
     return tn;
   }
 
   /**
-   * Writes the given mutation into a table until it violates the given policy.
-   * Returns the name of the table created & written into.
+   * Writes the given mutation into a table until it violates the given policy. Returns the name of
+   * the table created & written into.
    */
   TableName writeUntilViolation(SpaceViolationPolicy policyToViolate) throws Exception {
     TableName tn = createTableWithRegions(10);
@@ -160,16 +160,16 @@ public class SpaceQuotaHelperForTests {
     return tn;
   }
 
-
-  TableName writeUntilViolationAndVerifyViolationInNamespace(
-          String ns, SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+  TableName writeUntilViolationAndVerifyViolationInNamespace(String ns,
+    SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
     final TableName tn = writeUntilViolationInNamespace(ns, policyToViolate);
     verifyViolation(policyToViolate, tn, m);
     return tn;
   }
 
-  TableName writeUntilViolationInNamespace(String ns, SpaceViolationPolicy policyToViolate) throws Exception {
-    TableName tn = createTableWithRegions(ns,10);
+  TableName writeUntilViolationInNamespace(String ns, SpaceViolationPolicy policyToViolate)
+    throws Exception {
+    TableName tn = createTableWithRegions(ns, 10);
 
     setQuotaLimit(ns, policyToViolate, 4L);
 
@@ -186,7 +186,7 @@ public class SpaceQuotaHelperForTests {
    * Verifies that the given policy on the given table has been violated
    */
   void verifyViolation(SpaceViolationPolicy policyToViolate, TableName tn, Mutation m)
-      throws Exception {
+    throws Exception {
     // But let's try a few times to get the exception before failing
     boolean sawError = false;
     String msg = "";
@@ -202,15 +202,16 @@ public class SpaceQuotaHelperForTests {
           table.increment((Increment) m);
         } else {
           fail(
-              "Failed to apply " + m.getClass().getSimpleName() +
-                  " to the table. Programming error");
+            "Failed to apply " + m.getClass().getSimpleName() + " to the table. Programming error");
         }
         LOG.info("Did not reject the " + m.getClass().getSimpleName() + ", will sleep and retry");
         Thread.sleep(2000);
       } catch (Exception e) {
         msg = StringUtils.stringifyException(e);
-        if ((policyToViolate.equals(SpaceViolationPolicy.DISABLE)
-            && e instanceof TableNotEnabledException) || msg.contains(policyToViolate.name())) {
+        if (
+          (policyToViolate.equals(SpaceViolationPolicy.DISABLE)
+            && e instanceof TableNotEnabledException) || msg.contains(policyToViolate.name())
+        ) {
           LOG.info("Got the expected exception={}", msg);
           sawError = true;
           break;
@@ -233,15 +234,14 @@ public class SpaceQuotaHelperForTests {
     } else {
       if (policyToViolate.equals(SpaceViolationPolicy.DISABLE)) {
         assertTrue(
-            msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
+          msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
       } else {
         assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
-                + "', but was " + msg,
-            msg.contains(policyToViolate.name()));
+          + "', but was " + msg, msg.contains(policyToViolate.name()));
       }
     }
-    assertTrue(
-        "Expected to see an exception writing data to a table exceeding its quota", sawError);
+    assertTrue("Expected to see an exception writing data to a table exceeding its quota",
+      sawError);
   }
 
   /**
@@ -262,7 +262,7 @@ public class SpaceQuotaHelperForTests {
           table.increment((Increment) m);
         } else {
           fail("Failed to apply " + m.getClass().getSimpleName() + " to the table."
-              + " Programming error");
+            + " Programming error");
         }
         sawSuccess = true;
       } catch (Exception e) {
@@ -294,14 +294,15 @@ public class SpaceQuotaHelperForTests {
       ResultScanner rs = quotaTable.getScanner(s);
       sawUsageSnapshot = (rs.next() != null);
     }
-    assertTrue("Expected to succeed in getting table usage snapshots for space quota", sawUsageSnapshot);
+    assertTrue("Expected to succeed in getting table usage snapshots for space quota",
+      sawUsageSnapshot);
   }
 
   /**
    * Sets the given quota (policy & limit) on the passed table.
    */
   void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
-      throws Exception {
+    throws Exception {
     final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, policy);
     testUtil.getAdmin().setQuota(settings);
@@ -311,8 +312,7 @@ public class SpaceQuotaHelperForTests {
   /**
    * Sets the given quota (policy & limit) on the passed namespace.
    */
-  void setQuotaLimit(String ns, SpaceViolationPolicy policy, long sizeInMBs)
-          throws Exception {
+  void setQuotaLimit(String ns, SpaceViolationPolicy policy, long sizeInMBs) throws Exception {
     final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(ns, sizeLimit, policy);
     testUtil.getAdmin().setQuota(settings);
@@ -329,15 +329,14 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
-   *
-   * @param tn the tablename
-   * @param numFiles number of files
+   * @param tn             the tablename
+   * @param numFiles       number of files
    * @param numRowsPerFile number of rows per file
    * @return a clientServiceCallable which can be used with the Caller factory for bulk load
    * @throws Exception when failed to get connection, table or preparation of the bulk load
    */
   ClientServiceCallable<Void> generateFileToLoad(TableName tn, int numFiles, int numRowsPerFile)
-      throws Exception {
+    throws Exception {
     Connection conn = testUtil.getConnection();
     FileSystem fs = testUtil.getTestFileSystem();
     Configuration conf = testUtil.getConfiguration();
@@ -346,9 +345,8 @@ public class SpaceQuotaHelperForTests {
     final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>();
     for (int i = 1; i <= numFiles; i++) {
       Path hfile = new Path(baseDir, "file" + i);
-      TestHRegionServerBulkLoad
-          .createHFile(fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-              Bytes.toBytes("reject"), numRowsPerFile);
+      TestHRegionServerBulkLoad.createHFile(fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1),
+        Bytes.toBytes("to"), Bytes.toBytes("reject"), numRowsPerFile);
       famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
     }
 
@@ -356,7 +354,7 @@ public class SpaceQuotaHelperForTests {
     Table table = conn.getTable(tn);
     final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
     return new ClientServiceCallable<Void>(conn, tn, Bytes.toBytes("row"),
-        new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET) {
+      new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET) {
       @Override
       public Void rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;
@@ -373,40 +371,40 @@ public class SpaceQuotaHelperForTests {
   /**
    * Bulk-loads a number of files with a number of rows to the given table.
    */
-//  ClientServiceCallable<Boolean> generateFileToLoad(
-//      TableName tn, int numFiles, int numRowsPerFile) throws Exception {
-//    Connection conn = testUtil.getConnection();
-//    FileSystem fs = testUtil.getTestFileSystem();
-//    Configuration conf = testUtil.getConfiguration();
-//    Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
-//    fs.mkdirs(baseDir);
-//    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
-//    for (int i = 1; i <= numFiles; i++) {
-//      Path hfile = new Path(baseDir, "file" + i);
-//      TestHRegionServerBulkLoad.createHFile(
-//          fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("my"),
-//          Bytes.toBytes("file"), numRowsPerFile);
-//      famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
-//    }
-//
-//    // bulk load HFiles
-//    Table table = conn.getTable(tn);
-//    final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
-//    return new ClientServiceCallable<Boolean>(
-//        conn, tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(),
-//        HConstants.PRIORITY_UNSET) {
-//      @Override
-//     public Boolean rpcCall() throws Exception {
-//        SecureBulkLoadClient secureClient = null;
-//        byte[] regionName = getLocation().getRegion().getRegionName();
-//        try (Table table = conn.getTable(getTableName())) {
-//          secureClient = new SecureBulkLoadClient(conf, table);
-//          return secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-//                true, null, bulkToken);
-//        }
-//      }
-//    };
-//  }
+  // ClientServiceCallable<Boolean> generateFileToLoad(
+  // TableName tn, int numFiles, int numRowsPerFile) throws Exception {
+  // Connection conn = testUtil.getConnection();
+  // FileSystem fs = testUtil.getTestFileSystem();
+  // Configuration conf = testUtil.getConfiguration();
+  // Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
+  // fs.mkdirs(baseDir);
+  // final List<Pair<byte[], String>> famPaths = new ArrayList<>();
+  // for (int i = 1; i <= numFiles; i++) {
+  // Path hfile = new Path(baseDir, "file" + i);
+  // TestHRegionServerBulkLoad.createHFile(
+  // fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("my"),
+  // Bytes.toBytes("file"), numRowsPerFile);
+  // famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
+  // }
+  //
+  // // bulk load HFiles
+  // Table table = conn.getTable(tn);
+  // final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
+  // return new ClientServiceCallable<Boolean>(
+  // conn, tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(),
+  // HConstants.PRIORITY_UNSET) {
+  // @Override
+  // public Boolean rpcCall() throws Exception {
+  // SecureBulkLoadClient secureClient = null;
+  // byte[] regionName = getLocation().getRegion().getRegionName();
+  // try (Table table = conn.getTable(getTableName())) {
+  // secureClient = new SecureBulkLoadClient(conf, table);
+  // return secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
+  // true, null, bulkToken);
+  // }
+  // }
+  // };
+  // }
 
   /**
    * Removes the space quota from the given namespace
@@ -462,8 +460,8 @@ public class SpaceQuotaHelperForTests {
   }
 
   QuotaSettings getTableSpaceQuota(Connection conn, TableName tn) throws IOException {
-    try (QuotaRetriever scanner = QuotaRetriever.open(
-        conn.getConfiguration(), new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
+    try (QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration(),
+      new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
       for (QuotaSettings setting : scanner) {
         if (setting.getTableName().equals(tn) && setting.getQuotaType() == QuotaType.SPACE) {
           return setting;
@@ -585,8 +583,8 @@ public class SpaceQuotaHelperForTests {
 
     final long sizeLimit3 = 1024L * 1024L * 1024L * 1024L * 100L; // 100TB
     final SpaceViolationPolicy violationPolicy3 = SpaceViolationPolicy.NO_INSERTS;
-    QuotaSettings qs3 = QuotaSettingsFactory.limitNamespaceSpace(
-        nd.getName(), sizeLimit3, violationPolicy3);
+    QuotaSettings qs3 =
+      QuotaSettingsFactory.limitNamespaceSpace(nd.getName(), sizeLimit3, violationPolicy3);
     tablesWithQuotas.put(tn3, qs3);
     tablesWithQuotas.put(tn4, qs3);
     tablesWithQuotas.put(tn5, qs3);
@@ -621,7 +619,7 @@ public class SpaceQuotaHelperForTests {
 
   TableName createTableWithRegions(Admin admin, int numRegions) throws Exception {
     return createTableWithRegions(admin, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions,
-        0);
+      0);
   }
 
   TableName createTableWithRegions(String namespace, int numRegions) throws Exception {
@@ -629,7 +627,7 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName createTableWithRegions(Admin admin, String namespace, int numRegions,
-      int numberOfReplicas) throws Exception {
+    int numberOfReplicas) throws Exception {
     final TableName tn = getNextTableName(namespace);
 
     // Delete the old table
@@ -642,10 +640,10 @@ public class SpaceQuotaHelperForTests {
     TableDescriptor tableDesc;
     if (numberOfReplicas > 0) {
       tableDesc = TableDescriptorBuilder.newBuilder(tn).setRegionReplication(numberOfReplicas)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
     } else {
       tableDesc = TableDescriptorBuilder.newBuilder(tn)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
     }
     if (numRegions == 1) {
       admin.createTable(tableDesc);
@@ -657,8 +655,8 @@ public class SpaceQuotaHelperForTests {
 
   TableName createTableInNamespace(NamespaceDescriptor nd) throws Exception {
     final Admin admin = testUtil.getAdmin();
-    final TableName tn = TableName.valueOf(nd.getName(),
-        testName.getMethodName() + counter.getAndIncrement());
+    final TableName tn =
+      TableName.valueOf(nd.getName(), testName.getMethodName() + counter.getAndIncrement());
 
     // Delete the old table
     if (admin.tableExists(tn)) {
@@ -668,14 +666,14 @@ public class SpaceQuotaHelperForTests {
 
     // Create the table
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
 
     admin.createTable(tableDesc);
     return tn;
   }
 
-  void partitionTablesByQuotaTarget(Multimap<TableName,QuotaSettings> quotas,
-      Set<TableName> tablesWithTableQuota, Set<TableName> tablesWithNamespaceQuota) {
+  void partitionTablesByQuotaTarget(Multimap<TableName, QuotaSettings> quotas,
+    Set<TableName> tablesWithTableQuota, Set<TableName> tablesWithNamespaceQuota) {
     // Partition the tables with quotas by table and ns quota
     for (Entry<TableName, QuotaSettings> entry : quotas.entries()) {
       SpaceLimitSettings settings = (SpaceLimitSettings) entry.getValue();
@@ -694,10 +692,9 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
-   * Abstraction to simplify the case where a test needs to verify a certain state
-   * on a {@code SpaceQuotaSnapshot}. This class fails-fast when there is no such
-   * snapshot obtained from the Master. As such, it is not useful to verify the
-   * lack of a snapshot.
+   * Abstraction to simplify the case where a test needs to verify a certain state on a
+   * {@code SpaceQuotaSnapshot}. This class fails-fast when there is no such snapshot obtained from
+   * the Master. As such, it is not useful to verify the lack of a snapshot.
    */
   static abstract class SpaceQuotaSnapshotPredicate implements Predicate<Exception> {
     private final Connection conn;
@@ -715,7 +712,7 @@ public class SpaceQuotaHelperForTests {
     SpaceQuotaSnapshotPredicate(Connection conn, TableName tn, String ns) {
       if ((null != tn && null != ns) || (null == tn && null == ns)) {
         throw new IllegalArgumentException(
-            "One of TableName and Namespace must be non-null, and the other null");
+          "One of TableName and Namespace must be non-null, and the other null");
       }
       this.conn = conn;
       this.tn = tn;
@@ -740,7 +737,6 @@ public class SpaceQuotaHelperForTests {
 
     /**
      * Must determine if the given {@code SpaceQuotaSnapshot} meets some criteria.
-     *
      * @param snapshot a non-null snapshot obtained from the HBase Master
      * @return true if the criteria is met, false otherwise
      */
@@ -764,7 +760,7 @@ public class SpaceQuotaHelperForTests {
       for (HRegion region : cluster.getRegions(tn)) {
         for (HStore store : region.getStores()) {
           Collection<HStoreFile> files =
-              store.getStoreEngine().getStoreFileManager().getCompactedfiles();
+            store.getStoreEngine().getStoreFileManager().getCompactedfiles();
           if (null != files && !files.isEmpty()) {
             LOG.debug(region.getRegionInfo().getEncodedName() + " still has compacted files");
             return false;

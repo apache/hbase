@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,11 +40,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHBaseConfiguration {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseConfiguration.class);
+    HBaseClassTestRule.forClass(TestHBaseConfiguration.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseConfiguration.class);
 
@@ -63,11 +63,8 @@ public class TestHBaseConfiguration {
     String prefix = "hbase.mapred.output.";
     conf.set("hbase.security.authentication", "kerberos");
     conf.set("hbase.regionserver.kerberos.principal", "hbasesource");
-    HBaseConfiguration.setWithPrefix(conf, prefix,
-        ImmutableMap.of(
-            "hbase.regionserver.kerberos.principal", "hbasedest",
-            "", "shouldbemissing")
-            .entrySet());
+    HBaseConfiguration.setWithPrefix(conf, prefix, ImmutableMap
+      .of("hbase.regionserver.kerberos.principal", "hbasedest", "", "shouldbemissing").entrySet());
 
     Configuration subsetConf = HBaseConfiguration.subset(conf, prefix);
     assertNull(subsetConf.get(prefix + "hbase.regionserver.kerberos.principal"));
@@ -87,7 +84,7 @@ public class TestHBaseConfiguration {
   public void testGetPassword() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(ReflectiveCredentialProviderClient.CREDENTIAL_PROVIDER_PATH, "jceks://file"
-        + new File(UTIL.getDataTestDir().toUri().getPath(), "foo.jks").getCanonicalPath());
+      + new File(UTIL.getDataTestDir().toUri().getPath(), "foo.jks").getCanonicalPath());
     ReflectiveCredentialProviderClient client = new ReflectiveCredentialProviderClient();
     if (client.isHadoopCredentialProviderAvailable()) {
       char[] keyPass = { 'k', 'e', 'y', 'p', 'a', 's', 's' };
@@ -121,14 +118,13 @@ public class TestHBaseConfiguration {
     Configuration conf = HBaseConfiguration.create();
     Configuration.addDefaultResource("hdfs-scr-disabled.xml");
     assertEquals("hdfs-scr-disabled.xml",
-            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
+      conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
     assertEquals("false", conf.get("dfs.client.read.shortcircuit"));
     assertNull(conf.get("dfs.domain.socket.path"));
     Configuration.addDefaultResource("hdfs-scr-enabled.xml");
     assertEquals("hdfs-scr-enabled.xml",
-            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
-    assertEquals("hdfs-scr-enabled.xml",
-            conf.getPropertySources("dfs.domain.socket.path")[0]);
+      conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
+    assertEquals("hdfs-scr-enabled.xml", conf.getPropertySources("dfs.domain.socket.path")[0]);
     assertEquals("true", conf.get("dfs.client.read.shortcircuit"));
     assertEquals("/var/lib/hadoop-hdfs/dn_socket", conf.get("dfs.domain.socket.path"));
   }
@@ -136,10 +132,9 @@ public class TestHBaseConfiguration {
   @Test
   public void testDeprecatedConfigurations() {
     // Configuration.addDeprecations before create Configuration object
-    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[] {
       new Configuration.DeprecationDelta("hbase.deprecated.conf", "hbase.new.conf"),
-      new Configuration.DeprecationDelta("hbase.deprecated.conf2", "hbase.new.conf2")
-    });
+      new Configuration.DeprecationDelta("hbase.deprecated.conf2", "hbase.new.conf2") });
     Configuration conf = HBaseConfiguration.create();
     conf.addResource("hbase-deprecated-conf.xml");
     assertEquals("1000", conf.get("hbase.new.conf"));
@@ -148,29 +143,25 @@ public class TestHBaseConfiguration {
 
   private static class ReflectiveCredentialProviderClient {
     public static final String HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME =
-        "org.apache.hadoop.security.alias.JavaKeyStoreProvider$Factory";
-    public static final String
-      HADOOP_CRED_PROVIDER_FACTORY_GET_PROVIDERS_METHOD_NAME = "getProviders";
+      "org.apache.hadoop.security.alias.JavaKeyStoreProvider$Factory";
+    public static final String HADOOP_CRED_PROVIDER_FACTORY_GET_PROVIDERS_METHOD_NAME =
+      "getProviders";
 
     public static final String HADOOP_CRED_PROVIDER_CLASS_NAME =
-        "org.apache.hadoop.security.alias.CredentialProvider";
-    public static final String
-        HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME =
-        "getCredentialEntry";
-    public static final String
-        HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME = "getAliases";
-    public static final String
-        HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME =
-        "createCredentialEntry";
+      "org.apache.hadoop.security.alias.CredentialProvider";
+    public static final String HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME =
+      "getCredentialEntry";
+    public static final String HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME = "getAliases";
+    public static final String HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME =
+      "createCredentialEntry";
     public static final String HADOOP_CRED_PROVIDER_FLUSH_METHOD_NAME = "flush";
 
     public static final String HADOOP_CRED_ENTRY_CLASS_NAME =
-        "org.apache.hadoop.security.alias.CredentialProvider$CredentialEntry";
-    public static final String HADOOP_CRED_ENTRY_GET_CREDENTIAL_METHOD_NAME =
-        "getCredential";
+      "org.apache.hadoop.security.alias.CredentialProvider$CredentialEntry";
+    public static final String HADOOP_CRED_ENTRY_GET_CREDENTIAL_METHOD_NAME = "getCredential";
 
     public static final String CREDENTIAL_PROVIDER_PATH =
-        "hadoop.security.credential.provider.path";
+      "hadoop.security.credential.provider.path";
 
     private static Object hadoopCredProviderFactory = null;
     private static Method getProvidersMethod = null;
@@ -181,19 +172,17 @@ public class TestHBaseConfiguration {
     private static Boolean hadoopClassesAvailable = null;
 
     /**
-     * Determine if we can load the necessary CredentialProvider classes. Only
-     * loaded the first time, so subsequent invocations of this method should
-     * return fast.
-     *
-     * @return True if the CredentialProvider classes/methods are available,
-     *         false otherwise.
+     * Determine if we can load the necessary CredentialProvider classes. Only loaded the first
+     * time, so subsequent invocations of this method should return fast.
+     * @return True if the CredentialProvider classes/methods are available, false otherwise.
      */
     private boolean isHadoopCredentialProviderAvailable() {
       if (null != hadoopClassesAvailable) {
         // Make sure everything is initialized as expected
-        if (hadoopClassesAvailable && null != getProvidersMethod
-            && null != hadoopCredProviderFactory
-            && null != getCredentialEntryMethod && null != getCredentialMethod) {
+        if (
+          hadoopClassesAvailable && null != getProvidersMethod && null != hadoopCredProviderFactory
+            && null != getCredentialEntryMethod && null != getCredentialMethod
+        ) {
           return true;
         } else {
           // Otherwise we failed to load it
@@ -206,8 +195,7 @@ public class TestHBaseConfiguration {
       // Load Hadoop CredentialProviderFactory
       Class<?> hadoopCredProviderFactoryClz;
       try {
-        hadoopCredProviderFactoryClz = Class
-            .forName(HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME);
+        hadoopCredProviderFactoryClz = Class.forName(HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME);
       } catch (ClassNotFoundException e) {
         return false;
       }
@@ -221,48 +209,43 @@ public class TestHBaseConfiguration {
 
       try {
         getProvidersMethod = loadMethod(hadoopCredProviderFactoryClz,
-            HADOOP_CRED_PROVIDER_FACTORY_GET_PROVIDERS_METHOD_NAME,
-            Configuration.class);
+          HADOOP_CRED_PROVIDER_FACTORY_GET_PROVIDERS_METHOD_NAME, Configuration.class);
         // Load Hadoop CredentialProvider
         Class<?> hadoopCredProviderClz;
         hadoopCredProviderClz = Class.forName(HADOOP_CRED_PROVIDER_CLASS_NAME);
         getCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
-            HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME, String.class);
+          HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME, String.class);
 
         Method getAliasesMethod =
           loadMethod(hadoopCredProviderClz, HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME);
 
         createCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
-            HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME,
-            String.class, char[].class);
+          HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME, String.class, char[].class);
 
-        flushMethod = loadMethod(hadoopCredProviderClz,
-            HADOOP_CRED_PROVIDER_FLUSH_METHOD_NAME);
+        flushMethod = loadMethod(hadoopCredProviderClz, HADOOP_CRED_PROVIDER_FLUSH_METHOD_NAME);
 
         // Load Hadoop CredentialEntry
         Class<?> hadoopCredentialEntryClz;
         try {
-          hadoopCredentialEntryClz = Class
-              .forName(HADOOP_CRED_ENTRY_CLASS_NAME);
+          hadoopCredentialEntryClz = Class.forName(HADOOP_CRED_ENTRY_CLASS_NAME);
         } catch (ClassNotFoundException e) {
           LOG.error("Failed to load class:" + e);
           return false;
         }
 
-        getCredentialMethod = loadMethod(hadoopCredentialEntryClz,
-            HADOOP_CRED_ENTRY_GET_CREDENTIAL_METHOD_NAME);
+        getCredentialMethod =
+          loadMethod(hadoopCredentialEntryClz, HADOOP_CRED_ENTRY_GET_CREDENTIAL_METHOD_NAME);
       } catch (Exception e1) {
         return false;
       }
 
       hadoopClassesAvailable = true;
-      LOG.info("Credential provider classes have been" +
-          " loaded and initialized successfully through reflection.");
+      LOG.info("Credential provider classes have been"
+        + " loaded and initialized successfully through reflection.");
       return true;
     }
 
-    private Method loadMethod(Class<?> clz, String name, Class<?>... classes)
-        throws Exception {
+    private Method loadMethod(Class<?> clz, String name, Class<?>... classes) throws Exception {
       Method method;
       try {
         method = clz.getMethod(name, classes);
@@ -278,22 +261,18 @@ public class TestHBaseConfiguration {
     }
 
     /**
-     * Wrapper to fetch the configured {@code List<CredentialProvider>}s.
-     *
-     * @param conf
-     *    Configuration with GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS defined
+     * Wrapper to fetch the configured {@code List<CredentialProvider>}s. n * Configuration with
+     * GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS defined
      * @return List of CredentialProviders, or null if they could not be loaded
      */
     @SuppressWarnings("unchecked")
-    protected  List<Object> getCredentialProviders(Configuration conf) {
+    protected List<Object> getCredentialProviders(Configuration conf) {
       // Call CredentialProviderFactory.getProviders(Configuration)
       Object providersObj;
       try {
-        providersObj = getProvidersMethod.invoke(hadoopCredProviderFactory,
-            conf);
+        providersObj = getProvidersMethod.invoke(hadoopCredProviderFactory, conf);
       } catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException e) {
-        LOG.error("Failed to invoke: " + getProvidersMethod.getName() +
-            ": " + e);
+        LOG.error("Failed to invoke: " + getProvidersMethod.getName() + ": " + e);
         return null;
       }
 
@@ -306,26 +285,19 @@ public class TestHBaseConfiguration {
     }
 
     /**
-     * Create a CredentialEntry using the configured Providers.
-     * If multiple CredentialProviders are configured, the first will be used.
-     *
-     * @param conf
-     *          Configuration for the CredentialProvider
-     * @param name
-     *          CredentialEntry name (alias)
-     * @param credential
-     *          The credential
+     * Create a CredentialEntry using the configured Providers. If multiple CredentialProviders are
+     * configured, the first will be used. n * Configuration for the CredentialProvider n *
+     * CredentialEntry name (alias) n * The credential
      */
-    public  void createEntry(Configuration conf, String name, char[] credential)
-        throws Exception {
+    public void createEntry(Configuration conf, String name, char[] credential) throws Exception {
       if (!isHadoopCredentialProviderAvailable()) {
         return;
       }
 
       List<Object> providers = getCredentialProviders(conf);
       if (null == providers) {
-        throw new IOException("Could not fetch any CredentialProviders, " +
-            "is the implementation available?");
+        throw new IOException(
+          "Could not fetch any CredentialProviders, " + "is the implementation available?");
       }
 
       Object provider = providers.get(0);
@@ -333,20 +305,12 @@ public class TestHBaseConfiguration {
     }
 
     /**
-     * Create a CredentialEntry with the give name and credential in the
-     * credentialProvider. The credentialProvider argument must be an instance
-     * of Hadoop
-     * CredentialProvider.
-     *
-     * @param credentialProvider
-     *          Instance of CredentialProvider
-     * @param name
-     *          CredentialEntry name (alias)
-     * @param credential
-     *          The credential to store
+     * Create a CredentialEntry with the give name and credential in the credentialProvider. The
+     * credentialProvider argument must be an instance of Hadoop CredentialProvider. n * Instance of
+     * CredentialProvider n * CredentialEntry name (alias) n * The credential to store
      */
-    private void createEntryInProvider(Object credentialProvider,
-        String name, char[] credential) throws Exception {
+    private void createEntryInProvider(Object credentialProvider, String name, char[] credential)
+      throws Exception {
       if (!isHadoopCredentialProviderAvailable()) {
         return;
       }

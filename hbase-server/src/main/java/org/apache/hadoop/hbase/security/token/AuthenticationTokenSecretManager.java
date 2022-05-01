@@ -15,53 +15,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
-import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
+import javax.crypto.SecretKey;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKLeaderManager;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manages an internal list of secret keys used to sign new authentication
- * tokens as they are generated, and to valid existing tokens used for
- * authentication.
- *
+ * Manages an internal list of secret keys used to sign new authentication tokens as they are
+ * generated, and to valid existing tokens used for authentication.
  * <p>
- * A single instance of {@code AuthenticationTokenSecretManager} will be
- * running as the "leader" in a given HBase cluster.  The leader is responsible
- * for periodically generating new secret keys, which are then distributed to
- * followers via ZooKeeper, and for expiring previously used secret keys that
- * are no longer needed (as any tokens using them have expired).
+ * A single instance of {@code AuthenticationTokenSecretManager} will be running as the "leader" in
+ * a given HBase cluster. The leader is responsible for periodically generating new secret keys,
+ * which are then distributed to followers via ZooKeeper, and for expiring previously used secret
+ * keys that are no longer needed (as any tokens using them have expired).
  * </p>
  */
 @InterfaceAudience.Private
-public class AuthenticationTokenSecretManager
-    extends SecretManager<AuthenticationTokenIdentifier> {
+public class AuthenticationTokenSecretManager extends SecretManager<AuthenticationTokenIdentifier> {
 
   static final String NAME_PREFIX = "SecretManager-";
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AuthenticationTokenSecretManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuthenticationTokenSecretManager.class);
 
   private long lastKeyUpdate;
   private long keyUpdateInterval;
@@ -70,7 +63,7 @@ public class AuthenticationTokenSecretManager
   private LeaderElector leaderElector;
   private ZKClusterId clusterId;
 
-  private Map<Integer,AuthenticationKey> allKeys = new ConcurrentHashMap<>();
+  private Map<Integer, AuthenticationKey> allKeys = new ConcurrentHashMap<>();
   private AuthenticationKey currentKey;
 
   private int idSeq;
@@ -79,23 +72,25 @@ public class AuthenticationTokenSecretManager
 
   /**
    * Create a new secret manager instance for generating keys.
-   * @param conf Configuration to use
-   * @param zk Connection to zookeeper for handling leader elections
-   * @param keyUpdateInterval Time (in milliseconds) between rolling a new master key for token signing
-   * @param tokenMaxLifetime Maximum age (in milliseconds) before a token expires and is no longer valid
+   * @param conf              Configuration to use
+   * @param zk                Connection to zookeeper for handling leader elections
+   * @param keyUpdateInterval Time (in milliseconds) between rolling a new master key for token
+   *                          signing
+   * @param tokenMaxLifetime  Maximum age (in milliseconds) before a token expires and is no longer
+   *                          valid
    */
-  /* TODO: Restrict access to this constructor to make rogues instances more difficult.
-   * For the moment this class is instantiated from
-   * org.apache.hadoop.hbase.ipc.SecureServer so public access is needed.
+  /*
+   * TODO: Restrict access to this constructor to make rogues instances more difficult. For the
+   * moment this class is instantiated from org.apache.hadoop.hbase.ipc.SecureServer so public
+   * access is needed.
    */
-  public AuthenticationTokenSecretManager(Configuration conf,
-                                          ZKWatcher zk, String serverName,
-                                          long keyUpdateInterval, long tokenMaxLifetime) {
+  public AuthenticationTokenSecretManager(Configuration conf, ZKWatcher zk, String serverName,
+    long keyUpdateInterval, long tokenMaxLifetime) {
     this.zkWatcher = new ZKSecretWatcher(conf, zk, this);
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenMaxLifetime = tokenMaxLifetime;
     this.leaderElector = new LeaderElector(zk, serverName);
-    this.name = NAME_PREFIX+serverName;
+    this.name = NAME_PREFIX + serverName;
     this.clusterId = new ZKClusterId(zk, zk);
   }
 
@@ -130,31 +125,29 @@ public class AuthenticationTokenSecretManager
     identifier.setIssueDate(now);
     identifier.setExpirationDate(now + tokenMaxLifetime);
     identifier.setSequenceNumber(tokenSeq.getAndIncrement());
-    return createPassword(identifier.getBytes(),
-        secretKey.getKey());
+    return createPassword(identifier.getBytes(), secretKey.getKey());
   }
 
   @Override
-  public byte[] retrievePassword(AuthenticationTokenIdentifier identifier)
-      throws InvalidToken {
+  public byte[] retrievePassword(AuthenticationTokenIdentifier identifier) throws InvalidToken {
     long now = EnvironmentEdgeManager.currentTime();
     if (identifier.getExpirationDate() < now) {
       throw new InvalidToken("Token has expired");
     }
     AuthenticationKey masterKey = allKeys.get(identifier.getKeyId());
-    if(masterKey == null) {
-      if(zkWatcher.getWatcher().isAborted()) {
+    if (masterKey == null) {
+      if (zkWatcher.getWatcher().isAborted()) {
         LOG.error("ZKWatcher is abort");
-        throw new InvalidToken("Token keys could not be sync from zookeeper"
-            + " because of ZKWatcher abort");
+        throw new InvalidToken(
+          "Token keys could not be sync from zookeeper" + " because of ZKWatcher abort");
       }
       synchronized (this) {
         if (!leaderElector.isAlive() || leaderElector.isStopped()) {
-          LOG.warn("Thread leaderElector[" + leaderElector.getName() + ":"
-              + leaderElector.getId() + "] is stopped or not alive");
+          LOG.warn("Thread leaderElector[" + leaderElector.getName() + ":" + leaderElector.getId()
+            + "] is stopped or not alive");
           leaderElector.start();
-          LOG.info("Thread leaderElector [" + leaderElector.getName() + ":"
-              + leaderElector.getId() + "] is started");
+          LOG.info("Thread leaderElector [" + leaderElector.getName() + ":" + leaderElector.getId()
+            + "] is started");
         }
       }
       zkWatcher.refreshKeys();
@@ -164,12 +157,10 @@ public class AuthenticationTokenSecretManager
       masterKey = allKeys.get(identifier.getKeyId());
     }
     if (masterKey == null) {
-      throw new InvalidToken("Unknown master key for token (id="+
-          identifier.getKeyId()+")");
+      throw new InvalidToken("Unknown master key for token (id=" + identifier.getKeyId() + ")");
     }
     // regenerate the password
-    return createPassword(identifier.getBytes(),
-        masterKey.getKey());
+    return createPassword(identifier.getBytes(), masterKey.getKey());
   }
 
   @Override
@@ -178,8 +169,7 @@ public class AuthenticationTokenSecretManager
   }
 
   public Token<AuthenticationTokenIdentifier> generateToken(String username) {
-    AuthenticationTokenIdentifier ident =
-        new AuthenticationTokenIdentifier(username);
+    AuthenticationTokenIdentifier ident = new AuthenticationTokenIdentifier(username);
     Token<AuthenticationTokenIdentifier> token = new Token<>(ident, this);
     if (clusterId.hasId()) {
       token.setService(new Text(clusterId.getId()));
@@ -259,9 +249,11 @@ public class AuthenticationTokenSecretManager
 
     long now = EnvironmentEdgeManager.currentTime();
     AuthenticationKey prev = currentKey;
-    AuthenticationKey newKey = new AuthenticationKey(++idSeq,
-        Long.MAX_VALUE, // don't allow to expire until it's replaced by a new key
-        generateSecret());
+    AuthenticationKey newKey = new AuthenticationKey(++idSeq, Long.MAX_VALUE, // don't allow to
+                                                                              // expire until it's
+                                                                              // replaced by a new
+                                                                              // key
+      generateSecret());
     allKeys.put(newKey.getKeyId(), newKey);
     currentKey = newKey;
     zkWatcher.addKeyToZK(newKey);
@@ -292,8 +284,8 @@ public class AuthenticationTokenSecretManager
     public LeaderElector(ZKWatcher watcher, String serverName) {
       setDaemon(true);
       setName("ZKSecretWatcher-leaderElector");
-      zkLeader = new ZKLeaderManager(watcher,
-          ZNodePaths.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
+      zkLeader =
+        new ZKLeaderManager(watcher, ZNodePaths.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
           Bytes.toBytes(serverName), this);
     }
 
@@ -318,7 +310,7 @@ public class AuthenticationTokenSecretManager
         zkLeader.stepDownAsLeader();
       }
       isMaster = false;
-      LOG.info("Stopping leader election, because: "+reason);
+      LOG.info("Stopping leader election, because: " + reason);
       interrupt();
     }
 

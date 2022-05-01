@@ -135,8 +135,8 @@ class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
 
     if (!Bytes.equals(metaTableRow.getRow(), ri.getRegionName())) {
       LOG.warn(
-        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; " +
-          "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
+        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; "
+          + "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
         Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
       return null;
     }

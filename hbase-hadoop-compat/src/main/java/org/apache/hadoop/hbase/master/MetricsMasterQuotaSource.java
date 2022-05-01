@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,16 +41,16 @@ public interface MetricsMasterQuotaSource extends BaseSource {
   String NUM_REGION_SIZE_REPORTS_DESC = "Number of Region sizes reported";
   String QUOTA_OBSERVER_CHORE_TIME_NAME = "quotaObserverChoreTime";
   String QUOTA_OBSERVER_CHORE_TIME_DESC =
-      "Histogram for the time in millis for the QuotaObserverChore";
+    "Histogram for the time in millis for the QuotaObserverChore";
   String SNAPSHOT_OBSERVER_CHORE_TIME_NAME = "snapshotQuotaObserverChoreTime";
   String SNAPSHOT_OBSERVER_CHORE_TIME_DESC =
-      "Histogram for the time in millis for the SnapshotQuotaObserverChore";
+    "Histogram for the time in millis for the SnapshotQuotaObserverChore";
   String SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_NAME = "snapshotObserverSizeComputationTime";
   String SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_DESC =
-      "Histogram for the time in millis to compute the size of each snapshot";
+    "Histogram for the time in millis to compute the size of each snapshot";
   String SNAPSHOT_OBSERVER_FETCH_TIME_NAME = "snapshotObserverSnapshotFetchTime";
   String SNAPSHOT_OBSERVER_FETCH_TIME_DESC =
-      "Histogram for the time in millis to fetch all snapshots from HBase";
+    "Histogram for the time in millis to fetch all snapshots from HBase";
   String TABLE_QUOTA_USAGE_NAME = "tableSpaceQuotaOverview";
   String TABLE_QUOTA_USAGE_DESC = "A JSON summary of the usage of all tables with space quotas";
   String NS_QUOTA_USAGE_NAME = "namespaceSpaceQuotaOverview";
@@ -57,40 +58,35 @@ public interface MetricsMasterQuotaSource extends BaseSource {
 
   /**
    * Updates the metric tracking the number of space quotas defined in the system.
-   *
    * @param numSpaceQuotas The number of space quotas defined
    */
   void updateNumSpaceQuotas(long numSpaceQuotas);
 
   /**
-   * Updates the metric tracking the number of tables the master has computed to be in
-   * violation of their space quota.
-   *
+   * Updates the metric tracking the number of tables the master has computed to be in violation of
+   * their space quota.
    * @param numTablesInViolation The number of tables violating a space quota
    */
   void updateNumTablesInSpaceQuotaViolation(long numTablesInViolation);
 
   /**
-   * Updates the metric tracking the number of namespaces the master has computed to be in
-   * violation of their space quota.
-   *
+   * Updates the metric tracking the number of namespaces the master has computed to be in violation
+   * of their space quota.
    * @param numNamespacesInViolation The number of namespaces violating a space quota
    */
   void updateNumNamespacesInSpaceQuotaViolation(long numNamespacesInViolation);
 
   /**
-   * Updates the metric tracking the number of region size reports the master is currently
-   * retaining in memory.
-   *
+   * Updates the metric tracking the number of region size reports the master is currently retaining
+   * in memory.
    * @param numCurrentRegionSizeReports The number of region size reports the master is holding in
-   *    memory
+   *                                    memory
    */
   void updateNumCurrentSpaceQuotaRegionSizeReports(long numCurrentRegionSizeReports);
 
   /**
-   * Updates the metric tracking the amount of time taken by the {@code QuotaObserverChore}
-   * which runs periodically.
-   *
+   * Updates the metric tracking the amount of time taken by the {@code QuotaObserverChore} which
+   * runs periodically.
    * @param time The execution time of the chore in milliseconds
    */
   void incrementSpaceQuotaObserverChoreTime(long time);

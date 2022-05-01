@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.http.jersey.SupplierFactoryAdapter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.javax.ws.rs.core.Feature;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.FeatureContext;
 import org.apache.hbase.thirdparty.org.glassfish.hk2.utilities.binding.AbstractBinder;
@@ -54,12 +55,8 @@ public class MasterFeature implements Feature {
 
     @Override
     protected void configure() {
-      bindFactory(supplier)
-        .to(HMaster.class)
-        .in(Singleton.class);
-      bindFactory(supplier)
-        .to(MasterServices.class)
-        .in(Singleton.class);
+      bindFactory(supplier).to(HMaster.class).in(Singleton.class);
+      bindFactory(supplier).to(MasterServices.class).in(Singleton.class);
     }
 
     /**

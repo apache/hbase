@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
 import java.io.BufferedReader;
@@ -84,58 +83,53 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * This integration test loads successful resource retrieval records from the Common Crawl
- * (https://commoncrawl.org/) public dataset into an HBase table and writes records that can be
- * used to later verify the presence and integrity of those records.
+ * (https://commoncrawl.org/) public dataset into an HBase table and writes records that can be used
+ * to later verify the presence and integrity of those records.
  * <p>
- * Run like:
- * <blockquote>
- * ./bin/hbase org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl \<br>
+ * Run like: <blockquote> ./bin/hbase org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl
+ * \<br>
  * &nbsp;&nbsp; -Dfs.s3n.awsAccessKeyId=&lt;AWS access key&gt; \<br>
  * &nbsp;&nbsp; -Dfs.s3n.awsSecretAccessKey=&lt;AWS secret key&gt; \<br>
  * &nbsp;&nbsp; /path/to/test-CC-MAIN-2021-10-warc.paths.gz \<br>
- * &nbsp;&nbsp; /path/to/tmp/warc-loader-output
- * </blockquote>
+ * &nbsp;&nbsp; /path/to/tmp/warc-loader-output </blockquote>
  * <p>
- * Access to the Common Crawl dataset in S3 is made available to anyone by Amazon AWS, but
- * Hadoop's S3N filesystem still requires valid access credentials to initialize.
+ * Access to the Common Crawl dataset in S3 is made available to anyone by Amazon AWS, but Hadoop's
+ * S3N filesystem still requires valid access credentials to initialize.
  * <p>
- * The input path can either specify a directory or a file. The file may optionally be
- * compressed with gzip. If a directory, the loader expects the directory to contain one or more
- * WARC files from the Common Crawl dataset. If a file, the loader expects a list of Hadoop S3N
- * URIs which point to S3 locations for one or more WARC files from the Common Crawl dataset,
- * one URI per line. Lines should be terminated with the UNIX line terminator.
+ * The input path can either specify a directory or a file. The file may optionally be compressed
+ * with gzip. If a directory, the loader expects the directory to contain one or more WARC files
+ * from the Common Crawl dataset. If a file, the loader expects a list of Hadoop S3N URIs which
+ * point to S3 locations for one or more WARC files from the Common Crawl dataset, one URI per line.
+ * Lines should be terminated with the UNIX line terminator.
  * <p>
- * Included in hbase-it/src/test/resources/CC-MAIN-2021-10-warc.paths.gz is a list of all WARC
- * files comprising the Q1 2021 crawl archive. There are 64,000 WARC files in this data set, each
+ * Included in hbase-it/src/test/resources/CC-MAIN-2021-10-warc.paths.gz is a list of all WARC files
+ * comprising the Q1 2021 crawl archive. There are 64,000 WARC files in this data set, each
  * containing ~1GB of gzipped data. The WARC files contain several record types, such as metadata,
- * request, and response, but we only load the response record types. If the HBase table schema
- * does not specify compression (by default) there is roughly a 10x expansion. Loading the full
- * crawl archive results in a table approximately 640 TB in size.
+ * request, and response, but we only load the response record types. If the HBase table schema does
+ * not specify compression (by default) there is roughly a 10x expansion. Loading the full crawl
+ * archive results in a table approximately 640 TB in size.
  * <p>
  * You can also split the Loader and Verify stages:
  * <p>
- * Load with:
- * <blockquote>
- * ./bin/hbase 'org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl$Loader' \<br>
+ * Load with: <blockquote> ./bin/hbase
+ * 'org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl$Loader' \<br>
  * &nbsp;&nbsp; -files /path/to/hadoop-aws.jar \<br>
  * &nbsp;&nbsp; -Dfs.s3n.awsAccessKeyId=&lt;AWS access key&gt; \<br>
  * &nbsp;&nbsp; -Dfs.s3n.awsSecretAccessKey=&lt;AWS secret key&gt; \<br>
  * &nbsp;&nbsp; /path/to/test-CC-MAIN-2021-10-warc.paths.gz \<br>
- * &nbsp;&nbsp; /path/to/tmp/warc-loader-output
- * </blockquote>
+ * &nbsp;&nbsp; /path/to/tmp/warc-loader-output </blockquote>
  * <p>
- * Note: The hadoop-aws jar will be needed at runtime to instantiate the S3N filesystem. Use
- * the <tt>-files</tt> ToolRunner argument to add it.
+ * Note: The hadoop-aws jar will be needed at runtime to instantiate the S3N filesystem. Use the
+ * <tt>-files</tt> ToolRunner argument to add it.
  * <p>
- * Verify with:
- * <blockquote>
- * ./bin/hbase 'org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl$Verify' \<br>
- * &nbsp;&nbsp; /path/to/tmp/warc-loader-output
- * </blockquote>
+ * Verify with: <blockquote> ./bin/hbase
+ * 'org.apache.hadoop.hbase.test.IntegrationTestLoadCommonCrawl$Verify' \<br>
+ * &nbsp;&nbsp; /path/to/tmp/warc-loader-output </blockquote>
  * <p>
  */
 public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
@@ -159,7 +153,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
   private static final int VERIFICATION_READ_RETRIES = 10;
 
   public static enum Counts {
-    REFERENCED, UNREFERENCED, CORRUPT
+    REFERENCED,
+    UNREFERENCED,
+    CORRUPT
   }
 
   protected Path warcFileInputDir = null;
@@ -273,11 +269,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     private int qualifierLength;
     private long ts;
 
-    public HBaseKeyWritable() { }
+    public HBaseKeyWritable() {
+    }
 
-    public HBaseKeyWritable(byte[] row, int rowOffset, int rowLength,
-        byte[] family, int familyOffset, int familyLength,
-        byte[] qualifier, int qualifierOffset, int qualifierLength, long ts) {
+    public HBaseKeyWritable(byte[] row, int rowOffset, int rowLength, byte[] family,
+      int familyOffset, int familyLength, byte[] qualifier, int qualifierOffset,
+      int qualifierLength, long ts) {
       this.row = row;
       this.rowOffset = rowOffset;
       this.rowLength = rowLength;
@@ -291,9 +288,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public HBaseKeyWritable(byte[] row, byte[] family, byte[] qualifier, long ts) {
-      this(row, 0, row.length,
-        family, 0, family.length,
-        qualifier, 0, qualifier != null ? qualifier.length : 0, ts);
+      this(row, 0, row.length, family, 0, family.length, qualifier, 0,
+        qualifier != null ? qualifier.length : 0, ts);
     }
 
     public HBaseKeyWritable(byte[] row, byte[] family, long ts) {
@@ -301,10 +297,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public HBaseKeyWritable(Cell cell) {
-      this(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
-        cell.getTimestamp());
+      this(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), cell.getFamilyArray(),
+        cell.getFamilyOffset(), cell.getFamilyLength(), cell.getQualifierArray(),
+        cell.getQualifierOffset(), cell.getQualifierLength(), cell.getTimestamp());
     }
 
     @Override
@@ -326,8 +321,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       out.writeUTF(new String(row, rowOffset, rowLength, StandardCharsets.UTF_8));
       out.writeUTF(new String(family, familyOffset, familyLength, StandardCharsets.UTF_8));
       if (qualifier != null) {
-        out.writeUTF(new String(qualifier, qualifierOffset, qualifierLength,
-          StandardCharsets.UTF_8));
+        out.writeUTF(
+          new String(qualifier, qualifierOffset, qualifierLength, StandardCharsets.UTF_8));
       } else {
         out.writeUTF("");
       }
@@ -423,35 +418,28 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     void createSchema(final TableName tableName) throws IOException {
 
       try (Connection conn = ConnectionFactory.createConnection(getConf());
-           Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         if (!admin.tableExists(tableName)) {
 
-          ColumnFamilyDescriptorBuilder contentFamilyBuilder =
-            ColumnFamilyDescriptorBuilder.newBuilder(CONTENT_FAMILY_NAME)
-              .setDataBlockEncoding(DataBlockEncoding.NONE)
-              .setBloomFilterType(BloomType.ROW)
-              .setMaxVersions(1000)
-              .setBlocksize(256 * 1024)
-              ;
+          ColumnFamilyDescriptorBuilder contentFamilyBuilder = ColumnFamilyDescriptorBuilder
+            .newBuilder(CONTENT_FAMILY_NAME).setDataBlockEncoding(DataBlockEncoding.NONE)
+            .setBloomFilterType(BloomType.ROW).setMaxVersions(1000).setBlocksize(256 * 1024);
 
-          ColumnFamilyDescriptorBuilder infoFamilyBuilder =
-            ColumnFamilyDescriptorBuilder.newBuilder(INFO_FAMILY_NAME)
-              .setDataBlockEncoding(DataBlockEncoding.NONE)
-              .setBloomFilterType(BloomType.ROWCOL)
-              .setMaxVersions(1000)
-              .setBlocksize(8 * 1024)
-              ;
+          ColumnFamilyDescriptorBuilder infoFamilyBuilder = ColumnFamilyDescriptorBuilder
+            .newBuilder(INFO_FAMILY_NAME).setDataBlockEncoding(DataBlockEncoding.NONE)
+            .setBloomFilterType(BloomType.ROWCOL).setMaxVersions(1000).setBlocksize(8 * 1024);
 
           Set<ColumnFamilyDescriptor> families = new HashSet<>();
           families.add(contentFamilyBuilder.build());
           families.add(infoFamilyBuilder.build());
 
-          TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-              .setColumnFamilies(families)
-              .build();
+          TableDescriptor tableDescriptor =
+            TableDescriptorBuilder.newBuilder(tableName).setColumnFamilies(families).build();
 
-          if (getConf().getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
-            HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+          if (
+            getConf().getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
+              HBaseTestingUtility.PRESPLIT_TEST_TABLE)
+          ) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
@@ -460,9 +448,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
               HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Creating test table: " + tableDescriptor);
-            LOG.info("Number of live regionservers: " + numberOfServers + ", " +
-                "pre-splitting table into " + totalNumberOfRegions + " regions " +
-                "(default regions per server: " + regionsPerServer + ")");
+            LOG.info("Number of live regionservers: " + numberOfServers + ", "
+              + "pre-splitting table into " + totalNumberOfRegions + " regions "
+              + "(default regions per server: " + regionsPerServer + ")");
             byte[][] splits = new RegionSplitter.UniformSplit().split(totalNumberOfRegions);
             admin.createTable(tableDescriptor, splits);
           } else {
@@ -477,7 +465,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     int run(final Path warcFileInput, final Path outputDir)
-        throws IOException, ClassNotFoundException, InterruptedException {
+      throws IOException, ClassNotFoundException, InterruptedException {
 
       createSchema(getTablename(getConf()));
 
@@ -549,7 +537,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public static class LoaderMapper
-        extends Mapper<LongWritable, WARCWritable, HBaseKeyWritable, BytesWritable> {
+      extends Mapper<LongWritable, WARCWritable, HBaseKeyWritable, BytesWritable> {
 
       protected Configuration conf;
       protected Connection conn;
@@ -578,7 +566,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       @Override
       protected void map(final LongWritable key, final WARCWritable value, final Context output)
-          throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         final WARCRecord.Header warcHeader = value.getRecord().getHeader();
         final String recordID = warcHeader.getRecordID();
         final String targetURI = warcHeader.getTargetURI();
@@ -596,8 +584,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
               LOG.debug("Could not make a row key for record " + recordID + ", ignoring", e);
               return;
             } catch (URISyntaxException e) {
-              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " + recordID +
-                ", ignoring");
+              LOG.warn(
+                "Could not parse URI \"" + targetURI + "\" for record " + recordID + ", ignoring");
               return;
             }
 
@@ -615,8 +603,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             put.addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER, ts, content);
             put.addColumn(INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER, ts,
               Bytes.toBytes(content.length));
-            put.addColumn(INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, ts,
-              Bytes.toBytes(contentType));
+            put.addColumn(INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, ts, Bytes.toBytes(contentType));
             put.addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER, ts, Bytes.toBytes(crc64));
             put.addColumn(INFO_FAMILY_NAME, RECORD_ID_QUALIFIER, ts, Bytes.toBytes(recordID));
             put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, ts, Bytes.toBytes(targetURI));
@@ -633,26 +620,27 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER, ts),
               new BytesWritable(Bytes.toBytes(crc64)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER,
-              ts), new BytesWritable(Bytes.toBytes(content.length)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER,
-              ts), new BytesWritable(Bytes.toBytes(contentType)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, RECORD_ID_QUALIFIER,
-              ts), new BytesWritable(Bytes.toBytes(recordID)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER,
-              ts), new BytesWritable(Bytes.toBytes(targetURI)));
+            output.write(
+              new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER, ts),
+              new BytesWritable(Bytes.toBytes(content.length)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, ts),
+              new BytesWritable(Bytes.toBytes(contentType)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, RECORD_ID_QUALIFIER, ts),
+              new BytesWritable(Bytes.toBytes(recordID)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, ts),
+              new BytesWritable(Bytes.toBytes(targetURI)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, DATE_QUALIFIER, ts),
               new BytesWritable(Bytes.toBytes(warcHeader.getDateString())));
             if (ipAddr != null) {
-              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER,
-                ts), new BytesWritable(Bytes.toBytes(ipAddr)));
+              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, ts),
+                new BytesWritable(Bytes.toBytes(ipAddr)));
             }
           }
         }
       }
 
       private byte[] rowKeyFromTargetURI(final String targetUri)
-          throws URISyntaxException, IllegalArgumentException {
+        throws URISyntaxException, IllegalArgumentException {
         final URI uri = new URI(targetUri);
         // Ignore the scheme
         // Reverse the components of the hostname
@@ -689,8 +677,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           sb.append(uri.getFragment());
         }
         if (sb.length() > HConstants.MAX_ROW_LENGTH) {
-          throw new IllegalArgumentException("Key would be too large (length=" + sb.length() +
-            ", limit=" + HConstants.MAX_ROW_LENGTH);
+          throw new IllegalArgumentException("Key would be too large (length=" + sb.length()
+            + ", limit=" + HConstants.MAX_ROW_LENGTH);
         }
         return Bytes.toBytes(sb.toString());
       }
@@ -710,8 +698,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     public static final Logger LOG = LoggerFactory.getLogger(Verify.class);
     public static final String USAGE = "Verify <inputDir>";
 
-    int run(final Path inputDir)
-        throws IOException, ClassNotFoundException, InterruptedException {
+    int run(final Path inputDir) throws IOException, ClassNotFoundException, InterruptedException {
       Job job = Job.getInstance(getConf());
       job.setJobName(Verify.class.getName());
       job.setJarByClass(getClass());
@@ -727,7 +714,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         LOG.error("Failure during job " + job.getJobID());
       }
       final Counters counters = job.getCounters();
-      for (Counts c: Counts.values()) {
+      for (Counts c : Counts.values()) {
         LOG.info(c + ": " + counters.findCounter(c).getValue());
       }
       if (counters.findCounter(Counts.UNREFERENCED).getValue() > 0) {
@@ -756,7 +743,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     }
 
     public static class VerifyMapper
-        extends Mapper<HBaseKeyWritable, BytesWritable, NullWritable, NullWritable> {
+      extends Mapper<HBaseKeyWritable, BytesWritable, NullWritable, NullWritable> {
 
       private Connection conn;
       private Table table;
@@ -783,25 +770,23 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       @Override
       protected void map(final HBaseKeyWritable key, final BytesWritable value,
-          final Context output) throws IOException, InterruptedException {
+        final Context output) throws IOException, InterruptedException {
         final byte[] row = Bytes.copy(key.getRowArray(), key.getRowOffset(), key.getRowLength());
-        final byte[] family = Bytes.copy(key.getFamilyArray(), key.getFamilyOffset(),
-          key.getFamilyLength());
-        final byte[] qualifier = Bytes.copy(key.getQualifierArray(), key.getQualifierOffset(),
-          key.getQualifierLength());
+        final byte[] family =
+          Bytes.copy(key.getFamilyArray(), key.getFamilyOffset(), key.getFamilyLength());
+        final byte[] qualifier =
+          Bytes.copy(key.getQualifierArray(), key.getQualifierOffset(), key.getQualifierLength());
         final long ts = key.getTimestamp();
 
         int retries = VERIFICATION_READ_RETRIES;
         while (true) {
 
-          if (Bytes.equals(INFO_FAMILY_NAME, family) &&
-              Bytes.equals(CRC_QUALIFIER, qualifier)) {
+          if (Bytes.equals(INFO_FAMILY_NAME, family) && Bytes.equals(CRC_QUALIFIER, qualifier)) {
 
             final long expectedCRC64 = Bytes.toLong(value.getBytes(), 0, value.getLength());
-            final Result result = table.get(new Get(row)
-              .addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER)
-              .addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER)
-              .setTimestamp(ts));
+            final Result result =
+              table.get(new Get(row).addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER)
+                .addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER).setTimestamp(ts));
             final byte[] content = result.getValue(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER);
             if (content == null) {
               if (retries-- > 0) {
@@ -839,16 +824,15 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
           } else {
 
-            final Result result = table.get(new Get(row)
-              .addColumn(family, qualifier)
-              .setTimestamp(ts));
+            final Result result =
+              table.get(new Get(row).addColumn(family, qualifier).setTimestamp(ts));
             final byte[] bytes = result.getValue(family, qualifier);
             if (bytes == null) {
               if (retries-- > 0) {
                 continue;
               }
-              LOG.error("Row " + Bytes.toStringBinary(row) + ": missing " +
-                Bytes.toStringBinary(family) + ":" + Bytes.toStringBinary(qualifier));
+              LOG.error("Row " + Bytes.toStringBinary(row) + ": missing "
+                + Bytes.toStringBinary(family) + ":" + Bytes.toStringBinary(qualifier));
               output.getCounter(Counts.UNREFERENCED).increment(1);
               return;
             }
@@ -856,9 +840,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
               if (retries-- > 0) {
                 continue;
               }
-              LOG.error("Row " + Bytes.toStringBinary(row) + ": " +
-                Bytes.toStringBinary(family) + ":" + Bytes.toStringBinary(qualifier) +
-                " mismatch");
+              LOG.error("Row " + Bytes.toStringBinary(row) + ": " + Bytes.toStringBinary(family)
+                + ":" + Bytes.toStringBinary(qualifier) + " mismatch");
               output.getCounter(Counts.CORRUPT).increment(1);
               return;
             }
@@ -882,8 +865,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     // Take the current time, shift by 16 bits and zero those bits, and replace those bits
     // with the low 16 bits of the atomic counter. Mask off the high bit too because timestamps
     // cannot be negative.
-    return ((EnvironmentEdgeManager.currentTime() << 16) & 0x7fff_ffff_ffff_0000L) |
-        (counter.getAndIncrement() & 0xffffL);
+    return ((EnvironmentEdgeManager.currentTime() << 16) & 0x7fff_ffff_ffff_0000L)
+      | (counter.getAndIncrement() & 0xffffL);
   }
 
 }

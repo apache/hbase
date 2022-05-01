@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -61,7 +60,7 @@ public class ZKReplicationStorageBase {
    */
   protected static byte[] toByteArray(final ReplicationProtos.ReplicationState.State state) {
     ReplicationProtos.ReplicationState msg =
-        ReplicationProtos.ReplicationState.newBuilder().setState(state).build();
+      ReplicationProtos.ReplicationState.newBuilder().setState(state).build();
     // There is no toByteArray on this pb Message?
     // 32 bytes is default which seems fair enough here.
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

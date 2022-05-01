@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,15 +26,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class GetJavaProperty {
   public static void main(String args[]) {
     if (args.length == 0) {
-      for (Object prop: System.getProperties().keySet()) {
-        System.out.println(prop + "=" + System.getProperty((String)prop, ""));
+      for (Object prop : System.getProperties().keySet()) {
+        System.out.println(prop + "=" + System.getProperty((String) prop, ""));
       }
     } else {
-      for (String prop: args) {
+      for (String prop : args) {
         System.out.println(System.getProperty(prop, ""));
       }
     }
   }
 
-  private GetJavaProperty() {}
+  private GetJavaProperty() {
+  }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +27,8 @@ public interface FlushRequestListener {
 
   /**
    * Callback which will get called when a flush request is made for a region.
-   * 
-   * @param type The type of flush. (ie. Whether a normal flush or flush because of global heap preassure)
+   * @param type   The type of flush. (ie. Whether a normal flush or flush because of global heap
+   *               preassure)
    * @param region The region for which flush is requested
    */
   void flushRequested(FlushType type, Region region);

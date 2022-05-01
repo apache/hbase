@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,19 +49,18 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestDeleteColumnFamilyProcedureFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeleteColumnFamilyProcedureFromClient.class);
+    HBaseClassTestRule.forClass(TestDeleteColumnFamilyProcedureFromClient.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final TableName TABLENAME =
-      TableName.valueOf("column_family_handlers");
-  private static final byte[][] FAMILIES = new byte[][] { Bytes.toBytes("cf1"),
-      Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
+  private static final TableName TABLENAME = TableName.valueOf("column_family_handlers");
+  private static final byte[][] FAMILIES =
+    new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
 
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
@@ -134,8 +133,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
         });
         int k = 1;
         for (int j = 0; j < cf.length; j++) {
-          if (cf[j].isDirectory() == true
-              && cf[j].getPath().getName().startsWith(".") == false) {
+          if (cf[j].isDirectory() == true && cf[j].getPath().getName().startsWith(".") == false) {
             assertEquals(cf[j].getPath().getName(), "cf" + k);
             k++;
           }

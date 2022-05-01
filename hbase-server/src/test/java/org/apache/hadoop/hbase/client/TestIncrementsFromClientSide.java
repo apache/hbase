@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,36 +60,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Run Increment tests that use the HBase clients; {@link TableBuilder}.
- *
- * Test is parameterized to run the slow and fast increment code paths. If fast, in the @before, we
- * do a rolling restart of the single regionserver so that it can pick up the go fast configuration.
- * Doing it this way should be faster than starting/stopping a cluster per test.
- *
- * Test takes a long time because spin up a cluster between each run -- ugh.
+ * Run Increment tests that use the HBase clients; {@link TableBuilder}. Test is parameterized to
+ * run the slow and fast increment code paths. If fast, in the @before, we do a rolling restart of
+ * the single regionserver so that it can pick up the go fast configuration. Doing it this way
+ * should be faster than starting/stopping a cluster per test. Test takes a long time because spin
+ * up a cluster between each run -- ugh.
  */
 @Category(LargeTests.class)
 public class TestIncrementsFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementsFromClientSide.class);
+    HBaseClassTestRule.forClass(TestIncrementsFromClientSide.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static byte [] ROW = Bytes.toBytes("testRow");
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static byte[] ROW = Bytes.toBytes("testRow");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   // This test depends on there being only one slave running at at a time. See the @Before
   // method where we do rolling restart.
   protected static int SLAVES = 1;
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName());
+      MultiRowMutationEndpoint.class.getName());
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -129,7 +128,7 @@ public class TestIncrementsFromClientSide {
         inc.addColumn(TEST_UTIL.fam1, QUALIFIER, 1);
         Result result = table.increment(inc);
 
-        Cell [] cells = result.rawCells();
+        Cell[] cells = result.rawCells();
         assertEquals(1, cells.length);
         assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
 
@@ -150,12 +149,10 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateBatchIncrement() throws Exception {
-    HTableDescriptor hdt =
-      TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1,
-      kvs);
+    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
     TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
@@ -189,7 +186,7 @@ public class TestIncrementsFromClientSide {
   public void testIncrementWithDeletes() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 
@@ -211,7 +208,7 @@ public class TestIncrementsFromClientSide {
   public void testIncrementingInvalidValue() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     Put p = new Put(ROW);
@@ -251,8 +248,8 @@ public class TestIncrementsFromClientSide {
     Object[] results = new Object[2];
     table.batch(incs, results);
     assertTrue(results.length == 2);
-    for(Object r : results) {
-      Result result = (Result)r;
+    for (Object r : results) {
+      Result result = (Result) r;
       assertTrue(result.isEmpty());
     }
     table.close();
@@ -262,7 +259,7 @@ public class TestIncrementsFromClientSide {
   public void testIncrementInvalidArguments() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     try {
@@ -281,7 +278,7 @@ public class TestIncrementsFromClientSide {
     }
     // try null row
     try {
-      Increment incNoRow = new Increment((byte [])null);
+      Increment incNoRow = new Increment((byte[]) null);
       incNoRow.addColumn(FAMILY, COLUMN, 5);
       fail("Should have thrown IllegalArgumentException");
     } catch (IllegalArgumentException iax) {
@@ -303,15 +300,14 @@ public class TestIncrementsFromClientSide {
   public void testIncrementOutOfOrder() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
-    byte [][] QUALIFIERS = new byte [][] {
-      Bytes.toBytes("B"), Bytes.toBytes("A"), Bytes.toBytes("C")
-    };
+    byte[][] QUALIFIERS =
+      new byte[][] { Bytes.toBytes("B"), Bytes.toBytes("A"), Bytes.toBytes("C") };
 
     Increment inc = new Increment(ROW);
-    for (int i=0; i<QUALIFIERS.length; i++) {
+    for (int i = 0; i < QUALIFIERS.length; i++) {
       inc.addColumn(FAMILY, QUALIFIERS[i], 1);
     }
     ht.increment(inc);
@@ -319,7 +315,7 @@ public class TestIncrementsFromClientSide {
     // Verify expected results
     Get get = new Get(ROW);
     Result r = ht.get(get);
-    Cell [] kvs = r.rawCells();
+    Cell[] kvs = r.rawCells();
     assertEquals(3, kvs.length);
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[1], 1);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[0], 1);
@@ -327,7 +323,7 @@ public class TestIncrementsFromClientSide {
 
     // Now try multiple columns again
     inc = new Increment(ROW);
-    for (int i=0; i<QUALIFIERS.length; i++) {
+    for (int i = 0; i < QUALIFIERS.length; i++) {
       inc.addColumn(FAMILY, QUALIFIERS[i], 1);
     }
     ht.increment(inc);
@@ -348,7 +344,7 @@ public class TestIncrementsFromClientSide {
     Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLENAME), FAMILY);
 
     byte[][] QUALIFIERS =
-        new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
+      new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
 
     Increment inc = new Increment(ROW);
     for (int i = 0; i < QUALIFIERS.length; i++) {
@@ -389,7 +385,7 @@ public class TestIncrementsFromClientSide {
   public void testIncrementIncrZeroAtFirst() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-            TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     byte[] col1 = Bytes.toBytes("col1");
@@ -404,7 +400,7 @@ public class TestIncrementsFromClientSide {
     // Verify expected results
     Get get = new Get(ROW);
     Result r = ht.get(get);
-    Cell [] kvs = r.rawCells();
+    Cell[] kvs = r.rawCells();
     assertEquals(1, kvs.length);
     assertNotNull(kvs[0]);
     assertIncrementKey(kvs[0], ROW, FAMILY, col1, 0);
@@ -432,19 +428,15 @@ public class TestIncrementsFromClientSide {
   public void testIncrement() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
-    byte [][] ROWS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
-        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
-    };
-    byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
-        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
-    };
+    byte[][] ROWS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
+      Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"), Bytes.toBytes("g"),
+      Bytes.toBytes("h"), Bytes.toBytes("i") };
+    byte[][] QUALIFIERS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
+      Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"), Bytes.toBytes("g"),
+      Bytes.toBytes("h"), Bytes.toBytes("i") };
 
     // Do some simple single-column increments
 
@@ -464,7 +456,7 @@ public class TestIncrementsFromClientSide {
     // Verify expected results
     Get get = new Get(ROW);
     Result r = ht.get(get);
-    Cell [] kvs = r.rawCells();
+    Cell[] kvs = r.rawCells();
     assertEquals(5, kvs.length);
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 3);
@@ -474,8 +466,8 @@ public class TestIncrementsFromClientSide {
 
     // Now try multiple columns by different amounts
     inc = new Increment(ROWS[0]);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], i + 1);
     }
     ht.increment(inc);
     // Verify
@@ -483,22 +475,22 @@ public class TestIncrementsFromClientSide {
     r = ht.get(get);
     kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], i+1);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], i + 1);
     }
 
     // Re-increment them
     inc = new Increment(ROWS[0]);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], i + 1);
     }
     ht.increment(inc);
     // Verify
     r = ht.get(get);
     kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2 * (i + 1));
     }
 
     // Verify that an Increment of an amount of zero, returns current count; i.e. same as for above
@@ -512,7 +504,7 @@ public class TestIncrementsFromClientSide {
     kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);
     for (int i = 0; i < QUALIFIERS.length; i++) {
-      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
+      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2 * (i + 1));
     }
   }
 
@@ -522,7 +514,8 @@ public class TestIncrementsFromClientSide {
     Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     long timestamp = 999;
     Increment increment = new Increment(ROW);
-    increment.add(CellUtil.createCell(ROW, FAMILY, QUALIFIER, timestamp, KeyValue.Type.Put.getCode(), Bytes.toBytes(100L)));
+    increment.add(CellUtil.createCell(ROW, FAMILY, QUALIFIER, timestamp,
+      KeyValue.Type.Put.getCode(), Bytes.toBytes(100L)));
     Result r = table.increment(increment);
     assertEquals(1, r.size());
     assertEquals(timestamp, r.rawCells()[0].getTimestamp());
@@ -540,8 +533,8 @@ public class TestIncrementsFromClientSide {
   /**
    * Call over to the adjacent class's method of same name.
    */
-  static void assertIncrementKey(Cell key, byte [] row, byte [] family,
-      byte [] qualifier, long value) throws Exception {
+  static void assertIncrementKey(Cell key, byte[] row, byte[] family, byte[] qualifier, long value)
+    throws Exception {
     TestFromClientSide.assertIncrementKey(key, row, family, qualifier, value);
   }
 
@@ -550,13 +543,13 @@ public class TestIncrementsFromClientSide {
   }
 
   /*
-    Test that we have only 1 ttl tag with increment mutation.
+   * Test that we have only 1 ttl tag with increment mutation.
    */
   @Test
   public void testIncrementWithTtlTags() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName tableName =
-            TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 
@@ -565,11 +558,11 @@ public class TestIncrementsFromClientSide {
     conf.set(RPC_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf.set(DEFAULT_CODEC_CLASS, "");
     try (Connection connection = ConnectionFactory.createConnection(conf);
-         Table table = connection.getTable(tableName)) {
+      Table table = connection.getTable(tableName)) {
       for (int i = 0; i < 10; i++) {
         Increment inc = new Increment(ROW);
         inc.addColumn(FAMILY, COLUMN, 1);
-        long ttl = i + 3600000 ;
+        long ttl = i + 3600000;
         inc.setTTL(ttl);
         ht.increment(inc);
 
@@ -578,8 +571,8 @@ public class TestIncrementsFromClientSide {
         int count = 0;
         Result result;
         while ((result = scanner.next()) != null) {
-          Cell[] cells =  result.rawCells();
-          for (Cell cell: cells) {
+          Cell[] cells = result.rawCells();
+          for (Cell cell : cells) {
             List<Tag> tags = PrivateCellUtil.getTags(cell);
             // Make sure there is only 1 tag.
             assertEquals(1, tags.size());

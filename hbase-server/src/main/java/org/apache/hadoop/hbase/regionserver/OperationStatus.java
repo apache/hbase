@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,23 +23,20 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * 
- * This class stores the Operation status code and the exception message
- * that occurs in case of failure of operations like put, delete, etc.
- * This class is added with a purpose of adding more details or info regarding
- * the operation status in future.
- *
+ * This class stores the Operation status code and the exception message that occurs in case of
+ * failure of operations like put, delete, etc. This class is added with a purpose of adding more
+ * details or info regarding the operation status in future.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class OperationStatus {
 
-  /** Singleton for successful operations.  */
+  /** Singleton for successful operations. */
   public static final OperationStatus SUCCESS = new OperationStatus(OperationStatusCode.SUCCESS);
 
-  /** Singleton for failed operations.  */
+  /** Singleton for failed operations. */
   public static final OperationStatus FAILURE = new OperationStatus(OperationStatusCode.FAILURE);
 
-  /** Singleton for operations not yet run.  */
+  /** Singleton for operations not yet run. */
   public static final OperationStatus NOT_RUN = new OperationStatus(OperationStatusCode.NOT_RUN);
 
   private final OperationStatusCode code;
@@ -70,21 +66,21 @@ public class OperationStatus {
   }
 
   /**
-   * @return OperationStatusCode
+   * n
    */
   public OperationStatusCode getOperationStatusCode() {
     return code;
   }
 
   /**
-   * @return result
+   * n
    */
   public Result getResult() {
     return result;
   }
 
   /**
-   * @return ExceptionMessge
+   * n
    */
   public String getExceptionMsg() {
     return exceptionMsg;

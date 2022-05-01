@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos;
 
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
@@ -51,7 +49,8 @@ public class ChaosService {
     try {
       CommandLine cmdline = new GnuParser().parse(getOptions(), args);
       if (cmdline.hasOption(ChaosServiceName.CHAOSAGENT.toString().toLowerCase())) {
-        String actionStr = cmdline.getOptionValue(ChaosServiceName.CHAOSAGENT.toString().toLowerCase());
+        String actionStr =
+          cmdline.getOptionValue(ChaosServiceName.CHAOSAGENT.toString().toLowerCase());
         try {
           ExecutorAction action = ExecutorAction.valueOf(actionStr.toUpperCase());
           if (action == ExecutorAction.START) {
@@ -77,13 +76,13 @@ public class ChaosService {
       case CHAOSAGENT:
         ChaosAgent.stopChaosAgent.set(false);
         try {
-          Thread t = new Thread(new ChaosAgent(conf,
-            ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
+          Thread t = new Thread(
+            new ChaosAgent(conf, ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
           t.start();
           t.join();
         } catch (InterruptedException | UnknownHostException e) {
-          LOG.error("Failed while executing next task execution of ChaosAgent on : {}",
-            serviceName, e);
+          LOG.error("Failed while executing next task execution of ChaosAgent on : {}", serviceName,
+            e);
         }
         break;
       default:
@@ -97,10 +96,10 @@ public class ChaosService {
 
   private static Options getOptions() {
     Options options = new Options();
-    options.addOption(new Option("c", ChaosServiceName.CHAOSAGENT.toString().toLowerCase(),
-      true, "expecting a start/stop argument"));
-    options.addOption(new Option("D", ChaosServiceName.GENERIC.toString(),
-      true, "generic D param"));
+    options.addOption(new Option("c", ChaosServiceName.CHAOSAGENT.toString().toLowerCase(), true,
+      "expecting a start/stop argument"));
+    options
+      .addOption(new Option("D", ChaosServiceName.GENERIC.toString(), true, "generic D param"));
     LOG.info(Arrays.toString(new Collection[] { options.getOptions() }));
     return options;
   }
@@ -120,8 +119,7 @@ public class ChaosService {
 
       execute(args, conf);
     } finally {
-      if (authChore != null)
-        choreChaosService.shutdown();
+      if (authChore != null) choreChaosService.shutdown();
     }
   }
 
@@ -129,7 +127,6 @@ public class ChaosService {
     CHAOSAGENT,
     GENERIC
   }
-
 
   enum ExecutorAction {
     START,

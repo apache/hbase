@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.security.provider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for all Apache HBase, built-in {@link SaslAuthenticationProvider}'s to extend.
- *
- * HBase users should take care to note that this class (and its sub-classes) are marked with the
+ * Base class for all Apache HBase, built-in {@link SaslAuthenticationProvider}'s to extend. HBase
+ * users should take care to note that this class (and its sub-classes) are marked with the
  * {@code InterfaceAudience.Private} annotation. These implementations are available for users to
  * read, copy, and modify, but should not be extended or re-used in binary form. There are no
  * compatibility guarantees provided for implementations of this class.

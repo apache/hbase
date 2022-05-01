@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
 import java.io.IOException;
@@ -53,24 +52,23 @@ import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * An IntegrationTest for doing reads with a timeout, to a read-only table with region
- * replicas. ChaosMonkey is run which kills the region servers and master, but ensures
- * that meta region server is not killed, and at most 2 region servers are dead at any point
- * in time. The expected behavior is that all reads with stale mode true will return
- * before the timeout (5 sec by default). The test fails if the read requests does not finish
- * in time.
+ * An IntegrationTest for doing reads with a timeout, to a read-only table with region replicas.
+ * ChaosMonkey is run which kills the region servers and master, but ensures that meta region server
+ * is not killed, and at most 2 region servers are dead at any point in time. The expected behavior
+ * is that all reads with stale mode true will return before the timeout (5 sec by default). The
+ * test fails if the read requests does not finish in time.
+ * <p>
+ * This test uses LoadTestTool to read and write the data from a single client but multiple threads.
+ * The data is written first, then we allow the region replicas to catch up. Then we start the
+ * reader threads doing get requests with stale mode true. Chaos Monkey is started after some delay
+ * (20 sec by default) after the reader threads are started so that there is enough time to fully
+ * cache meta. These parameters (and some other parameters from LoadTestTool) can be used to control
+ * behavior, given values are default:
  *
- * <p> This test uses LoadTestTool to read and write the data from a single client but
- * multiple threads. The data is written first, then we allow the region replicas to catch
- * up. Then we start the reader threads doing get requests with stale mode true. Chaos Monkey is
- * started after some delay (20 sec by default) after the reader threads are started so that
- * there is enough time to fully cache meta.
- *
- * These parameters (and some other parameters from LoadTestTool) can be used to
- * control behavior, given values are default:
  * <pre>
  * -Dhbase.IntegrationTestTimeBoundedRequestsWithRegionReplicas.runtime=600000
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.num_regions_per_server=5
@@ -82,7 +80,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.num_regions_per_server=5
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.chaos_monkey_delay=20000
  * </pre>
+ *
  * Use this test with "serverKilling" ChaosMonkey. Sample usage:
+ *
  * <pre>
  * hbase org.apache.hadoop.hbase.test.IntegrationTestTimeBoundedRequestsWithRegionReplicas
  * -Dhbase.IntegrationTestTimeBoundedRequestsWithRegionReplicas.runtime=600000
@@ -94,11 +94,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Category(IntegrationTests.class)
 public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends IntegrationTestIngest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    IntegrationTestTimeBoundedRequestsWithRegionReplicas.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(IntegrationTestTimeBoundedRequestsWithRegionReplicas.class);
 
-  private static final String TEST_NAME
-    = IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName();
+  private static final String TEST_NAME =
+    IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName();
 
   protected static final long DEFAULT_GET_TIMEOUT = 5000; // 5 sec
   protected static final String GET_TIMEOUT_KEY = "get_timeout_ms";
@@ -127,8 +127,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       Integer.toString(DEFAULT_REGION_REPLICATION));
   }
 
-  protected void writeData(int colsPerKey, int recordSize, int writeThreads,
-      long startKey, long numKeys) throws IOException {
+  protected void writeData(int colsPerKey, int recordSize, int writeThreads, long startKey,
+    long numKeys) throws IOException {
     int ret = loadTool.run(getArgsForLoadTestTool("-write",
       String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), startKey, numKeys));
     if (0 != ret) {
@@ -140,9 +140,9 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
   @Override
   protected void runIngestTest(long defaultRunTime, long keysPerServerPerIter, int colsPerKey,
-      int recordSize, int writeThreads, int readThreads) throws Exception {
-    LOG.info("Cluster size:"+
-      util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
+    int recordSize, int writeThreads, int readThreads) throws Exception {
+    LOG.info("Cluster size:"
+      + util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
     long start = EnvironmentEdgeManager.currentTime();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -150,7 +150,6 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     long startKey = 0;
 
     long numKeys = getNumKeys(keysPerServerPerIter);
-
 
     // write data once
     LOG.info("Writing some data to the table");
@@ -162,10 +161,11 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     admin.flush(getTablename());
 
     // re-open the regions to make sure that the replicas are up to date
-    long refreshTime = conf.getLong(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);
+    long refreshTime =
+      conf.getLong(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);
     if (refreshTime > 0 && refreshTime <= 10000) {
       LOG.info("Sleeping " + refreshTime + "ms to ensure that the data is replicated");
-      Threads.sleep(refreshTime*3);
+      Threads.sleep(refreshTime * 3);
     } else {
       LOG.info("Reopening the table");
       admin.disableTable(getTablename());
@@ -177,11 +177,12 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     // will timeout if meta server is killed.
     // We will start the chaos monkey after 1 minute, and since the readers are reading random
     // keys, it should be enough to cache every region entry.
-    long chaosMonkeyDelay = conf.getLong(String.format("%s.%s", TEST_NAME, CHAOS_MONKEY_DELAY_KEY)
-      , DEFAUL_CHAOS_MONKEY_DELAY);
+    long chaosMonkeyDelay = conf.getLong(String.format("%s.%s", TEST_NAME, CHAOS_MONKEY_DELAY_KEY),
+      DEFAUL_CHAOS_MONKEY_DELAY);
     ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    LOG.info(String.format("ChaosMonkey delay is : %d seconds. Will start %s " +
-        "ChaosMonkey after delay", chaosMonkeyDelay / 1000, monkeyToUse));
+    LOG.info(
+      String.format("ChaosMonkey delay is : %d seconds. Will start %s " + "ChaosMonkey after delay",
+        chaosMonkeyDelay / 1000, monkeyToUse));
     ScheduledFuture<?> result = executorService.schedule(new Runnable() {
       @Override
       public void run() {
@@ -201,23 +202,23 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     long remainingTime = runtime - (EnvironmentEdgeManager.currentTime() - start);
     if (remainingTime <= 0) {
       LOG.error("The amount of time left for the test to perform random reads is "
-          + "non-positive. Increase the test execution time via "
-          + String.format(RUN_TIME_KEY,
-                IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName())
-          + " or reduce the amount of data written per server via "
-          + IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName()
-          + "." + IntegrationTestIngest.NUM_KEYS_PER_SERVER_KEY);
+        + "non-positive. Increase the test execution time via "
+        + String.format(RUN_TIME_KEY,
+          IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName())
+        + " or reduce the amount of data written per server via "
+        + IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName() + "."
+        + IntegrationTestIngest.NUM_KEYS_PER_SERVER_KEY);
       throw new IllegalArgumentException("No time remains to execute random reads");
     }
-    LOG.info("Reading random keys from the table for " + remainingTime/60000 + " min");
+    LOG.info("Reading random keys from the table for " + remainingTime / 60000 + " min");
     this.conf.setLong(
-      String.format(RUN_TIME_KEY, TimeBoundedMultiThreadedReader.class.getSimpleName())
-      , remainingTime); // load tool shares the same conf
+      String.format(RUN_TIME_KEY, TimeBoundedMultiThreadedReader.class.getSimpleName()),
+      remainingTime); // load tool shares the same conf
 
     // now start the readers which will run for configured run time
     try {
-      int ret = loadTool.run(getArgsForLoadTestTool("-read", String.format("100:%d", readThreads)
-        , startKey, numKeys));
+      int ret = loadTool.run(
+        getArgsForLoadTestTool("-read", String.format("100:%d", readThreads), startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg);
@@ -233,9 +234,9 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
   @Override
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
-      long numKeys) {
-    List<String> args = Lists.newArrayList(super.getArgsForLoadTestTool(
-      mode, modeSpecificArg, startKey, numKeys));
+    long numKeys) {
+    List<String> args =
+      Lists.newArrayList(super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys));
     args.add("-reader");
     args.add(TimeBoundedMultiThreadedReader.class.getName());
     return args.toArray(new String[args.size()]);
@@ -249,10 +250,10 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     protected AtomicLong staleReads = new AtomicLong();
 
     public TimeBoundedMultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
-        TableName tableName, double verifyPercent) throws IOException {
+      TableName tableName, double verifyPercent) throws IOException {
       super(dataGen, conf, tableName, verifyPercent);
-      long timeoutMs = conf.getLong(
-        String.format("%s.%s", TEST_NAME, GET_TIMEOUT_KEY), DEFAULT_GET_TIMEOUT);
+      long timeoutMs =
+        conf.getLong(String.format("%s.%s", TEST_NAME, GET_TIMEOUT_KEY), DEFAULT_GET_TIMEOUT);
       timeoutNano = timeoutMs * 1000000;
       LOG.info("Timeout for gets: " + timeoutMs);
       String runTimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -296,6 +297,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     private class TimeoutThread extends Thread {
       long timeout;
       long reportInterval = 60000;
+
       public TimeoutThread(long timeout) {
         this.timeout = timeout;
       }
@@ -331,16 +333,16 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       @Override
       protected long getNextKeyToRead() {
         // always read a random key, assuming that the writer has finished writing all keys
-        long key = startKey + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE)
-            % (endKey - startKey);
+        long key =
+          startKey + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE) % (endKey - startKey);
         return key;
       }
 
       @Override
       protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-          Result[] results, Table table, boolean isNullExpected)
-          throws IOException {
-        super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table, isNullExpected);
+        Result[] results, Table table, boolean isNullExpected) throws IOException {
+        super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table,
+          isNullExpected);
         for (Result r : results) {
           if (r.isStale()) staleReads.incrementAndGet();
         }
@@ -351,8 +353,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
           numReadFailures.addAndGet(1); // fail the test
           for (Result r : results) {
             LOG.error("FAILED FOR " + r);
-            RegionLocations rl = ((ClusterConnection)connection).
-                locateRegion(tableName, r.getRow(), true, true);
+            RegionLocations rl =
+              ((ClusterConnection) connection).locateRegion(tableName, r.getRow(), true, true);
             HRegionLocation locations[] = rl.getRegionLocations();
             for (HRegionLocation h : locations) {
               LOG.error("LOCATION " + h);
@@ -366,7 +368,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int ret = ToolRunner.run(conf, new IntegrationTestTimeBoundedRequestsWithRegionReplicas(), args);
+    int ret =
+      ToolRunner.run(conf, new IntegrationTestTimeBoundedRequestsWithRegionReplicas(), args);
     System.exit(ret);
   }
 }

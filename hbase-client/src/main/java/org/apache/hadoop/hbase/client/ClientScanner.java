@@ -93,15 +93,15 @@ public abstract class ClientScanner extends AbstractClientScanner {
   /**
    * Create a new ClientScanner for the specified table Note that the passed {@link Scan}'s start
    * row maybe changed changed.
-   * @param conf The {@link Configuration} to use.
-   * @param scan {@link Scan} to use in this scanner
-   * @param tableName The table that we wish to scan
+   * @param conf       The {@link Configuration} to use.
+   * @param scan       {@link Scan} to use in this scanner
+   * @param tableName  The table that we wish to scan
    * @param connection Connection identifying the cluster
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
-      RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
-      throws IOException {
+    ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
+    RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
+    throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(
         "Scan table=" + tableName + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -243,14 +243,14 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // Only worth logging if NOT first region in scan.
       LOG.debug(
         "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(scan.getStartRow())
-            + "', " + (scan.includeStartRow() ? "inclusive" : "exclusive"));
+          + "', " + (scan.includeStartRow() ? "inclusive" : "exclusive"));
     }
     // clear the current region, we will set a new value to it after the first call of the new
     // callable.
     this.currentRegion = null;
     this.callable =
-        new ScannerCallableWithReplicas(getTable(), getConnection(), createScannerCallable(), pool,
-            primaryOperationTimeout, scan, getRetries(), scannerTimeout, caching, conf, caller);
+      new ScannerCallableWithReplicas(getTable(), getConnection(), createScannerCallable(), pool,
+        primaryOperationTimeout, scan, getRetries(), scannerTimeout, caching, conf, caller);
     this.callable.setCaching(this.caching);
     incRegionCountMetrics(scanMetrics);
     return true;
@@ -261,7 +261,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   private Result[] call(ScannerCallableWithReplicas callable, RpcRetryingCaller<Result[]> caller,
-      int scannerTimeout, boolean updateCurrentRegion) throws IOException {
+    int scannerTimeout, boolean updateCurrentRegion) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
@@ -336,7 +336,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // keep compatible with the old logic. Should remove the isOpenScanner in the future.
     // 2. Server tells us that it has no more results for this region.
     return (values.length == 0 && !callable.isHeartbeatMessage())
-        || callable.moreResultsInRegion() == MoreResults.NO;
+      || callable.moreResultsInRegion() == MoreResults.NO;
   }
 
   private void closeScannerIfExhausted(boolean exhausted) throws IOException {
@@ -346,7 +346,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   private void handleScanError(DoNotRetryIOException e,
-      MutableBoolean retryAfterOutOfOrderException, int retriesLeft) throws DoNotRetryIOException {
+    MutableBoolean retryAfterOutOfOrderException, int retriesLeft) throws DoNotRetryIOException {
     // An exception was thrown which makes any partial results that we were collecting
     // invalid. The scanner will need to be reset to the beginning of a row.
     scanResultCache.clear();
@@ -366,10 +366,12 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // If exception is any but the list below throw it back to the client; else setup
     // the scanner and retry.
     Throwable cause = e.getCause();
-    if ((cause != null && cause instanceof NotServingRegionException)
+    if (
+      (cause != null && cause instanceof NotServingRegionException)
         || (cause != null && cause instanceof RegionServerStoppedException)
         || e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException
-        || e instanceof ScannerResetException || e instanceof LeaseException) {
+        || e instanceof ScannerResetException || e instanceof LeaseException
+    ) {
       // Pass. It is easier writing the if loop test as list of what is allowed rather than
       // as a list of what is not allowed... so if in here, it means we do not throw.
       if (retriesLeft <= 0) {
@@ -395,7 +397,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
       } else {
         // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
         throw new DoNotRetryIOException(
-            "Failed after retry of OutOfOrderScannerNextException: was there a rpc timeout?", e);
+          "Failed after retry of OutOfOrderScannerNextException: was there a rpc timeout?", e);
       }
     }
     // Clear region.
@@ -464,9 +466,9 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // caller, all book keeping will be performed within this method.
       int numberOfCompleteRowsBefore = scanResultCache.numberOfCompleteRows();
       Result[] resultsToAddToCache =
-          scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
+        scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
       int numberOfCompleteRows =
-          scanResultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
+        scanResultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
       for (Result rs : resultsToAddToCache) {
         cache.add(rs);
         long estimatedHeapSizeOfResult = calcEstimatedSize(rs);
@@ -494,7 +496,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
           // unnecesary delays to the caller
           LOG.trace("Heartbeat message received and cache contains Results. "
-              + "Breaking out of scan loop");
+            + "Breaking out of scan loop");
           // we know that the region has not been exhausted yet so just break without calling
           // closeScannerIfExhausted
           break;

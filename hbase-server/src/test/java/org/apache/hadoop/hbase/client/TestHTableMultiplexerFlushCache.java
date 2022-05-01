@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestHTableMultiplexerFlushCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHTableMultiplexerFlushCache.class);
+    HBaseClassTestRule.forClass(TestHTableMultiplexerFlushCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexerFlushCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -79,8 +79,7 @@ public class TestHTableMultiplexerFlushCache {
   }
 
   private static void checkExistence(final Table htable, final byte[] row, final byte[] family,
-      final byte[] quality,
-      final byte[] value) throws Exception {
+    final byte[] quality, final byte[] value) throws Exception {
     // verify that the Get returns the correct result
     TEST_UTIL.waitFor(30000, new Waiter.Predicate<Exception>() {
       @Override
@@ -90,8 +89,7 @@ public class TestHTableMultiplexerFlushCache {
         get.addColumn(family, quality);
         r = htable.get(get);
         return r != null && r.getValue(family, quality) != null
-            && Bytes.toStringBinary(value).equals(
-            Bytes.toStringBinary(r.getValue(family, quality)));
+          && Bytes.toStringBinary(value).equals(Bytes.toStringBinary(r.getValue(family, quality)));
       }
     });
   }
@@ -103,8 +101,8 @@ public class TestHTableMultiplexerFlushCache {
     Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),
-      PER_REGIONSERVER_QUEUE_SIZE);
+    HTableMultiplexer multiplexer =
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
 
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       byte[][] startRows = r.getStartKeys();
@@ -141,11 +139,11 @@ public class TestHTableMultiplexerFlushCache {
     Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),
-      PER_REGIONSERVER_QUEUE_SIZE);
+    HTableMultiplexer multiplexer =
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
 
     final RegionLocator regionLocator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-    Pair<byte[][],byte[][]> startEndRows = regionLocator.getStartEndKeys();
+    Pair<byte[][], byte[][]> startEndRows = regionLocator.getStartEndKeys();
     byte[] row = startEndRows.getFirst()[1];
     assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
 
@@ -170,10 +168,10 @@ public class TestHTableMultiplexerFlushCache {
     assertNotNull("Did not find a new RegionServer to use", newServer);
 
     // Move the region
-    LOG.info("Moving " + loc.getRegionInfo().getEncodedName() + " from " + originalServer
-        +  " to " + newServer);
+    LOG.info("Moving " + loc.getRegionInfo().getEncodedName() + " from " + originalServer + " to "
+      + newServer);
     TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(),
-        Bytes.toBytes(newServer.getServerName()));
+      Bytes.toBytes(newServer.getServerName()));
 
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 

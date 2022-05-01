@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -59,17 +58,17 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileEncryption {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileEncryption.class);
+    HBaseClassTestRule.forClass(TestHFileEncryption.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileEncryption.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static FileSystem fs;  
+  private static FileSystem fs;
   private static Encryption.Context cryptoContext;
 
   @BeforeClass
@@ -84,8 +83,7 @@ public class TestHFileEncryption {
     fs = FileSystem.get(conf);
 
     cryptoContext = Encryption.newContext(conf);
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher aes = Encryption.getCipher(conf, algorithm);
     assertNotNull(aes);
     cryptoContext.setCipher(aes);
@@ -95,32 +93,32 @@ public class TestHFileEncryption {
   }
 
   private int writeBlock(Configuration conf, FSDataOutputStream os, HFileContext fileContext,
-      int size) throws IOException {
+    int size) throws IOException {
     HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, fileContext);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int j = 0; j < size; j++) {
       dos.writeInt(j);
     }
     hbw.writeHeaderAndData(os);
-    LOG.info("Wrote a block at " + os.getPos() + " with" +
-        " onDiskSizeWithHeader=" + hbw.getOnDiskSizeWithHeader() +
-        " uncompressedSizeWithoutHeader=" + hbw.getOnDiskSizeWithoutHeader() +
-        " uncompressedSizeWithoutHeader=" + hbw.getUncompressedSizeWithoutHeader());
+    LOG.info("Wrote a block at " + os.getPos() + " with" + " onDiskSizeWithHeader="
+      + hbw.getOnDiskSizeWithHeader() + " uncompressedSizeWithoutHeader="
+      + hbw.getOnDiskSizeWithoutHeader() + " uncompressedSizeWithoutHeader="
+      + hbw.getUncompressedSizeWithoutHeader());
     return hbw.getOnDiskSizeWithHeader();
   }
 
   private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderImpl hbr, int size)
-      throws IOException {
+    throws IOException {
     HFileBlock b = hbr.readBlockData(pos, -1, false, false, true);
     assertEquals(0, HFile.getAndResetChecksumFailuresCount());
     b.sanityCheck();
-    assertFalse((b.getHFileContext().getCompression() != Compression.Algorithm.NONE)
-      && b.isUnpacked());
+    assertFalse(
+      (b.getHFileContext().getCompression() != Compression.Algorithm.NONE) && b.isUnpacked());
     b = b.unpack(ctx, hbr);
-    LOG.info("Read a block at " + pos + " with" +
-        " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader() +
-        " uncompressedSizeWithoutHeader=" + b.getOnDiskSizeWithoutHeader() +
-        " uncompressedSizeWithoutHeader=" + b.getUncompressedSizeWithoutHeader());
+    LOG.info(
+      "Read a block at " + pos + " with" + " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader()
+        + " uncompressedSizeWithoutHeader=" + b.getOnDiskSizeWithoutHeader()
+        + " uncompressedSizeWithoutHeader=" + b.getUncompressedSizeWithoutHeader());
     DataInputStream dis = b.getByteStream();
     for (int i = 0; i < size; i++) {
       int read = dis.readInt();
@@ -143,10 +141,8 @@ public class TestHFileEncryption {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "block_v3_" + compression + "_AES");
       LOG.info("testDataBlockEncryption: encryption=AES compression=" + compression);
       long totalSize = 0;
-      HFileContext fileContext = new HFileContextBuilder()
-        .withCompression(compression)
-        .withEncryptionContext(cryptoContext)
-        .build();
+      HFileContext fileContext = new HFileContextBuilder().withCompression(compression)
+        .withEncryptionContext(cryptoContext).build();
       FSDataOutputStream os = fs.create(path);
       try {
         for (int i = 0; i < blocks; i++) {
@@ -156,14 +152,12 @@ public class TestHFileEncryption {
         os.close();
       }
       FSDataInputStream is = fs.open(path);
-      ReaderContext context = new ReaderContextBuilder()
-          .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
-          .withFilePath(path)
-          .withFileSystem(fs)
-          .withFileSize(totalSize).build();
+      ReaderContext context =
+        new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+          .withFilePath(path).withFileSystem(fs).withFileSize(totalSize).build();
       try {
         HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, fileContext,
-            ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
+          ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
           pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
@@ -178,17 +172,14 @@ public class TestHFileEncryption {
   public void testHFileEncryptionMetadata() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
-    HFileContext fileContext = new HFileContextBuilder()
-        .withEncryptionContext(cryptoContext)
-        .build();
+    HFileContext fileContext =
+      new HFileContextBuilder().withEncryptionContext(cryptoContext).build();
 
     // write a simple encrypted hfile
     Path path = new Path(TEST_UTIL.getDataTestDir(), "cryptometa.hfile");
     FSDataOutputStream out = fs.create(path);
-    HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
-        .withOutputStream(out)
-        .withFileContext(fileContext)
-        .create();
+    HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf).withOutputStream(out)
+      .withFileContext(fileContext).create();
     try {
       KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
       writer.append(kv);
@@ -204,8 +195,7 @@ public class TestHFileEncryption {
       assertNotNull(trailer.getEncryptionKey());
       Encryption.Context readerContext = reader.getFileContext().getEncryptionContext();
       assertEquals(readerContext.getCipher().getName(), cryptoContext.getCipher().getName());
-      assertTrue(Bytes.equals(readerContext.getKeyBytes(),
-          cryptoContext.getKeyBytes()));
+      assertTrue(Bytes.equals(readerContext.getKeyBytes(), cryptoContext.getKeyBytes()));
     } finally {
       reader.close();
     }
@@ -220,25 +210,20 @@ public class TestHFileEncryption {
     // Iterate through data block encoding and compression combinations
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
-    for (DataBlockEncoding encoding: DataBlockEncoding.values()) {
-      for (Compression.Algorithm compression: HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
-        HFileContext fileContext = new HFileContextBuilder()
-          .withBlockSize(4096) // small blocks
-          .withEncryptionContext(cryptoContext)
-          .withCompression(compression)
-          .withDataBlockEncoding(encoding)
-          .build();
+    for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      for (Compression.Algorithm compression : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+        HFileContext fileContext = new HFileContextBuilder().withBlockSize(4096) // small blocks
+          .withEncryptionContext(cryptoContext).withCompression(compression)
+          .withDataBlockEncoding(encoding).build();
         // write a new test HFile
         LOG.info("Writing with " + fileContext);
         Path path = new Path(TEST_UTIL.getDataTestDir(),
           HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
         FSDataOutputStream out = fs.create(path);
-        HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
-          .withOutputStream(out)
-          .withFileContext(fileContext)
-          .create();
+        HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf).withOutputStream(out)
+          .withFileContext(fileContext).create();
         try {
-          for (KeyValue kv: testKvs) {
+          for (KeyValue kv : testKvs) {
             writer.append(kv);
           }
         } finally {

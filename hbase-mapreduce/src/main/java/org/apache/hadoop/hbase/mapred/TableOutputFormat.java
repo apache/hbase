@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +18,9 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -35,6 +32,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Convert Map/Reduce output and write it to an HBase table
@@ -46,20 +44,18 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
-   * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable)
-   * and write to an HBase table.
+   * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) and write to an HBase
+   * table.
    */
   protected static class TableRecordWriter implements RecordWriter<ImmutableBytesWritable, Put> {
     private BufferedMutator m_mutator;
     private Connection conn;
 
-
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
-     *
      * @deprecated since 2.0.0 and will be removed in 3.0.0. Please use
-     *   {@code #TableRecordWriter(JobConf)} instead. This version does not clean up connections and
-     *   will leak connections (removed in 2.0).
+     *             {@code #TableRecordWriter(JobConf)} instead. This version does not clean up
+     *             connections and will leak connections (removed in 2.0).
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-16774">HBASE-16774</a>
      */
     @Deprecated
@@ -103,31 +99,25 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   /**
-   * Creates a new record writer.
-   *
-   * Be aware that the baseline javadoc gives the impression that there is a single
-   * {@link RecordWriter} per job but in HBase, it is more natural if we give you a new
+   * Creates a new record writer. Be aware that the baseline javadoc gives the impression that there
+   * is a single {@link RecordWriter} per job but in HBase, it is more natural if we give you a new
    * RecordWriter per call of this method. You must close the returned RecordWriter when done.
    * Failure to do so will drop writes.
-   *
    * @param ignored Ignored filesystem
-   * @param job Current JobConf
-   * @param name Name of the job
-   * @param progress
-   * @return The newly created writer instance.
+   * @param job     Current JobConf
+   * @param name    Name of the job n * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
    */
   @Override
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
-      Progressable progress)
-  throws IOException {
+    Progressable progress) throws IOException {
     // Clear write buffer on fail is true by default so no need to reset it.
     return new TableRecordWriter(job);
   }
 
   @Override
   public void checkOutputSpecs(FileSystem ignored, JobConf job)
-  throws FileAlreadyExistsException, InvalidJobConfException, IOException {
+    throws FileAlreadyExistsException, InvalidJobConfException, IOException {
     String tableName = job.get(OUTPUT_TABLE);
     if (tableName == null) {
       throw new IOException("Must specify table name");

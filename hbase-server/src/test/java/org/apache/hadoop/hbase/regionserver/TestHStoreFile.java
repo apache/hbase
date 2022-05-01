@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -138,17 +138,13 @@ public class TestHStoreFile {
   }
 
   /**
-   * Write a file and then assert that we can read from top and bottom halves using two
-<<<<<<< HEAD
-   * HalfMapFiles, as well as one HalfMapFile and one HFileLink file.
-=======
-   * HalfMapFiles.
->>>>>>> 16116fa35e... HBASE-24510 Remove HBaseTestCase and GenericTestUtils (#1859)
+   * Write a file and then assert that we can read from top and bottom halves using two <<<<<<< HEAD
+   * HalfMapFiles, as well as one HalfMapFile and one HFileLink file. ======= HalfMapFiles. >>>>>>>
+   * 16116fa35e... HBASE-24510 Remove HBaseTestCase and GenericTestUtils (#1859)
    */
   @Test
   public void testBasicHalfAndHFileLinkMapFile() throws Exception {
-    final HRegionInfo hri =
-        new HRegionInfo(TableName.valueOf("testBasicHalfAndHFileLinkMapFile"));
+    final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testBasicHalfAndHFileLinkMapFile"));
     // The locations of HFileLink refers hfiles only should be consistent with the table dir
     // create by CommonFSUtils directory, so we should make the region directory under
     // the mode of CommonFSUtils.getTableDir here.
@@ -174,9 +170,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
-   * @param writer
-   * @throws IOException
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {
@@ -200,8 +194,8 @@ public class TestHStoreFile {
   @Test
   public void testReference() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testReferenceTb"));
-    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      conf, fs, new Path(testDir, hri.getTable().getNameAsString()), hri);
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+      new Path(testDir, hri.getTable().getNameAsString()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -335,8 +329,8 @@ public class TestHStoreFile {
 
     // adding legal table name chars to verify regex handles it.
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("_original-evil-name"));
-    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      testConf, fs, CommonFSUtils.getTableDir(testDir, hri.getTable()), hri);
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, hri.getTable()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
@@ -402,7 +396,7 @@ public class TestHStoreFile {
   }
 
   private void checkHalfHFile(final HRegionFileSystem regionFs, final HStoreFile f)
-      throws IOException {
+    throws IOException {
     f.initReader();
     Cell midkey = f.getReader().midKey().get();
     KeyValue midKV = (KeyValue) midkey;
@@ -413,8 +407,7 @@ public class TestHStoreFile {
     HRegionInfo topHri = new HRegionInfo(regionFs.getRegionInfo().getTable(), null, midRow);
     Path topPath = splitStoreFile(regionFs, topHri, TEST_FAMILY, f, midRow, true);
     // Create bottom split.
-    HRegionInfo bottomHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
-        midRow, null);
+    HRegionInfo bottomHri = new HRegionInfo(regionFs.getRegionInfo().getTable(), midRow, null);
     Path bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, midRow, false);
     // Make readers on top and bottom.
     HStoreFile topF = new HStoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
@@ -434,12 +427,16 @@ public class TestHStoreFile {
       boolean first = true;
       ByteBuffer key = null;
       HFileScanner topScanner = top.getScanner(false, false);
-      while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
-        (topScanner.isSeeked() && topScanner.next())) {
+      while (
+        (!topScanner.isSeeked() && topScanner.seekTo())
+          || (topScanner.isSeeked() && topScanner.next())
+      ) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
-        if ((PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
-          key.arrayOffset(), key.limit())) > 0) {
+        if (
+          (PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
+            key.arrayOffset(), key.limit())) > 0
+        ) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" + midkey);
         }
         if (first) {
@@ -536,8 +533,9 @@ public class TestHStoreFile {
       keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength())
-          .charAt(i) == 'z');
+        assertTrue(
+          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i)
+              == 'z');
       }
     } finally {
       if (top != null) {
@@ -606,8 +604,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos + ")", falsePos <= maxFalsePos);
   }
 
   private static final int BLOCKSIZE_SMALL = 8192;
@@ -682,8 +680,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos, falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos, falsePos <= maxFalsePos);
   }
 
   /**
@@ -850,8 +848,8 @@ public class TestHStoreFile {
     Mockito.doReturn(OptionalLong.of(bulkTimestamp)).when(mock).getBulkLoadTimestamp();
     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
     Mockito.doReturn(new Path(path)).when(mock).getPath();
-    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp +
-      " seqId=" + seqId + " path=" + path;
+    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp
+      + " seqId=" + seqId + " path=" + path;
     Mockito.doReturn(name).when(mock).toString();
     return mock;
   }

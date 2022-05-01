@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestWALCompressionLzma extends CompressedWALTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALCompressionLzma.class);
+    HBaseClassTestRule.forClass(TestWALCompressionLzma.class);
 
   @Rule
   public TestName name = new TestName();

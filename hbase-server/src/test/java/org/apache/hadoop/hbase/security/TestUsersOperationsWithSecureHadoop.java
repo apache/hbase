@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -49,11 +48,11 @@ public class TestUsersOperationsWithSecureHadoop {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestUsersOperationsWithSecureHadoop.class);
+    HBaseClassTestRule.forClass(TestUsersOperationsWithSecureHadoop.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final File KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri()
-      .getPath());
+  private static final File KEYTAB_FILE =
+    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
 
@@ -89,8 +88,7 @@ public class TestUsersOperationsWithSecureHadoop {
    * <p>
    * <b> hbase.regionserver.kerberos.principal </b>
    * <p>
-   * <b> hbase.regionserver.keytab.file </b>
-   * @throws IOException
+   * <b> hbase.regionserver.keytab.file </b> n
    */
   @Test
   public void testUserLoginInSecureHadoop() throws Exception {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
@@ -98,8 +96,8 @@ public class TestSlowLogAccessor {
     this.namedQueueRecorder = (NamedQueueRecorder) slowLogRecorder.get(hRegionServer);
   }
 
-  private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
-      AdminProtos.SlowLogResponseRequest request) {
+  private List<TooSlowLog.SlowLogPayload>
+    getSlowLogPayloads(AdminProtos.SlowLogResponseRequest request) {
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
     namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
@@ -122,34 +120,34 @@ public class TestSlowLogAccessor {
     Connection connection = waitForSlowLogTableCreation();
     // add 5 records initially
     for (; i < 5; i++) {
-      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
-        .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder.getRpcLogDetails("userName_" + (i + 1),
+        "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 2 more records
     for (; i < 7; i++) {
-      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
-        .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder.getRpcLogDetails("userName_" + (i + 1),
+        "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 3 more records
     for (; i < 10; i++) {
-      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
-        .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder.getRpcLogDetails("userName_" + (i + 1),
+        "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 4 more records
     for (; i < 14; i++) {
-      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
-        .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder.getRpcLogDetails("userName_" + (i + 1),
+        "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY
-      .waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
+    Assert.assertNotEquals(-1,
+      HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
     Assert.assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getTableCount(connection) == 14));

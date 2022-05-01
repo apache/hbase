@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,29 +41,25 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * A Store data file.  Stores usually have one or more of these files.  They
- * are produced by flushing the memstore to disk.  To
- * create, instantiate a writer using {@link StoreFileWriter.Builder}
- * and append data. Be sure to add any metadata before calling close on the
- * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
- * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
- * passing filesystem and path.  To read, call {@link #initReader()}
- * <p>StoreFiles may also reference store files in another Store.
- *
- * The reason for this weird pattern where you use a different instance for the
- * writer and a reader is that we write once but read a lot more.
+ * A Store data file. Stores usually have one or more of these files. They are produced by flushing
+ * the memstore to disk. To create, instantiate a writer using {@link StoreFileWriter.Builder} and
+ * append data. Be sure to add any metadata before calling close on the Writer (Use the
+ * appendMetadata convenience methods). On close, a StoreFile is sitting in the Filesystem. To refer
+ * to it, create a StoreFile instance passing filesystem and path. To read, call
+ * {@link #initReader()}
+ * <p>
+ * StoreFiles may also reference store files in another Store. The reason for this weird pattern
+ * where you use a different instance for the writer and a reader is that we write once but read a
+ * lot more.
  */
 @InterfaceAudience.Private
 public class HStoreFile implements StoreFile {
@@ -81,7 +76,7 @@ public class HStoreFile implements StoreFile {
 
   /** Minor compaction flag in FileInfo */
   public static final byte[] EXCLUDE_FROM_MINOR_COMPACTION_KEY =
-      Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
+    Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
 
   /**
    * Key for compaction event which contains the compacted storefiles in FileInfo
@@ -170,7 +165,7 @@ public class HStoreFile implements StoreFile {
     return maxMemstoreTS;
   }
 
-  // If true, this file was product of a major compaction.  Its then set
+  // If true, this file was product of a major compaction. Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
 
@@ -182,45 +177,46 @@ public class HStoreFile implements StoreFile {
   private final Set<String> compactedStoreFiles = new HashSet<>();
 
   /**
-   * Map of the metadata entries in the corresponding HFile. Populated when Reader is opened
-   * after which it is not modified again.
+   * Map of the metadata entries in the corresponding HFile. Populated when Reader is opened after
+   * which it is not modified again.
    */
   private Map<byte[], byte[]> metadataMap;
 
   /**
-   * Bloom filter type specified in column family configuration. Does not
-   * necessarily correspond to the Bloom filter type present in the HFile.
+   * Bloom filter type specified in column family configuration. Does not necessarily correspond to
+   * the Bloom filter type present in the HFile.
    */
   private final BloomType cfBloomType;
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
    * depending on the underlying files (10-20MB?).
-   * @param fs The current file system to use.
-   * @param p The path of the file.
-   * @param conf The current configuration.
-   * @param cacheConf The cache configuration and block cache reference.
-   * @param cfBloomType The bloom type to use for this store file as specified by column family
-   *          configuration. This may or may not be the same as the Bloom filter type actually
-   *          present in the HFile, because column family configuration might change. If this is
-   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
-   * @throws IOException
+   * @param fs             The current file system to use.
+   * @param p              The path of the file.
+   * @param conf           The current configuration.
+   * @param cacheConf      The cache configuration and block cache reference.
+   * @param cfBloomType    The bloom type to use for this store file as specified by column family
+   *                       configuration. This may or may not be the same as the Bloom filter type
+   *                       actually present in the HFile, because column family configuration might
+   *                       change. If this is {@link BloomType#NONE}, the existing Bloom filter is
+   *                       ignored.
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false. n
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
-      BloomType cfBloomType, boolean primaryReplica) throws IOException {
+    BloomType cfBloomType, boolean primaryReplica) throws IOException {
     this(new StoreFileInfo(conf, fs, p, primaryReplica), cfBloomType, cacheConf);
   }
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
    * depending on the underlying files (10-20MB?).
-   * @param fileInfo The store file information.
-   * @param cfBloomType The bloom type to use for this store file as specified by column
-   *          family configuration. This may or may not be the same as the Bloom filter type
-   *          actually present in the HFile, because column family configuration might change. If
-   *          this is {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @param cacheConf The cache configuration and block cache reference.
+   * @param fileInfo    The store file information.
+   * @param cfBloomType The bloom type to use for this store file as specified by column family
+   *                    configuration. This may or may not be the same as the Bloom filter type
+   *                    actually present in the HFile, because column family configuration might
+   *                    change. If this is {@link BloomType#NONE}, the existing Bloom filter is
+   *                    ignored.
+   * @param cacheConf   The cache configuration and block cache reference.
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf) {
     this.fileInfo = fileInfo;
@@ -228,8 +224,8 @@ public class HStoreFile implements StoreFile {
     if (BloomFilterFactory.isGeneralBloomEnabled(fileInfo.getConf())) {
       this.cfBloomType = cfBloomType;
     } else {
-      LOG.info("Ignoring bloom filter check for file " + this.getPath() + ": " + "cfBloomType=" +
-          cfBloomType + " (disabled in config)");
+      LOG.info("Ignoring bloom filter check for file " + this.getPath() + ": " + "cfBloomType="
+        + cfBloomType + " (disabled in config)");
       this.cfBloomType = BloomType.NONE;
     }
   }
@@ -301,9 +297,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Only used by the Striped Compaction Policy
-   * @param key
-   * @return value associated with the metadata key
+   * Only used by the Striped Compaction Policy n * @return value associated with the metadata key
    */
   public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);
@@ -340,8 +334,9 @@ public class HStoreFile implements StoreFile {
   @Override
   public OptionalLong getBulkLoadTimestamp() {
     byte[] bulkLoadTimestamp = metadataMap.get(BULKLOAD_TIME_KEY);
-    return bulkLoadTimestamp == null ? OptionalLong.empty()
-        : OptionalLong.of(Bytes.toLong(bulkLoadTimestamp));
+    return bulkLoadTimestamp == null
+      ? OptionalLong.empty()
+      : OptionalLong.of(Bytes.toLong(bulkLoadTimestamp));
   }
 
   /**
@@ -382,11 +377,11 @@ public class HStoreFile implements StoreFile {
     metadataMap = Collections.unmodifiableMap(initialReader.loadFileInfo());
 
     // Read in our metadata.
-    byte [] b = metadataMap.get(MAX_SEQ_ID_KEY);
+    byte[] b = metadataMap.get(MAX_SEQ_ID_KEY);
     if (b != null) {
       // By convention, if halfhfile, top half has a sequence number > bottom
       // half. Thats why we add one in below. Its done for case the two halves
-      // are ever merged back together --rare.  Without it, on open of store,
+      // are ever merged back together --rare. Without it, on open of store,
       // since store files are distinguished by sequence id, the one half would
       // subsume the other.
       this.sequenceid = Bytes.toLong(b);
@@ -395,15 +390,15 @@ public class HStoreFile implements StoreFile {
       }
     }
 
-    if (isBulkLoadResult()){
+    if (isBulkLoadResult()) {
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
       String fileName = this.getPath().getName();
       // Use lastIndexOf() to get the last, most recent bulk load seqId.
       int startPos = fileName.lastIndexOf("SeqId_");
       if (startPos != -1) {
-        this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
-            fileName.indexOf('_', startPos + 6)));
+        this.sequenceid =
+          Long.parseLong(fileName.substring(startPos + 6, fileName.indexOf('_', startPos + 6)));
         // Handle reference files as done above.
         if (fileInfo.isTopReference()) {
           this.sequenceid += 1;
@@ -450,14 +445,13 @@ public class HStoreFile implements StoreFile {
     if (cfBloomType != BloomType.NONE) {
       initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
       if (hfileBloomType != cfBloomType) {
-        LOG.debug("HFile Bloom filter type for "
-            + initialReader.getHFileReader().getName() + ": " + hfileBloomType
-            + ", but " + cfBloomType + " specified in column family "
-            + "configuration");
+        LOG.debug("HFile Bloom filter type for " + initialReader.getHFileReader().getName() + ": "
+          + hfileBloomType + ", but " + cfBloomType + " specified in column family "
+          + "configuration");
       }
     } else if (hfileBloomType != BloomType.NONE) {
-      LOG.info("Bloom filter turned off by CF config for "
-          + initialReader.getHFileReader().getName());
+      LOG.info(
+        "Bloom filter turned off by CF config for " + initialReader.getHFileReader().getName());
     }
 
     // load delete family bloom filter
@@ -465,11 +459,10 @@ public class HStoreFile implements StoreFile {
 
     try {
       byte[] data = metadataMap.get(TIMERANGE_KEY);
-      initialReader.timeRange = data == null ? null :
-          TimeRangeTracker.parseFrom(data).toTimeRange();
+      initialReader.timeRange =
+        data == null ? null : TimeRangeTracker.parseFrom(data).toTimeRange();
     } catch (IllegalArgumentException e) {
-      LOG.error("Error reading timestamp range data from meta -- " +
-          "proceeding without", e);
+      LOG.error("Error reading timestamp range data from meta -- " + "proceeding without", e);
       this.initialReader.timeRange = null;
     }
 
@@ -528,7 +521,7 @@ public class HStoreFile implements StoreFile {
    * Must be called after initReader.
    */
   public StoreFileScanner getPreadScanner(boolean cacheBlocks, long readPt, long scannerOrder,
-      boolean canOptimizeForNonNullColumn) {
+    boolean canOptimizeForNonNullColumn) {
     return getReader().getStoreFileScanner(cacheBlocks, true, false, readPt, scannerOrder,
       canOptimizeForNonNullColumn);
   }
@@ -539,11 +532,10 @@ public class HStoreFile implements StoreFile {
    * Must be called after initReader.
    */
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
-      boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
-      throws IOException {
-    return createStreamReader(canUseDropBehind)
-        .getStoreFileScanner(cacheBlocks, false, isCompaction, readPt, scannerOrder,
-            canOptimizeForNonNullColumn);
+    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
+    throws IOException {
+    return createStreamReader(canUseDropBehind).getStoreFileScanner(cacheBlocks, false,
+      isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
   /**
@@ -555,8 +547,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * @param evictOnClose whether to evict blocks belonging to this file
-   * @throws IOException
+   * @param evictOnClose whether to evict blocks belonging to this file n
    */
   public synchronized void closeStoreFile(boolean evictOnClose) throws IOException {
     if (this.initialReader != null) {
@@ -566,8 +557,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Delete this file
-   * @throws IOException
+   * Delete this file n
    */
   public void deleteStoreFile() throws IOException {
     boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;

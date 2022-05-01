@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -27,24 +25,24 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
- * Implementations make a RPC call against a RegionService via a protobuf Service.
- * Implement rpcCall() and the parent class setClientByServiceName; this latter is where the
- * RPC stub gets set (the appropriate protobuf 'Service'/Client). Be sure to make use of the
- * RpcController that this instance is carrying via #getRpcController().
- *
- * <p>TODO: this class is actually tied to one region, because most of the paths make use of
- *       the regioninfo part of location when building requests. The only reason it works for
- *       multi-region requests (e.g. batch) is that they happen to not use the region parts.
- *       This could be done cleaner (e.g. having a generic parameter and 2 derived classes,
- *       RegionCallable and actual RegionServerCallable with ServerName.
- *
+ * Implementations make a RPC call against a RegionService via a protobuf Service. Implement
+ * rpcCall() and the parent class setClientByServiceName; this latter is where the RPC stub gets set
+ * (the appropriate protobuf 'Service'/Client). Be sure to make use of the RpcController that this
+ * instance is carrying via #getRpcController().
+ * <p>
+ * TODO: this class is actually tied to one region, because most of the paths make use of the
+ * regioninfo part of location when building requests. The only reason it works for multi-region
+ * requests (e.g. batch) is that they happen to not use the region parts. This could be done cleaner
+ * (e.g. having a generic parameter and 2 derived classes, RegionCallable and actual
+ * RegionServerCallable with ServerName.
  * @param <T> The class that the ServerCallable handles.
  * @param <S> The protocol to use (Admin or Client or even an Endpoint over in MetaTableAccessor).
  */
@@ -63,25 +61,24 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
 
   /**
    * This is 99% of the time a HBaseRpcController but also used doing Coprocessor Endpoints and in
-   * this case, it is a ServerRpcControllable which is not a HBaseRpcController.
-   * Can be null!
+   * this case, it is a ServerRpcControllable which is not a HBaseRpcController. Can be null!
    */
   protected final RpcController rpcController;
   private int priority = HConstants.NORMAL_QOS;
 
   /**
-   * @param connection Connection to use.
+   * @param connection    Connection to use.
    * @param rpcController Controller to use; can be shaded or non-shaded.
-   * @param tableName Table name to which <code>row</code> belongs.
-   * @param row The row we want in <code>tableName</code>.
+   * @param tableName     Table name to which <code>row</code> belongs.
+   * @param row           The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
-      RpcController rpcController) {
+  public RegionServerCallable(Connection connection, TableName tableName, byte[] row,
+    RpcController rpcController) {
     this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
   }
 
-  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
-      RpcController rpcController, int priority) {
+  public RegionServerCallable(Connection connection, TableName tableName, byte[] row,
+    RpcController rpcController, int priority) {
     super();
     this.connection = connection;
     this.tableName = tableName;
@@ -103,8 +100,8 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   }
 
   /**
-   * Override that changes call Exception from {@link Exception} to {@link IOException}.
-   * Also does set up of the rpcController.
+   * Override that changes call Exception from {@link Exception} to {@link IOException}. Also does
+   * set up of the rpcController.
    */
   @Override
   public T call(int callTimeout) throws IOException {
@@ -112,11 +109,11 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
       // Iff non-null and an instance of a SHADED rpcController, do config! Unshaded -- i.e.
       // com.google.protobuf.RpcController or null -- will just skip over this config.
       if (getRpcController() != null) {
-        RpcController shadedRpcController = (RpcController)getRpcController();
+        RpcController shadedRpcController = (RpcController) getRpcController();
         // Do a reset to clear previous states, such as CellScanner.
         shadedRpcController.reset();
         if (shadedRpcController instanceof HBaseRpcController) {
-          HBaseRpcController hrc = (HBaseRpcController)getRpcController();
+          HBaseRpcController hrc = (HBaseRpcController) getRpcController();
           // If it is an instance of HBaseRpcController, we can set priority on the controller based
           // off the tableName. Set call timeout too.
           hrc.setPriority(tableName);
@@ -131,31 +128,30 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   }
 
   /**
-   * Run the RPC call. Implement this method. To get at the rpcController that has been created
-   * and configured to make this rpc call, use getRpcController(). We are trying to contain
+   * Run the RPC call. Implement this method. To get at the rpcController that has been created and
+   * configured to make this rpc call, use getRpcController(). We are trying to contain
    * rpcController references so we don't pollute codebase with protobuf references; keep the
-   * protobuf references contained and only present in a few classes rather than all about the
-   * code base.
-   * @throws Exception
+   * protobuf references contained and only present in a few classes rather than all about the code
+   * base. n
    */
   protected abstract T rpcCall() throws Exception;
 
   /**
-   * Get the RpcController CellScanner.
-   * If the RpcController is a HBaseRpcController, which it is in all cases except
-   * when we are processing Coprocessor Endpoint, then this method returns a reference to the
-   * CellScanner that the HBaseRpcController is carrying. Do it up here in this Callable
-   * so we don't have to scatter ugly instanceof tests around the codebase. Will return null
-   * if called in a Coproccessor Endpoint context. Should never happen.
+   * Get the RpcController CellScanner. If the RpcController is a HBaseRpcController, which it is in
+   * all cases except when we are processing Coprocessor Endpoint, then this method returns a
+   * reference to the CellScanner that the HBaseRpcController is carrying. Do it up here in this
+   * Callable so we don't have to scatter ugly instanceof tests around the codebase. Will return
+   * null if called in a Coproccessor Endpoint context. Should never happen.
    */
   protected CellScanner getRpcControllerCellScanner() {
-    return (getRpcController() != null && getRpcController() instanceof HBaseRpcController)?
-        ((HBaseRpcController)getRpcController()).cellScanner(): null;
+    return (getRpcController() != null && getRpcController() instanceof HBaseRpcController)
+      ? ((HBaseRpcController) getRpcController()).cellScanner()
+      : null;
   }
 
   protected void setRpcControllerCellScanner(CellScanner cellScanner) {
     if (getRpcController() != null && getRpcController() instanceof HBaseRpcController) {
-      ((HBaseRpcController)this.rpcController).setCellScanner(cellScanner);
+      ((HBaseRpcController) this.rpcController).setCellScanner(cellScanner);
     }
   }
 
@@ -178,17 +174,19 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     return this.tableName;
   }
 
-  public byte [] getRow() {
+  public byte[] getRow() {
     return this.row;
   }
 
-  protected int getPriority() { return this.priority;}
+  protected int getPriority() {
+    return this.priority;
+  }
 
   @Override
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {
       getConnection().updateCachedLocations(tableName, location.getRegionInfo().getRegionName(),
-          row, t, location.getServerName());
+        row, t, location.getServerName());
     }
   }
 
@@ -215,16 +213,18 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   @Override
   public void prepare(final boolean reload) throws IOException {
     // check table state if this is a retry
-    if (reload && tableName != null && !tableName.equals(TableName.META_TABLE_NAME)
-        && getConnection().isTableDisabled(tableName)) {
+    if (
+      reload && tableName != null && !tableName.equals(TableName.META_TABLE_NAME)
+        && getConnection().isTableDisabled(tableName)
+    ) {
       throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
       this.location = regionLocator.getRegionLocation(row);
     }
     if (this.location == null) {
-      throw new IOException("Failed to find location, tableName=" + tableName +
-          ", row=" + Bytes.toString(row) + ", reload=" + reload);
+      throw new IOException("Failed to find location, tableName=" + tableName + ", row="
+        + Bytes.toString(row) + ", reload=" + reload);
     }
     setStubByServiceName(this.location.getServerName());
   }

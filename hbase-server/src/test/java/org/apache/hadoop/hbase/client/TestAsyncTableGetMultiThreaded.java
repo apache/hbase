@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -60,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Will split the table, and move region randomly when testing.
@@ -108,11 +108,11 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TABLE = CONN.getTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
-        .setMaxRetries(1000).build();
+      .setMaxRetries(1000).build();
     TABLE.putAll(
       IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
-          .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))).collect(Collectors.toList()))
-        .get();
+        .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))).collect(Collectors.toList()))
+      .get();
   }
 
   @AfterClass
@@ -125,7 +125,7 @@ public class TestAsyncTableGetMultiThreaded {
     while (!stop.get()) {
       for (int i = 0; i < COUNT; i++) {
         assertEquals(i, Bytes.toInt(TABLE.get(new Get(Bytes.toBytes(String.format("%03d", i))))
-            .get().getValue(FAMILY, QUALIFIER)));
+          .get().getValue(FAMILY, QUALIFIER)));
       }
       // sleep a bit so we do not add to much load to the test machine as we have 20 threads here
       Thread.sleep(10);
@@ -177,16 +177,18 @@ public class TestAsyncTableGetMultiThreaded {
         RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
         for (;;) {
           try {
-            if (admin.getCompactionStateForRegion(
-              region.getRegionInfo().getRegionName()) == CompactionState.NONE) {
+            if (
+              admin.getCompactionStateForRegion(region.getRegionInfo().getRegionName())
+                  == CompactionState.NONE
+            ) {
               break;
             }
           } catch (IOException e) {
             LOG.warn("Failed to query");
           }
           if (!retrier.shouldRetry()) {
-            throw new IOException("Can not finish compaction in time after attempt " +
-              retrier.getAttemptTimes() + " times");
+            throw new IOException("Can not finish compaction in time after attempt "
+              + retrier.getAttemptTimes() + " times");
           }
           retrier.sleepUntilNextRetry();
         }
@@ -203,8 +205,8 @@ public class TestAsyncTableGetMultiThreaded {
       Thread.sleep(5000);
       ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
       ServerName newMetaServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-          .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer))
-          .findAny().get();
+        .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer)).findAny()
+        .get();
       LOG.info("====== Moving meta from {} to {} ======", metaServer, newMetaServer);
       admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), newMetaServer);
       LOG.info("====== Move meta done ======");

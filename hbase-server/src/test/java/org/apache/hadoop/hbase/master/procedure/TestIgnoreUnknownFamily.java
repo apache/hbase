@@ -1,12 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.procedure;
 
@@ -48,7 +55,7 @@ public class TestIgnoreUnknownFamily {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIgnoreUnknownFamily.class);
+    HBaseClassTestRule.forClass(TestIgnoreUnknownFamily.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -84,18 +91,18 @@ public class TestIgnoreUnknownFamily {
       FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(mfs.getConfiguration()), region);
     Path familyDir = new Path(regionDir, Bytes.toString(UNKNOWN_FAMILY));
     StoreFileWriter writer =
-        new StoreFileWriter.Builder(mfs.getConfiguration(), mfs.getFileSystem())
-            .withOutputDir(familyDir).withFileContext(new HFileContextBuilder().build()).build();
+      new StoreFileWriter.Builder(mfs.getConfiguration(), mfs.getFileSystem())
+        .withOutputDir(familyDir).withFileContext(new HFileContextBuilder().build()).build();
     writer.close();
   }
 
   @Test
   public void testSplit()
-      throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     Admin admin = UTIL.getAdmin();
     admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     RegionInfo region = admin.getRegions(tableName).get(0);
     addStoreFileToKnownFamily(region);
     admin.splitRegionAsync(region.getRegionName(), Bytes.toBytes(0)).get(30, TimeUnit.SECONDS);
@@ -103,12 +110,12 @@ public class TestIgnoreUnknownFamily {
 
   @Test
   public void testMerge()
-      throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     Admin admin = UTIL.getAdmin();
     admin.createTable(
       TableDescriptorBuilder.newBuilder(tableName)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build(),
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build(),
       new byte[][] { Bytes.toBytes(0) });
     List<RegionInfo> regions = admin.getRegions(tableName);
     addStoreFileToKnownFamily(regions.get(0));

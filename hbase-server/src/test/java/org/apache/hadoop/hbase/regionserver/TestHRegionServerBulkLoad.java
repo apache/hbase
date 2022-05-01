@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,16 +95,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 
 /**
- * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of
- * the region server's bullkLoad functionality.
+ * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of the region server's
+ * bullkLoad functionality.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestHRegionServerBulkLoad {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionServerBulkLoad.class);
+    HBaseClassTestRule.forClass(TestHRegionServerBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
   protected static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -121,6 +121,7 @@ public class TestHRegionServerBulkLoad {
       families[i] = Bytes.toBytes(family(i));
     }
   }
+
   @Parameters
   public static final Collection<Object[]> parameters() {
     int[] sleepDurations = new int[] { 0, 30000 };
@@ -155,16 +156,12 @@ public class TestHRegionServerBulkLoad {
   /**
    * Create an HFile with the given number of rows with a specified value.
    */
-  public static void createHFile(FileSystem fs, Path path, byte[] family,
-      byte[] qualifier, byte[] value, int numRows) throws IOException {
-    HFileContext context = new HFileContextBuilder().withBlockSize(BLOCKSIZE)
-                            .withCompression(COMPRESSION)
-                            .build();
-    HFile.Writer writer = HFile
-        .getWriterFactory(conf, new CacheConfig(conf))
-        .withPath(fs, path)
-        .withFileContext(context)
-        .create();
+  public static void createHFile(FileSystem fs, Path path, byte[] family, byte[] qualifier,
+    byte[] value, int numRows) throws IOException {
+    HFileContext context =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE).withCompression(COMPRESSION).build();
+    HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
+      .withFileContext(context).create();
     long now = EnvironmentEdgeManager.currentTime();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
@@ -179,20 +176,18 @@ public class TestHRegionServerBulkLoad {
   }
 
   /**
-   * Thread that does full scans of the table looking for any partially
-   * completed rows.
-   *
-   * Each iteration of this loads 10 hdfs files, which occupies 5 file open file
-   * handles. So every 10 iterations (500 file handles) it does a region
-   * compaction to reduce the number of open file handles.
+   * Thread that does full scans of the table looking for any partially completed rows. Each
+   * iteration of this loads 10 hdfs files, which occupies 5 file open file handles. So every 10
+   * iterations (500 file handles) it does a region compaction to reduce the number of open file
+   * handles.
    */
   public static class AtomicHFileLoader extends RepeatingTestThread {
     final AtomicLong numBulkLoads = new AtomicLong();
     final AtomicLong numCompactions = new AtomicLong();
     private TableName tableName;
 
-    public AtomicHFileLoader(TableName tableName, TestContext ctx,
-        byte targetFamilies[][]) throws IOException {
+    public AtomicHFileLoader(TableName tableName, TestContext ctx, byte targetFamilies[][])
+      throws IOException {
       super(ctx);
       this.tableName = tableName;
     }
@@ -200,8 +195,7 @@ public class TestHRegionServerBulkLoad {
     @Override
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
-      Path dir =  UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d",
-          iteration));
+      Path dir = UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d", iteration));
 
       // create HFiles for different column families
       FileSystem fs = UTIL.getTestFileSystem();
@@ -215,23 +209,23 @@ public class TestHRegionServerBulkLoad {
       }
 
       // bulk load HFiles
-      final ClusterConnection conn = (ClusterConnection)UTIL.getConnection();
+      final ClusterConnection conn = (ClusterConnection) UTIL.getConnection();
       Table table = conn.getTable(tableName);
-      final String bulkToken = new SecureBulkLoadClient(UTIL.getConfiguration(), table).
-          prepareBulkLoad(conn);
-      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
-          tableName, Bytes.toBytes("aaa"),
-          new RpcControllerFactory(UTIL.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
+      final String bulkToken =
+        new SecureBulkLoadClient(UTIL.getConfiguration(), table).prepareBulkLoad(conn);
+      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, tableName,
+        Bytes.toBytes("aaa"), new RpcControllerFactory(UTIL.getConfiguration()).newController(),
+        HConstants.PRIORITY_UNSET) {
         @Override
         public Void rpcCall() throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
-              + Bytes.toStringBinary(getRow()));
+            + Bytes.toStringBinary(getRow()));
           SecureBulkLoadClient secureClient = null;
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(UTIL.getConfiguration(), table);
-            secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-                  true, null, bulkToken);
+            secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName, true, null,
+              bulkToken);
           }
           return null;
         }
@@ -243,17 +237,16 @@ public class TestHRegionServerBulkLoad {
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 5 == 0) {
         // 5 * 50 = 250 open file handles!
-        callable = new ClientServiceCallable<Void>(conn,
-            tableName, Bytes.toBytes("aaa"),
-            new RpcControllerFactory(UTIL.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
+        callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
+          new RpcControllerFactory(UTIL.getConfiguration()).newController(),
+          HConstants.PRIORITY_UNSET) {
           @Override
           protected Void rpcCall() throws Exception {
-            LOG.debug("compacting " + getLocation() + " for row "
-                + Bytes.toStringBinary(getRow()));
+            LOG.debug("compacting " + getLocation() + " for row " + Bytes.toStringBinary(getRow()));
             AdminProtos.AdminService.BlockingInterface server =
               conn.getAdmin(getLocation().getServerName());
-            CompactRegionRequest request = RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, null);
+            CompactRegionRequest request = RequestConverter
+              .buildCompactRegionRequest(getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;
@@ -274,9 +267,8 @@ public class TestHRegionServerBulkLoad {
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-        CompactionRequest request)
-        throws IOException {
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
       try {
         Thread.sleep(sleepDuration);
       } catch (InterruptedException ie) {
@@ -289,8 +281,7 @@ public class TestHRegionServerBulkLoad {
   }
 
   /**
-   * Thread that does full scans of the table looking for any partially
-   * completed rows.
+   * Thread that does full scans of the table looking for any partially completed rows.
    */
   public static class AtomicScanReader extends RepeatingTestThread {
     byte targetFamilies[][];
@@ -299,8 +290,8 @@ public class TestHRegionServerBulkLoad {
     AtomicLong numRowsScanned = new AtomicLong();
     TableName TABLE_NAME;
 
-    public AtomicScanReader(TableName TABLE_NAME, TestContext ctx,
-        byte targetFamilies[][]) throws IOException {
+    public AtomicScanReader(TableName TABLE_NAME, TestContext ctx, byte targetFamilies[][])
+      throws IOException {
       super(ctx);
       this.TABLE_NAME = TABLE_NAME;
       this.targetFamilies = targetFamilies;
@@ -321,19 +312,15 @@ public class TestHRegionServerBulkLoad {
         for (byte[] family : targetFamilies) {
           byte qualifier[] = QUAL;
           byte thisValue[] = res.getValue(family, qualifier);
-          if (gotValue != null && thisValue != null
-              && !Bytes.equals(gotValue, thisValue)) {
+          if (gotValue != null && thisValue != null && !Bytes.equals(gotValue, thisValue)) {
 
             StringBuilder msg = new StringBuilder();
-            msg.append("Failed on scan ").append(numScans)
-                .append(" after scanning ").append(numRowsScanned)
-                .append(" rows!\n");
-            msg.append("Current  was " + Bytes.toString(res.getRow()) + "/"
-                + Bytes.toString(family) + ":" + Bytes.toString(qualifier)
-                + " = " + Bytes.toString(thisValue) + "\n");
-            msg.append("Previous  was " + Bytes.toString(lastRow) + "/"
-                + Bytes.toString(lastFam) + ":" + Bytes.toString(lastQual)
-                + " = " + Bytes.toString(gotValue));
+            msg.append("Failed on scan ").append(numScans).append(" after scanning ")
+              .append(numRowsScanned).append(" rows!\n");
+            msg.append("Current  was " + Bytes.toString(res.getRow()) + "/" + Bytes.toString(family)
+              + ":" + Bytes.toString(qualifier) + " = " + Bytes.toString(thisValue) + "\n");
+            msg.append("Previous  was " + Bytes.toString(lastRow) + "/" + Bytes.toString(lastFam)
+              + ":" + Bytes.toString(lastQual) + " = " + Bytes.toString(gotValue));
             throw new RuntimeException(msg.toString());
           }
 
@@ -349,8 +336,8 @@ public class TestHRegionServerBulkLoad {
   }
 
   /**
-   * Creates a table with given table name and specified number of column
-   * families if the table does not already exist.
+   * Creates a table with given table name and specified number of column families if the table does
+   * not already exist.
    */
   public void setupTable(TableName table, int cfs) throws IOException {
     try {
@@ -392,7 +379,7 @@ public class TestHRegionServerBulkLoad {
   }
 
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
-      throws Exception {
+    throws Exception {
     setupTable(tableName, 10);
 
     TestContext ctx = new TestContext(UTIL.getConfiguration());
@@ -423,8 +410,8 @@ public class TestHRegionServerBulkLoad {
   }
 
   /**
-   * Run test on an HBase instance for 5 minutes. This assumes that the table
-   * under test only has a single region.
+   * Run test on an HBase instance for 5 minutes. This assumes that the table under test only has a
+   * single region.
    */
   public static void main(String args[]) throws Exception {
     try {
@@ -461,5 +448,3 @@ public class TestHRegionServerBulkLoad {
     }
   }
 }
-
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -36,11 +35,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * A base class for tests that do something with the cluster while running
- * {@link LoadTestTool} to write and verify some data.
+ * A base class for tests that do something with the cluster while running {@link LoadTestTool} to
+ * write and verify some data.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestIngest extends IntegrationTestBase {
@@ -67,15 +67,10 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected HBaseCluster cluster;
   protected LoadTestTool loadTool;
 
-  protected String[] LOAD_TEST_TOOL_INIT_ARGS = {
-      LoadTestTool.OPT_COLUMN_FAMILIES,
-      LoadTestTool.OPT_COMPRESSION,
-      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
-      LoadTestTool.OPT_INMEMORY,
-      LoadTestTool.OPT_ENCRYPTION,
-      LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
-      LoadTestTool.OPT_REGION_REPLICATION,
-  };
+  protected String[] LOAD_TEST_TOOL_INIT_ARGS =
+    { LoadTestTool.OPT_COLUMN_FAMILIES, LoadTestTool.OPT_COMPRESSION,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING, LoadTestTool.OPT_INMEMORY, LoadTestTool.OPT_ENCRYPTION,
+      LoadTestTool.OPT_NUM_REGIONS_PER_SERVER, LoadTestTool.OPT_REGION_REPLICATION, };
 
   @Override
   public void setUpCluster() throws Exception {
@@ -116,18 +111,18 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     String clazz = this.getClass().getSimpleName();
     long numKeysPerServer = conf.getLong(String.format("%s.%s", clazz, NUM_KEYS_PER_SERVER_KEY),
       DEFAULT_NUM_KEYS_PER_SERVER);
-    int numWriteThreads = conf.getInt(
-      String.format("%s.%s", clazz, NUM_WRITE_THREADS_KEY), DEFAULT_NUM_WRITE_THREADS);
-    int numReadThreads = conf.getInt(
-      String.format("%s.%s", clazz, NUM_READ_THREADS_KEY), DEFAULT_NUM_READ_THREADS);
+    int numWriteThreads =
+      conf.getInt(String.format("%s.%s", clazz, NUM_WRITE_THREADS_KEY), DEFAULT_NUM_WRITE_THREADS);
+    int numReadThreads =
+      conf.getInt(String.format("%s.%s", clazz, NUM_READ_THREADS_KEY), DEFAULT_NUM_READ_THREADS);
     runIngestTest(runTime, numKeysPerServer, 10, 1024, numWriteThreads, numReadThreads);
   }
 
   @Override
   public TableName getTablename() {
     String clazz = this.getClass().getSimpleName();
-    return TableName.valueOf(
-      conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_TABLE_NAME), clazz));
+    return TableName
+      .valueOf(conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_TABLE_NAME), clazz));
   }
 
   @Override
@@ -135,16 +130,16 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     Set<String> families = Sets.newHashSet();
     String clazz = this.getClass().getSimpleName();
     // parse conf for getting the column famly names because LTT is not initialized yet.
-    String familiesString = getConf().get(
-      String.format("%s.%s", clazz, LoadTestTool.OPT_COLUMN_FAMILIES));
+    String familiesString =
+      getConf().get(String.format("%s.%s", clazz, LoadTestTool.OPT_COLUMN_FAMILIES));
     if (familiesString == null) {
       for (byte[] family : HFileTestUtil.DEFAULT_COLUMN_FAMILIES) {
         families.add(Bytes.toString(family));
       }
     } else {
-       for (String family : familiesString.split(",")) {
-         families.add(family);
-       }
+      for (String family : familiesString.split(",")) {
+        families.add(family);
+      }
     }
 
     return families;
@@ -157,11 +152,11 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   protected void runIngestTest(long defaultRunTime, long keysPerServerPerIter, int colsPerKey,
-      int recordSize, int writeThreads, int readThreads) throws Exception {
+    int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
-      .getClusterMetrics().getLiveServerMetrics().size());
+    LOG.info("Cluster size:"
+      + util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
     long start = EnvironmentEdgeManager.currentTime();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -170,12 +165,12 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
     long numKeys = getNumKeys(keysPerServerPerIter);
     while (EnvironmentEdgeManager.currentTime() - start < 0.9 * runtime) {
-      LOG.info("Intended run time: " + (runtime/60000) + " min, left:" +
-          ((runtime - (EnvironmentEdgeManager.currentTime() - start))/60000) + " min");
+      LOG.info("Intended run time: " + (runtime / 60000) + " min, left:"
+        + ((runtime - (EnvironmentEdgeManager.currentTime() - start)) / 60000) + " min");
 
       int ret = -1;
       ret = loadTool.run(getArgsForLoadTestTool("-write",
-          String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), startKey, numKeys));
+        String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
@@ -183,21 +178,21 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       }
 
       ret = loadTool.run(getArgsForLoadTestTool("-update", String.format("60:%d:1", writeThreads),
-          startKey, numKeys));
+        startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Update failed with error code " + ret;
         LOG.error(errorMsg);
         Assert.fail(errorMsg);
       }
 
-      ret = loadTool.run(getArgsForLoadTestTool("-read", String.format("100:%d", readThreads)
-        , startKey, numKeys));
+      ret = loadTool.run(
+        getArgsForLoadTestTool("-read", String.format("100:%d", readThreads), startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg + " Rerunning verification after 1 minute for debugging");
         Threads.sleep(1000 * 60);
-        ret = loadTool.run(getArgsForLoadTestTool("-read", String.format("100:%d", readThreads)
-            , startKey, numKeys));
+        ret = loadTool.run(
+          getArgsForLoadTestTool("-read", String.format("100:%d", readThreads), startKey, numKeys));
         if (0 != ret) {
           LOG.error("Rerun of Verification failed with error code " + ret);
         }
@@ -225,7 +220,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
-      long numKeys) {
+    long numKeys) {
     List<String> args = new ArrayList<>(11);
     args.add("-tn");
     args.add(getTablename().getNameAsString());
@@ -247,8 +242,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   /** Estimates a data size based on the cluster size */
-  protected long getNumKeys(long keysPerServer)
-      throws IOException {
+  protected long getNumKeys(long keysPerServer) throws IOException {
     int numRegionServers = cluster.getClusterMetrics().getLiveServerMetrics().size();
     return keysPerServer * numRegionServers;
   }

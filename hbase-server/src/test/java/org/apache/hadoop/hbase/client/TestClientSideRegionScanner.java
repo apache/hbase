@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,8 +84,8 @@ public class TestClientSideRegionScanner {
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
     assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
-    assertTrue(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT == blockCache
-      .getMaxSize());
+    assertTrue(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT
+        == blockCache.getMaxSize());
   }
 
   @Test

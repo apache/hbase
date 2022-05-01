@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Arrays;
@@ -62,7 +61,7 @@ public class TestBalancerDecision extends BalancerTestBase {
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, -1f);
     try {
       // Test with/without per table balancer.
-      boolean[] perTableBalancerConfigs = {true, false};
+      boolean[] perTableBalancerConfigs = { true, false };
       for (boolean isByTable : perTableBalancerConfigs) {
         conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
         loadBalancer.onConfigurationChange(conf);
@@ -83,12 +82,9 @@ public class TestBalancerDecision extends BalancerTestBase {
         loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
       List<RecentLogs.BalancerDecision> balancerDecisions =
         namedQueueGetResponse.getBalancerDecisions();
-      MasterProtos.BalancerDecisionsResponse response =
-        MasterProtos.BalancerDecisionsResponse.newBuilder()
-          .addAllBalancerDecision(balancerDecisions)
-          .build();
-      List<LogEntry> balancerDecisionRecords =
-        ProtobufUtil.getBalancerDecisionEntries(response);
+      MasterProtos.BalancerDecisionsResponse response = MasterProtos.BalancerDecisionsResponse
+        .newBuilder().addAllBalancerDecision(balancerDecisions).build();
+      List<LogEntry> balancerDecisionRecords = ProtobufUtil.getBalancerDecisionEntries(response);
       Assert.assertTrue(balancerDecisionRecords.size() > 160);
     } finally {
       // reset config
@@ -100,7 +96,7 @@ public class TestBalancerDecision extends BalancerTestBase {
   }
 
   private static boolean needsBalanceIdleRegion(int[] cluster) {
-    return (Arrays.stream(cluster).anyMatch(x -> x > 1)) && (Arrays.stream(cluster)
-      .anyMatch(x -> x < 1));
+    return (Arrays.stream(cluster).anyMatch(x -> x > 1))
+      && (Arrays.stream(cluster).anyMatch(x -> x < 1));
   }
 }

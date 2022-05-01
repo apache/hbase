@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestFilterListOnMini {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFilterListOnMini.class);
+    HBaseClassTestRule.forClass(TestFilterListOnMini.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterListOnMini.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -80,9 +80,9 @@ public class TestFilterListOnMini {
     put2.addColumn(CF2, Bytes.toBytes("col_b"), Bytes.toBytes(0));
     table.put(put2);
     FamilyFilter filterCF1 =
-        new FamilyFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(CF1));
+      new FamilyFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(CF1));
     FamilyFilter filterCF2 =
-        new FamilyFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(CF2));
+      new FamilyFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(CF2));
     FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     filterList.addFilter(filterCF1);
     filterList.addFilter(filterCF2);
@@ -104,23 +104,12 @@ public class TestFilterListOnMini {
     byte[] cf1 = Bytes.toBytes("f1");
     byte[] row = Bytes.toBytes("row");
     byte[] value = Bytes.toBytes("value");
-    String[] columns = new String[]{
-      "1544768273917010001_lt",
-      "1544768273917010001_w_1",
-      "1544768723910010001_ca_1",
-      "1544768723910010001_lt",
-      "1544768723910010001_ut_1",
-      "1544768723910010001_w_5",
-      "1544769779710010001_lt",
-      "1544769779710010001_w_5",
-      "1544769883529010001_lt",
-      "1544769883529010001_w_5",
-      "1544769915805010001_lt",
-      "1544769915805010001_w_5",
-      "1544779883529010001_lt",
-      "1544770422942010001_lt",
-      "1544770422942010001_w_5"
-    };
+    String[] columns = new String[] { "1544768273917010001_lt", "1544768273917010001_w_1",
+      "1544768723910010001_ca_1", "1544768723910010001_lt", "1544768723910010001_ut_1",
+      "1544768723910010001_w_5", "1544769779710010001_lt", "1544769779710010001_w_5",
+      "1544769883529010001_lt", "1544769883529010001_w_5", "1544769915805010001_lt",
+      "1544769915805010001_w_5", "1544779883529010001_lt", "1544770422942010001_lt",
+      "1544770422942010001_w_5" };
     Table table = TEST_UTIL.createTable(tn, cf1);
     for (int i = 0; i < columns.length; i++) {
       Put put = new Put(row).addColumn(cf1, Bytes.toBytes(columns[i]), value);
@@ -128,9 +117,9 @@ public class TestFilterListOnMini {
     }
     Scan scan = new Scan();
     scan.withStartRow(row).withStopRow(row, true)
-        .setFilter(new FilterList(Operator.MUST_PASS_ONE,
-            new ColumnPrefixFilter(Bytes.toBytes("1544770422942010001_")),
-            new ColumnPrefixFilter(Bytes.toBytes("1544769883529010001_"))));
+      .setFilter(new FilterList(Operator.MUST_PASS_ONE,
+        new ColumnPrefixFilter(Bytes.toBytes("1544770422942010001_")),
+        new ColumnPrefixFilter(Bytes.toBytes("1544769883529010001_"))));
     ResultScanner scanner = table.getScanner(scan);
     Result result;
     int resultCount = 0;

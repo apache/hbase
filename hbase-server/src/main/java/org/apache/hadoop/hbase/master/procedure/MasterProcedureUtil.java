@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -38,7 +37,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 @InterfaceStability.Evolving
 public final class MasterProcedureUtil {
 
-  private MasterProcedureUtil() {}
+  private MasterProcedureUtil() {
+  }
 
   public static UserInformation toProtoUserInfo(User user) {
     UserInformation.Builder userInfoPB = UserInformation.newBuilder();
@@ -63,17 +63,16 @@ public final class MasterProcedureUtil {
   }
 
   /**
-   * Helper Runnable used in conjunction with submitProcedure() to deal with
-   * submitting procs with nonce.
-   * See submitProcedure() for an example.
+   * Helper Runnable used in conjunction with submitProcedure() to deal with submitting procs with
+   * nonce. See submitProcedure() for an example.
    */
   public static abstract class NonceProcedureRunnable {
     private final MasterServices master;
     private final NonceKey nonceKey;
     private Long procId;
 
-    public NonceProcedureRunnable(final MasterServices master,
-        final long nonceGroup, final long nonce) {
+    public NonceProcedureRunnable(final MasterServices master, final long nonceGroup,
+      final long nonce) {
       this.master = master;
       this.nonceKey = getProcedureExecutor().createNonceKey(nonceGroup, nonce);
     }
@@ -100,6 +99,7 @@ public final class MasterProcedureUtil {
     }
 
     protected abstract void run() throws IOException;
+
     protected abstract String getDescription();
 
     protected long submitProcedure(final Procedure<MasterProcedureEnv> proc) {
@@ -110,11 +110,9 @@ public final class MasterProcedureUtil {
   }
 
   /**
-   * Helper used to deal with submitting procs with nonce.
-   * Internally the NonceProcedureRunnable.run() will be called only if no one else
-   * registered the nonce. any Exception thrown by the run() method will be
-   * collected/handled and rethrown.
-   * <code>
+   * Helper used to deal with submitting procs with nonce. Internally the
+   * NonceProcedureRunnable.run() will be called only if no one else registered the nonce. any
+   * Exception thrown by the run() method will be collected/handled and rethrown. <code>
    * long procId = MasterProcedureUtil.submitProcedure(
    *      new NonceProcedureRunnable(procExec, nonceGroup, nonce) {
    *   {@literal @}Override
@@ -133,9 +131,8 @@ public final class MasterProcedureUtil {
     try {
       runnable.run();
     } catch (IOException e) {
-      procExec.setFailureResultForNonce(runnable.getNonceKey(),
-          runnable.getDescription(),
-          procExec.getEnvironment().getRequestUser(), e);
+      procExec.setFailureResultForNonce(runnable.getNonceKey(), runnable.getDescription(),
+        procExec.getEnvironment().getRequestUser(), e);
       throw e;
     } finally {
       procExec.unregisterNonceIfProcedureWasNotSubmitted(runnable.getNonceKey());
@@ -184,15 +181,16 @@ public final class MasterProcedureUtil {
   }
 
   /**
-   * This is a version of unwrapRemoteIOException that can do DoNotRetryIOE.
-   * We need to throw DNRIOE to clients if a failed Procedure else they will
-   * keep trying. The default proc.getException().unwrapRemoteException
-   * doesn't have access to DNRIOE from the procedure2 module.
+   * This is a version of unwrapRemoteIOException that can do DoNotRetryIOE. We need to throw DNRIOE
+   * to clients if a failed Procedure else they will keep trying. The default
+   * proc.getException().unwrapRemoteException doesn't have access to DNRIOE from the procedure2
+   * module.
    */
   public static IOException unwrapRemoteIOException(Procedure proc) {
     Exception e = proc.getException().unwrapRemoteException();
     // Do not retry ProcedureExceptions!
-    return (e instanceof ProcedureException)? new DoNotRetryIOException(e):
-        proc.getException().unwrapRemoteIOException();
+    return (e instanceof ProcedureException)
+      ? new DoNotRetryIOException(e)
+      : proc.getException().unwrapRemoteIOException();
   }
 }

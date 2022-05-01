@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.concurrent.ThreadFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
@@ -27,9 +31,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
-import java.util.concurrent.ThreadFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Event loop group related config.
@@ -53,7 +54,7 @@ public class NettyEventLoopGroupConfig {
     boolean useEpoll = useEpoll(conf);
     int workerCount = conf.getInt("hbase.netty.worker.count", 0);
     ThreadFactory eventLoopThreadFactory =
-        new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
+      new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
     if (useEpoll) {
       group = new EpollEventLoopGroup(workerCount, eventLoopThreadFactory);
       serverChannelClass = EpollServerSocketChannel.class;

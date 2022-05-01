@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.util.Arrays;
@@ -114,8 +113,8 @@ public final class BucketAllocator {
     }
 
     /**
-     * Allocate a block in this bucket, return the offset representing the
-     * position in physical space
+     * Allocate a block in this bucket, return the offset representing the position in physical
+     * space
      * @return the offset in the IOEngine
      */
     public long allocate() {
@@ -130,18 +129,16 @@ public final class BucketAllocator {
     public void addAllocation(long offset) throws BucketAllocatorException {
       offset -= baseOffset;
       if (offset < 0 || offset % itemAllocationSize != 0)
-        throw new BucketAllocatorException(
-            "Attempt to add allocation for bad offset: " + offset + " base="
-                + baseOffset + ", bucket size=" + itemAllocationSize);
+        throw new BucketAllocatorException("Attempt to add allocation for bad offset: " + offset
+          + " base=" + baseOffset + ", bucket size=" + itemAllocationSize);
       int idx = (int) (offset / itemAllocationSize);
       boolean matchFound = false;
       for (int i = 0; i < freeCount; ++i) {
         if (matchFound) freeList[i - 1] = freeList[i];
         else if (freeList[i] == idx) matchFound = true;
       }
-      if (!matchFound)
-        throw new BucketAllocatorException("Couldn't find match for index "
-            + idx + " in free list");
+      if (!matchFound) throw new BucketAllocatorException(
+        "Couldn't find match for index " + idx + " in free list");
       ++usedCount;
       --freeCount;
     }
@@ -260,10 +257,8 @@ public final class BucketAllocator {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this.getClass())
-        .add("sizeIndex", sizeIndex)
-        .add("bucketSize", bucketSizes[sizeIndex])
-        .toString();
+      return MoreObjects.toStringHelper(this.getClass()).add("sizeIndex", sizeIndex)
+        .add("bucketSize", bucketSizes[sizeIndex]).toString();
     }
   }
 
@@ -272,20 +267,17 @@ public final class BucketAllocator {
   // The real block size in hfile maybe a little larger than the size we configured ,
   // so we need add extra 1024 bytes for fit.
   // TODO Support the view of block size distribution statistics
-  private static final int DEFAULT_BUCKET_SIZES[] = { 4 * 1024 + 1024, 8 * 1024 + 1024,
-      16 * 1024 + 1024, 32 * 1024 + 1024, 40 * 1024 + 1024, 48 * 1024 + 1024,
-      56 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024, 128 * 1024 + 1024,
-      192 * 1024 + 1024, 256 * 1024 + 1024, 384 * 1024 + 1024,
-      512 * 1024 + 1024 };
+  private static final int DEFAULT_BUCKET_SIZES[] =
+    { 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024, 32 * 1024 + 1024, 40 * 1024 + 1024,
+      48 * 1024 + 1024, 56 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024, 128 * 1024 + 1024,
+      192 * 1024 + 1024, 256 * 1024 + 1024, 384 * 1024 + 1024, 512 * 1024 + 1024 };
 
   /**
-   * Round up the given block size to bucket size, and get the corresponding
-   * BucketSizeInfo
+   * Round up the given block size to bucket size, and get the corresponding BucketSizeInfo
    */
   public BucketSizeInfo roundUpToBucketSizeInfo(int blockSize) {
     for (int i = 0; i < bucketSizes.length; ++i)
-      if (blockSize <= bucketSizes[i])
-        return bucketSizeInfos[i];
+      if (blockSize <= bucketSizes[i]) return bucketSizeInfos[i];
     return null;
   }
 
@@ -303,16 +295,15 @@ public final class BucketAllocator {
   private final long totalSize;
   private transient long usedSize = 0;
 
-  BucketAllocator(long availableSpace, int[] bucketSizes)
-      throws BucketAllocatorException {
+  BucketAllocator(long availableSpace, int[] bucketSizes) throws BucketAllocatorException {
     this.bucketSizes = bucketSizes == null ? DEFAULT_BUCKET_SIZES : bucketSizes;
     Arrays.sort(this.bucketSizes);
     this.bigItemSize = Ints.max(this.bucketSizes);
     this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * (long) bigItemSize;
     buckets = new Bucket[(int) (availableSpace / bucketCapacity)];
     if (buckets.length < this.bucketSizes.length)
-      throw new BucketAllocatorException("Bucket allocator size too small (" + buckets.length +
-        "); must have room for at least " + this.bucketSizes.length + " buckets");
+      throw new BucketAllocatorException("Bucket allocator size too small (" + buckets.length
+        + "); must have room for at least " + this.bucketSizes.length + " buckets");
     bucketSizeInfos = new BucketSizeInfo[this.bucketSizes.length];
     for (int i = 0; i < this.bucketSizes.length; ++i) {
       bucketSizeInfos[i] = new BucketSizeInfo(i);
@@ -320,27 +311,26 @@ public final class BucketAllocator {
     for (int i = 0; i < buckets.length; ++i) {
       buckets[i] = new Bucket(bucketCapacity * i);
       bucketSizeInfos[i < this.bucketSizes.length ? i : this.bucketSizes.length - 1]
-          .instantiateBucket(buckets[i]);
+        .instantiateBucket(buckets[i]);
     }
     this.totalSize = ((long) buckets.length) * bucketCapacity;
     if (LOG.isInfoEnabled()) {
-      LOG.info("Cache totalSize=" + this.totalSize + ", buckets=" + this.buckets.length +
-        ", bucket capacity=" + this.bucketCapacity +
-        "=(" + FEWEST_ITEMS_IN_BUCKET + "*" + this.bigItemSize + ")=" +
-        "(FEWEST_ITEMS_IN_BUCKET*(largest configured bucketcache size))");
+      LOG.info("Cache totalSize=" + this.totalSize + ", buckets=" + this.buckets.length
+        + ", bucket capacity=" + this.bucketCapacity + "=(" + FEWEST_ITEMS_IN_BUCKET + "*"
+        + this.bigItemSize + ")="
+        + "(FEWEST_ITEMS_IN_BUCKET*(largest configured bucketcache size))");
     }
   }
 
   /**
    * Rebuild the allocator's data structures from a persisted map.
    * @param availableSpace capacity of cache
-   * @param map A map stores the block key and BucketEntry(block's meta data
-   *          like offset, length)
-   * @param realCacheSize cached data size statistics for bucket cache
-   * @throws BucketAllocatorException
+   * @param map            A map stores the block key and BucketEntry(block's meta data like offset,
+   *                       length)
+   * @param realCacheSize  cached data size statistics for bucket cache n
    */
   BucketAllocator(long availableSpace, int[] bucketSizes, Map<BlockCacheKey, BucketEntry> map,
-      LongAdder realCacheSize) throws BucketAllocatorException {
+    LongAdder realCacheSize) throws BucketAllocatorException {
     this(availableSpace, bucketSizes);
 
     // each bucket has an offset, sizeindex. probably the buckets are too big
@@ -381,7 +371,7 @@ public final class BucketAllocator {
       } else {
         if (!b.isCompletelyFree()) {
           throw new BucketAllocatorException(
-              "Reconfiguring bucket " + bucketNo + " but it's already allocated; corrupt data");
+            "Reconfiguring bucket " + bucketNo + " but it's already allocated; corrupt data");
         }
         // Need to remove the bucket from whichever list it's currently in at
         // the moment...
@@ -398,8 +388,8 @@ public final class BucketAllocator {
     }
 
     if (sizeNotMatchedCount > 0) {
-      LOG.warn("There are " + sizeNotMatchedCount + " blocks which can't be rebuilt because " +
-        "there is no matching bucket size for these blocks");
+      LOG.warn("There are " + sizeNotMatchedCount + " blocks which can't be rebuilt because "
+        + "there is no matching bucket size for these blocks");
     }
     if (insufficientCapacityCount > 0) {
       LOG.warn("There are " + insufficientCapacityCount + " blocks which can't be rebuilt - "
@@ -433,25 +423,21 @@ public final class BucketAllocator {
 
   /**
    * Allocate a block with specified size. Return the offset
-   * @param blockSize size of block
-   * @throws BucketAllocatorException
-   * @throws CacheFullException
-   * @return the offset in the IOEngine
+   * @param blockSize size of block nn * @return the offset in the IOEngine
    */
-  public synchronized long allocateBlock(int blockSize) throws CacheFullException,
-      BucketAllocatorException {
+  public synchronized long allocateBlock(int blockSize)
+    throws CacheFullException, BucketAllocatorException {
     assert blockSize > 0;
     BucketSizeInfo bsi = roundUpToBucketSizeInfo(blockSize);
     if (bsi == null) {
-      throw new BucketAllocatorException("Allocation too big size=" + blockSize +
-        "; adjust BucketCache sizes " + BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY +
-        " to accomodate if size seems reasonable and you want it cached.");
+      throw new BucketAllocatorException("Allocation too big size=" + blockSize
+        + "; adjust BucketCache sizes " + BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY
+        + " to accomodate if size seems reasonable and you want it cached.");
     }
     long offset = bsi.allocateBlock();
 
     // Ask caller to free up space and try again!
-    if (offset < 0)
-      throw new CacheFullException(blockSize, bsi.sizeIndex());
+    if (offset < 0) throw new CacheFullException(blockSize, bsi.sizeIndex());
     usedSize += bucketSizes[bsi.sizeIndex()];
     return offset;
   }
@@ -539,7 +525,7 @@ public final class BucketAllocator {
     }
   }
 
-  public Bucket [] getBuckets() {
+  public Bucket[] getBuckets() {
     return this.buckets;
   }
 
@@ -547,11 +533,11 @@ public final class BucketAllocator {
     IndexStatistics total = new IndexStatistics();
     IndexStatistics[] stats = getIndexStatistics(total);
     LOG.info("Bucket allocator statistics follow:\n");
-    LOG.info("  Free bytes=" + total.freeBytes() + "+; used bytes="
-        + total.usedBytes() + "; total bytes=" + total.totalBytes());
+    LOG.info("  Free bytes=" + total.freeBytes() + "+; used bytes=" + total.usedBytes()
+      + "; total bytes=" + total.totalBytes());
     for (IndexStatistics s : stats) {
-      LOG.info("  Object size " + s.itemSize() + " used=" + s.usedCount()
-          + "; free=" + s.freeCount() + "; total=" + s.totalCount());
+      LOG.info("  Object size " + s.itemSize() + " used=" + s.usedCount() + "; free="
+        + s.freeCount() + "; total=" + s.totalCount());
     }
   }
 
@@ -585,33 +571,28 @@ public final class BucketAllocator {
   }
 
   /**
-   * Returns a set of indices of the buckets that are least filled
-   * excluding the offsets, we also the fully free buckets for the
-   * BucketSizes where everything is empty and they only have one
+   * Returns a set of indices of the buckets that are least filled excluding the offsets, we also
+   * the fully free buckets for the BucketSizes where everything is empty and they only have one
    * completely free bucket as a reserved
-   *
-   * @param excludedBuckets the buckets that need to be excluded due to
-   *                        currently being in used
+   * @param excludedBuckets the buckets that need to be excluded due to currently being in used
    * @param bucketCount     max Number of buckets to return
    * @return set of bucket indices which could be used for eviction
    */
-  public Set<Integer> getLeastFilledBuckets(Set<Integer> excludedBuckets,
-                                            int bucketCount) {
-    Queue<Integer> queue = MinMaxPriorityQueue.<Integer>orderedBy(
-        new Comparator<Integer>() {
-          @Override
-          public int compare(Integer left, Integer right) {
-            // We will always get instantiated buckets
-            return Float.compare(
-                ((float) buckets[left].usedCount) / buckets[left].itemCount,
-                ((float) buckets[right].usedCount) / buckets[right].itemCount);
-          }
-        }).maximumSize(bucketCount).create();
+  public Set<Integer> getLeastFilledBuckets(Set<Integer> excludedBuckets, int bucketCount) {
+    Queue<Integer> queue = MinMaxPriorityQueue.<Integer> orderedBy(new Comparator<Integer>() {
+      @Override
+      public int compare(Integer left, Integer right) {
+        // We will always get instantiated buckets
+        return Float.compare(((float) buckets[left].usedCount) / buckets[left].itemCount,
+          ((float) buckets[right].usedCount) / buckets[right].itemCount);
+      }
+    }).maximumSize(bucketCount).create();
 
-    for (int i = 0; i < buckets.length; i ++ ) {
+    for (int i = 0; i < buckets.length; i++) {
       if (!excludedBuckets.contains(i) && !buckets[i].isUninstantiated() &&
-          // Avoid the buckets that are the only buckets for a sizeIndex
-          bucketSizeInfos[buckets[i].sizeIndex()].bucketList.size() != 1) {
+      // Avoid the buckets that are the only buckets for a sizeIndex
+        bucketSizeInfos[buckets[i].sizeIndex()].bucketList.size() != 1
+      ) {
         queue.add(i);
       }
     }

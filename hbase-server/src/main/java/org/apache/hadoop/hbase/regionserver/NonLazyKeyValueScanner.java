@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,23 +18,21 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A "non-lazy" scanner which always does a real seek operation. Most scanners
- * are inherited from this class.
+ * A "non-lazy" scanner which always does a real seek operation. Most scanners are inherited from
+ * this class.
  */
 @InterfaceAudience.Private
 public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override
-  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
-      throws IOException {
+  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
     return doRealSeek(this, kv, forward);
   }
 
@@ -46,12 +43,11 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override
   public void enforceSeek() throws IOException {
-    throw new NotImplementedException("enforceSeek must not be called on a " +
-        "non-lazy scanner");
+    throw new NotImplementedException("enforceSeek must not be called on a " + "non-lazy scanner");
   }
 
-  public static boolean doRealSeek(KeyValueScanner scanner,
-      Cell kv, boolean forward) throws IOException {
+  public static boolean doRealSeek(KeyValueScanner scanner, Cell kv, boolean forward)
+    throws IOException {
     return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }
 
@@ -66,7 +62,6 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
     // Not a file by default.
     return false;
   }
-
 
   @Override
   public Path getFilePath() {

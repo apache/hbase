@@ -64,8 +64,8 @@ class MasterInitializationMonitor extends Thread {
         if (master.isInitialized()) {
           LOG.debug("Initialization completed within allotted tolerance. Monitor exiting.");
         } else {
-          LOG.error("Master failed to complete initialization after " + timeout + "ms. Please" +
-            " consider submitting a bug report including a thread dump of this process.");
+          LOG.error("Master failed to complete initialization after " + timeout + "ms. Please"
+            + " consider submitting a bug report including a thread dump of this process.");
           if (haltOnTimeout) {
             LOG.error("Zombie Master exiting. Thread dump to stdout");
             Threads.printThreadInfo(System.out, "Zombie HMaster");

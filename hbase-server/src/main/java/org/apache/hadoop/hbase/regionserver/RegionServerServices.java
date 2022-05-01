@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,20 +47,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
- * A curated subset of services provided by {@link HRegionServer}.
- * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
- * full-on HRegionServer at test-time. Be judicious adding API. Changes cause ripples through
- * the code base.
+ * A curated subset of services provided by {@link HRegionServer}. For use internally only. Passed
+ * to Managers, Services and Chores so can pass less-than-a full-on HRegionServer at test-time. Be
+ * judicious adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
 public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion {
 
-  /** @return the WAL for a particular region. Pass null for getting the
-   * default (common) WAL */
+  /**
+   * @return the WAL for a particular region. Pass null for getting the default (common) WAL
+   */
   WAL getWAL(RegionInfo regionInfo) throws IOException;
 
-  /** @return the List of WALs that are used by this server
-   *  Doesn't include the meta WAL
+  /**
+   * @return the List of WALs that are used by this server Doesn't include the meta WAL
    */
   List<WAL> getWALs() throws IOException;
 
@@ -138,7 +137,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     private final RegionInfo[] hris;
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
-        RegionInfo... hris) {
+      RegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
@@ -147,7 +146,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     }
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long procId,
-        long masterSystemTime, RegionInfo hri) {
+      long masterSystemTime, RegionInfo hri) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
@@ -250,8 +249,8 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   /**
    * Master based locks on namespaces/tables/regions.
    */
-  EntityLock regionLock(List<RegionInfo> regionInfos, String description,
-      Abortable abort) throws IOException;
+  EntityLock regionLock(List<RegionInfo> regionInfos, String description, Abortable abort)
+    throws IOException;
 
   /**
    * Unassign the given region from the current regionserver and assign it randomly. Could still be
@@ -295,7 +294,6 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
 
   /**
    * Reports the provided Region sizes hosted by this RegionServer to the active Master.
-   *
    * @param sizeStore The sizes for Regions locally hosted.
    * @return {@code false} if reporting should be temporarily paused, {@code true} otherwise.
    */
@@ -304,11 +302,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   /**
    * Reports a collection of files, and their sizes, that belonged to the given {@code table} were
    * just moved to the archive directory.
-   *
-   * @param tableName The name of the table that files previously belonged to
+   * @param tableName     The name of the table that files previously belonged to
    * @param archivedFiles Files and their sizes that were moved to archive
    * @return {@code true} if the files were successfully reported, {@code false} otherwise.
    */
-  boolean reportFileArchivalForQuotas(
-      TableName tableName, Collection<Entry<String,Long>> archivedFiles);
+  boolean reportFileArchivalForQuotas(TableName tableName,
+    Collection<Entry<String, Long>> archivedFiles);
 }

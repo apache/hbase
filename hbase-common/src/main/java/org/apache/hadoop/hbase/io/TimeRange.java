@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,8 +37,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
-  private static final TimeRange ALL_TIME = new TimeRange(INITIAL_MIN_TIMESTAMP,
-    INITIAL_MAX_TIMESTAMP);
+  private static final TimeRange ALL_TIME =
+    new TimeRange(INITIAL_MIN_TIMESTAMP, INITIAL_MAX_TIMESTAMP);
 
   public static TimeRange allTime() {
     return ALL_TIME;
@@ -85,10 +84,9 @@ public class TimeRange {
   private final boolean allTime;
 
   /**
-   * Default constructor.
-   * Represents interval [0, Long.MAX_VALUE) (allTime)
+   * Default constructor. Represents interval [0, Long.MAX_VALUE) (allTime)
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
+   *             changed to private or removed in 3.0.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -100,7 +98,7 @@ public class TimeRange {
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
+   *             changed to private or removed in 3.0.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -112,11 +110,11 @@ public class TimeRange {
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
+   *             changed to private or removed in 3.0.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public TimeRange(byte [] minStamp) {
+  public TimeRange(byte[] minStamp) {
     this(Bytes.toLong(minStamp));
   }
 
@@ -125,11 +123,11 @@ public class TimeRange {
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
+   *             changed to private or removed in 3.0.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public TimeRange(byte [] minStamp, byte [] maxStamp) {
+  public TimeRange(byte[] minStamp, byte[] maxStamp) {
     this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));
   }
 
@@ -139,7 +137,7 @@ public class TimeRange {
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IllegalArgumentException if either <0,
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
+   *             changed to private or removed in 3.0.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -156,8 +154,8 @@ public class TimeRange {
 
   private static void check(long minStamp, long maxStamp) {
     if (minStamp < 0 || maxStamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
-        + ", maxStamp:" + maxStamp);
+      throw new IllegalArgumentException(
+        "Timestamp cannot be negative. minStamp:" + minStamp + ", maxStamp:" + maxStamp);
     }
     if (maxStamp < minStamp) {
       throw new IllegalArgumentException("maxStamp is smaller than minStamp");
@@ -190,14 +188,14 @@ public class TimeRange {
    * Check if the specified timestamp is within this TimeRange.
    * <p>
    * Returns true if within interval [minStamp, maxStamp), false if not.
-   * @param bytes timestamp to check
+   * @param bytes  timestamp to check
    * @param offset offset into the bytes
    * @return true if within TimeRange, false if not
    * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   *   changed to private or removed in 3.0. Use {@link #withinTimeRange(long)} instead
+   *             changed to private or removed in 3.0. Use {@link #withinTimeRange(long)} instead
    */
   @Deprecated
-  public boolean withinTimeRange(byte [] bytes, int offset) {
+  public boolean withinTimeRange(byte[] bytes, int offset) {
     if (allTime) {
       return true;
     }
@@ -207,8 +205,7 @@ public class TimeRange {
   /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false
-   * if not.
+   * Returns true if within interval [minStamp, maxStamp), false if not.
    * @param timestamp timestamp to check
    * @return true if within TimeRange, false if not
    */
@@ -254,9 +251,8 @@ public class TimeRange {
 
   /**
    * Compare the timestamp to timerange.
-   * @return -1 if timestamp is less than timerange,
-   * 0 if timestamp is within timerange,
-   * 1 if timestamp is greater than timerange
+   * @return -1 if timestamp is less than timerange, 0 if timestamp is within timerange, 1 if
+   *         timestamp is greater than timerange
    */
   public int compare(long timestamp) {
     assert timestamp >= 0;
@@ -266,7 +262,7 @@ public class TimeRange {
     if (timestamp < minStamp) {
       return -1;
     }
-    return timestamp >= maxStamp? 1: 0;
+    return timestamp >= maxStamp ? 1 : 0;
   }
 
   @Override

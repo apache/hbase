@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeyta
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.Closeable;
 import java.io.File;
 import java.util.Collection;
@@ -58,13 +59,13 @@ import org.junit.experimental.categories.Category;
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({ MapReduceTests.class, MediumTests.class })
 public class TestTableMapReduceUtil {
   private static final String HTTP_PRINCIPAL = "HTTP/localhost";
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableMapReduceUtil.class);
+    HBaseClassTestRule.forClass(TestTableMapReduceUtil.class);
 
   @After
   public void after() {
@@ -72,8 +73,8 @@ public class TestTableMapReduceUtil {
   }
 
   /*
-   * initTableSnapshotMapperJob is tested in {@link TestTableSnapshotInputFormat} because
-   * the method depends on an online cluster.
+   * initTableSnapshotMapperJob is tested in {@link TestTableSnapshotInputFormat} because the method
+   * depends on an online cluster.
    */
 
   @Test
@@ -81,9 +82,8 @@ public class TestTableMapReduceUtil {
     Configuration configuration = new Configuration();
     Job job = Job.getInstance(configuration, "tableName");
     // test
-    TableMapReduceUtil.initTableMapperJob(
-      "Table", new Scan(), Import.Importer.class, Text.class, Text.class, job,
-      false, WALInputFormat.class);
+    TableMapReduceUtil.initTableMapperJob("Table", new Scan(), Import.Importer.class, Text.class,
+      Text.class, job, false, WALInputFormat.class);
     assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
@@ -96,9 +96,8 @@ public class TestTableMapReduceUtil {
   public void testInitTableMapperJob2() throws Exception {
     Configuration configuration = new Configuration();
     Job job = Job.getInstance(configuration, "tableName");
-    TableMapReduceUtil.initTableMapperJob(
-      Bytes.toBytes("Table"), new Scan(), Import.Importer.class, Text.class,
-      Text.class, job, false, WALInputFormat.class);
+    TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(), Import.Importer.class,
+      Text.class, Text.class, job, false, WALInputFormat.class);
     assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
@@ -111,9 +110,8 @@ public class TestTableMapReduceUtil {
   public void testInitTableMapperJob3() throws Exception {
     Configuration configuration = new Configuration();
     Job job = Job.getInstance(configuration, "tableName");
-    TableMapReduceUtil.initTableMapperJob(
-      Bytes.toBytes("Table"), new Scan(), Import.Importer.class, Text.class,
-      Text.class, job);
+    TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(), Import.Importer.class,
+      Text.class, Text.class, job);
     assertEquals(TableInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
@@ -126,9 +124,8 @@ public class TestTableMapReduceUtil {
   public void testInitTableMapperJob4() throws Exception {
     Configuration configuration = new Configuration();
     Job job = Job.getInstance(configuration, "tableName");
-    TableMapReduceUtil.initTableMapperJob(
-      Bytes.toBytes("Table"), new Scan(), Import.Importer.class, Text.class,
-      Text.class, job, false);
+    TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(), Import.Importer.class,
+      Text.class, Text.class, job, false);
     assertEquals(TableInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
@@ -137,8 +134,8 @@ public class TestTableMapReduceUtil {
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
   }
 
-  private static Closeable startSecureMiniCluster(
-    HBaseTestingUtility util, MiniKdc kdc, String principal) throws Exception {
+  private static Closeable startSecureMiniCluster(HBaseTestingUtility util, MiniKdc kdc,
+    String principal) throws Exception {
     Configuration conf = util.getConfiguration();
 
     SecureTestUtil.enableSecurity(conf);
@@ -148,8 +145,8 @@ public class TestTableMapReduceUtil {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       AccessController.class.getName() + ',' + TokenProvider.class.getName());
 
-    HBaseKerberosUtils.setSecuredConfiguration(conf,
-      principal + '@' + kdc.getRealm(), HTTP_PRINCIPAL + '@' + kdc.getRealm());
+    HBaseKerberosUtils.setSecuredConfiguration(conf, principal + '@' + kdc.getRealm(),
+      HTTP_PRINCIPAL + '@' + kdc.getRealm());
 
     KerberosName.resetDefaultRealm();
 
@@ -191,8 +188,7 @@ public class TestTableMapReduceUtil {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testInitCredentialsForCluster2()
-    throws Exception {
+  public void testInitCredentialsForCluster2() throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     HBaseTestingUtility util2 = new HBaseTestingUtility();
 
@@ -260,8 +256,7 @@ public class TestTableMapReduceUtil {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testInitCredentialsForCluster4()
-    throws Exception {
+  public void testInitCredentialsForCluster4() throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     // Assume util1 is insecure cluster
     // Do not start util1 because cannot boot secured mini cluster and insecure mini cluster at once

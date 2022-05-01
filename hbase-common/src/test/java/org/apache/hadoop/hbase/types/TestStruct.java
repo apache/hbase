@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,17 +39,15 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * This class both tests and demonstrates how to construct compound rowkeys
- * from a POJO. The code under test is {@link Struct}.
- * {@link SpecializedPojo1Type1} demonstrates how one might create their own
- * custom data type extension for an application POJO.
+ * This class both tests and demonstrates how to construct compound rowkeys from a POJO. The code
+ * under test is {@link Struct}. {@link SpecializedPojo1Type1} demonstrates how one might create
+ * their own custom data type extension for an application POJO.
  */
 @RunWith(Parameterized.class)
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestStruct {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStruct.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestStruct.class);
 
   @Parameterized.Parameter()
   public Struct generic;
@@ -63,27 +61,20 @@ public class TestStruct {
 
   @Parameters
   public static Collection<Object[]> params() {
-    Object[][] pojo1Args = {
-      new Object[] { "foo", 5,   10.001 },
-      new Object[] { "foo", 100, 7.0    },
-      new Object[] { "foo", 100, 10.001 },
-      new Object[] { "bar", 5,   10.001 },
-      new Object[] { "bar", 100, 10.001 },
-      new Object[] { "baz", 5,   10.001 },
-    };
+    Object[][] pojo1Args = { new Object[] { "foo", 5, 10.001 }, new Object[] { "foo", 100, 7.0 },
+      new Object[] { "foo", 100, 10.001 }, new Object[] { "bar", 5, 10.001 },
+      new Object[] { "bar", 100, 10.001 }, new Object[] { "baz", 5, 10.001 }, };
 
-    Object[][] pojo2Args = {
-      new Object[] { new byte[0], Bytes.toBytes("it"), "was", Bytes.toBytes("the") },
-      new Object[] { Bytes.toBytes("best"), new byte[0], "of", Bytes.toBytes("times,") },
-      new Object[] { Bytes.toBytes("it"), Bytes.toBytes("was"), "", Bytes.toBytes("the") },
-      new Object[] { Bytes.toBytes("worst"), Bytes.toBytes("of"), "times,", new byte[0] },
-      new Object[] { new byte[0], new byte[0], "", new byte[0] },
-    };
+    Object[][] pojo2Args =
+      { new Object[] { new byte[0], Bytes.toBytes("it"), "was", Bytes.toBytes("the") },
+        new Object[] { Bytes.toBytes("best"), new byte[0], "of", Bytes.toBytes("times,") },
+        new Object[] { Bytes.toBytes("it"), Bytes.toBytes("was"), "", Bytes.toBytes("the") },
+        new Object[] { Bytes.toBytes("worst"), Bytes.toBytes("of"), "times,", new byte[0] },
+        new Object[] { new byte[0], new byte[0], "", new byte[0] }, };
 
-    Object[][] params = new Object[][] {
-        { SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args },
-        { SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args },
-    };
+    Object[][] params =
+      new Object[][] { { SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args },
+        { SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args }, };
     return Arrays.asList(params);
   }
 
@@ -116,15 +107,9 @@ public class TestStruct {
       stringFieldAsc = (String) argv[0];
       intFieldAsc = (Integer) argv[1];
       doubleFieldAsc = (Double) argv[2];
-      str = new StringBuilder()
-            .append("{ ")
-            .append(null == stringFieldAsc ? "" : "\"")
-            .append(stringFieldAsc)
-            .append(null == stringFieldAsc ? "" : "\"").append(", ")
-            .append(intFieldAsc).append(", ")
-            .append(doubleFieldAsc)
-            .append(" }")
-            .toString();
+      str = new StringBuilder().append("{ ").append(null == stringFieldAsc ? "" : "\"")
+        .append(stringFieldAsc).append(null == stringFieldAsc ? "" : "\"").append(", ")
+        .append(intFieldAsc).append(", ").append(doubleFieldAsc).append(" }").toString();
     }
 
     @Override
@@ -169,8 +154,9 @@ public class TestStruct {
         return false;
       }
       Pojo1 other = (Pojo1) obj;
-      if (Double.doubleToLongBits(doubleFieldAsc) !=
-          Double.doubleToLongBits(other.doubleFieldAsc)) {
+      if (
+        Double.doubleToLongBits(doubleFieldAsc) != Double.doubleToLongBits(other.doubleFieldAsc)
+      ) {
         return false;
       }
       if (intFieldAsc != other.intFieldAsc) {
@@ -195,20 +181,15 @@ public class TestStruct {
     final transient String str;
 
     public Pojo2(Object... vals) {
-      byteField1Asc  = vals.length > 0 ? (byte[]) vals[0] : null;
-      byteField2Dsc  = vals.length > 1 ? (byte[]) vals[1] : null;
+      byteField1Asc = vals.length > 0 ? (byte[]) vals[0] : null;
+      byteField2Dsc = vals.length > 1 ? (byte[]) vals[1] : null;
       stringFieldDsc = vals.length > 2 ? (String) vals[2] : null;
-      byteField3Dsc  = vals.length > 3 ? (byte[]) vals[3] : null;
-      str = new StringBuilder()
-            .append("{ ")
-            .append(Bytes.toStringBinary(byteField1Asc)).append(", ")
-            .append(Bytes.toStringBinary(byteField2Dsc)).append(", ")
-            .append(null == stringFieldDsc ? "" : "\"")
-            .append(stringFieldDsc)
-            .append(null == stringFieldDsc ? "" : "\"").append(", ")
-            .append(Bytes.toStringBinary(byteField3Dsc))
-            .append(" }")
-            .toString();
+      byteField3Dsc = vals.length > 3 ? (byte[]) vals[3] : null;
+      str = new StringBuilder().append("{ ").append(Bytes.toStringBinary(byteField1Asc))
+        .append(", ").append(Bytes.toStringBinary(byteField2Dsc)).append(", ")
+        .append(null == stringFieldDsc ? "" : "\"").append(stringFieldDsc)
+        .append(null == stringFieldDsc ? "" : "\"").append(", ")
+        .append(Bytes.toStringBinary(byteField3Dsc)).append(" }").toString();
     }
 
     @Override
@@ -294,8 +275,8 @@ public class TestStruct {
     /**
      * The {@link Struct} equivalent of this type.
      */
-    public static Struct GENERIC = new StructBuilder().add(stringField).add(intField)
-      .add(doubleField).toStruct();
+    public static Struct GENERIC =
+      new StructBuilder().add(stringField).add(intField).add(doubleField).toStruct();
 
     @Override
     public boolean isOrderPreserving() {
@@ -319,9 +300,8 @@ public class TestStruct {
 
     @Override
     public int encodedLength(Pojo1 val) {
-      return stringField.encodedLength(val.stringFieldAsc) +
-          intField.encodedLength(val.intFieldAsc) +
-          doubleField.encodedLength(val.doubleFieldAsc);
+      return stringField.encodedLength(val.stringFieldAsc) + intField.encodedLength(val.intFieldAsc)
+        + doubleField.encodedLength(val.doubleFieldAsc);
     }
 
     @Override
@@ -360,10 +340,9 @@ public class TestStruct {
    */
   private static class SpecializedPojo2Type1 implements DataType<Pojo2> {
     private static RawBytesTerminated byteField1 = new RawBytesTerminated("/");
-    private static RawBytesTerminated byteField2 =
-        new RawBytesTerminated(Order.DESCENDING, "/");
+    private static RawBytesTerminated byteField2 = new RawBytesTerminated(Order.DESCENDING, "/");
     private static RawStringTerminated stringField =
-        new RawStringTerminated(Order.DESCENDING, new byte[] { 0x00 });
+      new RawStringTerminated(Order.DESCENDING, new byte[] { 0x00 });
     private static RawBytes byteField3 = RawBytes.DESCENDING;
 
     /**
@@ -394,10 +373,10 @@ public class TestStruct {
 
     @Override
     public int encodedLength(Pojo2 val) {
-      return byteField1.encodedLength(val.byteField1Asc) +
-          byteField2.encodedLength(val.byteField2Dsc) +
-          stringField.encodedLength(val.stringFieldDsc) +
-          byteField3.encodedLength(val.byteField3Dsc);
+      return byteField1.encodedLength(val.byteField1Asc)
+        + byteField2.encodedLength(val.byteField2Dsc)
+        + stringField.encodedLength(val.stringFieldDsc)
+        + byteField3.encodedLength(val.byteField3Dsc);
     }
 
     @Override
@@ -443,10 +422,10 @@ public class TestStruct {
     Constructor<?> ctor = specialized.encodedClass().getConstructor(Object[].class);
     for (int i = 0; i < vals.length; i++) {
       vals[i] = ctor.newInstance(new Object[] { constructorArgs[i] });
-      encodedGeneric[i] = new SimplePositionedMutableByteRange(
-          generic.encodedLength(constructorArgs[i]));
-      encodedSpecialized[i] = new SimplePositionedMutableByteRange(
-          specialized.encodedLength(vals[i]));
+      encodedGeneric[i] =
+        new SimplePositionedMutableByteRange(generic.encodedLength(constructorArgs[i]));
+      encodedSpecialized[i] =
+        new SimplePositionedMutableByteRange(specialized.encodedLength(vals[i]));
     }
 
     // populate our arrays
@@ -463,13 +442,10 @@ public class TestStruct {
     Arrays.sort(encodedSpecialized);
 
     for (int i = 0; i < vals.length; i++) {
-      assertEquals(
-        "Struct encoder does not preserve sort order at position " + i,
-        vals[i],
+      assertEquals("Struct encoder does not preserve sort order at position " + i, vals[i],
         ctor.newInstance(new Object[] { generic.decode(encodedGeneric[i]) }));
-      assertEquals(
-        "Specialized encoder does not preserve sort order at position " + i,
-        vals[i], specialized.decode(encodedSpecialized[i]));
+      assertEquals("Specialized encoder does not preserve sort order at position " + i, vals[i],
+        specialized.decode(encodedSpecialized[i]));
     }
   }
 }

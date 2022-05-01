@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +24,6 @@ import static org.junit.Assert.fail;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -59,7 +60,7 @@ public class TestSpaceQuotaBasicFunctioning {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotaBasicFunctioning.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotaBasicFunctioning.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotaBasicFunctioning.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -91,7 +92,7 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoInsertsWithPut() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_INSERTS, p);
   }
 
@@ -99,7 +100,7 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoInsertsWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
     a.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_INSERTS, a);
   }
 
@@ -127,7 +128,7 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoWritesWithPut() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
   }
 
@@ -135,7 +136,7 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoWritesWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
     a.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, a);
   }
 
@@ -156,9 +157,9 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoCompactions() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     final TableName tn =
-        helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES_COMPACTIONS, p);
+      helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES_COMPACTIONS, p);
     // We know the policy is active at this point
 
     // Major compactions should be rejected
@@ -181,7 +182,7 @@ public class TestSpaceQuotaBasicFunctioning {
   public void testNoEnableAfterDisablePolicy() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     final TableName tn = helper.writeUntilViolation(SpaceViolationPolicy.DISABLE);
     final Admin admin = TEST_UTIL.getAdmin();
     // Disabling a table relies on some external action (over the other policies), so wait a bit
@@ -199,8 +200,8 @@ public class TestSpaceQuotaBasicFunctioning {
       String exceptionContents = StringUtils.stringifyException(e);
       final String expectedText = "violated space quota";
       assertTrue(
-          "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents,
-          exceptionContents.contains(expectedText));
+        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents,
+        exceptionContents.contains(expectedText));
     }
   }
 
@@ -213,8 +214,8 @@ public class TestSpaceQuotaBasicFunctioning {
     final long tableLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     final long namespaceLimit = 1024L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.limitTableSpace(tn, tableLimit, policy));
-    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory
-        .limitNamespaceSpace(tn.getNamespaceAsString(), namespaceLimit, policy));
+    TEST_UTIL.getAdmin().setQuota(
+      QuotaSettingsFactory.limitNamespaceSpace(tn.getNamespaceAsString(), namespaceLimit, policy));
 
     // Write more data than should be allowed and flush it to disk
     helper.writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
@@ -225,7 +226,7 @@ public class TestSpaceQuotaBasicFunctioning {
     // The write should be rejected because the table quota takes priority over the namespace
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.verifyViolation(policy, tn, p);
   }
 
@@ -234,8 +235,7 @@ public class TestSpaceQuotaBasicFunctioning {
     TableName tableName = helper.createTable();
     helper.setQuotaLimit(tableName, SpaceViolationPolicy.DISABLE, 1L);
     helper.writeData(tableName, SpaceQuotaHelperForTests.ONE_MEGABYTE * 2L);
-    TEST_UTIL.getConfiguration()
-        .setLong("hbase.master.quotas.region.report.retention.millis", 100);
+    TEST_UTIL.getConfiguration().setLong("hbase.master.quotas.region.report.retention.millis", 100);
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
@@ -246,7 +246,7 @@ public class TestSpaceQuotaBasicFunctioning {
       public boolean evaluate() throws Exception {
         Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
         List<RegionInfo> tableRegions =
-            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+          MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
         return regionSizes.containsKey(tableRegions.get(0));
       }
     });
@@ -254,7 +254,7 @@ public class TestSpaceQuotaBasicFunctioning {
     // Check if disabled table region report present in the map after retention period expired.
     // It should be present after retention period expired.
     final long regionSizes = quotaManager.snapshotRegionSizes().keySet().stream()
-        .filter(k -> k.getTable().equals(tableName)).count();
+      .filter(k -> k.getTable().equals(tableName)).count();
     Assert.assertTrue(regionSizes > 0);
   }
 }

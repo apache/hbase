@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,12 +71,12 @@ public class TestCompactionLifeCycleTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionLifeCycleTracker.class);
+    HBaseClassTestRule.forClass(TestCompactionLifeCycleTracker.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName NAME =
-      TableName.valueOf(TestCompactionLifeCycleTracker.class.getSimpleName());
+    TableName.valueOf(TestCompactionLifeCycleTracker.class.getSimpleName());
 
   private static final byte[] CF1 = Bytes.toBytes("CF1");
 
@@ -98,8 +98,7 @@ public class TestCompactionLifeCycleTracker {
 
     @Override
     public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
-        throws IOException {
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -107,8 +106,8 @@ public class TestCompactionLifeCycleTracker {
 
     @Override
     public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
-        CompactionRequest request) {
+      List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -116,8 +115,8 @@ public class TestCompactionLifeCycleTracker {
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-        CompactionRequest request) throws IOException {
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -126,8 +125,8 @@ public class TestCompactionLifeCycleTracker {
 
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
-        throws IOException {
+      StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
+      throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -148,35 +147,25 @@ public class TestCompactionLifeCycleTracker {
   @Before
   public void setUp() throws IOException {
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2))
-            .setCoprocessor(CompactionObserver.class.getName()).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2))
+        .setCoprocessor(CompactionObserver.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF1)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Cell.Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table
+          .put(new Put(row).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+            .setFamily(CF1).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+            .setType(Cell.Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
       UTIL.getAdmin().flush(NAME);
       for (int i = 100; i < 200; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF1)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table
+          .put(new Put(row).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+            .setFamily(CF1).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+            .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
       UTIL.getAdmin().flush(NAME);
     }
@@ -277,18 +266,19 @@ public class TestCompactionLifeCycleTracker {
   // This test assumes that compaction wouldn't happen with null user.
   // But null user means system generated compaction so compaction should happen
   // even if the space quota is violated. So this test should be removed/ignored.
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testSpaceQuotaViolation() throws IOException, InterruptedException {
     region.getRegionServerServices().getRegionServerSpaceQuotaManager().enforceViolationPolicy(NAME,
       new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_WRITES_COMPACTIONS), 10L,
-          100L));
+        100L));
     Tracker tracker = new Tracker();
     TRACKER = tracker;
     region.requestCompaction("test", Store.PRIORITY_USER, false, tracker);
     tracker.await();
     assertEquals(2, tracker.notExecutedStores.size());
     tracker.notExecutedStores.sort((p1, p2) -> p1.getFirst().getColumnFamilyName()
-        .compareTo(p2.getFirst().getColumnFamilyName()));
+      .compareTo(p2.getFirst().getColumnFamilyName()));
 
     assertEquals(Bytes.toString(CF2),
       tracker.notExecutedStores.get(1).getFirst().getColumnFamilyName());

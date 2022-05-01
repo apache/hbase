@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ public class TestUnloadAccessController extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestUnloadAccessController.class);
+    HBaseClassTestRule.forClass(TestUnloadAccessController.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TEST_TABLE = TableName.valueOf("TestUnloadAccessController");
   private static Permission permission =
-      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
+    Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
   private static Admin admin;
 
   @BeforeClass
@@ -103,8 +103,10 @@ public class TestUnloadAccessController extends SecureTestUtil {
   }
 
   private void checkException(Throwable e) {
-    if (e instanceof DoNotRetryIOException
-        && e.getMessage().contains(UnsupportedOperationException.class.getName())) {
+    if (
+      e instanceof DoNotRetryIOException
+        && e.getMessage().contains(UnsupportedOperationException.class.getName())
+    ) {
       return;
     }
     fail("Expected UnsupportedOperationException but found " + e.getMessage());

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,14 +67,13 @@ public class BufferedMutatorExample extends Configured implements Tool {
         }
       }
     };
-    BufferedMutatorParams params = new BufferedMutatorParams(TABLE)
-        .listener(listener);
+    BufferedMutatorParams params = new BufferedMutatorParams(TABLE).listener(listener);
 
     //
     // step 1: create a single Connection and a BufferedMutator, shared by all worker threads.
     //
     try (final Connection conn = ConnectionFactory.createConnection(getConf());
-         final BufferedMutator mutator = conn.getBufferedMutator(params)) {
+      final BufferedMutator mutator = conn.getBufferedMutator(params)) {
 
       /** worker pool that operates on BufferedTable instances */
       final ExecutorService workerPool = Executors.newFixedThreadPool(POOL_SIZE);

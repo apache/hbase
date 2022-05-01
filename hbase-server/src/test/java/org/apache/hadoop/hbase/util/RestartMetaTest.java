@@ -1,23 +1,23 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -32,12 +32,12 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * A command-line tool that spins up a local process-based cluster, loads
- * some data, restarts the regionserver holding hbase:meta, and verifies that the
- * cluster recovers.
+ * A command-line tool that spins up a local process-based cluster, loads some data, restarts the
+ * regionserver holding hbase:meta, and verifies that the cluster recovers.
  */
 public class RestartMetaTest extends AbstractHBaseTool {
 
@@ -47,8 +47,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
   private static final int DEFAULT_NUM_RS = 2;
 
   /** Table name for the test */
-  private static TableName TABLE_NAME =
-      TableName.valueOf("load_test");
+  private static TableName TABLE_NAME = TableName.valueOf("load_test");
 
   /** The number of seconds to sleep after loading the data */
   private static final int SLEEP_SEC_AFTER_DATA_LOAD = 5;
@@ -72,16 +71,13 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // print out the arguments
     System.out.printf("Key range %d .. %d\n", startKey, endKey);
-    System.out.printf("Number of Columns/Key: %d..%d\n", minColsPerKey,
-        maxColsPerKey);
-    System.out.printf("Data Size/Column: %d..%d bytes\n", minColDataSize,
-        maxColDataSize);
+    System.out.printf("Number of Columns/Key: %d..%d\n", minColsPerKey, maxColsPerKey);
+    System.out.printf("Data Size/Column: %d..%d bytes\n", minColDataSize, maxColDataSize);
     System.out.printf("Client Threads: %d\n", numThreads);
 
     // start the writers
-    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
-      minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey,
-      HFileTestUtil.DEFAULT_COLUMN_FAMILY);
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(minColDataSize,
+      maxColDataSize, minColsPerKey, maxColsPerKey, HFileTestUtil.DEFAULT_COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
     writer.start(startKey, endKey, numThreads);
@@ -93,7 +89,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
   @Override
   protected int doWork() throws Exception {
     ProcessBasedLocalHBaseCluster hbaseCluster =
-        new ProcessBasedLocalHBaseCluster(conf, NUM_DATANODES, numRegionServers);
+      new ProcessBasedLocalHBaseCluster(conf, NUM_DATANODES, numRegionServers);
     hbaseCluster.startMiniDFS();
 
     // start the process based HBase cluster
@@ -101,14 +97,12 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
-        HFileTestUtil.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
-        DataBlockEncoding.NONE);
+      HFileTestUtil.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE, DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");
     loadData();
 
-    LOG.debug("Sleeping for " + SLEEP_SEC_AFTER_DATA_LOAD +
-        " seconds....\n\n");
+    LOG.debug("Sleeping for " + SLEEP_SEC_AFTER_DATA_LOAD + " seconds....\n\n");
     Threads.sleep(5 * SLEEP_SEC_AFTER_DATA_LOAD);
 
     Connection connection = ConnectionFactory.createConnection(conf);
@@ -129,11 +123,9 @@ public class RestartMetaTest extends AbstractHBaseTool {
     ResultScanner scanner = metaTable.getScanner(new Scan());
     Result result;
     while ((result = scanner.next()) != null) {
-      LOG.info("Region assignment from META: "
-          + Bytes.toStringBinary(result.getRow())
-          + " => "
-          + Bytes.toStringBinary(result.getFamilyMap(HConstants.CATALOG_FAMILY)
-              .get(HConstants.SERVER_QUALIFIER)));
+      LOG.info("Region assignment from META: " + Bytes.toStringBinary(result.getRow()) + " => "
+        + Bytes.toStringBinary(
+          result.getFamilyMap(HConstants.CATALOG_FAMILY).get(HConstants.SERVER_QUALIFIER)));
     }
     metaTable.close();
     connection.close();
@@ -144,13 +136,13 @@ public class RestartMetaTest extends AbstractHBaseTool {
   protected void addOptions() {
     addOptWithArg(OPT_NUM_RS, "Number of Region Servers");
     addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
-        HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    numRegionServers = Integer.parseInt(cmd.getOptionValue(OPT_NUM_RS,
-        String.valueOf(DEFAULT_NUM_RS)));
+    numRegionServers =
+      Integer.parseInt(cmd.getOptionValue(OPT_NUM_RS, String.valueOf(DEFAULT_NUM_RS)));
   }
 
   public static void main(String[] args) {

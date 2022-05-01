@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!--
+  <!--
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,59 +21,14 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-zookeeper</artifactId>
   <name>Apache HBase - Zookeeper</name>
   <description>Zookeeper Helpers for HBase</description>
-
-  <build>
-    <!-- Makes sure the resources get added before they are processed
-      by placing this first -->
-    <testResources>
-      <!-- Our test artifact has different license info than our source/bin ones -->
-      <testResource>
-        <directory>src/test/resources/META-INF/</directory>
-        <targetPath>META-INF/</targetPath>
-        <includes>
-          <include>NOTICE</include>
-        </includes>
-        <filtering>true</filtering>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </testResource>
-    </testResources>
-    <plugins>
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
-        tests (this is needed for upstream projects whose tests need this jar simply for
-        compilation) -->
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <configuration>
-          <failOnViolation>true</failOnViolation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
@@ -189,6 +144,51 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <!-- Makes sure the resources get added before they are processed
+      by placing this first -->
+    <testResources>
+      <!-- Our test artifact has different license info than our source/bin ones -->
+      <testResource>
+        <targetPath>META-INF/</targetPath>
+        <filtering>true</filtering>
+        <directory>src/test/resources/META-INF/</directory>
+        <includes>
+          <include>NOTICE</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
+        tests (this is needed for upstream projects whose tests need this jar simply for
+        compilation) -->
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
     <profile>
@@ -201,10 +201,10 @@
             <executions>
               <execution>
                 <id>license-javadocs</id>
-                <phase>prepare-package</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>prepare-package</phase>
                 <configuration>
                   <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
                   <resources>
@@ -247,8 +247,9 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -268,10 +269,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -314,10 +315,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -339,35 +340,9 @@
         </property>
       </activation>
       <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-eclipse-plugin</artifactId>
-            <configuration>
-              <additionalProjectnatures>
-                <projectnature>org.jamon.project.jamonnature</projectnature>
-              </additionalProjectnatures>
-              <buildcommands>
-                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
-                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
-              </buildcommands>
-              <additionalConfig>
-                <file>
-                  <name>.settings/org.jamon.prefs</name>
-                  <content># now
-                    eclipse.preferences.version=1
-                    templateSourceDir=src/main/jamon
-                    templateOutputDir=target/generated-jamon
-                  </content>
-                </file>
-              </additionalConfig>
-            </configuration>
-          </plugin>
-        </plugins>
         <pluginManagement>
-           <plugins>
-             <!--This plugin's configuration is used to store Eclipse m2e settings
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings
                  only. It has no influence on the Maven build itself and needs to
                  be kept in plugin management, not in the actual plugins. -->
             <plugin>
@@ -402,7 +377,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>
@@ -411,6 +386,31 @@
             </plugin>
           </plugins>
         </pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-eclipse-plugin</artifactId>
+            <configuration>
+              <additionalProjectnatures>
+                <projectnature>org.jamon.project.jamonnature</projectnature>
+              </additionalProjectnatures>
+              <buildcommands>
+                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
+                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
+                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
+              </buildcommands>
+              <additionalConfig>
+                <file>
+                  <name>.settings/org.jamon.prefs</name>
+                  <content># now
+                    eclipse.preferences.version=1
+                    templateSourceDir=src/main/jamon
+                    templateOutputDir=target/generated-jamon</content>
+                </file>
+              </additionalConfig>
+            </configuration>
+          </plugin>
+        </plugins>
       </build>
     </profile>
   </profiles>

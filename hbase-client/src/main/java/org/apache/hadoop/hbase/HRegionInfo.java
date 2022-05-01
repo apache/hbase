@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -38,40 +36,38 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
- * identifier (a timestamp) for differentiating between subset ranges (after region split)
- * and a replicaId for differentiating the instance for the same range and some status information
- * about the region.
- *
- * The region has a unique name which consists of the following fields:
+ * identifier (a timestamp) for differentiating between subset ranges (after region split) and a
+ * replicaId for differentiating the instance for the same range and some status information about
+ * the region. The region has a unique name which consists of the following fields:
  * <ul>
- * <li> tableName   : The name of the table </li>
- * <li> startKey    : The startKey for the region. </li>
- * <li> regionId    : A timestamp when the region is created. </li>
- * <li> replicaId   : An id starting from 0 to differentiate replicas of the same region range
- * but hosted in separated servers. The same region range can be hosted in multiple locations.</li>
- * <li> encodedName : An MD5 encoded string for the region name.</li>
+ * <li>tableName : The name of the table</li>
+ * <li>startKey : The startKey for the region.</li>
+ * <li>regionId : A timestamp when the region is created.</li>
+ * <li>replicaId : An id starting from 0 to differentiate replicas of the same region range but
+ * hosted in separated servers. The same region range can be hosted in multiple locations.</li>
+ * <li>encodedName : An MD5 encoded string for the region name.</li>
  * </ul>
- *
- * <br> Other than the fields in the region name, region info contains:
+ * <br>
+ * Other than the fields in the region name, region info contains:
  * <ul>
- * <li> endKey      : the endKey for the region (exclusive) </li>
- * <li> split       : Whether the region is split </li>
- * <li> offline     : Whether the region is offline </li>
+ * <li>endKey : the endKey for the region (exclusive)</li>
+ * <li>split : Whether the region is split</li>
+ * <li>offline : Whether the region is offline</li>
  * </ul>
- *
  * In 0.98 or before, a list of table's regions would fully cover the total keyspace, and at any
  * point in time, a row key always belongs to a single region, which is hosted in a single server.
  * In 0.99+, a region can have multiple instances (called replicas), and thus a range (or row) can
  * correspond to multiple HRegionInfo's. These HRI's share the same fields however except the
  * replicaId field. If the replicaId is not set, it defaults to 0, which is compatible with the
  * previous behavior of a range corresponding to 1 region.
- * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
- *             use {@link RegionInfoBuilder} to build {@link RegionInfo}.
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. use
+ *             {@link RegionInfoBuilder} to build {@link RegionInfo}.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -79,41 +75,31 @@ public class HRegionInfo implements RegionInfo {
   private static final Logger LOG = LoggerFactory.getLogger(HRegionInfo.class);
 
   /**
-   * The new format for a region name contains its encodedName at the end.
-   * The encoded name also serves as the directory name for the region
-   * in the filesystem.
-   *
-   * New region name format:
-   *    &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>.
-   * where,
-   *    &lt;encodedName> is a hex version of the MD5 hash of
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   *
-   * The old region name format:
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   * For region names in the old format, the encoded name is a 32-bit
-   * JenkinsHash integer value (in its decimal notation, string form).
-   *<p>
-   * **NOTE**
-   *
-   * The first hbase:meta region, and regions created by an older
-   * version of HBase (0.20 or prior) will continue to use the
-   * old region name format.
+   * The new format for a region name contains its encodedName at the end. The encoded name also
+   * serves as the directory name for the region in the filesystem. New region name format:
+   * &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>. where, &lt;encodedName>
+   * is a hex version of the MD5 hash of &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp> The old
+   * region name format: &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp> For region names in the
+   * old format, the encoded name is a 32-bit JenkinsHash integer value (in its decimal notation,
+   * string form).
+   * <p>
+   * **NOTE** The first hbase:meta region, and regions created by an older version of HBase (0.20 or
+   * prior) will continue to use the old region name format.
    */
 
   /** A non-capture group so that this can be embedded. */
-  public static final String ENCODED_REGION_NAME_REGEX = RegionInfoBuilder.ENCODED_REGION_NAME_REGEX;
+  public static final String ENCODED_REGION_NAME_REGEX =
+    RegionInfoBuilder.ENCODED_REGION_NAME_REGEX;
 
   private static final int MAX_REPLICA_ID = 0xFFFF;
 
   /**
-   * @param regionName
-   * @return the encodedName
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#encodeRegionName(byte[])}.
+   * n * @return the encodedName
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#encodeRegionName(byte[])}.
    */
   @Deprecated
-  public static String encodeRegionName(final byte [] regionName) {
+  public static String encodeRegionName(final byte[] regionName) {
     return RegionInfo.encodeRegionName(regionName);
   }
 
@@ -126,19 +112,19 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(RegionInfo...)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(RegionInfo...)}.
    */
   @Deprecated
-  public static String getShortNameToLog(HRegionInfo...hris) {
+  public static String getShortNameToLog(HRegionInfo... hris) {
     return RegionInfo.getShortNameToLog(Arrays.asList(hris));
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code>
-   * (usually encoded name) for us logging.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(List)})}.
+   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
+   *         for us logging.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(List)})}.
    */
   @Deprecated
   public static String getShortNameToLog(final List<HRegionInfo> hris) {
@@ -149,9 +135,9 @@ public class HRegionInfo implements RegionInfo {
    * Use logging.
    * @param encodedRegionName The encoded regionname.
    * @return <code>hbase:meta</code> if passed <code>1028785192</code> else returns
-   * <code>encodedRegionName</code>
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#prettyPrint(String)}.
+   *         <code>encodedRegionName</code>
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#prettyPrint(String)}.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -159,7 +145,7 @@ public class HRegionInfo implements RegionInfo {
     return RegionInfo.prettyPrint(encodedRegionName);
   }
 
-  private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
+  private byte[] endKey = HConstants.EMPTY_BYTE_ARRAY;
   // This flag is in the parent of a split while the parent is still referenced by daughter regions.
   // We USED to set this flag when we disabled a table but now table state is kept up in zookeeper
   // as of 0.90.0 HBase. And now in DisableTableProcedure, finally we will create bunch of
@@ -167,14 +153,14 @@ public class HRegionInfo implements RegionInfo {
   // will not change the offLine flag.
   private boolean offLine = false;
   private long regionId = -1;
-  private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
+  private transient byte[] regionName = HConstants.EMPTY_BYTE_ARRAY;
   private boolean split = false;
-  private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
+  private byte[] startKey = HConstants.EMPTY_BYTE_ARRAY;
   private int hashCode = -1;
-  //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
+  // TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
   private String encodedName = null;
-  private byte [] encodedNameAsBytes = null;
+  private byte[] encodedNameAsBytes = null;
   private int replicaId = DEFAULT_REPLICA_ID;
 
   // Current TableName
@@ -188,7 +174,7 @@ public class HRegionInfo implements RegionInfo {
   /** HRegionInfo for first meta region */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
   public static final HRegionInfo FIRST_META_REGIONINFO =
-      new HRegionInfo(1L, TableName.META_TABLE_NAME);
+    new HRegionInfo(1L, TableName.META_TABLE_NAME);
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -202,8 +188,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Private constructor used constructing HRegionInfo for the
-   * first meta regions
+   * Private constructor used constructing HRegionInfo for the first meta regions
    */
   private HRegionInfo(long regionId, TableName tableName) {
     this(regionId, tableName, DEFAULT_REPLICA_ID);
@@ -225,66 +210,54 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * Construct HRegionInfo with explicit parameters
-   *
    * @param tableName the table name
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @throws IllegalArgumentException
+   * @param startKey  first key in region
+   * @param endKey    end of key range n
    */
   public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey)
-  throws IllegalArgumentException {
+    throws IllegalArgumentException {
     this(tableName, startKey, endKey, false);
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
-   *
    * @param tableName the table descriptor
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @param split true if this region has split and we have daughter regions
-   * regions that may or may not hold references to this region.
-   * @throws IllegalArgumentException
+   * @param startKey  first key in region
+   * @param endKey    end of key range
+   * @param split     true if this region has split and we have daughter regions regions that may or
+   *                  may not hold references to this region. n
    */
   public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
-      final boolean split)
-  throws IllegalArgumentException {
+    final boolean split) throws IllegalArgumentException {
     this(tableName, startKey, endKey, split, EnvironmentEdgeManager.currentTime());
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
-   *
    * @param tableName the table descriptor
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @param split true if this region has split and we have daughter regions
-   * regions that may or may not hold references to this region.
-   * @param regionid Region id to use.
-   * @throws IllegalArgumentException
+   * @param startKey  first key in region
+   * @param endKey    end of key range
+   * @param split     true if this region has split and we have daughter regions regions that may or
+   *                  may not hold references to this region.
+   * @param regionid  Region id to use. n
    */
-  public HRegionInfo(final TableName tableName, final byte[] startKey,
-                     final byte[] endKey, final boolean split, final long regionid)
-  throws IllegalArgumentException {
+  public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
+    final boolean split, final long regionid) throws IllegalArgumentException {
     this(tableName, startKey, endKey, split, regionid, DEFAULT_REPLICA_ID);
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
-   *
    * @param tableName the table descriptor
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @param split true if this region has split and we have daughter regions
-   * regions that may or may not hold references to this region.
-   * @param regionid Region id to use.
-   * @param replicaId the replicaId to use
-   * @throws IllegalArgumentException
+   * @param startKey  first key in region
+   * @param endKey    end of key range
+   * @param split     true if this region has split and we have daughter regions regions that may or
+   *                  may not hold references to this region.
+   * @param regionid  Region id to use.
+   * @param replicaId the replicaId to use n
    */
-  public HRegionInfo(final TableName tableName, final byte[] startKey,
-                     final byte[] endKey, final boolean split, final long regionid,
-                     final int replicaId)
-    throws IllegalArgumentException {
+  public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
+    final boolean split, final long regionid, final int replicaId) throws IllegalArgumentException {
     super();
     if (tableName == null) {
       throw new IllegalArgumentException("TableName cannot be null");
@@ -300,17 +273,14 @@ public class HRegionInfo implements RegionInfo {
     this.regionName = createRegionName(this.tableName, startKey, regionId, replicaId, true);
 
     this.split = split;
-    this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
-    this.startKey = startKey == null?
-      HConstants.EMPTY_START_ROW: startKey.clone();
+    this.endKey = endKey == null ? HConstants.EMPTY_END_ROW : endKey.clone();
+    this.startKey = startKey == null ? HConstants.EMPTY_START_ROW : startKey.clone();
     this.tableName = tableName;
     setHashCode();
   }
 
   /**
-   * Costruct a copy of another HRegionInfo
-   *
-   * @param other
+   * Costruct a copy of another HRegionInfo n
    */
   public HRegionInfo(RegionInfo other) {
     super();
@@ -333,93 +303,82 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Make a region name of passed parameters.
-   * @param tableName
-   * @param startKey Can be null
-   * @param regionid Region id (Usually timestamp from when region was created).
-   * @param newFormat should we create the region name in the new format
-   *                  (such that it contains its encoded name?).
+   * Make a region name of passed parameters. n * @param startKey Can be null
+   * @param regionid  Region id (Usually timestamp from when region was created).
+   * @param newFormat should we create the region name in the new format (such that it contains its
+   *                  encoded name?).
    * @return Region name made of passed tableName, startKey and id
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#createRegionName(TableName, byte[], long, boolean)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#createRegionName(TableName, byte[], long, boolean)}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [] createRegionName(final TableName tableName,
-      final byte [] startKey, final long regionid, boolean newFormat) {
+  public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
+    final long regionid, boolean newFormat) {
     return RegionInfo.createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
   }
 
   /**
-   * Make a region name of passed parameters.
-   * @param tableName
-   * @param startKey Can be null
-   * @param id Region id (Usually timestamp from when region was created).
-   * @param newFormat should we create the region name in the new format
-   *                  (such that it contains its encoded name?).
+   * Make a region name of passed parameters. n * @param startKey Can be null
+   * @param id        Region id (Usually timestamp from when region was created).
+   * @param newFormat should we create the region name in the new format (such that it contains its
+   *                  encoded name?).
    * @return Region name made of passed tableName, startKey and id
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#createRegionName(TableName, byte[], String, boolean)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#createRegionName(TableName, byte[], String, boolean)}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [] createRegionName(final TableName tableName,
-      final byte [] startKey, final String id, boolean newFormat) {
+  public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
+    final String id, boolean newFormat) {
     return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
   }
 
   /**
-   * Make a region name of passed parameters.
-   * @param tableName
-   * @param startKey Can be null
-   * @param regionid Region id (Usually timestamp from when region was created).
-   * @param replicaId
-   * @param newFormat should we create the region name in the new format
-   *                  (such that it contains its encoded name?).
+   * Make a region name of passed parameters. n * @param startKey Can be null
+   * @param regionid Region id (Usually timestamp from when region was created). n * @param
+   *                 newFormat should we create the region name in the new format (such that it
+   *                 contains its encoded name?).
    * @return Region name made of passed tableName, startKey, id and replicaId
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#createRegionName(TableName, byte[], long, int, boolean)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#createRegionName(TableName, byte[], long, int, boolean)}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [] createRegionName(final TableName tableName,
-      final byte [] startKey, final long regionid, int replicaId, boolean newFormat) {
+  public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
+    final long regionid, int replicaId, boolean newFormat) {
     return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionid)),
-        replicaId, newFormat);
+      replicaId, newFormat);
   }
 
   /**
-   * Make a region name of passed parameters.
-   * @param tableName
-   * @param startKey Can be null
-   * @param id Region id (Usually timestamp from when region was created).
-   * @param newFormat should we create the region name in the new format
-   *                  (such that it contains its encoded name?).
+   * Make a region name of passed parameters. n * @param startKey Can be null
+   * @param id        Region id (Usually timestamp from when region was created).
+   * @param newFormat should we create the region name in the new format (such that it contains its
+   *                  encoded name?).
    * @return Region name made of passed tableName, startKey and id
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#createRegionName(TableName, byte[], byte[], boolean)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#createRegionName(TableName, byte[], byte[], boolean)}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [] createRegionName(final TableName tableName,
-      final byte [] startKey, final byte [] id, boolean newFormat) {
+  public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
+    final byte[] id, boolean newFormat) {
     return RegionInfo.createRegionName(tableName, startKey, id, DEFAULT_REPLICA_ID, newFormat);
   }
+
   /**
-   * Make a region name of passed parameters.
-   * @param tableName
-   * @param startKey Can be null
-   * @param id Region id (Usually timestamp from when region was created).
-   * @param replicaId
-   * @param newFormat should we create the region name in the new format
+   * Make a region name of passed parameters. n * @param startKey Can be null
+   * @param id Region id (Usually timestamp from when region was created). n * @param newFormat
+   *           should we create the region name in the new format
    * @return Region name made of passed tableName, startKey, id and replicaId
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#createRegionName(TableName, byte[], byte[], int, boolean)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#createRegionName(TableName, byte[], byte[], int, boolean)}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [] createRegionName(final TableName tableName,
-      final byte [] startKey, final byte [] id, final int replicaId, boolean newFormat) {
+  public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
+    final byte[] id, final int replicaId, boolean newFormat) {
     return RegionInfo.createRegionName(tableName, startKey, id, replicaId, newFormat);
   }
 
@@ -427,20 +386,18 @@ public class HRegionInfo implements RegionInfo {
    * Gets the table name from the specified region name.
    * @param regionName to extract the table name from
    * @return Table name
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getTable(byte[])}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#getTable(byte[])}.
    */
   @Deprecated
-  public static TableName getTable(final byte [] regionName) {
+  public static TableName getTable(final byte[] regionName) {
     return RegionInfo.getTable(regionName);
   }
 
   /**
-   * Gets the start key from the specified region name.
-   * @param regionName
-   * @return Start key.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getStartKey(byte[])}.
+   * Gets the start key from the specified region name. n * @return Start key.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#getStartKey(byte[])}.
    */
   @Deprecated
   public static byte[] getStartKey(final byte[] regionName) throws IOException {
@@ -448,26 +405,20 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Separate elements of a regionName.
-   * @param regionName
-   * @return Array of byte[] containing tableName, startKey and id
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#parseRegionName(byte[])}.
+   * Separate elements of a regionName. n * @return Array of byte[] containing tableName, startKey
+   * and id n * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   * {@link RegionInfo#parseRegionName(byte[])}.
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [][] parseRegionName(final byte [] regionName) throws IOException {
+  public static byte[][] parseRegionName(final byte[] regionName) throws IOException {
     return RegionInfo.parseRegionName(regionName);
   }
 
   /**
-   *
-   * @param regionName
-   * @return if region name is encoded.
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#isEncodedRegionName(byte[])}.
+   * n * @return if region name is encoded. n * @deprecated As of release 2.0.0, this will be
+   * removed in HBase 3.0.0 Use
+   * {@link org.apache.hadoop.hbase.client.RegionInfo#isEncodedRegionName(byte[])}.
    */
   @Deprecated
   public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
@@ -476,7 +427,7 @@ public class HRegionInfo implements RegionInfo {
 
   /** @return the regionId */
   @Override
-  public long getRegionId(){
+  public long getRegionId() {
     return regionId;
   }
 
@@ -485,7 +436,7 @@ public class HRegionInfo implements RegionInfo {
    * @see #getRegionNameAsString()
    */
   @Override
-  public byte [] getRegionName(){
+  public byte[] getRegionName() {
     return regionName;
   }
 
@@ -517,7 +468,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   @Override
-  public synchronized byte [] getEncodedNameAsBytes() {
+  public synchronized byte[] getEncodedNameAsBytes() {
     if (this.encodedNameAsBytes == null) {
       this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
     }
@@ -528,7 +479,7 @@ public class HRegionInfo implements RegionInfo {
    * @return the startKey
    */
   @Override
-  public byte [] getStartKey(){
+  public byte[] getStartKey() {
     return startKey;
   }
 
@@ -536,18 +487,17 @@ public class HRegionInfo implements RegionInfo {
    * @return the endKey
    */
   @Override
-  public byte [] getEndKey(){
+  public byte[] getEndKey() {
     return endKey;
   }
 
   /**
-   * Get current table name of the region
-   * @return TableName
+   * Get current table name of the region n
    */
   @Override
   public TableName getTable() {
     // This method name should be getTableName but there was already a method getTableName
-    // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
+    // that returned a byte array. It is unfortunate given everywhere else, getTableName returns
     // a TableName instance.
     if (tableName == null || tableName.getName().length == 0) {
       tableName = getTable(getRegionName());
@@ -556,24 +506,21 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Returns true if the given inclusive range of rows is fully contained
-   * by this region. For example, if the region is foo,a,g and this is
-   * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
-   * ["b","z"] it will return false.
+   * Returns true if the given inclusive range of rows is fully contained by this region. For
+   * example, if the region is foo,a,g and this is passed ["b","c"] or ["a","c"] it will return
+   * true, but if this is passed ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
     if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
-      throw new IllegalArgumentException(
-      "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
-      " > " + Bytes.toStringBinary(rangeEndKey));
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(rangeStartKey)
+        + " > " + Bytes.toStringBinary(rangeEndKey));
     }
 
     boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
     boolean lastKeyInRange =
-      Bytes.compareTo(rangeEndKey, endKey) < 0 ||
-      Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
+      Bytes.compareTo(rangeEndKey, endKey) < 0 || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
 
@@ -582,9 +529,8 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRow(byte[] row) {
-    return Bytes.compareTo(row, startKey) >= 0 &&
-      (Bytes.compareTo(row, endKey) < 0 ||
-       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    return Bytes.compareTo(row, startKey) >= 0
+      && (Bytes.compareTo(row, endKey) < 0 || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
   /**
@@ -599,7 +545,7 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public boolean isMetaRegion() {
-     return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
+    return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
   }
 
   /**
@@ -633,8 +579,8 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * The parent of a region split is offline while split daughters hold
-   * references to the parent. Offlined regions are closed.
+   * The parent of a region split is offline while split daughters hold references to the parent.
+   * Offlined regions are closed.
    * @param offLine Set online/offline status.
    */
   public void setOffline(boolean offLine) {
@@ -667,14 +613,11 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public String toString() {
-    return "{ENCODED => " + getEncodedName() + ", " +
-      HConstants.NAME + " => '" + Bytes.toStringBinary(this.regionName)
-      + "', STARTKEY => '" +
-      Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
-      Bytes.toStringBinary(this.endKey) + "'" +
-      (isOffline()? ", OFFLINE => true": "") +
-      (isSplit()? ", SPLIT => true": "") +
-      ((replicaId > 0)? ", REPLICA_ID => " + replicaId : "") + "}";
+    return "{ENCODED => " + getEncodedName() + ", " + HConstants.NAME + " => '"
+      + Bytes.toStringBinary(this.regionName) + "', STARTKEY => '"
+      + Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" + Bytes.toStringBinary(this.endKey)
+      + "'" + (isOffline() ? ", OFFLINE => true" : "") + (isSplit() ? ", SPLIT => true" : "")
+      + ((replicaId > 0) ? ", REPLICA_ID => " + replicaId : "") + "}";
   }
 
   /**
@@ -691,7 +634,7 @@ public class HRegionInfo implements RegionInfo {
     if (!(o instanceof HRegionInfo)) {
       return false;
     }
-    return this.compareTo((HRegionInfo)o) == 0;
+    return this.compareTo((HRegionInfo) o) == 0;
   }
 
   /**
@@ -704,17 +647,15 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * @return Comparator to use comparing {@link KeyValue}s.
-   * @deprecated Use Region#getCellComparator().  deprecated for hbase 2.0, remove for hbase 3.0
+   * @deprecated Use Region#getCellComparator(). deprecated for hbase 2.0, remove for hbase 3.0
    */
   @Deprecated
   public KVComparator getComparator() {
-    return isMetaRegion()?
-        KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
+    return isMetaRegion() ? KeyValue.META_COMPARATOR : KeyValue.COMPARATOR;
   }
 
   /**
    * Convert a HRegionInfo to the protobuf RegionInfo
-   *
    * @return the converted RegionInfo
    */
   HBaseProtos.RegionInfo convert() {
@@ -723,12 +664,11 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * Convert a HRegionInfo to a RegionInfo
-   *
    * @param info the HRegionInfo to convert
    * @return the converted RegionInfo
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use toRegionInfo(org.apache.hadoop.hbase.client.RegionInfo)
-   *             in org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             toRegionInfo(org.apache.hadoop.hbase.client.RegionInfo) in
+   *             org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -738,12 +678,11 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * Convert a RegionInfo to a HRegionInfo
-   *
    * @param proto the RegionInfo to convert
    * @return the converted HRegionInfo
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use toRegionInfo(HBaseProtos.RegionInfo)
-   *             in org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             toRegionInfo(HBaseProtos.RegionInfo) in
+   *             org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -753,17 +692,12 @@ public class HRegionInfo implements RegionInfo {
     // RegionInfo into HRegionInfo which is what is wanted here.
     HRegionInfo hri;
     if (ri.isMetaRegion()) {
-      hri = ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID ?
-      HRegionInfo.FIRST_META_REGIONINFO :
-      new HRegionInfo(ri.getRegionId(), ri.getTable(), ri.getReplicaId());
+      hri = ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID
+        ? HRegionInfo.FIRST_META_REGIONINFO
+        : new HRegionInfo(ri.getRegionId(), ri.getTable(), ri.getReplicaId());
     } else {
-      hri = new HRegionInfo(
-        ri.getTable(),
-        ri.getStartKey(),
-        ri.getEndKey(),
-        ri.isSplit(),
-        ri.getRegionId(),
-        ri.getReplicaId());
+      hri = new HRegionInfo(ri.getTable(), ri.getStartKey(), ri.getEndKey(), ri.isSplit(),
+        ri.getRegionId(), ri.getReplicaId());
       if (proto.hasOffline()) {
         hri.setOffline(proto.getOffline());
       }
@@ -774,36 +708,36 @@ public class HRegionInfo implements RegionInfo {
   /**
    * @return This instance serialized as protobuf w/ a magic pb prefix.
    * @see #parseFrom(byte[])
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#toByteArray(RegionInfo)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#toByteArray(RegionInfo)}.
    */
   @Deprecated
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     return RegionInfo.toByteArray(this);
   }
 
   /**
-   * @return A deserialized {@link HRegionInfo}
-   * or null if we failed deserialize or passed bytes null
+   * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes
+   *         null
    * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[])}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[])}.
    */
   @Deprecated
-  public static HRegionInfo parseFromOrNull(final byte [] bytes) {
+  public static HRegionInfo parseFromOrNull(final byte[] bytes) {
     if (bytes == null) return null;
     return parseFromOrNull(bytes, 0, bytes.length);
   }
 
   /**
-   * @return A deserialized {@link HRegionInfo} or null
-   *  if we failed deserialize or passed bytes null
+   * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes
+   *         null
    * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[], int, int)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[], int, int)}.
    */
   @Deprecated
-  public static HRegionInfo parseFromOrNull(final byte [] bytes, int offset, int len) {
+  public static HRegionInfo parseFromOrNull(final byte[] bytes, int offset, int len) {
     if (bytes == null || len <= 0) return null;
     try {
       return parseFrom(bytes, offset, len);
@@ -814,30 +748,26 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * @param bytes A pb RegionInfo serialized with a pb magic prefix.
-   * @return A deserialized {@link HRegionInfo}
-   * @throws DeserializationException
-   * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[])}.
+   * @return A deserialized {@link HRegionInfo} n * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[])}.
    */
-  public static HRegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
+  public static HRegionInfo parseFrom(final byte[] bytes) throws DeserializationException {
     if (bytes == null) return null;
     return parseFrom(bytes, 0, bytes.length);
   }
 
   /**
-   * @param bytes A pb RegionInfo serialized with a pb magic prefix.
+   * @param bytes  A pb RegionInfo serialized with a pb magic prefix.
    * @param offset starting point in the byte array
-   * @param len length to read on the byte array
-   * @return A deserialized {@link HRegionInfo}
-   * @throws DeserializationException
-   * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[], int, int)}.
+   * @param len    length to read on the byte array
+   * @return A deserialized {@link HRegionInfo} n * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[], int, int)}.
    */
   @Deprecated
-  public static HRegionInfo parseFrom(final byte [] bytes, int offset, int len)
-      throws DeserializationException {
+  public static HRegionInfo parseFrom(final byte[] bytes, int offset, int len)
+    throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes, offset, len)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
@@ -854,44 +784,37 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Use this instead of {@link #toByteArray()} when writing to a stream and you want to use
-   * the pb mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what you want).
-   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
-   * @throws IOException
-   * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#toDelimitedByteArray(RegionInfo)}.
+   * Use this instead of {@link #toByteArray()} when writing to a stream and you want to use the pb
+   * mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what you want).
+   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix. n * @see
+   *         #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#toDelimitedByteArray(RegionInfo)}.
    */
   @Deprecated
-  public byte [] toDelimitedByteArray() throws IOException {
+  public byte[] toDelimitedByteArray() throws IOException {
     return RegionInfo.toDelimitedByteArray(this);
   }
 
   /**
-   * Get the descriptive name as {@link RegionState} does it but with hidden
-   * startkey optionally
-   * @param state
-   * @param conf
-   * @return descriptive string
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use RegionInfoDisplay#getDescriptiveNameFromRegionStateForDisplay(RegionState, Configuration)
-   *             over in hbase-server module.
+   * Get the descriptive name as {@link RegionState} does it but with hidden startkey optionally nn
+   * * @return descriptive string
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             RegionInfoDisplay#getDescriptiveNameFromRegionStateForDisplay(RegionState,
+   *             Configuration) over in hbase-server module.
    */
   @Deprecated
   @InterfaceAudience.Private
   public static String getDescriptiveNameFromRegionStateForDisplay(RegionState state,
-      Configuration conf) {
+    Configuration conf) {
     return RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
   }
 
   /**
-   * Get the end key for display. Optionally hide the real end key.
-   * @param hri
-   * @param conf
-   * @return the endkey
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use RegionInfoDisplay#getEndKeyForDisplay(RegionInfo, Configuration)
-   *             over in hbase-server module.
+   * Get the end key for display. Optionally hide the real end key. nn * @return the endkey
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             RegionInfoDisplay#getEndKeyForDisplay(RegionInfo, Configuration) over in
+   *             hbase-server module.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -900,13 +823,10 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Get the start key for display. Optionally hide the real start key.
-   * @param hri
-   * @param conf
-   * @return the startkey
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use RegionInfoDisplay#getStartKeyForDisplay(RegionInfo, Configuration)
-   *             over in hbase-server module.
+   * Get the start key for display. Optionally hide the real start key. nn * @return the startkey
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             RegionInfoDisplay#getStartKeyForDisplay(RegionInfo, Configuration) over in
+   *             hbase-server module.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -915,13 +835,11 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Get the region name for display. Optionally hide the start key.
-   * @param hri
-   * @param conf
-   * @return region name as String
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use RegionInfoDisplay#getRegionNameAsStringForDisplay(RegionInfo, Configuration)
-   *             over in hbase-server module.
+   * Get the region name for display. Optionally hide the start key. nn * @return region name as
+   * String
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             RegionInfoDisplay#getRegionNameAsStringForDisplay(RegionInfo, Configuration) over
+   *             in hbase-server module.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -930,13 +848,10 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Get the region name for display. Optionally hide the start key.
-   * @param hri
-   * @param conf
-   * @return region name bytes
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use RegionInfoDisplay#getRegionNameForDisplay(RegionInfo, Configuration)
-   *             over in hbase-server module.
+   * Get the region name for display. Optionally hide the start key. nn * @return region name bytes
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             RegionInfoDisplay#getRegionNameForDisplay(RegionInfo, Configuration) over in
+   *             hbase-server module.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -945,13 +860,10 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Parses an HRegionInfo instance from the passed in stream.  Presumes the HRegionInfo was
-   * serialized to the stream with {@link #toDelimitedByteArray()}
-   * @param in
-   * @return An instance of HRegionInfo.
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#parseFrom(DataInputStream)}.
+   * Parses an HRegionInfo instance from the passed in stream. Presumes the HRegionInfo was
+   * serialized to the stream with {@link #toDelimitedByteArray()} n * @return An instance of
+   * HRegionInfo. n * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   * {@link RegionInfo#parseFrom(DataInputStream)}.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -959,12 +871,12 @@ public class HRegionInfo implements RegionInfo {
     // I need to be able to move back in the stream if this is not a pb serialization so I can
     // do the Writable decoding instead.
     int pblen = ProtobufUtil.lengthOfPBMagic();
-    byte [] pbuf = new byte[pblen];
-    if (in.markSupported()) { //read it with mark()
+    byte[] pbuf = new byte[pblen];
+    if (in.markSupported()) { // read it with mark()
       in.mark(pblen);
     }
 
-    //assumption: if Writable serialization, it should be longer than pblen.
+    // assumption: if Writable serialization, it should be longer than pblen.
     in.readFully(pbuf, 0, pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
@@ -976,14 +888,13 @@ public class HRegionInfo implements RegionInfo {
   /**
    * Serializes given HRegionInfo's as a byte array. Use this instead of {@link #toByteArray()} when
    * writing to a stream and you want to use the pb mergeDelimitedFrom (w/o the delimiter, pb reads
-   * to EOF which may not be what you want). {@link #parseDelimitedFrom(byte[], int, int)} can
-   * be used to read back the instances.
+   * to EOF which may not be what you want). {@link #parseDelimitedFrom(byte[], int, int)} can be
+   * used to read back the instances.
    * @param infos HRegionInfo objects to serialize
-   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
-   * @throws IOException
-   * @see #toByteArray()
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#toDelimitedByteArray(RegionInfo...)}.
+   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix. n * @see
+   *         #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#toDelimitedByteArray(RegionInfo...)}.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -994,16 +905,16 @@ public class HRegionInfo implements RegionInfo {
   /**
    * Parses all the HRegionInfo instances from the passed in stream until EOF. Presumes the
    * HRegionInfo's were serialized to the stream with {@link #toDelimitedByteArray()}
-   * @param bytes serialized bytes
+   * @param bytes  serialized bytes
    * @param offset the start offset into the byte[] buffer
    * @param length how far we should read into the byte[] buffer
    * @return All the hregioninfos that are in the byte array. Keeps reading till we hit the end.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link RegionInfo#parseDelimitedFrom(byte[], int, int)}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link RegionInfo#parseDelimitedFrom(byte[], int, int)}.
    */
   @Deprecated
   public static List<HRegionInfo> parseDelimitedFrom(final byte[] bytes, final int offset,
-      final int length) throws IOException {
+    final int length) throws IOException {
     if (bytes == null) {
       throw new IllegalArgumentException("Can't build an object with empty bytes array");
     }
@@ -1022,12 +933,9 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Check whether two regions are adjacent
-   * @param regionA
-   * @param regionB
-   * @return true if two regions are adjacent
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#areAdjacent(RegionInfo, RegionInfo)}.
+   * Check whether two regions are adjacent nn * @return true if two regions are adjacent
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link org.apache.hadoop.hbase.client.RegionInfo#areAdjacent(RegionInfo, RegionInfo)}.
    */
   @Deprecated
   public static boolean areAdjacent(HRegionInfo regionA, HRegionInfo regionB) {

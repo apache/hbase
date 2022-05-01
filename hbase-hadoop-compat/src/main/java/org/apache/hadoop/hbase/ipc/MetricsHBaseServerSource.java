@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
@@ -25,20 +23,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
-  String AUTHORIZATION_SUCCESSES_DESC =
-      "Number of authorization successes.";
+  String AUTHORIZATION_SUCCESSES_DESC = "Number of authorization successes.";
   String AUTHORIZATION_FAILURES_NAME = "authorizationFailures";
-  String AUTHORIZATION_FAILURES_DESC =
-      "Number of authorization failures.";
+  String AUTHORIZATION_FAILURES_DESC = "Number of authorization failures.";
   String AUTHENTICATION_SUCCESSES_NAME = "authenticationSuccesses";
-  String AUTHENTICATION_SUCCESSES_DESC =
-      "Number of authentication successes.";
+  String AUTHENTICATION_SUCCESSES_DESC = "Number of authentication successes.";
   String AUTHENTICATION_FAILURES_NAME = "authenticationFailures";
-  String AUTHENTICATION_FAILURES_DESC =
-      "Number of authentication failures.";
+  String AUTHENTICATION_FAILURES_DESC = "Number of authentication failures.";
   String AUTHENTICATION_FALLBACKS_NAME = "authenticationFallbacks";
-  String AUTHENTICATION_FALLBACKS_DESC =
-      "Number of fallbacks to insecure authentication.";
+  String AUTHENTICATION_FALLBACKS_DESC = "Number of fallbacks to insecure authentication.";
   String SENT_BYTES_NAME = "sentBytes";
   String SENT_BYTES_DESC = "Number of bytes sent.";
   String RECEIVED_BYTES_NAME = "receivedBytes";
@@ -54,27 +47,26 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String TOTAL_CALL_TIME_NAME = "totalCallTime";
   String TOTAL_CALL_TIME_DESC = "Total call time, including both queued and processing time.";
   String QUEUE_SIZE_NAME = "queueSize";
-  String QUEUE_SIZE_DESC = "Number of bytes in the call queues; request has been read and " +
-    "parsed and is waiting to run or is currently being executed.";
+  String QUEUE_SIZE_DESC = "Number of bytes in the call queues; request has been read and "
+    + "parsed and is waiting to run or is currently being executed.";
   String GENERAL_QUEUE_NAME = "numCallsInGeneralQueue";
-  String GENERAL_QUEUE_DESC = "Number of calls in the general call queue; " +
-    "parsed requests waiting in scheduler to be executed";
+  String GENERAL_QUEUE_DESC = "Number of calls in the general call queue; "
+    + "parsed requests waiting in scheduler to be executed";
   String PRIORITY_QUEUE_NAME = "numCallsInPriorityQueue";
   String METAPRIORITY_QUEUE_NAME = "numCallsInMetaPriorityQueue";
   String REPLICATION_QUEUE_NAME = "numCallsInReplicationQueue";
-  String REPLICATION_QUEUE_DESC =
-      "Number of calls in the replication call queue waiting to be run";
+  String REPLICATION_QUEUE_DESC = "Number of calls in the replication call queue waiting to be run";
   String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
   String METAPRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
   String WRITE_QUEUE_NAME = "numCallsInWriteQueue";
-  String WRITE_QUEUE_DESC = "Number of calls in the write call queue; " +
-    "parsed requests waiting in scheduler to be executed";
+  String WRITE_QUEUE_DESC = "Number of calls in the write call queue; "
+    + "parsed requests waiting in scheduler to be executed";
   String READ_QUEUE_NAME = "numCallsInReadQueue";
-  String READ_QUEUE_DESC = "Number of calls in the read call queue; " +
-    "parsed requests waiting in scheduler to be executed";
+  String READ_QUEUE_DESC = "Number of calls in the read call queue; "
+    + "parsed requests waiting in scheduler to be executed";
   String SCAN_QUEUE_NAME = "numCallsInScanQueue";
-  String SCAN_QUEUE_DESC = "Number of calls in the scan call queue; " +
-    "parsed requests waiting in scheduler to be executed";
+  String SCAN_QUEUE_DESC = "Number of calls in the scan call queue; "
+    + "parsed requests waiting in scheduler to be executed";
   String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
   String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
   String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
@@ -92,16 +84,15 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_ACTIVE_SCAN_HANDLER_NAME = "numActiveScanHandler";
   String NUM_ACTIVE_SCAN_HANDLER_DESC = "Number of active scan rpc handlers.";
   String NUM_GENERAL_CALLS_DROPPED_NAME = "numGeneralCallsDropped";
-  String NUM_GENERAL_CALLS_DROPPED_DESC = "Total number of calls in general queue which " +
-    "were dropped by CoDel RPC executor";
+  String NUM_GENERAL_CALLS_DROPPED_DESC =
+    "Total number of calls in general queue which " + "were dropped by CoDel RPC executor";
   String NUM_LIFO_MODE_SWITCHES_NAME = "numLifoModeSwitches";
-  String NUM_LIFO_MODE_SWITCHES_DESC = "Total number of calls in general queue which " +
-    "were served from the tail of the queue";
+  String NUM_LIFO_MODE_SWITCHES_DESC =
+    "Total number of calls in general queue which " + "were served from the tail of the queue";
   // Direct Memory Usage metrics
   String NETTY_DM_USAGE_NAME = "nettyDirectMemoryUsage";
 
   String NETTY_DM_USAGE_DESC = "Current Netty direct memory usage.";
-
 
   void authorizationSuccess();
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,28 +40,25 @@ import org.junit.rules.ExpectedException;
 
 /**
  * Tests the HColumnDescriptor with appropriate arguments.
- *
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
- *            {@link HColumnDescriptor}.
+ *             {@link HColumnDescriptor}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 @Deprecated
 public class TestHColumnDescriptor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHColumnDescriptor.class);
+    HBaseClassTestRule.forClass(TestHColumnDescriptor.class);
 
   @Rule
   public ExpectedException expectedEx = ExpectedException.none();
+
   @Test
   public void testPb() throws DeserializationException {
-    HColumnDescriptor hcd = new HColumnDescriptor(
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-            .setInMemory(true)
-            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            .setBloomFilterType(BloomType.NONE)
-            .setCacheDataInL1(true));
+    HColumnDescriptor hcd = new HColumnDescriptor(new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+      .setInMemory(true).setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      .setBloomFilterType(BloomType.NONE).setCacheDataInL1(true));
     final int v = 123;
     hcd.setBlocksize(v);
     hcd.setTimeToLive(v);
@@ -82,7 +79,7 @@ public class TestHColumnDescriptor {
     hcd.setMobThreshold(1000L);
     hcd.setDFSReplication((short) v);
 
-    byte [] bytes = hcd.toByteArray();
+    byte[] bytes = hcd.toByteArray();
     HColumnDescriptor deserializedHcd = HColumnDescriptor.parseFrom(bytes);
     assertTrue(hcd.equals(deserializedHcd));
     assertEquals(v, hcd.getBlocksize());
@@ -134,11 +131,11 @@ public class TestHColumnDescriptor {
     // We unify the format of all values saved in the descriptor.
     // Each value is stored as bytes of string.
     String isMobString = PrettyPrinter.format(String.valueOf(isMob),
-            HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
+      HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
     String thresholdString = PrettyPrinter.format(String.valueOf(threshold),
-            HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
+      HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
     String policyString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(policy)),
-        HColumnDescriptor.getUnit(HColumnDescriptor.MOB_COMPACT_PARTITION_POLICY));
+      HColumnDescriptor.getUnit(HColumnDescriptor.MOB_COMPACT_PARTITION_POLICY));
     assertEquals(String.valueOf(isMob), isMobString);
     assertEquals(String.valueOf(threshold), thresholdString);
     assertEquals(String.valueOf(policy), policyString);
@@ -146,16 +143,11 @@ public class TestHColumnDescriptor {
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
-    /* HColumnDescriptor should have a builder style setup where setXXX/addXXX methods
-     * can be chainable together:
-     * . For example:
-     * HColumnDescriptor hcd
-     *   = new HColumnDescriptor()
-     *     .setFoo(foo)
-     *     .setBar(bar)
-     *     .setBuz(buz)
-     *
-     * This test ensures that all methods starting with "set" returns the declaring object
+    /*
+     * HColumnDescriptor should have a builder style setup where setXXX/addXXX methods can be
+     * chainable together: . For example: HColumnDescriptor hcd = new HColumnDescriptor()
+     * .setFoo(foo) .setBar(bar) .setBuz(buz) This test ensures that all methods starting with "set"
+     * returns the declaring object
      */
 
     BuilderStyleTest.assertClassesAreBuilderStyle(HColumnDescriptor.class);

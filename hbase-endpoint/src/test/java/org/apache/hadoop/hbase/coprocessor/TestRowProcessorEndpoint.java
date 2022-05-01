@@ -79,14 +79,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Verifies ProcessEndpoint works.
- * The tested RowProcessor performs two scans and a read-modify-write.
+ * Verifies ProcessEndpoint works. The tested RowProcessor performs two scans and a
+ * read-modify-write.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRowProcessorEndpoint {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRowProcessorEndpoint.class);
+    HBaseClassTestRule.forClass(TestRowProcessorEndpoint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowProcessorEndpoint.class);
 
@@ -120,7 +120,7 @@ public class TestRowProcessorEndpoint {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        RowProcessorEndpoint.class.getName());
+      RowProcessorEndpoint.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     conf.setLong("hbase.hregion.row.processor.timeout", 1000L);
     conf.setLong(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 2048);
@@ -142,9 +142,9 @@ public class TestRowProcessorEndpoint {
     table = util.createTable(TABLE, FAM);
     {
       Put put = new Put(ROW);
-      put.addColumn(FAM, A, Bytes.add(B, C));    // B, C are friends of A
+      put.addColumn(FAM, A, Bytes.add(B, C)); // B, C are friends of A
       put.addColumn(FAM, B, Bytes.add(D, E, F)); // D, E, F are friends of B
-      put.addColumn(FAM, C, G);                  // G is a friend of C
+      put.addColumn(FAM, C, G); // G is a friend of C
       table.put(put);
       rowSize = put.size();
     }
@@ -161,16 +161,15 @@ public class TestRowProcessorEndpoint {
 
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.FriendsOfFriendsProcessor processor =
-        new RowProcessorEndpoint.FriendsOfFriendsProcessor(ROW, A);
-    RowProcessorService.BlockingInterface service =
-        RowProcessorService.newBlockingStub(channel);
+      new RowProcessorEndpoint.FriendsOfFriendsProcessor(ROW, A);
+    RowProcessorService.BlockingInterface service = RowProcessorService.newBlockingStub(channel);
     ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     ProcessResponse protoResult = service.process(null, request);
     FriendsOfFriendsProcessorResponse response =
-        FriendsOfFriendsProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
+      FriendsOfFriendsProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
     Set<String> result = new HashSet<>();
     result.addAll(response.getResultList());
-    Set<String> expected = new HashSet<>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
+    Set<String> expected = new HashSet<>(Arrays.asList(new String[] { "d", "e", "f", "g" }));
     Get get = new Get(ROW);
     LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).listCells()));
     assertEquals(expected, result);
@@ -207,13 +206,12 @@ public class TestRowProcessorEndpoint {
   private int incrementCounter(Table table) throws Throwable {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.IncrementCounterProcessor processor =
-        new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
-    RowProcessorService.BlockingInterface service =
-        RowProcessorService.newBlockingStub(channel);
+      new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
+    RowProcessorService.BlockingInterface service = RowProcessorService.newBlockingStub(channel);
     ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     ProcessResponse protoResult = service.process(null, request);
-    IncCounterProcessorResponse response = IncCounterProcessorResponse
-        .parseFrom(protoResult.getRowProcessorResult());
+    IncCounterProcessorResponse response =
+      IncCounterProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
     Integer result = response.getResponse();
     return result;
   }
@@ -246,10 +244,8 @@ public class TestRowProcessorEndpoint {
     failures.set(0);
     int numThreads = 100;
     concurrentExec(new SwapRowsRunner(), numThreads);
-    LOG.debug("row keyvalues:" +
-              stringifyKvs(table.get(new Get(ROW)).listCells()));
-    LOG.debug("row2 keyvalues:" +
-              stringifyKvs(table.get(new Get(ROW2)).listCells()));
+    LOG.debug("row keyvalues:" + stringifyKvs(table.get(new Get(ROW)).listCells()));
+    LOG.debug("row2 keyvalues:" + stringifyKvs(table.get(new Get(ROW2)).listCells()));
     int failureNumber = failures.get();
     if (failureNumber > 0) {
       LOG.debug("We failed " + failureNumber + " times during test");
@@ -278,9 +274,8 @@ public class TestRowProcessorEndpoint {
   private void swapRows(Table table) throws Throwable {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.RowSwapProcessor processor =
-        new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);
-    RowProcessorService.BlockingInterface service =
-        RowProcessorService.newBlockingStub(channel);
+      new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);
+    RowProcessorService.BlockingInterface service = RowProcessorService.newBlockingStub(channel);
     ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     service.process(null, request);
   }
@@ -290,9 +285,8 @@ public class TestRowProcessorEndpoint {
     prepareTestData();
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.TimeoutProcessor processor =
-        new RowProcessorEndpoint.TimeoutProcessor(ROW);
-    RowProcessorService.BlockingInterface service =
-        RowProcessorService.newBlockingStub(channel);
+      new RowProcessorEndpoint.TimeoutProcessor(ROW);
+    RowProcessorService.BlockingInterface service = RowProcessorService.newBlockingStub(channel);
     ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     boolean exceptionCaught = false;
     try {
@@ -304,17 +298,15 @@ public class TestRowProcessorEndpoint {
   }
 
   /**
-   * This class defines two RowProcessors:
-   * IncrementCounterProcessor and FriendsOfFriendsProcessor.
-   *
-   * We define the RowProcessors as the inner class of the endpoint.
-   * So they can be loaded with the endpoint on the coprocessor.
+   * This class defines two RowProcessors: IncrementCounterProcessor and FriendsOfFriendsProcessor.
+   * We define the RowProcessors as the inner class of the endpoint. So they can be loaded with the
+   * endpoint on the coprocessor.
    */
-  public static class RowProcessorEndpoint<S extends Message,T extends Message>
-          extends BaseRowProcessorEndpoint<S,T> {
-    public static class IncrementCounterProcessor extends
-            BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
-                    IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
+  public static class RowProcessorEndpoint<S extends Message, T extends Message>
+    extends BaseRowProcessorEndpoint<S, T> {
+    public static class IncrementCounterProcessor
+      extends BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
+        IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
       int counter = 0;
       byte[] row = new byte[0];
 
@@ -346,15 +338,14 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void process(long now, HRegion region,
-          List<Mutation> mutations, WALEdit walEdit) throws IOException {
+      public void process(long now, HRegion region, List<Mutation> mutations, WALEdit walEdit)
+        throws IOException {
         // Scan current counter
         List<Cell> kvs = new ArrayList<>();
         Scan scan = new Scan(row, row);
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
-        counter = kvs.isEmpty() ? 0 :
-          Bytes.toInt(CellUtil.cloneValue(kvs.iterator().next()));
+        counter = kvs.isEmpty() ? 0 : Bytes.toInt(CellUtil.cloneValue(kvs.iterator().next()));
 
         // Assert counter value
         assertEquals(expectedCounter, counter);
@@ -363,19 +354,15 @@ public class TestRowProcessorEndpoint {
         counter += 1;
         expectedCounter += 1;
 
-
         Put p = new Put(row);
-        KeyValue kv =
-            new KeyValue(row, FAM, COUNTER, now, Bytes.toBytes(counter));
+        KeyValue kv = new KeyValue(row, FAM, COUNTER, now, Bytes.toBytes(counter));
         p.add(kv);
         mutations.add(p);
         walEdit.add(kv);
 
         // We can also inject some meta data to the walEdit
-        KeyValue metaKv = new KeyValue(
-            row, WALEdit.METAFAMILY,
-            Bytes.toBytes("I just increment counter"),
-            Bytes.toBytes(counter));
+        KeyValue metaKv = new KeyValue(row, WALEdit.METAFAMILY,
+          Bytes.toBytes("I just increment counter"), Bytes.toBytes(counter));
         walEdit.add(metaKv);
       }
 
@@ -395,7 +382,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class FriendsOfFriendsProcessor extends
-            BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
+      BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
       byte[] row = null;
       byte[] person = null;
       final Set<String> result = new HashSet<>();
@@ -419,7 +406,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public FriendsOfFriendsProcessorResponse getResult() {
         FriendsOfFriendsProcessorResponse.Builder builder =
-            FriendsOfFriendsProcessorResponse.newBuilder();
+          FriendsOfFriendsProcessorResponse.newBuilder();
         builder.addAllResult(result);
         return builder.build();
       }
@@ -430,8 +417,8 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void process(long now, HRegion region,
-          List<Mutation> mutations, WALEdit walEdit) throws IOException {
+      public void process(long now, HRegion region, List<Mutation> mutations, WALEdit walEdit)
+        throws IOException {
         List<Cell> kvs = new ArrayList<>();
         { // First scan to get friends of the person
           Scan scan = new Scan(row, row);
@@ -444,7 +431,7 @@ public class TestRowProcessorEndpoint {
         for (Cell kv : kvs) {
           byte[] friends = CellUtil.cloneValue(kv);
           for (byte f : friends) {
-            scan.addColumn(FAM, new byte[]{f});
+            scan.addColumn(FAM, new byte[] { f });
           }
         }
         doScan(region, scan, kvs);
@@ -453,7 +440,7 @@ public class TestRowProcessorEndpoint {
         result.clear();
         for (Cell kv : kvs) {
           for (byte b : CellUtil.cloneValue(kv)) {
-            result.add((char)b + "");
+            result.add((char) b + "");
           }
         }
       }
@@ -461,7 +448,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public FriendsOfFriendsProcessorRequest getRequestData() throws IOException {
         FriendsOfFriendsProcessorRequest.Builder builder =
-            FriendsOfFriendsProcessorRequest.newBuilder();
+          FriendsOfFriendsProcessorRequest.newBuilder();
         builder.setPerson(ByteStringer.wrap(person));
         builder.setRow(ByteStringer.wrap(row));
         builder.addAllResult(result);
@@ -470,8 +457,7 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void initialize(FriendsOfFriendsProcessorRequest request)
-          throws IOException {
+      public void initialize(FriendsOfFriendsProcessorRequest request) throws IOException {
         this.person = request.getPerson().toByteArray();
         this.row = request.getRow().toByteArray();
         result.clear();
@@ -479,8 +465,8 @@ public class TestRowProcessorEndpoint {
       }
     }
 
-    public static class RowSwapProcessor extends
-            BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
+    public static class RowSwapProcessor
+      extends BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
       byte[] row1 = new byte[0];
       byte[] row2 = new byte[0];
 
@@ -514,8 +500,8 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void process(long now, HRegion region,
-          List<Mutation> mutations, WALEdit walEdit) throws IOException {
+      public void process(long now, HRegion region, List<Mutation> mutations, WALEdit walEdit)
+        throws IOException {
 
         // Override the time to avoid race-condition in the unit test caused by
         // inacurate timer on some machines
@@ -541,19 +527,17 @@ public class TestRowProcessorEndpoint {
         List<List<Cell>> kvs = new ArrayList<>(2);
         kvs.add(kvs1);
         kvs.add(kvs2);
-        byte[][] rows = new byte[][]{row1, row2};
+        byte[][] rows = new byte[][] { row1, row2 };
         for (int i = 0; i < kvs.size(); ++i) {
           for (Cell kv : kvs.get(i)) {
             // Delete from the current row and add to the other row
             Delete d = new Delete(rows[i]);
-            KeyValue kvDelete =
-                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-                    kv.getTimestamp(), KeyValue.Type.Delete);
+            KeyValue kvDelete = new KeyValue(rows[i], CellUtil.cloneFamily(kv),
+              CellUtil.cloneQualifier(kv), kv.getTimestamp(), KeyValue.Type.Delete);
             d.add(kvDelete);
             Put p = new Put(rows[1 - i]);
-            KeyValue kvAdd =
-                new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-                    now, CellUtil.cloneValue(kv));
+            KeyValue kvAdd = new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv),
+              CellUtil.cloneQualifier(kv), now, CellUtil.cloneValue(kv));
             p.add(kvAdd);
             mutations.add(d);
             walEdit.add(kvDelete);
@@ -583,8 +567,8 @@ public class TestRowProcessorEndpoint {
       }
     }
 
-    public static class TimeoutProcessor extends
-            BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
+    public static class TimeoutProcessor
+      extends BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
       byte[] row = new byte[0];
 
       /**
@@ -607,8 +591,8 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void process(long now, HRegion region,
-          List<Mutation> mutations, WALEdit walEdit) throws IOException {
+      public void process(long now, HRegion region, List<Mutation> mutations, WALEdit walEdit)
+        throws IOException {
         try {
           // Sleep for a long time so it timeout
           Thread.sleep(100 * 1000L);
@@ -663,11 +647,9 @@ public class TestRowProcessorEndpoint {
         byte[] col = CellUtil.cloneQualifier(kv);
         byte[] val = CellUtil.cloneValue(kv);
         if (Bytes.equals(col, COUNTER)) {
-          out.append(Bytes.toStringBinary(col) + ":" +
-                     Bytes.toInt(val) + " ");
+          out.append(Bytes.toStringBinary(col) + ":" + Bytes.toInt(val) + " ");
         } else {
-          out.append(Bytes.toStringBinary(col) + ":" +
-                     Bytes.toStringBinary(val) + " ");
+          out.append(Bytes.toStringBinary(col) + ":" + Bytes.toStringBinary(val) + " ");
         }
       }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,28 +60,27 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestTimeRangeMapRed {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTimeRangeMapRed.class);
+    HBaseClassTestRule.forClass(TestTimeRangeMapRed.class);
 
   private final static Logger log = LoggerFactory.getLogger(TestTimeRangeMapRed.class);
-  private static final HBaseTestingUtility UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Admin admin;
 
-  private static final byte [] KEY = Bytes.toBytes("row1");
+  private static final byte[] KEY = Bytes.toBytes("row1");
   private static final NavigableMap<Long, Boolean> TIMESTAMP = new TreeMap<>();
   static {
-    TIMESTAMP.put((long)1245620000, false);
-    TIMESTAMP.put((long)1245620005, true); // include
-    TIMESTAMP.put((long)1245620010, true); // include
-    TIMESTAMP.put((long)1245620055, true); // include
-    TIMESTAMP.put((long)1245620100, true); // include
-    TIMESTAMP.put((long)1245620150, false);
-    TIMESTAMP.put((long)1245620250, false);
+    TIMESTAMP.put((long) 1245620000, false);
+    TIMESTAMP.put((long) 1245620005, true); // include
+    TIMESTAMP.put((long) 1245620010, true); // include
+    TIMESTAMP.put((long) 1245620055, true); // include
+    TIMESTAMP.put((long) 1245620100, true); // include
+    TIMESTAMP.put((long) 1245620150, false);
+    TIMESTAMP.put((long) 1245620250, false);
   }
   static final long MINSTAMP = 1245620005;
   static final long MAXSTAMP = 1245620100 + 1; // maxStamp itself is excluded. so increment it.
@@ -106,16 +105,13 @@ public class TestTimeRangeMapRed {
   }
 
   private static class ProcessTimeRangeMapper
-  extends TableMapper<ImmutableBytesWritable, MapWritable>
-  implements Configurable {
+    extends TableMapper<ImmutableBytesWritable, MapWritable> implements Configurable {
 
     private Configuration conf = null;
     private Table table = null;
 
     @Override
-    public void map(ImmutableBytesWritable key, Result result,
-        Context context)
-    throws IOException {
+    public void map(ImmutableBytesWritable key, Result result, Context context) throws IOException {
       List<Long> tsList = new ArrayList<>();
       for (Cell kv : result.listCells()) {
         tsList.add(kv.getTimestamp());
@@ -150,7 +146,7 @@ public class TestTimeRangeMapRed {
 
   @Test
   public void testTimeRangeMapRed()
-  throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
     final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
     col.setMaxVersions(Integer.MAX_VALUE);
@@ -170,8 +166,7 @@ public class TestTimeRangeMapRed {
     table.close();
   }
 
-  private void runTestOnTable()
-  throws IOException, InterruptedException, ClassNotFoundException {
+  private void runTestOnTable() throws IOException, InterruptedException, ClassNotFoundException {
     Job job = null;
     try {
       job = new Job(UTIL.getConfiguration(), "test123");
@@ -181,16 +176,15 @@ public class TestTimeRangeMapRed {
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
       scan.setMaxVersions();
-      TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
-        scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
+      TableMapReduceUtil.initTableMapperJob(TABLE_NAME, scan, ProcessTimeRangeMapper.class,
+        Text.class, Text.class, job);
       job.waitForCompletion(true);
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     } finally {
       if (job != null) {
-        FileUtil.fullyDelete(
-          new File(job.getConfiguration().get("hadoop.tmp.dir")));
+        FileUtil.fullyDelete(new File(job.getConfiguration().get("hadoop.tmp.dir")));
       }
     }
   }
@@ -200,11 +194,11 @@ public class TestTimeRangeMapRed {
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
     scan.setMaxVersions(1);
     ResultScanner scanner = table.getScanner(scan);
-    for (Result r: scanner) {
+    for (Result r : scanner) {
       for (Cell kv : r.listCells()) {
         log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(CellUtil.cloneFamily(kv))
-            + "\t" + Bytes.toString(CellUtil.cloneQualifier(kv))
-            + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(CellUtil.cloneValue(kv)));
+          + "\t" + Bytes.toString(CellUtil.cloneQualifier(kv)) + "\t" + kv.getTimestamp() + "\t"
+          + Bytes.toBoolean(CellUtil.cloneValue(kv)));
         org.junit.Assert.assertEquals(TIMESTAMP.get(kv.getTimestamp()),
           Bytes.toBoolean(CellUtil.cloneValue(kv)));
       }
@@ -213,4 +207,3 @@ public class TestTimeRangeMapRed {
   }
 
 }
-

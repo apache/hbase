@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +74,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLogRolling.class);
+    HBaseClassTestRule.forClass(TestLogRolling.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLogRolling.class);
 
@@ -87,7 +87,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     /**** configuration for testLogRollOnDatanodeDeath ****/
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
-    Configuration conf= TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     conf.setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode
@@ -109,7 +109,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
   public void testSlowSyncLogRolling() throws Exception {
     // Create the test table
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     int row = 1;
@@ -141,8 +141,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         writeData(table, row++);
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -156,6 +155,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public void close() throws IOException {
           oldWriter1.close();
         }
+
         @Override
         public void sync(boolean forceSync) throws IOException {
           try {
@@ -167,10 +167,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
           oldWriter1.sync(forceSync);
         }
+
         @Override
         public void append(Entry entry) throws IOException {
           oldWriter1.append(entry);
         }
+
         @Override
         public long getLength() {
           return oldWriter1.getLength();
@@ -197,14 +199,14 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public boolean evaluate() throws Exception {
           return log.getWriter() != newWriter1;
         }
+
         @Override
         public String explainFailure() throws Exception {
           return "Waited too long for our test writer to get rolled out";
         }
       });
 
-      assertTrue("Should have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -212,12 +214,13 @@ public class TestLogRolling extends AbstractTestLogRolling {
       // Wrap the current writer with the anonymous class below that adds 5000 ms of
       // latency to any sync on the hlog.
       // This will trip the other threshold.
-      final Writer oldWriter2 = (Writer)log.getWriter();
+      final Writer oldWriter2 = (Writer) log.getWriter();
       final Writer newWriter2 = new Writer() {
         @Override
         public void close() throws IOException {
           oldWriter2.close();
         }
+
         @Override
         public void sync(boolean forceSync) throws IOException {
           try {
@@ -229,10 +232,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
           oldWriter2.sync(forceSync);
         }
+
         @Override
         public void append(Entry entry) throws IOException {
           oldWriter2.append(entry);
         }
+
         @Override
         public long getLength() {
           return oldWriter2.getLength();
@@ -256,14 +261,14 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public boolean evaluate() throws Exception {
           return log.getWriter() != newWriter2;
         }
+
         @Override
         public String explainFailure() throws Exception {
           return "Waited too long for our test writer to get rolled out";
         }
       });
 
-      assertTrue("Should have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -273,8 +278,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         writeData(table, row++);
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
     } finally {
       table.close();
@@ -282,7 +286,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
   }
 
   void batchWriteAndWait(Table table, final FSHLog log, int start, boolean expect, int timeout)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < 10; i++) {
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", (start + i))));
       put.addColumn(HConstants.CATALOG_FAMILY, null, value);
@@ -323,7 +327,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     // Create the test table and open it
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
@@ -362,9 +366,9 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     assertTrue(
       "DataNodes " + dfsCluster.getDataNodes().size() + " default replication "
-          + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
-      dfsCluster.getDataNodes()
-          .size() >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
+        + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
+      dfsCluster.getDataNodes().size()
+          >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
 
     writeData(table, 2);
 
@@ -419,8 +423,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
   }
 
   /**
-   * Test that WAL is rolled when all data nodes in the pipeline have been restarted.
-   * @throws Exception
+   * Test that WAL is rolled when all data nodes in the pipeline have been restarted. n
    */
   @Test
   public void testLogRollOnPipelineRestart() throws Exception {
@@ -435,7 +438,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // Create the test table and open it
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
       admin.createTable(desc);
       Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
@@ -564,7 +567,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // verify that no region servers aborted
       for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
-          .getRegionServerThreads()) {
+        .getRegionServerThreads()) {
         assertFalse(rsThread.getRegionServer().isAborted());
       }
     } finally {

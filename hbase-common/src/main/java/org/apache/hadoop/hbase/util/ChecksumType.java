@@ -15,50 +15,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Checksum types. The Checksum type is a one byte number
- * that stores a representation of the checksum algorithm
- * used to encode a hfile. The ordinal of these cannot
- * change or else you risk breaking all existing HFiles out there.
+ * Checksum types. The Checksum type is a one byte number that stores a representation of the
+ * checksum algorithm used to encode a hfile. The ordinal of these cannot change or else you risk
+ * breaking all existing HFiles out there.
  */
 @InterfaceAudience.Private
 public enum ChecksumType {
 
-  NULL((byte)0) {
+  NULL((byte) 0) {
     @Override
     public String getName() {
       return "NULL";
     }
 
-    @Override public DataChecksum.Type getDataChecksumType() {
+    @Override
+    public DataChecksum.Type getDataChecksumType() {
       return DataChecksum.Type.NULL;
     }
   },
 
-  CRC32((byte)1) {
+  CRC32((byte) 1) {
     @Override
     public String getName() {
       return "CRC32";
     }
 
-    @Override public DataChecksum.Type getDataChecksumType() {
+    @Override
+    public DataChecksum.Type getDataChecksumType() {
       return DataChecksum.Type.CRC32;
     }
   },
 
-  CRC32C((byte)2) {
+  CRC32C((byte) 2) {
     @Override
     public String getName() {
       return "CRC32C";
     }
 
-    @Override public DataChecksum.Type getDataChecksumType() {
+    @Override
+    public DataChecksum.Type getDataChecksumType() {
       return DataChecksum.Type.CRC32C;
     }
   };
@@ -84,10 +85,8 @@ public enum ChecksumType {
   }
 
   /**
-   * Cannot rely on enum ordinals . They change if item is removed or moved.
-   * Do our own codes.
-   * @param b
-   * @return Type associated with passed code.
+   * Cannot rely on enum ordinals . They change if item is removed or moved. Do our own codes. n
+   * * @return Type associated with passed code.
    */
   public static ChecksumType codeToType(final byte b) {
     for (ChecksumType t : ChecksumType.values()) {
@@ -99,10 +98,8 @@ public enum ChecksumType {
   }
 
   /**
-   * Map a checksum name to a specific type.
-   * Do our own names.
-   * @param name
-   * @return Type associated with passed code.
+   * Map a checksum name to a specific type. Do our own names. n * @return Type associated with
+   * passed code.
    */
   public static ChecksumType nameToType(final String name) {
     for (ChecksumType t : ChecksumType.values()) {

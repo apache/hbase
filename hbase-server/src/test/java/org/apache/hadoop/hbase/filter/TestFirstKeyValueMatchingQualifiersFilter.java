@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestFirstKeyValueMatchingQualifiersFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFirstKeyValueMatchingQualifiersFilter.class);
+    HBaseClassTestRule.forClass(TestFirstKeyValueMatchingQualifiersFilter.class);
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -57,24 +57,19 @@ public class TestFirstKeyValueMatchingQualifiersFilter {
     // Match in first attempt
     KeyValue cell;
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_1, VAL_1);
-    assertTrue("includeAndSetFlag",
-        filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue("includeAndSetFlag", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("flagIsSetSkipToNextRow",
-        filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue("flagIsSetSkipToNextRow", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
 
     // A mismatch in first attempt and match in second attempt.
     filter.reset();
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_3, VAL_1);
     System.out.println(filter.filterCell(cell));
-    assertTrue("includeFlagIsUnset",
-        filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue("includeFlagIsUnset", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("includeAndSetFlag",
-        filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue("includeAndSetFlag", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_1, VAL_1);
-    assertTrue("flagIsSetSkipToNextRow",
-        filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue("flagIsSetSkipToNextRow", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
   }
 
 }

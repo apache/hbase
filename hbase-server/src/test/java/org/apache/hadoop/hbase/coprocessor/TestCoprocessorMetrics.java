@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,12 +83,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Testing of coprocessor metrics end-to-end.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestCoprocessorMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorMetrics.class);
+    HBaseClassTestRule.forClass(TestCoprocessorMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorMetrics.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -108,14 +108,14 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                               TableDescriptor desc, RegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // we rely on the fact that there is only 1 instance of our MasterObserver
       this.start = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                TableDescriptor desc, RegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
       if (this.start > 0) {
         long time = EnvironmentEdgeManager.currentTime() - start;
         LOG.info("Create table took: " + time);
@@ -126,10 +126,9 @@ public class TestCoprocessorMetrics {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       if (env instanceof MasterCoprocessorEnvironment) {
-        MetricRegistry registry =
-            ((MasterCoprocessorEnvironment) env).getMetricRegistryForMaster();
+        MetricRegistry registry = ((MasterCoprocessorEnvironment) env).getMetricRegistryForMaster();
 
-        createTableTimer  = registry.timer("CreateTable");
+        createTableTimer = registry.timer("CreateTable");
       }
     }
 
@@ -142,18 +141,19 @@ public class TestCoprocessorMetrics {
   /**
    * RegionServerObserver that has a Counter for rollWAL requests.
    */
-  public static class CustomRegionServerObserver implements RegionServerCoprocessor,
-      RegionServerObserver {
+  public static class CustomRegionServerObserver
+    implements RegionServerCoprocessor, RegionServerObserver {
     /** This is the Counter metric object to keep track of the current count across invocations */
     private Counter rollWALCounter;
 
-    @Override public Optional<RegionServerObserver> getRegionServerObserver() {
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
       return Optional.of(this);
     }
 
     @Override
     public void postRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       // Increment the Counter whenever the coprocessor is called
       rollWALCounter.increment();
     }
@@ -162,7 +162,7 @@ public class TestCoprocessorMetrics {
     public void start(CoprocessorEnvironment env) throws IOException {
       if (env instanceof RegionServerCoprocessorEnvironment) {
         MetricRegistry registry =
-            ((RegionServerCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+          ((RegionServerCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
 
         if (rollWALCounter == null) {
           rollWALCounter = registry.counter("rollWALRequests");
@@ -179,8 +179,7 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-                             RegionInfo info, WALKey logKey,
-                             WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       walEditsCount.increment();
     }
 
@@ -188,7 +187,7 @@ public class TestCoprocessorMetrics {
     public void start(CoprocessorEnvironment env) throws IOException {
       if (env instanceof WALCoprocessorEnvironment) {
         MetricRegistry registry =
-            ((WALCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+          ((WALCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
 
         if (walEditsCount == null) {
           walEditsCount = registry.counter("walEditsCount");
@@ -196,7 +195,8 @@ public class TestCoprocessorMetrics {
       }
     }
 
-    @Override public Optional<WALObserver> getWALObserver() {
+    @Override
+    public Optional<WALObserver> getWALObserver() {
       return Optional.of(this);
     }
   }
@@ -209,7 +209,7 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
-                         List<Cell> results) throws IOException {
+      List<Cell> results) throws IOException {
       preGetCounter.increment();
     }
 
@@ -222,7 +222,7 @@ public class TestCoprocessorMetrics {
     public void start(CoprocessorEnvironment env) throws IOException {
       if (env instanceof RegionCoprocessorEnvironment) {
         MetricRegistry registry =
-            ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+          ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
 
         if (preGetCounter == null) {
           preGetCounter = registry.counter("preGetRequests");
@@ -243,7 +243,7 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void mutateRows(RpcController controller, MutateRowsRequest request,
-                           RpcCallback<MutateRowsResponse> done) {
+      RpcCallback<MutateRowsResponse> done) {
       long start = System.nanoTime();
       super.mutateRows(controller, request, done);
       endpointExecution.updateNanos(System.nanoTime() - start);
@@ -255,7 +255,7 @@ public class TestCoprocessorMetrics {
 
       if (env instanceof RegionCoprocessorEnvironment) {
         MetricRegistry registry =
-            ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+          ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
 
         if (endpointExecution == null) {
           endpointExecution = registry.timer("EndpointExecution");
@@ -268,12 +268,10 @@ public class TestCoprocessorMetrics {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // inject master, regionserver and WAL coprocessors
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        CustomMasterObserver.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CustomMasterObserver.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        CustomRegionServerObserver.class.getName());
-    conf.set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-        CustomWALObserver.class.getName());
+      CustomRegionServerObserver.class.getName());
+    conf.set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY, CustomWALObserver.class.getName());
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
     UTIL.startMiniCluster();
   }
@@ -286,7 +284,7 @@ public class TestCoprocessorMetrics {
   @Before
   public void setup() throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       for (HTableDescriptor htd : admin.listTables()) {
         UTIL.deleteTable(htd.getTableName());
       }
@@ -296,23 +294,22 @@ public class TestCoprocessorMetrics {
   @Test
   public void testMasterObserver() throws IOException {
     // Find out the MetricRegistry used by the CP using the global registries
-    MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForMasterCoprocessor(
-        CustomMasterObserver.class.getName());
-    Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+    MetricRegistryInfo info = MetricsCoprocessor
+      .createRegistryInfoForMasterCoprocessor(CustomMasterObserver.class.getName());
+    Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
     assertTrue(registry.isPresent());
 
     Optional<Metric> metric = registry.get().get("CreateTable");
     assertTrue(metric.isPresent());
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
 
-      Timer createTableTimer = (Timer)metric.get();
+      Timer createTableTimer = (Timer) metric.get();
       long prevCount = createTableTimer.getHistogram().getCount();
       LOG.info("Creating table");
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
+      admin.createTable(new HTableDescriptor(TableName.valueOf(name.getMethodName()))
+        .addFamily(new HColumnDescriptor("foo")));
 
       assertEquals(1, createTableTimer.getHistogram().getCount() - prevCount);
     }
@@ -321,44 +318,43 @@ public class TestCoprocessorMetrics {
   @Test
   public void testRegionServerObserver() throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       LOG.info("Rolling WALs");
       admin.rollWALWriter(UTIL.getMiniHBaseCluster().getServerHoldingMeta());
     }
 
     // Find out the MetricRegistry used by the CP using the global registries
-    MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForRSCoprocessor(
-        CustomRegionServerObserver.class.getName());
+    MetricRegistryInfo info = MetricsCoprocessor
+      .createRegistryInfoForRSCoprocessor(CustomRegionServerObserver.class.getName());
 
-    Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+    Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
     assertTrue(registry.isPresent());
 
     Optional<Metric> metric = registry.get().get("rollWALRequests");
     assertTrue(metric.isPresent());
 
-    Counter rollWalRequests = (Counter)metric.get();
+    Counter rollWalRequests = (Counter) metric.get();
     assertEquals(1, rollWalRequests.getCount());
   }
 
   @Test
   public void testWALObserver() throws IOException {
     // Find out the MetricRegistry used by the CP using the global registries
-    MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForWALCoprocessor(
-        CustomWALObserver.class.getName());
+    MetricRegistryInfo info =
+      MetricsCoprocessor.createRegistryInfoForWALCoprocessor(CustomWALObserver.class.getName());
 
-    Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+    Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
     assertTrue(registry.isPresent());
 
     Optional<Metric> metric = registry.get().get("walEditsCount");
     assertTrue(metric.isPresent());
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(TableName.valueOf(name.getMethodName()))
+        .addFamily(new HColumnDescriptor("foo")));
 
-      Counter rollWalRequests = (Counter)metric.get();
+      Counter rollWalRequests = (Counter) metric.get();
       long prevCount = rollWalRequests.getCount();
       assertTrue(prevCount > 0);
 
@@ -375,16 +371,16 @@ public class TestCoprocessorMetrics {
    */
   private void assertPreGetRequestsCounter(Class<?> coprocClass) {
     // Find out the MetricRegistry used by the CP using the global registries
-    MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForRegionCoprocessor(
-        coprocClass.getName());
+    MetricRegistryInfo info =
+      MetricsCoprocessor.createRegistryInfoForRegionCoprocessor(coprocClass.getName());
 
-    Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+    Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
     assertTrue(registry.isPresent());
 
     Optional<Metric> metric = registry.get().get("preGetRequests");
     assertTrue(metric.isPresent());
 
-    Counter preGetRequests = (Counter)metric.get();
+    Counter preGetRequests = (Counter) metric.get();
     assertEquals(2, preGetRequests.getCount());
   }
 
@@ -392,12 +388,10 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverSingleRegion() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -411,20 +405,18 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverMultiRegion() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionObserver.class.getName()), new byte[][] { foo }); // create with
+                                                                                      // 2 regions
       try (Table table = connection.getTable(tableName);
-           RegionLocator locator = connection.getRegionLocator(tableName)) {
+        RegionLocator locator = connection.getRegionLocator(tableName)) {
         table.get(new Get(bar));
         table.get(new Get(foo)); // 2 gets to 2 separate regions
         assertEquals(2, locator.getAllRegionLocations().size());
         assertNotEquals(locator.getRegionLocation(bar).getRegionInfo(),
-            locator.getRegionLocation(foo).getRegionInfo());
+          locator.getRegionLocation(foo).getRegionInfo());
       }
     }
 
@@ -436,19 +428,15 @@ public class TestCoprocessorMetrics {
     final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
     final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName1)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
-      admin.createTable(
-          new HTableDescriptor(tableName2)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName1).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionObserver.class.getName()));
+      admin.createTable(new HTableDescriptor(tableName2).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table1 = connection.getTable(tableName1);
-           Table table2 = connection.getTable(tableName2)) {
+        Table table2 = connection.getTable(tableName2)) {
         table1.get(new Get(bar));
         table2.get(new Get(foo)); // 2 gets to 2 separate tables
       }
@@ -460,13 +448,11 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverMultiCoprocessor() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region. We add two different coprocessors
-              .addCoprocessor(CustomRegionObserver.class.getName())
-              .addCoprocessor(CustomRegionObserver2.class.getName()));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region. We add two different coprocessors
+        .addCoprocessor(CustomRegionObserver.class.getName())
+        .addCoprocessor(CustomRegionObserver2.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -482,13 +468,11 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverAfterRegionClosed() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionObserver.class.getName()), new byte[][] { foo }); // create with
+                                                                                      // 2 regions
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -503,7 +487,7 @@ public class TestCoprocessorMetrics {
 
         HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(loc.getServerName());
         UTIL.waitFor(30000,
-            () -> server.getOnlineRegion(loc.getRegionInfo().getRegionName()) == null);
+          () -> server.getOnlineRegion(loc.getRegionInfo().getRegionName()) == null);
         assertNull(server.getOnlineRegion(loc.getRegionInfo().getRegionName()));
       }
 
@@ -513,11 +497,11 @@ public class TestCoprocessorMetrics {
       // close the table
       admin.disableTable(tableName);
 
-      MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForRegionCoprocessor(
-          CustomRegionObserver.class.getName());
+      MetricRegistryInfo info = MetricsCoprocessor
+        .createRegistryInfoForRegionCoprocessor(CustomRegionObserver.class.getName());
 
       // ensure that MetricRegistry is deleted
-      Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+      Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
       assertFalse(registry.isPresent());
     }
   }
@@ -526,41 +510,39 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverEndpoint() throws IOException, ServiceException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionEndpoint.class.getName()));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
+        // add the coprocessor for the region
+        .addCoprocessor(CustomRegionEndpoint.class.getName()));
 
       try (Table table = connection.getTable(tableName)) {
         List<Mutation> mutations = Lists.newArrayList(new Put(foo), new Put(bar));
         MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
 
         for (Mutation mutation : mutations) {
-          mrmBuilder.addMutationRequest(ProtobufUtil.toMutation(
-              ClientProtos.MutationProto.MutationType.PUT, mutation));
+          mrmBuilder.addMutationRequest(
+            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
         }
 
         CoprocessorRpcChannel channel = table.coprocessorService(bar);
         MultiRowMutationService.BlockingInterface service =
-            MultiRowMutationService.newBlockingStub(channel);
+          MultiRowMutationService.newBlockingStub(channel);
         MutateRowsRequest mrm = mrmBuilder.build();
         service.mutateRows(null, mrm);
       }
     }
 
     // Find out the MetricRegistry used by the CP using the global registries
-    MetricRegistryInfo info = MetricsCoprocessor.createRegistryInfoForRegionCoprocessor(
-        CustomRegionEndpoint.class.getName());
+    MetricRegistryInfo info = MetricsCoprocessor
+      .createRegistryInfoForRegionCoprocessor(CustomRegionEndpoint.class.getName());
 
-    Optional<MetricRegistry> registry =  MetricRegistries.global().get(info);
+    Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
     assertTrue(registry.isPresent());
 
     Optional<Metric> metric = registry.get().get("EndpointExecution");
     assertTrue(metric.isPresent());
 
-    Timer endpointExecutions = (Timer)metric.get();
+    Timer endpointExecutions = (Timer) metric.get();
     assertEquals(1, endpointExecutions.getHistogram().getCount());
   }
 }

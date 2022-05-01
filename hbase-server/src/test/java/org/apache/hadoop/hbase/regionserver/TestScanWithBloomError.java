@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,19 +58,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test a multi-column scanner when there is a Bloom filter false-positive.
- * This is needed for the multi-column Bloom filter optimization.
+ * Test a multi-column scanner when there is a Bloom filter false-positive. This is needed for the
+ * multi-column Bloom filter optimization.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestScanWithBloomError {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanWithBloomError.class);
+    HBaseClassTestRule.forClass(TestScanWithBloomError.class);
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestScanWithBloomError.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScanWithBloomError.class);
 
   private static final String TABLE_NAME = "ScanWithBloomError";
   private static final String FAMILY = "myCF";
@@ -100,7 +99,7 @@ public class TestScanWithBloomError {
   }
 
   @Before
-  public void setUp() throws IOException{
+  public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
     conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
@@ -109,31 +108,27 @@ public class TestScanWithBloomError {
   @Test
   public void testThreeStoreFiles() throws IOException {
     region = TEST_UTIL.createTestRegion(TABLE_NAME,
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(Compression.Algorithm.GZ)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(TestMultiColumnScanner.MAX_VERSIONS));
-    createStoreFile(new int[] {1, 2, 6});
-    createStoreFile(new int[] {1, 2, 3, 7});
-    createStoreFile(new int[] {1, 9});
-    scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
+      new HColumnDescriptor(FAMILY).setCompressionType(Compression.Algorithm.GZ)
+        .setBloomFilterType(bloomType).setMaxVersions(TestMultiColumnScanner.MAX_VERSIONS));
+    createStoreFile(new int[] { 1, 2, 6 });
+    createStoreFile(new int[] { 1, 2, 3, 7 });
+    createStoreFile(new int[] { 1, 9 });
+    scanColSet(new int[] { 1, 4, 6, 7 }, new int[] { 1, 6, 7 });
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  private void scanColSet(int[] colSet, int[] expectedResultCols)
-      throws IOException {
+  private void scanColSet(int[] colSet, int[] expectedResultCols) throws IOException {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
     Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
     addColumnSetToScan(scan, colSet);
     RegionScannerImpl scanner = region.getScanner(scan);
     KeyValueHeap storeHeap = scanner.storeHeap;
     assertEquals(0, storeHeap.getHeap().size());
-    StoreScanner storeScanner =
-        (StoreScanner) storeHeap.getCurrentForTesting();
+    StoreScanner storeScanner = (StoreScanner) storeHeap.getCurrentForTesting();
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    List<StoreFileScanner> scanners = (List<StoreFileScanner>)
-        (List) storeScanner.getAllScannersForTesting();
+    List<StoreFileScanner> scanners =
+      (List<StoreFileScanner>) (List) storeScanner.getAllScannersForTesting();
 
     // Sort scanners by their HFile's modification time.
     Collections.sort(scanners, new Comparator<StoreFileScanner>() {
@@ -156,13 +151,12 @@ public class TestScanWithBloomError {
     for (StoreFileScanner sfScanner : scanners)
       lastStoreFileReader = sfScanner.getReader();
 
-    new HFilePrettyPrinter(conf).run(new String[]{ "-m", "-p", "-f",
-        lastStoreFileReader.getHFileReader().getPath().toString()});
+    new HFilePrettyPrinter(conf).run(
+      new String[] { "-m", "-p", "-f", lastStoreFileReader.getHFileReader().getPath().toString() });
 
     // Disable Bloom filter for the last store file. The disabled Bloom filter
     // will always return "true".
-    LOG.info("Disabling Bloom filter for: "
-        + lastStoreFileReader.getHFileReader().getName());
+    LOG.info("Disabling Bloom filter for: " + lastStoreFileReader.getHFileReader().getName());
     lastStoreFileReader.disableBloomFilterForTesting();
 
     List<Cell> allResults = new ArrayList<>();
@@ -179,22 +173,19 @@ public class TestScanWithBloomError {
     for (Cell kv : allResults) {
       String qual = Bytes.toString(CellUtil.cloneQualifier(kv));
       assertTrue(qual.startsWith(QUALIFIER_PREFIX));
-      actualIds.add(Integer.valueOf(qual.substring(
-          QUALIFIER_PREFIX.length())));
+      actualIds.add(Integer.valueOf(qual.substring(QUALIFIER_PREFIX.length())));
     }
     List<Integer> expectedIds = new ArrayList<>();
     for (int expectedId : expectedResultCols)
       expectedIds.add(expectedId);
 
-    LOG.info("Column ids returned: " + actualIds + ", expected: "
-        + expectedIds);
+    LOG.info("Column ids returned: " + actualIds + ", expected: " + expectedIds);
     assertEquals(expectedIds.toString(), actualIds.toString());
   }
 
   private void addColumnSetToScan(Scan scan, int[] colIds) {
     for (int colId : colIds) {
-      scan.addColumn(FAMILY_BYTES,
-          Bytes.toBytes(qualFromId(colId)));
+      scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualFromId(colId)));
     }
   }
 
@@ -202,21 +193,18 @@ public class TestScanWithBloomError {
     return QUALIFIER_PREFIX + colId;
   }
 
-  private void createStoreFile(int[] colIds)
-      throws IOException {
+  private void createStoreFile(int[] colIds) throws IOException {
     Put p = new Put(ROW_BYTES);
     for (int colId : colIds) {
       long ts = Long.MAX_VALUE;
       String qual = qualFromId(colId);
       allColIds.add(colId);
-      KeyValue kv = KeyValueTestUtil.create(ROW, FAMILY,
-          qual, ts, TestMultiColumnScanner.createValue(ROW, qual, ts));
+      KeyValue kv = KeyValueTestUtil.create(ROW, FAMILY, qual, ts,
+        TestMultiColumnScanner.createValue(ROW, qual, ts));
       p.add(kv);
     }
     region.put(p);
     region.flush(true);
   }
 
-
 }
-

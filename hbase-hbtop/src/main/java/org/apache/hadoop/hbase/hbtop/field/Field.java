@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.hbtop.field;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents fields that are displayed in the top screen.
  */
@@ -34,8 +33,7 @@ public enum Field {
   REGION("REGION", "Encoded Region Name", false, true, FieldValueType.STRING),
   REGION_SERVER("RS", "Short Region Server Name", true, true, FieldValueType.STRING),
   LONG_REGION_SERVER("LRS", "Long Region Server Name", true, true, FieldValueType.STRING),
-  REQUEST_COUNT_PER_SECOND("#REQ/S", "Request Count per second", false, false,
-    FieldValueType.LONG),
+  REQUEST_COUNT_PER_SECOND("#REQ/S", "Request Count per second", false, false, FieldValueType.LONG),
   READ_REQUEST_COUNT_PER_SECOND("#READ/S", "Read Request Count per second", false, false,
     FieldValueType.LONG),
   FILTERED_READ_REQUEST_COUNT_PER_SECOND("#FREAD/S", "Filtered Read Request Count per second",
@@ -49,8 +47,7 @@ public enum Field {
   MEM_STORE_SIZE("MEMSTORE", "MemStore Size", false, false, FieldValueType.SIZE),
   LOCALITY("LOCALITY", "Block Locality", false, false, FieldValueType.FLOAT),
   START_KEY("SKEY", "Start Key", true, true, FieldValueType.STRING),
-  COMPACTING_CELL_COUNT("#COMPingCELL", "Compacting Cell Count", false, false,
-    FieldValueType.LONG),
+  COMPACTING_CELL_COUNT("#COMPingCELL", "Compacting Cell Count", false, false, FieldValueType.LONG),
   COMPACTED_CELL_COUNT("#COMPedCELL", "Compacted Cell Count", false, false, FieldValueType.LONG),
   COMPACTION_PROGRESS("%COMP", "Compaction Progress", false, false, FieldValueType.PERCENT),
   LAST_MAJOR_COMPACTION_TIME("LASTMCOMP", "Last Major Compaction Time", false, true,

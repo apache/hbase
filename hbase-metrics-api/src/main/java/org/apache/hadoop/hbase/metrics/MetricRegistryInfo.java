@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
-
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HBase Metrics are grouped in different MetricRegistry'ies. All metrics that correspond to a
- * subcomponent (like RPC, GC, WAL) are managed in a single MetricRegistry.
- * This class holds the name and description and JMX related context names for such group of
- * metrics.
+ * subcomponent (like RPC, GC, WAL) are managed in a single MetricRegistry. This class holds the
+ * name and description and JMX related context names for such group of metrics.
  */
 @InterfaceAudience.Private
 public class MetricRegistryInfo {
@@ -37,12 +34,8 @@ public class MetricRegistryInfo {
   protected final String metricsJmxContext;
   protected final boolean existingSource;
 
-  public MetricRegistryInfo(
-      String metricsName,
-      String metricsDescription,
-      String metricsJmxContext,
-      String metricsContext,
-      boolean existingSource) {
+  public MetricRegistryInfo(String metricsName, String metricsDescription, String metricsJmxContext,
+    String metricsContext, boolean existingSource) {
     this.metricsName = metricsName;
     this.metricsDescription = metricsDescription;
     this.metricsContext = metricsContext;
@@ -51,9 +44,8 @@ public class MetricRegistryInfo {
   }
 
   /**
-   * Get the metrics context.  For hadoop metrics2 system this is usually an all lowercased string.
+   * Get the metrics context. For hadoop metrics2 system this is usually an all lowercased string.
    * eg. regionserver, master, thriftserver
-   *
    * @return The string context used to register this source to hadoop's metrics2 system.
    */
   public String getMetricsContext() {
@@ -68,16 +60,15 @@ public class MetricRegistryInfo {
   }
 
   /**
-   * Get the name of the context in JMX that this source will be exposed through.
-   * This is in ObjectName format. With the default context being Hadoop -&gt; HBase
+   * Get the name of the context in JMX that this source will be exposed through. This is in
+   * ObjectName format. With the default context being Hadoop -&gt; HBase
    */
   public String getMetricsJmxContext() {
     return metricsJmxContext;
   }
 
   /**
-   * Get the name of the metrics that are being exported by this source.
-   * Eg. IPC, GC, WAL
+   * Get the name of the metrics that are being exported by this source. Eg. IPC, GC, WAL
    */
   public String getMetricsName() {
     return metricsName;
@@ -102,11 +93,7 @@ public class MetricRegistryInfo {
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder()
-        .append(metricsName)
-        .append(metricsDescription)
-        .append(metricsContext)
-        .append(metricsJmxContext)
-        .toHashCode();
+    return new HashCodeBuilder().append(metricsName).append(metricsDescription)
+      .append(metricsContext).append(metricsJmxContext).toHashCode();
   }
 }

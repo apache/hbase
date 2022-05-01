@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +18,26 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
-
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.BasicParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -32,24 +45,10 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.MissingOptionException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 /**
- * A job with a just a map phase to count rows. Map outputs table rows IF the
- * input row has columns that have content.
+ * A job with a just a map phase to count rows. Map outputs table rows IF the input row has columns
+ * that have content.
  */
 @InterfaceAudience.Public
 public class RowCounter extends AbstractHBaseTool {
@@ -77,25 +76,23 @@ public class RowCounter extends AbstractHBaseTool {
   /**
    * Mapper that runs the count.
    */
-  static class RowCounterMapper
-  extends TableMapper<ImmutableBytesWritable, Result> {
+  static class RowCounterMapper extends TableMapper<ImmutableBytesWritable, Result> {
 
     /** Counter enumeration to count the actual rows. */
-    public static enum Counters {ROWS}
+    public static enum Counters {
+      ROWS
+    }
 
     /**
      * Maps the data.
-     *
-     * @param row  The current table row key.
+     * @param row     The current table row key.
      * @param values  The columns.
-     * @param context  The current context.
+     * @param context The current context.
      * @throws IOException When something is broken with the data.
      * @see org.apache.hadoop.mapreduce.Mapper#map(Object, Object, Context)
      */
     @Override
-    public void map(ImmutableBytesWritable row, Result values,
-      Context context)
-    throws IOException {
+    public void map(ImmutableBytesWritable row, Result values, Context context) throws IOException {
       // Count every row containing data, whether it's in qualifiers or values
       context.getCounter(Counters.ROWS).increment(1);
     }
@@ -103,8 +100,7 @@ public class RowCounter extends AbstractHBaseTool {
 
   /**
    * Sets up the actual job.
-   *
-   * @param conf  The current configuration.
+   * @param conf The current configuration.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
@@ -125,30 +121,28 @@ public class RowCounter extends AbstractHBaseTool {
       }
     }
 
-    if(this.expectedCount >= 0) {
+    if (this.expectedCount >= 0) {
       conf.setLong(EXPECTED_COUNT_KEY, this.expectedCount);
     }
 
     scan.setTimeRange(startTime, endTime);
     job.setOutputFormatClass(NullOutputFormat.class);
-    TableMapReduceUtil.initTableMapperJob(tableName, scan,
-      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    TableMapReduceUtil.initTableMapperJob(tableName, scan, RowCounterMapper.class,
+      ImmutableBytesWritable.class, Result.class, job);
     job.setNumReduceTasks(0);
     return job;
   }
 
   /**
    * Sets up the actual job.
-   *
-   * @param conf  The current configuration.
-   * @param args  The command line parameters.
+   * @param conf The current configuration.
+   * @param args The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    * @deprecated as of release 2.3.0. Will be removed on 4.0.0. Please use main method instead.
    */
   @Deprecated
-  public static Job createSubmittableJob(Configuration conf, String[] args)
-    throws IOException {
+  public static Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
     String tableName = args[0];
     List<MultiRowRangeFilter.RowRange> rowRangeList = null;
     long startTime = 0;
@@ -166,7 +160,7 @@ public class RowCounter extends AbstractHBaseTool {
       if (args[i].startsWith(rangeSwitch)) {
         try {
           rowRangeList = parseRowRangeParameter(
-            args[i].substring(args[1].indexOf(rangeSwitch)+rangeSwitch.length()));
+            args[i].substring(args[1].indexOf(rangeSwitch) + rangeSwitch.length()));
         } catch (IllegalArgumentException e) {
           return null;
         }
@@ -206,60 +200,55 @@ public class RowCounter extends AbstractHBaseTool {
 
         if (StringUtils.isBlank(qualifier)) {
           scan.addFamily(Bytes.toBytes(family));
-        }
-        else {
+        } else {
           scan.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier));
         }
       }
     }
     scan.setTimeRange(startTime, endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
     job.setOutputFormatClass(NullOutputFormat.class);
-    TableMapReduceUtil.initTableMapperJob(tableName, scan,
-      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    TableMapReduceUtil.initTableMapperJob(tableName, scan, RowCounterMapper.class,
+      ImmutableBytesWritable.class, Result.class, job);
     job.setNumReduceTasks(0);
     return job;
   }
 
   /**
-   * Prints usage without error message.
-   * Note that we don't document --expected-count, because it's intended for test.
+   * Prints usage without error message. Note that we don't document --expected-count, because it's
+   * intended for test.
    */
   private static void printUsage(String errorMessage) {
     System.err.println("ERROR: " + errorMessage);
-    System.err.println("Usage: hbase rowcounter [options] <tablename> "
-      + "[--starttime=<start> --endtime=<end>] "
-      + "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
+    System.err.println(
+      "Usage: hbase rowcounter [options] <tablename> " + "[--starttime=<start> --endtime=<end>] "
+        + "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
     System.err.println("For performance consider the following options:\n"
-      + "-Dhbase.client.scanner.caching=100\n"
-      + "-Dmapreduce.map.speculative=false");
+      + "-Dhbase.client.scanner.caching=100\n" + "-Dmapreduce.map.speculative=false");
   }
 
   private static List<MultiRowRangeFilter.RowRange> parseRowRangeParameter(String arg) {
     final List<String> rangesSplit = Splitter.on(";").splitToList(arg);
     final List<MultiRowRangeFilter.RowRange> rangeList = new ArrayList<>();
     for (String range : rangesSplit) {
-      if(range!=null && !range.isEmpty()) {
+      if (range != null && !range.isEmpty()) {
         List<String> startEnd = Splitter.on(",").splitToList(range);
         if (startEnd.size() != 2 || startEnd.get(1).contains(",")) {
           throw new IllegalArgumentException("Wrong range specification: " + range);
         }
         String startKey = startEnd.get(0);
         String endKey = startEnd.get(1);
-        rangeList.add(new MultiRowRangeFilter.RowRange(Bytes.toBytesBinary(startKey),
-            true, Bytes.toBytesBinary(endKey), false));
+        rangeList.add(new MultiRowRangeFilter.RowRange(Bytes.toBytesBinary(startKey), true,
+          Bytes.toBytesBinary(endKey), false));
       }
     }
     return rangeList;
   }
 
   /**
-   * Sets filter {@link FilterBase} to the {@link Scan} instance.
-   * If provided rowRangeList contains more than one element,
-   * method sets filter which is instance of {@link MultiRowRangeFilter}.
-   * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}.
-   * If rowRangeList contains exactly one element, startRow and stopRow are set to the scan.
-   * @param scan
-   * @param rowRangeList
+   * Sets filter {@link FilterBase} to the {@link Scan} instance. If provided rowRangeList contains
+   * more than one element, method sets filter which is instance of {@link MultiRowRangeFilter}.
+   * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
+   * contains exactly one element, startRow and stopRow are set to the scan. nn
    */
   private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList) {
     final int size = rowRangeList == null ? 0 : rowRangeList.size();
@@ -268,8 +257,8 @@ public class RowCounter extends AbstractHBaseTool {
     }
     if (size == 1) {
       MultiRowRangeFilter.RowRange range = rowRangeList.get(0);
-      scan.setStartRow(range.getStartRow()); //inclusive
-      scan.setStopRow(range.getStopRow());   //exclusive
+      scan.setStartRow(range.getStartRow()); // inclusive
+      scan.setStopRow(range.getStopRow()); // exclusive
     } else if (size > 1) {
       scan.setFilter(new MultiRowRangeFilter(rowRangeList));
     }
@@ -281,13 +270,13 @@ public class RowCounter extends AbstractHBaseTool {
     footerBuilder.append("For performance, consider the following configuration properties:\n");
     footerBuilder.append("-Dhbase.client.scanner.caching=100\n");
     footerBuilder.append("-Dmapreduce.map.speculative=false\n");
-    printUsage("hbase rowcounter <tablename> [options] [<column1> <column2>...]",
-        "Options:", footerBuilder.toString());
+    printUsage("hbase rowcounter <tablename> [options] [<column1> <column2>...]", "Options:",
+      footerBuilder.toString());
   }
 
   @Override
   protected void printUsage(final String usageStr, final String usageHeader,
-      final String usageFooter) {
+    final String usageFooter) {
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.setWidth(120);
     helpFormatter.setOptionComparator(new AbstractHBaseTool.OptionsOrderComparator());
@@ -297,15 +286,15 @@ public class RowCounter extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
-    Option startTimeOption = Option.builder(null).valueSeparator('=').hasArg(true).
-        desc("starting time filter to start counting rows from.").longOpt(OPT_START_TIME).build();
-    Option endTimeOption = Option.builder(null).valueSeparator('=').hasArg(true).
-        desc("end time filter limit, to only count rows up to this timestamp.").
-        longOpt(OPT_END_TIME).build();
-    Option rangeOption = Option.builder(null).valueSeparator('=').hasArg(true).
-        desc("[startKey],[endKey][;[startKey],[endKey]...]]").longOpt(OPT_RANGE).build();
-    Option expectedOption = Option.builder(null).valueSeparator('=').hasArg(true).
-        desc("expected number of rows to be count.").longOpt(OPT_EXPECTED_COUNT).build();
+    Option startTimeOption = Option.builder(null).valueSeparator('=').hasArg(true)
+      .desc("starting time filter to start counting rows from.").longOpt(OPT_START_TIME).build();
+    Option endTimeOption = Option.builder(null).valueSeparator('=').hasArg(true)
+      .desc("end time filter limit, to only count rows up to this timestamp.").longOpt(OPT_END_TIME)
+      .build();
+    Option rangeOption = Option.builder(null).valueSeparator('=').hasArg(true)
+      .desc("[startKey],[endKey][;[startKey],[endKey]...]]").longOpt(OPT_RANGE).build();
+    Option expectedOption = Option.builder(null).valueSeparator('=').hasArg(true)
+      .desc("expected number of rows to be count.").longOpt(OPT_EXPECTED_COUNT).build();
     addOption(startTimeOption);
     addOption(endTimeOption);
     addOption(rangeOption);
@@ -313,28 +302,31 @@ public class RowCounter extends AbstractHBaseTool {
   }
 
   @Override
-  protected void processOptions(CommandLine cmd) throws IllegalArgumentException{
+  protected void processOptions(CommandLine cmd) throws IllegalArgumentException {
     this.tableName = cmd.getArgList().get(0);
-    if(cmd.getOptionValue(OPT_RANGE)!=null) {
+    if (cmd.getOptionValue(OPT_RANGE) != null) {
       this.rowRangeList = parseRowRangeParameter(cmd.getOptionValue(OPT_RANGE));
     }
-    this.endTime = cmd.getOptionValue(OPT_END_TIME) == null ? HConstants.LATEST_TIMESTAMP :
-        Long.parseLong(cmd.getOptionValue(OPT_END_TIME));
-    this.expectedCount = cmd.getOptionValue(OPT_EXPECTED_COUNT) == null ? Long.MIN_VALUE :
-        Long.parseLong(cmd.getOptionValue(OPT_EXPECTED_COUNT));
-    this.startTime = cmd.getOptionValue(OPT_START_TIME) == null ? 0 :
-        Long.parseLong(cmd.getOptionValue(OPT_START_TIME));
+    this.endTime = cmd.getOptionValue(OPT_END_TIME) == null
+      ? HConstants.LATEST_TIMESTAMP
+      : Long.parseLong(cmd.getOptionValue(OPT_END_TIME));
+    this.expectedCount = cmd.getOptionValue(OPT_EXPECTED_COUNT) == null
+      ? Long.MIN_VALUE
+      : Long.parseLong(cmd.getOptionValue(OPT_EXPECTED_COUNT));
+    this.startTime = cmd.getOptionValue(OPT_START_TIME) == null
+      ? 0
+      : Long.parseLong(cmd.getOptionValue(OPT_START_TIME));
 
-    for(int i=1; i<cmd.getArgList().size(); i++){
+    for (int i = 1; i < cmd.getArgList().size(); i++) {
       String argument = cmd.getArgList().get(i);
-      if(!argument.startsWith("-")){
+      if (!argument.startsWith("-")) {
         this.columns.add(argument);
       }
     }
 
     if (endTime < startTime) {
-      throw new IllegalArgumentException("--endtime=" + endTime +
-          " needs to be greater than --starttime=" + startTime);
+      throw new IllegalArgumentException(
+        "--endtime=" + endTime + " needs to be greater than --starttime=" + startTime);
     }
   }
 
@@ -342,8 +334,8 @@ public class RowCounter extends AbstractHBaseTool {
   protected void processOldArgs(List<String> args) {
     List<String> copiedArgs = new ArrayList<>(args);
     args.removeAll(copiedArgs);
-    for(String arg : copiedArgs){
-      if(arg.startsWith("-") && arg.contains("=")){
+    for (String arg : copiedArgs) {
+      if (arg.startsWith("-") && arg.contains("=")) {
         String[] kv = arg.split("=");
         args.add(kv[0]);
         args.add(kv[1]);
@@ -365,8 +357,8 @@ public class RowCounter extends AbstractHBaseTool {
       final Counter counter = job.getCounters().findCounter(RowCounterMapper.Counters.ROWS);
       success = expectedCount == counter.getValue();
       if (!success) {
-        LOG.error("Failing job because count of '" + counter.getValue() +
-            "' does not match expected count of '" + expectedCount + "'");
+        LOG.error("Failing job because count of '" + counter.getValue()
+          + "' does not match expected count of '" + expectedCount + "'");
       }
     }
     return (success ? 0 : 1);
@@ -385,7 +377,7 @@ public class RowCounter extends AbstractHBaseTool {
 
     @Override
     protected void checkRequiredOptions() throws MissingOptionException {
-      if(this.cmd.getArgList().size()<1 || this.cmd.getArgList().get(0).startsWith("-")){
+      if (this.cmd.getArgList().size() < 1 || this.cmd.getArgList().get(0).startsWith("-")) {
         throw new MissingOptionException("First argument must be a valid table name.");
       }
     }

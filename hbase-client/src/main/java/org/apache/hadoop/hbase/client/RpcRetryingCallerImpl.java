@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
@@ -29,7 +27,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
@@ -40,16 +37,15 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
- * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client
- * threadlocal outstanding timeouts as so we don't persist too much.
- * Dynamic rather than static so can set the generic appropriately.
- *
- * This object has a state. It should not be used by in parallel by different threads.
- * Reusing it is possible however, even between multiple threads. However, the user will
- *  have to manage the synchronization on its side: there is no synchronization inside the class.
+ * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client threadlocal outstanding timeouts
+ * as so we don't persist too much. Dynamic rather than static so can set the generic appropriately.
+ * This object has a state. It should not be used by in parallel by different threads. Reusing it is
+ * possible however, even between multiple threads. However, the user will have to manage the
+ * synchronization on its side: there is no synchronization inside the class.
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
@@ -75,7 +71,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   }
 
   public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
-      RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout) {
+    RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout) {
     this.pause = pause;
     this.pauseForServerOverloaded = pauseForServerOverloaded;
     this.maxAttempts = retries2Attempts(retries);
@@ -87,16 +83,16 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   }
 
   @Override
-  public void cancel(){
+  public void cancel() {
     cancelled.set(true);
-    synchronized (cancelled){
+    synchronized (cancelled) {
       cancelled.notifyAll();
     }
   }
 
   @Override
   public T callWithRetries(RetryingCallable<T> callable, int callTimeout)
-  throws IOException, RuntimeException {
+    throws IOException, RuntimeException {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions = new ArrayList<>();
     tracker.start();
     context.clear();
@@ -123,12 +119,12 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         if (tries > startLogErrorsCnt) {
           if (LOG.isInfoEnabled()) {
             StringBuilder builder = new StringBuilder("Call exception, tries=").append(tries)
-                .append(", retries=").append(maxAttempts).append(", started=")
-                .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
-                .append(" ms ago, ").append("cancelled=").append(cancelled.get())
-                .append(", msg=").append(t.getMessage())
-                .append(", details=").append(callable.getExceptionMessageAdditionalDetail())
-                .append(", see https://s.apache.org/timeout");
+              .append(", retries=").append(maxAttempts).append(", started=")
+              .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
+              .append(" ms ago, ").append("cancelled=").append(cancelled.get()).append(", msg=")
+              .append(t.getMessage()).append(", details=")
+              .append(callable.getExceptionMessageAdditionalDetail())
+              .append(", see https://s.apache.org/timeout");
             if (LOG.isDebugEnabled()) {
               builder.append(", exception=").append(StringUtils.stringifyException(t));
               LOG.debug(builder.toString());
@@ -140,8 +136,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
         callable.throwable(t, maxAttempts != 1);
         RetriesExhaustedException.ThrowableWithExtraContext qt =
-            new RetriesExhaustedException.ThrowableWithExtraContext(t,
-                EnvironmentEdgeManager.currentTime(), toString());
+          new RetriesExhaustedException.ThrowableWithExtraContext(t,
+            EnvironmentEdgeManager.currentTime(), toString());
         exceptions.add(qt);
         if (tries >= maxAttempts - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
@@ -151,16 +147,16 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
         // special when encountering an exception indicating the server is overloaded.
         // see #HBASE-17114 and HBASE-26807
-        long pauseBase = HBaseServerException.isServerOverloaded(t)
-          ? pauseForServerOverloaded : pause;
+        long pauseBase =
+          HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
         expectedSleep = callable.sleep(pauseBase, tries);
 
         // If, after the planned sleep, there won't be enough time left, we stop now.
         long duration = singleCallDuration(expectedSleep);
         if (duration > callTimeout) {
-          String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration +
-              ": " +  t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
-          throw (SocketTimeoutException)(new SocketTimeoutException(msg).initCause(t));
+          String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration + ": "
+            + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
+          throw (SocketTimeoutException) (new SocketTimeoutException(msg).initCause(t));
         }
       } finally {
         interceptor.updateFailureInfo(context);
@@ -174,8 +170,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         }
         if (cancelled.get()) return null;
       } catch (InterruptedException e) {
-        throw new InterruptedIOException("Interrupted after " + tries
-            + " tries while maxAttempts=" + maxAttempts);
+        throw new InterruptedIOException(
+          "Interrupted after " + tries + " tries while maxAttempts=" + maxAttempts);
       }
     }
   }
@@ -189,7 +185,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   @Override
   public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
-  throws IOException, RuntimeException {
+    throws IOException, RuntimeException {
     // The code of this method should be shared with withRetries.
     try {
       callable.prepare(false);
@@ -199,7 +195,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       ExceptionUtil.rethrowIfInterrupt(t2);
       // It would be nice to clear the location cache here.
       if (t2 instanceof IOException) {
-        throw (IOException)t2;
+        throw (IOException) t2;
       } else {
         throw new RuntimeException(t2);
       }
@@ -219,29 +215,29 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       }
     }
     if (t instanceof RemoteException) {
-      t = ((RemoteException)t).unwrapRemoteException();
+      t = ((RemoteException) t).unwrapRemoteException();
     }
     if (t instanceof LinkageError) {
       throw new DoNotRetryIOException(t);
     }
     if (t instanceof ServiceException) {
-      ServiceException se = (ServiceException)t;
+      ServiceException se = (ServiceException) t;
       Throwable cause = se.getCause();
       if (cause instanceof DoNotRetryIOException) {
-        throw (DoNotRetryIOException)cause;
+        throw (DoNotRetryIOException) cause;
       }
       // Don't let ServiceException out; its rpc specific.
       // It also could be a RemoteException, so go around again.
       t = translateException(cause);
     } else if (t instanceof DoNotRetryIOException) {
-      throw (DoNotRetryIOException)t;
+      throw (DoNotRetryIOException) t;
     }
     return t;
   }
 
-  private int getTimeout(int callTimeout){
+  private int getTimeout(int callTimeout) {
     int timeout = tracker.getRemainingTime(callTimeout);
-    if (timeout <= 0 || rpcTimeout > 0 && rpcTimeout < timeout){
+    if (timeout <= 0 || rpcTimeout > 0 && rpcTimeout < timeout) {
       timeout = rpcTimeout;
     }
     return timeout;
@@ -249,8 +245,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   @Override
   public String toString() {
-    return "RpcRetryingCaller{" + "globalStartTime=" +
-      Instant.ofEpochMilli(tracker.getStartTime()) +
-        ", pause=" + pause + ", maxAttempts=" + maxAttempts + '}';
+    return "RpcRetryingCaller{" + "globalStartTime=" + Instant.ofEpochMilli(tracker.getStartTime())
+      + ", pause=" + pause + ", maxAttempts=" + maxAttempts + '}';
   }
 }

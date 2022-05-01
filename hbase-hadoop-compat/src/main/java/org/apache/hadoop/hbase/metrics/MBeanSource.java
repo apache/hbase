@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import javax.management.ObjectName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *  Object that will register an mbean with the underlying metrics implementation.
+ * Object that will register an mbean with the underlying metrics implementation.
  */
 @InterfaceAudience.Private
-public interface MBeanSource  {
+public interface MBeanSource {
 
   /**
    * Register an mbean with the underlying metrics system
    * @param serviceName Metrics service/system name
    * @param metricsName name of the metrics object to expose
-   * @param theMbean the actual MBean
+   * @param theMbean    the actual MBean
    * @return ObjectName from jmx
    */
-  ObjectName register(String serviceName, String metricsName,
-                             Object theMbean);
+  ObjectName register(String serviceName, String metricsName, Object theMbean);
 
 }

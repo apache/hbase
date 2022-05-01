@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,6 +32,7 @@ public class ReaderContext {
     PREAD,
     STREAM
   }
+
   private final Path filePath;
   private final FSDataInputStreamWrapper fsdis;
   private final long fileSize;
@@ -41,7 +41,7 @@ public class ReaderContext {
   private final ReaderType type;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
-      HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
+    HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
     this.filePath = filePath;
     this.fsdis = fsdis;
     this.fileSize = fileSize;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckEncryption {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -79,9 +79,8 @@ public class TestHBaseFsckEncryption {
     // Create the test encryption key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     Bytes.secureRandom(keyBytes);
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
-    cfKey = new SecretKeySpec(keyBytes,algorithm);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    cfKey = new SecretKeySpec(keyBytes, algorithm);
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(3);
@@ -112,8 +111,7 @@ public class TestHBaseFsckEncryption {
       for (int i = 0; i < values.length; i++) {
         for (int j = 0; j < values.length; j++) {
           Put put = new Put(new byte[] { values[i], values[j] });
-          put.addColumn(Bytes.toBytes("cf"), new byte[]{}, new byte[]{values[i],
-                  values[j]});
+          put.addColumn(Bytes.toBytes("cf"), new byte[] {}, new byte[] { values[i], values[j] });
           table.put(put);
         }
       }
@@ -126,7 +124,7 @@ public class TestHBaseFsckEncryption {
     // Verify we have encrypted store files on disk
     final List<Path> paths = findStorefilePaths(htd.getTableName());
     assertTrue(paths.size() > 0);
-    for (Path path: paths) {
+    for (Path path : paths) {
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(cfKey.getEncoded(), extractHFileKey(path)));
     }
@@ -144,7 +142,7 @@ public class TestHBaseFsckEncryption {
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getRegions(htd.getTableName())) {
+      .getRegions(htd.getTableName())) {
       for (HStore store : ((HRegion) region).getStores()) {
         for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
@@ -155,8 +153,8 @@ public class TestHBaseFsckEncryption {
   }
 
   private byte[] extractHFileKey(Path path) throws Exception {
-    HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
-      new CacheConfig(conf), true, conf);
+    HFile.Reader reader =
+      HFile.createReader(TEST_UTIL.getTestFileSystem(), path, new CacheConfig(conf), true, conf);
     try {
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
       assertNotNull("Reader has a null crypto context", cryptoContext);

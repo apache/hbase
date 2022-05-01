@@ -70,7 +70,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf)
+    throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
@@ -184,8 +185,10 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         RemoteIterator<LocatedFileStatus> iterator = rootDirectoryFs.listFiles(metaTableDir, true);
         while (iterator.hasNext()) {
           LocatedFileStatus status = iterator.next();
-          if (StoreFileInfo.isHFile(status.getPath()) && HFile
-            .isHFileFormat(rootDirectoryFs, status.getPath())) {
+          if (
+            StoreFileInfo.isHFile(status.getPath())
+              && HFile.isHFileFormat(rootDirectoryFs, status.getPath())
+          ) {
             shouldDelete = false;
             break;
           }

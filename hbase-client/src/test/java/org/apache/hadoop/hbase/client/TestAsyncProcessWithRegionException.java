@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,20 +45,18 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
- * The purpose of this test is to make sure the region exception won't corrupt the results
- * of batch. The prescription is shown below.
- * 1) honor the action result rather than region exception. If the action have both of true result
- * and region exception, the action is fine as the exception is caused by other actions
- * which are in the same region.
- * 2) honor the action exception rather than region exception. If the action have both of action
- * exception and region exception, we deal with the action exception only. If we also
- * handle the region exception for the same action, it will introduce the negative count of
- * actions in progress. The AsyncRequestFuture#waitUntilDone will block forever.
- *
- * This bug can be reproduced by real use case. see TestMalformedCellFromClient(in branch-1.4+).
- * It uses the batch of RowMutations to present the bug. Given that the batch of RowMutations is
- * only supported by branch-1.4+, perhaps the branch-1.3 and branch-1.2 won't encounter this issue.
- * We still backport the fix to branch-1.3 and branch-1.2 in case we ignore some write paths.
+ * The purpose of this test is to make sure the region exception won't corrupt the results of batch.
+ * The prescription is shown below. 1) honor the action result rather than region exception. If the
+ * action have both of true result and region exception, the action is fine as the exception is
+ * caused by other actions which are in the same region. 2) honor the action exception rather than
+ * region exception. If the action have both of action exception and region exception, we deal with
+ * the action exception only. If we also handle the region exception for the same action, it will
+ * introduce the negative count of actions in progress. The AsyncRequestFuture#waitUntilDone will
+ * block forever. This bug can be reproduced by real use case. see TestMalformedCellFromClient(in
+ * branch-1.4+). It uses the batch of RowMutations to present the bug. Given that the batch of
+ * RowMutations is only supported by branch-1.4+, perhaps the branch-1.3 and branch-1.2 won't
+ * encounter this issue. We still backport the fix to branch-1.3 and branch-1.2 in case we ignore
+ * some write paths.
  */
 @Category({ ClientTests.class, SmallTests.class })
 public class TestAsyncProcessWithRegionException {
@@ -78,12 +76,8 @@ public class TestAsyncProcessWithRegionException {
   private static final byte[] FAMILY = Bytes.toBytes("FAMILY");
   private static final ServerName SERVER_NAME = ServerName.valueOf("s1,1,1");
   private static final RegionInfo REGION_INFO =
-    RegionInfoBuilder.newBuilder(DUMMY_TABLE)
-      .setStartKey(HConstants.EMPTY_START_ROW)
-      .setEndKey(HConstants.EMPTY_END_ROW)
-      .setSplit(false)
-      .setRegionId(1)
-      .build();
+    RegionInfoBuilder.newBuilder(DUMMY_TABLE).setStartKey(HConstants.EMPTY_START_ROW)
+      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(1).build();
 
   private static final HRegionLocation REGION_LOCATION =
     new HRegionLocation(REGION_INFO, SERVER_NAME);
@@ -207,20 +201,15 @@ public class TestAsyncProcessWithRegionException {
 
     public AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows)
       throws InterruptedIOException {
-      return submit(AsyncProcessTask.newBuilder()
-        .setPool(service)
-        .setTableName(tableName)
-        .setRowAccess(rows)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.NORMAL)
-        .setNeedResults(true)
-        .setRpcTimeout(HConstants.DEFAULT_HBASE_RPC_TIMEOUT)
-        .setOperationTimeout(HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT)
-        .build());
+      return submit(AsyncProcessTask.newBuilder().setPool(service).setTableName(tableName)
+        .setRowAccess(rows).setSubmittedRows(AsyncProcessTask.SubmittedRows.NORMAL)
+        .setNeedResults(true).setRpcTimeout(HConstants.DEFAULT_HBASE_RPC_TIMEOUT)
+        .setOperationTimeout(HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT).build());
     }
 
     @Override
-    protected RpcRetryingCaller<AbstractResponse> createCaller(
-      CancellableRegionServerCallable callable, int rpcTimeout) {
+    protected RpcRetryingCaller<AbstractResponse>
+      createCaller(CancellableRegionServerCallable callable, int rpcTimeout) {
       MultiServerCallable callable1 = (MultiServerCallable) callable;
       MultiResponse mr = new MultiResponse();
       callable1.getMulti().actions.forEach((regionName, actions) -> {

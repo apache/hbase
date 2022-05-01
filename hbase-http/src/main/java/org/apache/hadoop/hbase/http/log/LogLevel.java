@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,8 +54,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class LogLevel {
   private static final String USAGES = "\nUsage: General options are:\n"
-      + "\t[-getlevel <host:port> <classname> [-protocol (http|https)]\n"
-      + "\t[-setlevel <host:port> <classname> <level> [-protocol (http|https)]";
+    + "\t[-getlevel <host:port> <classname> [-protocol (http|https)]\n"
+    + "\t[-setlevel <host:port> <classname> <level> [-protocol (http|https)]";
 
   public static final String PROTOCOL_HTTP = "http";
   public static final String PROTOCOL_HTTPS = "https";
@@ -85,8 +85,7 @@ public final class LogLevel {
   }
 
   public static boolean isValidProtocol(String protocol) {
-    return ((protocol.equals(PROTOCOL_HTTP) ||
-        protocol.equals(PROTOCOL_HTTPS)));
+    return ((protocol.equals(PROTOCOL_HTTP) || protocol.equals(PROTOCOL_HTTPS)));
   }
 
   static class CLI extends Configured implements Tool {
@@ -114,10 +113,9 @@ public final class LogLevel {
     /**
      * Send HTTP request to the daemon.
      * @throws HadoopIllegalArgumentException if arguments are invalid.
-     * @throws Exception if unable to connect
+     * @throws Exception                      if unable to connect
      */
-    private void sendLogLevelRequest()
-        throws HadoopIllegalArgumentException, Exception {
+    private void sendLogLevelRequest() throws HadoopIllegalArgumentException, Exception {
       switch (operation) {
         case GETLEVEL:
           doGetLevel();
@@ -126,13 +124,11 @@ public final class LogLevel {
           doSetLevel();
           break;
         default:
-          throw new HadoopIllegalArgumentException(
-              "Expect either -getlevel or -setlevel");
+          throw new HadoopIllegalArgumentException("Expect either -getlevel or -setlevel");
       }
     }
 
-    public void parseArguments(String[] args) throws
-        HadoopIllegalArgumentException {
+    public void parseArguments(String[] args) throws HadoopIllegalArgumentException {
       if (args.length == 0) {
         throw new HadoopIllegalArgumentException("No arguments specified");
       }
@@ -149,15 +145,13 @@ public final class LogLevel {
             nextArgIndex = parseProtocolArgs(args, nextArgIndex);
             break;
           default:
-            throw new HadoopIllegalArgumentException(
-                "Unexpected argument " + args[nextArgIndex]);
+            throw new HadoopIllegalArgumentException("Unexpected argument " + args[nextArgIndex]);
         }
       }
 
       // if operation is never specified in the arguments
       if (operation == Operations.UNKNOWN) {
-        throw new HadoopIllegalArgumentException(
-            "Must specify either -getlevel or -setlevel");
+        throw new HadoopIllegalArgumentException("Must specify either -getlevel or -setlevel");
       }
 
       // if protocol is unspecified, set it as http.
@@ -166,8 +160,7 @@ public final class LogLevel {
       }
     }
 
-    private int parseGetLevelArgs(String[] args, int index) throws
-        HadoopIllegalArgumentException {
+    private int parseGetLevelArgs(String[] args, int index) throws HadoopIllegalArgumentException {
       // fail if multiple operations are specified in the arguments
       if (operation != Operations.UNKNOWN) {
         throw new HadoopIllegalArgumentException("Redundant -getlevel command");
@@ -182,8 +175,7 @@ public final class LogLevel {
       return index + 3;
     }
 
-    private int parseSetLevelArgs(String[] args, int index) throws
-        HadoopIllegalArgumentException {
+    private int parseSetLevelArgs(String[] args, int index) throws HadoopIllegalArgumentException {
       // fail if multiple operations are specified in the arguments
       if (operation != Operations.UNKNOWN) {
         throw new HadoopIllegalArgumentException("Redundant -setlevel command");
@@ -199,32 +191,27 @@ public final class LogLevel {
       return index + 4;
     }
 
-    private int parseProtocolArgs(String[] args, int index) throws
-        HadoopIllegalArgumentException {
+    private int parseProtocolArgs(String[] args, int index) throws HadoopIllegalArgumentException {
       // make sure only -protocol is specified
       if (protocol != null) {
-        throw new HadoopIllegalArgumentException(
-            "Redundant -protocol command");
+        throw new HadoopIllegalArgumentException("Redundant -protocol command");
       }
       // check number of arguments is sufficient
       if (index + 1 >= args.length) {
-        throw new HadoopIllegalArgumentException(
-            "-protocol needs one parameter");
+        throw new HadoopIllegalArgumentException("-protocol needs one parameter");
       }
       // check protocol is valid
       protocol = args[index + 1];
       if (!isValidProtocol(protocol)) {
-        throw new HadoopIllegalArgumentException(
-            "Invalid protocol: " + protocol);
+        throw new HadoopIllegalArgumentException("Invalid protocol: " + protocol);
       }
       return index + 2;
     }
 
     /**
      * Send HTTP request to get log level.
-     *
      * @throws HadoopIllegalArgumentException if arguments are invalid.
-     * @throws Exception if unable to connect
+     * @throws Exception                      if unable to connect
      */
     private void doGetLevel() throws Exception {
       process(protocol + "://" + hostName + "/logLevel?log=" + className);
@@ -232,20 +219,16 @@ public final class LogLevel {
 
     /**
      * Send HTTP request to set log level.
-     *
      * @throws HadoopIllegalArgumentException if arguments are invalid.
-     * @throws Exception if unable to connect
+     * @throws Exception                      if unable to connect
      */
     private void doSetLevel() throws Exception {
-      process(protocol + "://" + hostName + "/logLevel?log=" + className
-          + "&level=" + level);
+      process(protocol + "://" + hostName + "/logLevel?log=" + className + "&level=" + level);
     }
 
     /**
-     * Connect to the URL. Supports HTTP and supports SPNEGO
-     * authentication. It falls back to simple authentication if it fails to
-     * initiate SPNEGO.
-     *
+     * Connect to the URL. Supports HTTP and supports SPNEGO authentication. It falls back to simple
+     * authentication if it fails to initiate SPNEGO.
      * @param url the URL address of the daemon servlet
      * @return a connected connection
      * @throws Exception if it can not establish a connection.
@@ -274,8 +257,7 @@ public final class LogLevel {
     }
 
     /**
-     * Configures the client to send HTTP request to the URL.
-     * Supports SPENGO for authentication.
+     * Configures the client to send HTTP request to the URL. Supports SPENGO for authentication.
      * @param urlString URL and query string to the daemon's web UI
      * @throws Exception if unable to connect
      */
@@ -289,11 +271,12 @@ public final class LogLevel {
 
       // read from the servlet
 
-      try (InputStreamReader streamReader =
-            new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
-           BufferedReader bufferedReader = new BufferedReader(streamReader)) {
+      try (
+        InputStreamReader streamReader =
+          new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
+        BufferedReader bufferedReader = new BufferedReader(streamReader)) {
         bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
-            .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));
+          .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));
       } catch (IOException ioe) {
         System.err.println("" + ioe);
       }
@@ -312,19 +295,16 @@ public final class LogLevel {
 
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+      throws ServletException, IOException {
       // Do the authorization
-      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-          response)) {
+      if (!HttpServer.hasAdministratorAccess(getServletContext(), request, response)) {
         return;
       }
       // Disallow modification of the LogLevel if explicitly set to readonly
-      Configuration conf = (Configuration) getServletContext().getAttribute(
-          HttpServer.CONF_CONTEXT_ATTRIBUTE);
+      Configuration conf =
+        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
       if (conf.getBoolean("hbase.master.ui.readonly", false)) {
-        sendError(
-          response,
-          HttpServletResponse.SC_FORBIDDEN,
+        sendError(response, HttpServletResponse.SC_FORBIDDEN,
           "Modification of HBase via the UI is disallowed in configuration.");
         return;
       }
@@ -347,17 +327,13 @@ public final class LogLevel {
 
       if (logName != null) {
         out.println("<p>Results:</p>");
-        out.println(MARKER
-            + "Submitted Log Name: <b>" + logName + "</b><br />");
+        out.println(MARKER + "Submitted Log Name: <b>" + logName + "</b><br />");
 
         Logger log = LoggerFactory.getLogger(logName);
-        out.println(MARKER
-            + "Log Class: <b>" + log.getClass().getName() +"</b><br />");
+        out.println(MARKER + "Log Class: <b>" + log.getClass().getName() + "</b><br />");
         if (level != null) {
           if (!isLogLevelChangeAllowed(logName, readOnlyLogLevels)) {
-            sendError(
-              response,
-              HttpServletResponse.SC_PRECONDITION_FAILED,
+            sendError(response, HttpServletResponse.SC_PRECONDITION_FAILED,
               "Modification of logger " + logName + " is disallowed in configuration.");
             return;
           }
@@ -396,41 +372,41 @@ public final class LogLevel {
     }
 
     static final String FORMS = "<div class='container-fluid content'>\n"
-        + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
-        + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "Actions:" + "<p>"
-        + "<center>\n" + "<table class='table' style='border: 0;' width='95%' >\n" + "<tr>\n"
-        + "<form>\n" + "<td class='centered'>\n"
-        + "<input style='font-size: 12pt; width: 10em' type='submit' value='Get Log Level'"
-        + " class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
-        + "<input type='text' name='log' size='50' required='required'"
-        + " placeholder='Log Name (required)' />\n" + "</td>\n" + "<td width=\"40%\">"
-        + "Get the current log level for the specified log name." + "</td>\n" + "</form>\n"
-        + "</tr>\n" + "<tr>\n" + "<form>\n" + "<td class='centered'>\n"
-        + "<input style='font-size: 12pt; width: 10em' type='submit'"
-        + " value='Set Log Level' class='btn' />\n" + "</td>\n"
-        + "<td style='text-align: center;'>\n"
-        + "<input type='text' name='log' size='50' required='required'"
-        + " placeholder='Log Name (required)' />\n"
-        + "<input type='text' name='level' size='50' required='required'"
-        + " placeholder='Log Level (required)' />\n" + "</td>\n" + "<td width=\"40%\" style=\"\">"
-        + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
-        + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
+      + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
+      + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "Actions:" + "<p>" + "<center>\n"
+      + "<table class='table' style='border: 0;' width='95%' >\n" + "<tr>\n" + "<form>\n"
+      + "<td class='centered'>\n"
+      + "<input style='font-size: 12pt; width: 10em' type='submit' value='Get Log Level'"
+      + " class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
+      + "<input type='text' name='log' size='50' required='required'"
+      + " placeholder='Log Name (required)' />\n" + "</td>\n" + "<td width=\"40%\">"
+      + "Get the current log level for the specified log name." + "</td>\n" + "</form>\n"
+      + "</tr>\n" + "<tr>\n" + "<form>\n" + "<td class='centered'>\n"
+      + "<input style='font-size: 12pt; width: 10em' type='submit'"
+      + " value='Set Log Level' class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
+      + "<input type='text' name='log' size='50' required='required'"
+      + " placeholder='Log Name (required)' />\n"
+      + "<input type='text' name='level' size='50' required='required'"
+      + " placeholder='Log Level (required)' />\n" + "</td>\n" + "<td width=\"40%\" style=\"\">"
+      + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
+      + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
 
     private static void process(Logger logger, String levelName, PrintWriter out) {
       if (levelName != null) {
         try {
           Log4jUtils.setLogLevel(logger.getName(), levelName);
-          out.println(MARKER + "<div class='text-success'>" + "Setting Level to <strong>" +
-            levelName + "</strong> ...<br />" + "</div>");
+          out.println(MARKER + "<div class='text-success'>" + "Setting Level to <strong>"
+            + levelName + "</strong> ...<br />" + "</div>");
         } catch (IllegalArgumentException e) {
-          out.println(MARKER + "<div class='text-danger'>" + "Bad level : <strong>" + levelName +
-            "</strong><br />" + "</div>");
+          out.println(MARKER + "<div class='text-danger'>" + "Bad level : <strong>" + levelName
+            + "</strong><br />" + "</div>");
         }
       }
-      out.println(MARKER + "Effective level: <b>" + Log4jUtils.getEffectiveLevel(logger.getName()) +
-        "</b><br />");
+      out.println(MARKER + "Effective level: <b>" + Log4jUtils.getEffectiveLevel(logger.getName())
+        + "</b><br />");
     }
   }
 
-  private LogLevel() {}
+  private LogLevel() {
+  }
 }

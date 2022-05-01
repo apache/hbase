@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({ MapReduceTests.class, MediumTests.class })
 public class TestHRegionPartitioner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionPartitioner.class);
+    HBaseClassTestRule.forClass(TestHRegionPartitioner.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -65,8 +65,8 @@ public class TestHRegionPartitioner {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    UTIL.createTable(TableName.valueOf(name.getMethodName()), families, 1,
-    Bytes.toBytes("aa"), Bytes.toBytes("cc"), 3);
+    UTIL.createTable(TableName.valueOf(name.getMethodName()), families, 1, Bytes.toBytes("aa"),
+      Bytes.toBytes("cc"), 3);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();
     Configuration configuration = UTIL.getConfiguration();

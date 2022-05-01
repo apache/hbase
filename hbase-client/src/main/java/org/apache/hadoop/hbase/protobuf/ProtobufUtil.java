@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,8 +95,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
-import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -109,11 +109,10 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Protobufs utility.
- * NOTE: This class OVERLAPS ProtobufUtil in the subpackage 'shaded'. The latter is used
- * internally and has more methods. This Class is for Coprocessor Endpoints only though they
- * should not be using this private class. It should not be depended upon. Most methods here
- * are COPIED from the shaded ProtobufUtils with only difference being they refer to non-shaded
+ * Protobufs utility. NOTE: This class OVERLAPS ProtobufUtil in the subpackage 'shaded'. The latter
+ * is used internally and has more methods. This Class is for Coprocessor Endpoints only though they
+ * should not be using this private class. It should not be depended upon. Most methods here are
+ * COPIED from the shaded ProtobufUtils with only difference being they refer to non-shaded
  * protobufs.
  * @see ProtobufUtil
  */
@@ -124,19 +123,19 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Many results are simple: no cell, exists true or false. To save on object creations,
-   *  we reuse them across calls.
+   * Many results are simple: no cell, exists true or false. To save on object creations, we reuse
+   * them across calls.
    */
   // TODO: PICK THESE UP FROM THE SHADED PROTOBUF.
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
+  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[] {};
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
   final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
   private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
-  private final static Result EMPTY_RESULT_EXISTS_TRUE_STALE
-    = Result.create((Cell[])null, true, true);
-  private final static Result EMPTY_RESULT_EXISTS_FALSE_STALE
-    = Result.create((Cell[])null, false, true);
+  private final static Result EMPTY_RESULT_EXISTS_TRUE_STALE =
+    Result.create((Cell[]) null, true, true);
+  private final static Result EMPTY_RESULT_EXISTS_FALSE_STALE =
+    Result.create((Cell[]) null, false, true);
 
   private final static ClientProtos.Result EMPTY_RESULT_PB;
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
@@ -145,13 +144,12 @@ public final class ProtobufUtil {
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE_STALE;
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE_STALE;
 
-
   static {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
 
     builder.setExists(true);
     builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
+    EMPTY_RESULT_PB_EXISTS_TRUE = builder.build();
 
     builder.setStale(true);
     EMPTY_RESULT_PB_EXISTS_TRUE_STALE = builder.build();
@@ -159,41 +157,39 @@ public final class ProtobufUtil {
 
     builder.setExists(false);
     builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
+    EMPTY_RESULT_PB_EXISTS_FALSE = builder.build();
     builder.setStale(true);
     EMPTY_RESULT_PB_EXISTS_FALSE_STALE = builder.build();
 
     builder.clear();
     builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB =  builder.build();
+    EMPTY_RESULT_PB = builder.build();
     builder.setStale(true);
     EMPTY_RESULT_PB_STALE = builder.build();
   }
 
   /**
-    * Dynamic class loader to load filter/comparators
-    */
+   * Dynamic class loader to load filter/comparators
+   */
   private final static class ClassLoaderHolder {
     private final static ClassLoader CLASS_LOADER;
 
     static {
       ClassLoader parent = ProtobufUtil.class.getClassLoader();
       Configuration conf = HBaseConfiguration.create();
-      CLASS_LOADER = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)
-        () -> new DynamicClassLoader(conf, parent)
-      );
+      CLASS_LOADER = AccessController
+        .doPrivileged((PrivilegedAction<ClassLoader>) () -> new DynamicClassLoader(conf, parent));
     }
   }
 
   /**
-   * Prepend the passed bytes with four bytes of magic, {@link ProtobufMagic#PB_MAGIC},
-   * to flag what follows as a protobuf in hbase.  Prepend these bytes to all content written to
-   * znodes, etc.
+   * Prepend the passed bytes with four bytes of magic, {@link ProtobufMagic#PB_MAGIC}, to flag what
+   * follows as a protobuf in hbase. Prepend these bytes to all content written to znodes, etc.
    * @param bytes Bytes to decorate
-   * @return The passed <code>bytes</code> with magic prepended (Creates a new
-   * byte array that is <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
+   * @return The passed <code>bytes</code> with magic prepended (Creates a new byte array that is
+   *         <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
    */
-  public static byte [] prependPBMagic(final byte [] bytes) {
+  public static byte[] prependPBMagic(final byte[] bytes) {
     return Bytes.add(PB_MAGIC, bytes);
   }
 
@@ -201,17 +197,17 @@ public final class ProtobufUtil {
    * @param bytes Bytes to check.
    * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
-  public static boolean isPBMagicPrefix(final byte [] bytes) {
+  public static boolean isPBMagicPrefix(final byte[] bytes) {
     return ProtobufMagic.isPBMagicPrefix(bytes);
   }
 
   /**
-   * @param bytes Bytes to check.
+   * @param bytes  Bytes to check.
    * @param offset offset to start at
-   * @param len length to use
+   * @param len    length to use
    * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
-  public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
+  public static boolean isPBMagicPrefix(final byte[] bytes, int offset, int len) {
     return ProtobufMagic.isPBMagicPrefix(bytes, offset, len);
   }
 
@@ -223,7 +219,7 @@ public final class ProtobufUtil {
     if (!isPBMagicPrefix(bytes)) {
       String bytesPrefix = bytes == null ? "null" : Bytes.toStringBinary(bytes, 0, PB_MAGIC.length);
       throw new DeserializationException(
-          "Missing pb magic " + Bytes.toString(PB_MAGIC) + " prefix, bytes: " + bytesPrefix);
+        "Missing pb magic " + Bytes.toString(PB_MAGIC) + " prefix, bytes: " + bytesPrefix);
     }
   }
 
@@ -235,26 +231,23 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Return the IOException thrown by the remote server wrapped in
-   * ServiceException as cause.
-   *
+   * Return the IOException thrown by the remote server wrapped in ServiceException as cause.
    * @param se ServiceException that wraps IO exception thrown by the server
-   * @return Exception wrapped in ServiceException or
-   *   a new IOException that wraps the unexpected ServiceException.
+   * @return Exception wrapped in ServiceException or a new IOException that wraps the unexpected
+   *         ServiceException.
    */
   public static IOException getRemoteException(ServiceException se) {
     return makeIOExceptionOfException(se);
   }
 
   /**
-   * Return the Exception thrown by the remote server wrapped in
-   * ServiceException as cause. RemoteException are left untouched.
-   *
+   * Return the Exception thrown by the remote server wrapped in ServiceException as cause.
+   * RemoteException are left untouched.
    * @param e ServiceException that wraps IO exception thrown by the server
    * @return Exception wrapped in ServiceException.
    */
-  public static IOException getServiceException(
-      org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+  public static IOException
+    getServiceException(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
     Throwable t = e.getCause();
     if (ExceptionUtil.isInterrupt(t)) {
       return ExceptionUtil.asInterrupt(t);
@@ -265,9 +258,8 @@ public final class ProtobufUtil {
   /**
    * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
    * just {@link ServiceException}. Prefer this method to
-   * {@link #getRemoteException(ServiceException)} because trying to
-   * contain direct protobuf references.
-   * @param e
+   * {@link #getRemoteException(ServiceException)} because trying to contain direct protobuf
+   * references. n
    */
   public static IOException handleRemoteException(Exception e) {
     return makeIOExceptionOfException(e);
@@ -275,31 +267,30 @@ public final class ProtobufUtil {
 
   private static IOException makeIOExceptionOfException(Exception e) {
     Throwable t = e;
-    if (e instanceof ServiceException ||
-        e instanceof org.apache.hbase.thirdparty.com.google.protobuf.ServiceException) {
+    if (
+      e instanceof ServiceException
+        || e instanceof org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
+    ) {
       t = e.getCause();
     }
     if (ExceptionUtil.isInterrupt(t)) {
       return ExceptionUtil.asInterrupt(t);
     }
     if (t instanceof RemoteException) {
-      t = ((RemoteException)t).unwrapRemoteException();
+      t = ((RemoteException) t).unwrapRemoteException();
     }
-    return t instanceof IOException? (IOException)t: new HBaseIOException(t);
+    return t instanceof IOException ? (IOException) t : new HBaseIOException(t);
   }
 
   /**
    * Convert a ServerName to a protocol buffer ServerName
-   *
    * @param serverName the ServerName to convert
    * @return the converted protocol buffer ServerName
    * @see #toServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName)
    */
-  public static HBaseProtos.ServerName
-      toServerName(final ServerName serverName) {
+  public static HBaseProtos.ServerName toServerName(final ServerName serverName) {
     if (serverName == null) return null;
-    HBaseProtos.ServerName.Builder builder =
-      HBaseProtos.ServerName.newBuilder();
+    HBaseProtos.ServerName.Builder builder = HBaseProtos.ServerName.newBuilder();
     builder.setHostName(serverName.getHostname());
     if (serverName.getPort() >= 0) {
       builder.setPort(serverName.getPort());
@@ -312,7 +303,6 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer ServerName to a ServerName
-   *
    * @param proto the protocol buffer ServerName to convert
    * @return the converted ServerName
    */
@@ -333,51 +323,47 @@ public final class ProtobufUtil {
   /**
    * Convert a protobuf Durability into a client Durability
    */
-  public static Durability toDurability(
-      final ClientProtos.MutationProto.Durability proto) {
-    switch(proto) {
-    case USE_DEFAULT:
-      return Durability.USE_DEFAULT;
-    case SKIP_WAL:
-      return Durability.SKIP_WAL;
-    case ASYNC_WAL:
-      return Durability.ASYNC_WAL;
-    case SYNC_WAL:
-      return Durability.SYNC_WAL;
-    case FSYNC_WAL:
-      return Durability.FSYNC_WAL;
-    default:
-      return Durability.USE_DEFAULT;
+  public static Durability toDurability(final ClientProtos.MutationProto.Durability proto) {
+    switch (proto) {
+      case USE_DEFAULT:
+        return Durability.USE_DEFAULT;
+      case SKIP_WAL:
+        return Durability.SKIP_WAL;
+      case ASYNC_WAL:
+        return Durability.ASYNC_WAL;
+      case SYNC_WAL:
+        return Durability.SYNC_WAL;
+      case FSYNC_WAL:
+        return Durability.FSYNC_WAL;
+      default:
+        return Durability.USE_DEFAULT;
     }
   }
 
   /**
    * Convert a client Durability into a protbuf Durability
    */
-  public static ClientProtos.MutationProto.Durability toDurability(
-      final Durability d) {
-    switch(d) {
-    case USE_DEFAULT:
-      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
-    case SKIP_WAL:
-      return ClientProtos.MutationProto.Durability.SKIP_WAL;
-    case ASYNC_WAL:
-      return ClientProtos.MutationProto.Durability.ASYNC_WAL;
-    case SYNC_WAL:
-      return ClientProtos.MutationProto.Durability.SYNC_WAL;
-    case FSYNC_WAL:
-      return ClientProtos.MutationProto.Durability.FSYNC_WAL;
-    default:
-      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
+  public static ClientProtos.MutationProto.Durability toDurability(final Durability d) {
+    switch (d) {
+      case USE_DEFAULT:
+        return ClientProtos.MutationProto.Durability.USE_DEFAULT;
+      case SKIP_WAL:
+        return ClientProtos.MutationProto.Durability.SKIP_WAL;
+      case ASYNC_WAL:
+        return ClientProtos.MutationProto.Durability.ASYNC_WAL;
+      case SYNC_WAL:
+        return ClientProtos.MutationProto.Durability.SYNC_WAL;
+      case FSYNC_WAL:
+        return ClientProtos.MutationProto.Durability.FSYNC_WAL;
+      default:
+        return ClientProtos.MutationProto.Durability.USE_DEFAULT;
     }
   }
 
   /**
    * Convert a protocol buffer Get to a client Get
-   *
    * @param proto the protocol buffer Get to convert
-   * @return the converted client Get
-   * @throws IOException
+   * @return the converted client Get n
    */
   public static Get toGet(final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
@@ -398,8 +384,8 @@ public final class ProtobufUtil {
     if (proto.getCfTimeRangeCount() > 0) {
       for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
         TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
-        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
-            timeRange.getMin(), timeRange.getMax());
+        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(), timeRange.getMin(),
+          timeRange.getMax());
       }
     }
     if (proto.hasTimeRange()) {
@@ -410,14 +396,14 @@ public final class ProtobufUtil {
       FilterProtos.Filter filter = proto.getFilter();
       get.setFilter(ProtobufUtil.toFilter(filter));
     }
-    for (NameBytesPair attribute: proto.getAttributeList()) {
+    for (NameBytesPair attribute : proto.getAttributeList()) {
       get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     if (proto.getColumnCount() > 0) {
-      for (Column column: proto.getColumnList()) {
+      for (Column column : proto.getColumnList()) {
         byte[] family = column.getFamily().toByteArray();
         if (column.getQualifierCount() > 0) {
-          for (ByteString qualifier: column.getQualifierList()) {
+          for (ByteString qualifier : column.getQualifierList()) {
             get.addColumn(family, qualifier.toByteArray());
           }
         } else {
@@ -425,7 +411,7 @@ public final class ProtobufUtil {
         }
       }
     }
-    if (proto.hasExistenceOnly() && proto.getExistenceOnly()){
+    if (proto.hasExistenceOnly() && proto.getExistenceOnly()) {
       get.setCheckExistenceOnly(true);
     }
     if (proto.hasConsistency()) {
@@ -439,58 +425,59 @@ public final class ProtobufUtil {
 
   public static Consistency toConsistency(ClientProtos.Consistency consistency) {
     switch (consistency) {
-      case STRONG : return Consistency.STRONG;
-      case TIMELINE : return Consistency.TIMELINE;
-      default : return Consistency.STRONG;
+      case STRONG:
+        return Consistency.STRONG;
+      case TIMELINE:
+        return Consistency.TIMELINE;
+      default:
+        return Consistency.STRONG;
     }
   }
 
   public static ClientProtos.Consistency toConsistency(Consistency consistency) {
     switch (consistency) {
-      case STRONG : return ClientProtos.Consistency.STRONG;
-      case TIMELINE : return ClientProtos.Consistency.TIMELINE;
-      default : return ClientProtos.Consistency.STRONG;
+      case STRONG:
+        return ClientProtos.Consistency.STRONG;
+      case TIMELINE:
+        return ClientProtos.Consistency.TIMELINE;
+      default:
+        return ClientProtos.Consistency.STRONG;
     }
   }
 
   /**
    * Convert a protocol buffer Mutate to a Put.
-   *
    * @param proto The protocol buffer MutationProto to convert
-   * @return A client Put.
-   * @throws IOException
+   * @return A client Put. n
    */
-  public static Put toPut(final MutationProto proto)
-  throws IOException {
+  public static Put toPut(final MutationProto proto) throws IOException {
     return toPut(proto, null);
   }
 
   /**
    * Convert a protocol buffer Mutate to a Put.
-   *
-   * @param proto The protocol buffer MutationProto to convert
+   * @param proto       The protocol buffer MutationProto to convert
    * @param cellScanner If non-null, the Cell data that goes with this proto.
-   * @return A client Put.
-   * @throws IOException
+   * @return A client Put. n
    */
   public static Put toPut(final MutationProto proto, final CellScanner cellScanner)
-  throws IOException {
-    // TODO: Server-side at least why do we convert back to the Client types?  Why not just pb it?
+    throws IOException {
+    // TODO: Server-side at least why do we convert back to the Client types? Why not just pb it?
     MutationType type = proto.getMutateType();
-    assert type == MutationType.PUT: type.name();
-    long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
+    assert type == MutationType.PUT : type.name();
+    long timestamp = proto.hasTimestamp() ? proto.getTimestamp() : HConstants.LATEST_TIMESTAMP;
     Put put = proto.hasRow() ? new Put(proto.getRow().toByteArray(), timestamp) : null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-            toShortString(proto));
+        throw new DoNotRetryIOException(
+          "Cell count of " + cellCount + " but no cellScanner: " + toShortString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + toShortString(proto));
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
+            + " no cell returned: " + toShortString(proto));
         }
         Cell cell = cellScanner.current();
         if (put == null) {
@@ -503,13 +490,13 @@ public final class ProtobufUtil {
         throw new IllegalArgumentException("row cannot be null");
       }
       // The proto has the metadata and the data itself
-      ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
-      for (ColumnValue column: proto.getColumnValueList()) {
+      ExtendedCellBuilder cellBuilder =
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+      for (ColumnValue column : proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
+        for (QualifierValue qv : column.getQualifierValueList()) {
           if (!qv.hasValue()) {
-            throw new DoNotRetryIOException(
-                "Missing required field: qualifier value");
+            throw new DoNotRetryIOException("Missing required field: qualifier value");
           }
           long ts = timestamp;
           if (qv.hasTimestamp()) {
@@ -518,51 +505,35 @@ public final class ProtobufUtil {
           byte[] allTagsBytes;
           if (qv.hasTags()) {
             allTagsBytes = qv.getTags().toByteArray();
-            if(qv.hasDeleteType()) {
-              put.add(cellBuilder.clear()
-                  .setRow(put.getRow())
-                  .setFamily(family)
-                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                  .setTimestamp(ts)
-                  .setType(fromDeleteType(qv.getDeleteType()).getCode())
-                  .setTags(allTagsBytes)
-                  .build());
+            if (qv.hasDeleteType()) {
+              put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
+                .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                .setTimestamp(ts).setType(fromDeleteType(qv.getDeleteType()).getCode())
+                .setTags(allTagsBytes).build());
             } else {
-              put.add(cellBuilder.clear()
-                  .setRow(put.getRow())
-                  .setFamily(family)
-                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                  .setTimestamp(ts)
-                  .setType(Cell.Type.Put)
-                  .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
-                  .setTags(allTagsBytes)
-                  .build());
+              put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
+                .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                .setTimestamp(ts).setType(Cell.Type.Put)
+                .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null).setTags(allTagsBytes)
+                .build());
             }
           } else {
-            if(qv.hasDeleteType()) {
-              put.add(cellBuilder.clear()
-                  .setRow(put.getRow())
-                  .setFamily(family)
-                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                  .setTimestamp(ts)
-                  .setType(fromDeleteType(qv.getDeleteType()).getCode())
-                  .build());
-            } else{
-              put.add(cellBuilder.clear()
-                  .setRow(put.getRow())
-                  .setFamily(family)
-                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                  .setTimestamp(ts)
-                  .setType(Type.Put)
-                  .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
-                  .build());
+            if (qv.hasDeleteType()) {
+              put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
+                .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                .setTimestamp(ts).setType(fromDeleteType(qv.getDeleteType()).getCode()).build());
+            } else {
+              put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
+                .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                .setTimestamp(ts).setType(Type.Put)
+                .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null).build());
             }
           }
         }
       }
     }
     put.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
+    for (NameBytesPair attribute : proto.getAttributeList()) {
       put.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return put;
@@ -570,43 +541,38 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Mutate to a Delete
-   *
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Delete
-   * @throws IOException
+   * @return the converted client Delete n
    */
-  public static Delete toDelete(final MutationProto proto)
-  throws IOException {
+  public static Delete toDelete(final MutationProto proto) throws IOException {
     return toDelete(proto, null);
   }
 
   /**
    * Convert a protocol buffer Mutate to a Delete
-   *
-   * @param proto the protocol buffer Mutate to convert
+   * @param proto       the protocol buffer Mutate to convert
    * @param cellScanner if non-null, the data that goes with this delete.
-   * @return the converted client Delete
-   * @throws IOException
+   * @return the converted client Delete n
    */
   public static Delete toDelete(final MutationProto proto, final CellScanner cellScanner)
-  throws IOException {
+    throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.DELETE : type.name();
     long timestamp = proto.hasTimestamp() ? proto.getTimestamp() : HConstants.LATEST_TIMESTAMP;
     Delete delete = proto.hasRow() ? new Delete(proto.getRow().toByteArray(), timestamp) : null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
         // TextFormat should be fine for a Delete since it carries no data, just coordinates.
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: "
+          + TextFormat.shortDebugString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
           // TextFormat should be fine for a Delete since it carries no data, just coordinates.
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
+            + " no cell returned: " + TextFormat.shortDebugString(proto));
         }
         Cell cell = cellScanner.current();
         if (delete == null) {
@@ -619,9 +585,9 @@ public final class ProtobufUtil {
       if (delete == null) {
         throw new IllegalArgumentException("row cannot be null");
       }
-      for (ColumnValue column: proto.getColumnValueList()) {
+      for (ColumnValue column : proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
+        for (QualifierValue qv : column.getQualifierValueList()) {
           DeleteType deleteType = qv.getDeleteType();
           byte[] qualifier = null;
           if (qv.hasQualifier()) {
@@ -641,36 +607,38 @@ public final class ProtobufUtil {
       }
     }
     delete.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
+    for (NameBytesPair attribute : proto.getAttributeList()) {
       delete.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return delete;
   }
 
   @FunctionalInterface
-  private interface ConsumerWithException <T, U> {
+  private interface ConsumerWithException<T, U> {
     void accept(T t, U u) throws IOException;
   }
 
-  private static <T extends Mutation> T toDelta(Function<Bytes, T> supplier, ConsumerWithException<T, Cell> consumer,
-      final MutationProto proto, final CellScanner cellScanner) throws IOException {
+  private static <T extends Mutation> T toDelta(Function<Bytes, T> supplier,
+    ConsumerWithException<T, Cell> consumer, final MutationProto proto,
+    final CellScanner cellScanner) throws IOException {
     byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
     T mutation = row == null ? null : supplier.apply(new Bytes(row));
     int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-                toShortString(proto));
+        throw new DoNotRetryIOException(
+          "Cell count of " + cellCount + " but no cellScanner: " + toShortString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-                  " no cell returned: " + toShortString(proto));
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
+            + " no cell returned: " + toShortString(proto));
         }
         Cell cell = cellScanner.current();
         if (mutation == null) {
-          mutation = supplier.apply(new Bytes(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+          mutation =
+            supplier.apply(new Bytes(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
         }
         consumer.accept(mutation, cell);
       }
@@ -683,16 +651,15 @@ public final class ProtobufUtil {
         for (QualifierValue qv : column.getQualifierValueList()) {
           byte[] qualifier = qv.getQualifier().toByteArray();
           if (!qv.hasValue()) {
-            throw new DoNotRetryIOException(
-                    "Missing required field: qualifier value");
+            throw new DoNotRetryIOException("Missing required field: qualifier value");
           }
           byte[] value = qv.getValue().toByteArray();
           byte[] tags = null;
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
           }
-          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier, cellTimestampOrLatest(qv),
-                  KeyValue.Type.Put, value, tags));
+          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier,
+            cellTimestampOrLatest(qv), KeyValue.Type.Put, value, tags));
         }
       }
     }
@@ -712,18 +679,16 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Mutate to an Append
-   * @param cellScanner
-   * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Append
-   * @throws IOException
+   * Convert a protocol buffer Mutate to an Append n * @param proto the protocol buffer Mutate to
+   * convert
+   * @return the converted client Append n
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
-          throws IOException {
+    throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
     Append append = toDelta((Bytes row) -> new Append(row.get(), row.getOffset(), row.getLength()),
-        Append::add, proto, cellScanner);
+      Append::add, proto, cellScanner);
     if (proto.hasTimeRange()) {
       TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
       append.setTimeRange(timeRange.getMin(), timeRange.getMax());
@@ -733,17 +698,16 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Mutate to an Increment
-   *
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Increment
-   * @throws IOException
+   * @return the converted client Increment n
    */
   public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
-          throws IOException {
+    throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.INCREMENT : type.name();
-    Increment increment = toDelta((Bytes row) -> new Increment(row.get(), row.getOffset(), row.getLength()),
-            Increment::add, proto, cellScanner);
+    Increment increment =
+      toDelta((Bytes row) -> new Increment(row.get(), row.getOffset(), row.getLength()),
+        Increment::add, proto, cellScanner);
     if (proto.hasTimeRange()) {
       TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
       increment.setTimeRange(timeRange.getMin(), timeRange.getMax());
@@ -753,10 +717,8 @@ public final class ProtobufUtil {
 
   /**
    * Convert a MutateRequest to Mutation
-   *
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted Mutation
-   * @throws IOException
+   * @return the converted Mutation n
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
@@ -777,13 +739,10 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Mutate to a Get.
-   * @param proto the protocol buffer Mutate to convert.
-   * @param cellScanner
-   * @return the converted client get.
-   * @throws IOException
+   * @param proto the protocol buffer Mutate to convert. n * @return the converted client get. n
    */
   public static Get toGet(final MutationProto proto, final CellScanner cellScanner)
-      throws IOException {
+    throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.INCREMENT || type == MutationType.APPEND : type.name();
     byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
@@ -793,21 +752,20 @@ public final class ProtobufUtil {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
         throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: "
-            + TextFormat.shortDebugString(proto));
+          + TextFormat.shortDebugString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
           throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
-              + " no cell returned: " + TextFormat.shortDebugString(proto));
+            + " no cell returned: " + TextFormat.shortDebugString(proto));
         }
         Cell cell = cellScanner.current();
         if (get == null) {
           get = new Get(Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
         }
         get.addColumn(
-          Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
-          Bytes.copy(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
+          Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()), Bytes
+            .copy(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
       }
     } else {
       get = new Get(row);
@@ -860,15 +818,11 @@ public final class ProtobufUtil {
 
   /**
    * Convert a client Scan to a protocol buffer Scan
-   *
    * @param scan the client Scan to convert
-   * @return the converted protocol buffer Scan
-   * @throws IOException
+   * @return the converted protocol buffer Scan n
    */
-  public static ClientProtos.Scan toScan(
-      final Scan scan) throws IOException {
-    ClientProtos.Scan.Builder scanBuilder =
-      ClientProtos.Scan.newBuilder();
+  public static ClientProtos.Scan toScan(final Scan scan) throws IOException {
+    ClientProtos.Scan.Builder scanBuilder = ClientProtos.Scan.newBuilder();
     scanBuilder.setCacheBlocks(scan.getCacheBlocks());
     if (scan.getBatch() > 0) {
       scanBuilder.setBatchSize(scan.getBatch());
@@ -889,15 +843,13 @@ public final class ProtobufUtil {
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     scan.getColumnFamilyTimeRange().forEach((cf, timeRange) -> {
       scanBuilder.addCfTimeRange(HBaseProtos.ColumnFamilyTimeRange.newBuilder()
-        .setColumnFamily(ByteStringer.wrap(cf))
-        .setTimeRange(toTimeRange(timeRange))
-        .build());
+        .setColumnFamily(ByteStringer.wrap(cf)).setTimeRange(toTimeRange(timeRange)).build());
     });
     scanBuilder.setTimeRange(toTimeRange(scan.getTimeRange()));
     Map<String, byte[]> attributes = scan.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
         attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         scanBuilder.addAttribute(attributeBuilder.build());
@@ -916,13 +868,12 @@ public final class ProtobufUtil {
     }
     if (scan.hasFamilies()) {
       Column.Builder columnBuilder = Column.newBuilder();
-      for (Map.Entry<byte[],NavigableSet<byte []>>
-          family: scan.getFamilyMap().entrySet()) {
+      for (Map.Entry<byte[], NavigableSet<byte[]>> family : scan.getFamilyMap().entrySet()) {
         columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-        NavigableSet<byte []> qualifiers = family.getValue();
+        NavigableSet<byte[]> qualifiers = family.getValue();
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
-          for (byte [] qualifier: qualifiers) {
+          for (byte[] qualifier : qualifiers) {
             columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
           }
         }
@@ -960,13 +911,10 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Scan to a client Scan
-   *
    * @param proto the protocol buffer Scan to convert
-   * @return the converted client Scan
-   * @throws IOException
+   * @return the converted client Scan n
    */
-  public static Scan toScan(
-      final ClientProtos.Scan proto) throws IOException {
+  public static Scan toScan(final ClientProtos.Scan proto) throws IOException {
     byte[] startRow = HConstants.EMPTY_START_ROW;
     byte[] stopRow = HConstants.EMPTY_END_ROW;
     boolean includeStartRow = true;
@@ -984,7 +932,7 @@ public final class ProtobufUtil {
       includeStopRow = proto.getIncludeStopRow();
     }
     Scan scan =
-        new Scan().withStartRow(startRow, includeStartRow).withStopRow(stopRow, includeStopRow);
+      new Scan().withStartRow(startRow, includeStartRow).withStopRow(stopRow, includeStopRow);
     if (proto.hasCacheBlocks()) {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }
@@ -1003,8 +951,8 @@ public final class ProtobufUtil {
     if (proto.getCfTimeRangeCount() > 0) {
       for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
         TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
-        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
-            timeRange.getMin(), timeRange.getMax());
+        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(), timeRange.getMin(),
+          timeRange.getMax());
       }
     }
     if (proto.hasTimeRange()) {
@@ -1027,14 +975,14 @@ public final class ProtobufUtil {
     if (proto.hasAllowPartialResults()) {
       scan.setAllowPartialResults(proto.getAllowPartialResults());
     }
-    for (NameBytesPair attribute: proto.getAttributeList()) {
+    for (NameBytesPair attribute : proto.getAttributeList()) {
       scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     if (proto.getColumnCount() > 0) {
-      for (Column column: proto.getColumnList()) {
+      for (Column column : proto.getColumnList()) {
         byte[] family = column.getFamily().toByteArray();
         if (column.getQualifierCount() > 0) {
-          for (ByteString qualifier: column.getQualifierList()) {
+          for (ByteString qualifier : column.getQualifierList()) {
             scan.addColumn(family, qualifier.toByteArray());
           }
         } else {
@@ -1064,31 +1012,25 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer Get based on a client Get.
-   *
    * @param get the client Get
-   * @return a protocol buffer Get
-   * @throws IOException
+   * @return a protocol buffer Get n
    */
-  public static ClientProtos.Get toGet(
-      final Get get) throws IOException {
-    ClientProtos.Get.Builder builder =
-      ClientProtos.Get.newBuilder();
+  public static ClientProtos.Get toGet(final Get get) throws IOException {
+    ClientProtos.Get.Builder builder = ClientProtos.Get.newBuilder();
     builder.setRow(ByteStringer.wrap(get.getRow()));
     builder.setCacheBlocks(get.getCacheBlocks());
     builder.setMaxVersions(get.getMaxVersions());
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
     }
-    get.getColumnFamilyTimeRange().forEach((cf, timeRange) ->
-      builder.addCfTimeRange(HBaseProtos.ColumnFamilyTimeRange.newBuilder()
-        .setColumnFamily(ByteStringer.wrap(cf))
-        .setTimeRange(toTimeRange(timeRange)).build())
-    );
+    get.getColumnFamilyTimeRange().forEach(
+      (cf, timeRange) -> builder.addCfTimeRange(HBaseProtos.ColumnFamilyTimeRange.newBuilder()
+        .setColumnFamily(ByteStringer.wrap(cf)).setTimeRange(toTimeRange(timeRange)).build()));
     builder.setTimeRange(toTimeRange(get.getTimeRange()));
     Map<String, byte[]> attributes = get.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
         attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
@@ -1097,12 +1039,12 @@ public final class ProtobufUtil {
     if (get.hasFamilies()) {
       Column.Builder columnBuilder = Column.newBuilder();
       Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
-      for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
+      for (Map.Entry<byte[], NavigableSet<byte[]>> family : families.entrySet()) {
         NavigableSet<byte[]> qualifiers = family.getValue();
         columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
-          for (byte[] qualifier: qualifiers) {
+          for (byte[] qualifier : qualifiers) {
             columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
           }
         }
@@ -1115,7 +1057,7 @@ public final class ProtobufUtil {
     if (get.getRowOffsetPerColumnFamily() > 0) {
       builder.setStoreOffset(get.getRowOffsetPerColumnFamily());
     }
-    if (get.isCheckExistenceOnly()){
+    if (get.isCheckExistenceOnly()) {
       builder.setExistenceOnly(true);
     }
     if (get.getConsistency() != null && get.getConsistency() != Consistency.STRONG) {
@@ -1136,12 +1078,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer Mutate based on a client Mutation
-   *
-   * @param type
-   * @param mutation
-   * @return a protobuf'd Mutation
-   * @throws IOException
+   * Create a protocol buffer Mutate based on a client Mutation nn * @return a protobuf'd Mutation n
    */
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
     final long nonce) throws IOException {
@@ -1149,13 +1086,12 @@ public final class ProtobufUtil {
   }
 
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
-      MutationProto.Builder builder) throws IOException {
+    MutationProto.Builder builder) throws IOException {
     return toMutation(type, mutation, builder, HConstants.NO_NONCE);
   }
 
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
-      MutationProto.Builder builder, long nonce)
-  throws IOException {
+    MutationProto.Builder builder, long nonce) throws IOException {
     builder = getMutationBuilderAndSetCommonFields(type, mutation, builder);
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
@@ -1168,15 +1104,15 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> family : mutation.getFamilyCellMap().entrySet()) {
       columnBuilder.clear();
       columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-      for (Cell cell: family.getValue()) {
+      for (Cell cell : family.getValue()) {
         valueBuilder.clear();
-        valueBuilder.setQualifier(ByteStringer.wrap(
-            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
-        valueBuilder.setValue(ByteStringer.wrap(
-            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        valueBuilder.setQualifier(ByteStringer.wrap(cell.getQualifierArray(),
+          cell.getQualifierOffset(), cell.getQualifierLength()));
+        valueBuilder.setValue(
+          ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         valueBuilder.setTimestamp(cell.getTimestamp());
         if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(cell))) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(cell.getTypeByte());
@@ -1191,41 +1127,34 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf.
-   * @param type
-   * @param mutation
-   * @param builder
-   * @return a protobuf'd Mutation
-   * @throws IOException
+   * Understanding is that the Cell will be transported other than via protobuf. nnn * @return a
+   * protobuf'd Mutation n
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
-      final MutationProto.Builder builder)  throws IOException {
+    final MutationProto.Builder builder) throws IOException {
     return toMutationNoData(type, mutation, builder, HConstants.NO_NONCE);
   }
 
   /**
-   * Create a protocol buffer MutationProto based on a client Mutation.  Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf.
-   * @param type
-   * @param mutation
-   * @return a protobuf'd Mutation
-   * @throws IOException
+   * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
+   * Understanding is that the Cell will be transported other than via protobuf. nn * @return a
+   * protobuf'd Mutation n
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation)
-  throws IOException {
-    MutationProto.Builder builder =  MutationProto.newBuilder();
+    throws IOException {
+    MutationProto.Builder builder = MutationProto.newBuilder();
     return toMutationNoData(type, mutation, builder);
   }
 
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
-      final MutationProto.Builder builder, long nonce) throws IOException {
+    final MutationProto.Builder builder, long nonce) throws IOException {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
     builder.setAssociatedCellCount(mutation.size());
     if (mutation instanceof Increment) {
-      builder.setTimeRange(toTimeRange(((Increment)mutation).getTimeRange()));
+      builder.setTimeRange(toTimeRange(((Increment) mutation).getTimeRange()));
     }
     if (mutation instanceof Append) {
-      builder.setTimeRange(toTimeRange(((Append)mutation).getTimeRange()));
+      builder.setTimeRange(toTimeRange(((Append) mutation).getTimeRange()));
     }
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
@@ -1235,13 +1164,11 @@ public final class ProtobufUtil {
 
   /**
    * Code shared by {@link #toMutation(MutationType, Mutation)} and
-   * {@link #toMutationNoData(MutationType, Mutation)}
-   * @param type
-   * @param mutation
-   * @return A partly-filled out protobuf'd Mutation.
+   * {@link #toMutationNoData(MutationType, Mutation)} nn * @return A partly-filled out protobuf'd
+   * Mutation.
    */
   private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
-      final Mutation mutation, MutationProto.Builder builder) {
+    final Mutation mutation, MutationProto.Builder builder) {
     builder.setRow(ByteStringer.wrap(mutation.getRow()));
     builder.setMutateType(type);
     builder.setDurability(toDurability(mutation.getDurability()));
@@ -1249,7 +1176,7 @@ public final class ProtobufUtil {
     Map<String, byte[]> attributes = mutation.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
         attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
@@ -1260,7 +1187,6 @@ public final class ProtobufUtil {
 
   /**
    * Convert a client Result to a protocol buffer Result
-   *
    * @param result the client Result to convert
    * @return the converted protocol buffer Result
    */
@@ -1287,12 +1213,11 @@ public final class ProtobufUtil {
 
   /**
    * Convert a client Result to a protocol buffer Result
-   *
    * @param existence the client existence to send
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final boolean existence, boolean stale) {
-    if (stale){
+    if (stale) {
       return existence ? EMPTY_RESULT_PB_EXISTS_TRUE_STALE : EMPTY_RESULT_PB_EXISTS_FALSE_STALE;
     } else {
       return existence ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
@@ -1300,9 +1225,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a client Result to a protocol buffer Result.
-   * The pb Result does not include the Cell data.  That is for transport otherwise.
-   *
+   * Convert a client Result to a protocol buffer Result. The pb Result does not include the Cell
+   * data. That is for transport otherwise.
    * @param result the client Result to convert
    * @return the converted protocol buffer Result
    */
@@ -1318,20 +1242,19 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Result to a client Result
-   *
    * @param proto the protocol buffer Result to convert
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
     if (proto.hasExists()) {
       if (proto.getStale()) {
-        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
+        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE : EMPTY_RESULT_EXISTS_FALSE_STALE;
       }
       return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
 
     List<CellProtos.Cell> values = proto.getCellList();
-    if (values.isEmpty()){
+    if (values.isEmpty()) {
       return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
@@ -1345,23 +1268,22 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Result to a client Result
-   *
-   * @param proto the protocol buffer Result to convert
+   * @param proto   the protocol buffer Result to convert
    * @param scanner Optional cell scanner.
-   * @return the converted client Result
-   * @throws IOException
+   * @return the converted client Result n
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
-  throws IOException {
+    throws IOException {
     List<CellProtos.Cell> values = proto.getCellList();
 
     if (proto.hasExists()) {
-      if (!values.isEmpty() ||
-          (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)) {
+      if (
+        !values.isEmpty() || (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)
+      ) {
         throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
       }
       if (proto.getStale()) {
-        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
+        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE : EMPTY_RESULT_EXISTS_FALSE_STALE;
       }
       return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
@@ -1377,23 +1299,21 @@ public final class ProtobufUtil {
       }
     }
 
-    if (!values.isEmpty()){
+    if (!values.isEmpty()) {
       if (cells == null) cells = new ArrayList<>(values.size());
       ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
-      for (CellProtos.Cell c: values) {
+      for (CellProtos.Cell c : values) {
         cells.add(toCell(builder, c));
       }
     }
 
     return (cells == null || cells.isEmpty())
-        ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
-        : Result.create(cells, null, proto.getStale());
+      ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
+      : Result.create(cells, null, proto.getStale());
   }
-
 
   /**
    * Convert a ByteArrayComparable to a protocol buffer Comparator
-   *
    * @param comparator the ByteArrayComparable to convert
    * @return the converted protocol buffer Comparator
    */
@@ -1406,23 +1326,22 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Comparator to a ByteArrayComparable
-   *
    * @param proto the protocol buffer Comparator to convert
    * @return the converted ByteArrayComparable
    */
   @SuppressWarnings("unchecked")
   public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
-  throws IOException {
+    throws IOException {
     String type = proto.getName();
     String funcName = "parseFrom";
-    byte [] value = proto.getSerializedComparator().toByteArray();
+    byte[] value = proto.getSerializedComparator().toByteArray();
     try {
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
       }
-      return (ByteArrayComparable)parseFrom.invoke(null, value);
+      return (ByteArrayComparable) parseFrom.invoke(null, value);
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -1430,14 +1349,13 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Filter to a client Filter
-   *
    * @param proto the protocol buffer Filter to convert
    * @return the converted Filter
    */
   @SuppressWarnings("unchecked")
   public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
     String type = proto.getName();
-    final byte [] value = proto.getSerializedFilter().toByteArray();
+    final byte[] value = proto.getSerializedFilter().toByteArray();
     String funcName = "parseFrom";
     try {
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
@@ -1445,7 +1363,7 @@ public final class ProtobufUtil {
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
       }
-      return (Filter)parseFrom.invoke(c, value);
+      return (Filter) parseFrom.invoke(c, value);
     } catch (Exception e) {
       // Either we couldn't instantiate the method object, or "parseFrom" failed.
       // In either case, let's not retry.
@@ -1455,7 +1373,6 @@ public final class ProtobufUtil {
 
   /**
    * Convert a client Filter to a protocol buffer Filter
-   *
    * @param filter the Filter to convert
    * @return the converted protocol buffer Filter
    */
@@ -1467,54 +1384,46 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a delete KeyValue type to protocol buffer DeleteType.
-   *
-   * @param type
-   * @return protocol buffer DeleteType
-   * @throws IOException
+   * Convert a delete KeyValue type to protocol buffer DeleteType. n * @return protocol buffer
+   * DeleteType n
    */
-  public static DeleteType toDeleteType(
-      KeyValue.Type type) throws IOException {
+  public static DeleteType toDeleteType(KeyValue.Type type) throws IOException {
     switch (type) {
-    case Delete:
-      return DeleteType.DELETE_ONE_VERSION;
-    case DeleteColumn:
-      return DeleteType.DELETE_MULTIPLE_VERSIONS;
-    case DeleteFamily:
-      return DeleteType.DELETE_FAMILY;
-    case DeleteFamilyVersion:
-      return DeleteType.DELETE_FAMILY_VERSION;
-    default:
+      case Delete:
+        return DeleteType.DELETE_ONE_VERSION;
+      case DeleteColumn:
+        return DeleteType.DELETE_MULTIPLE_VERSIONS;
+      case DeleteFamily:
+        return DeleteType.DELETE_FAMILY;
+      case DeleteFamilyVersion:
+        return DeleteType.DELETE_FAMILY_VERSION;
+      default:
         throw new IOException("Unknown delete type: " + type);
     }
   }
 
   /**
    * Convert a protocol buffer DeleteType to delete KeyValue type.
-   *
    * @param type The DeleteType
-   * @return The type.
-   * @throws IOException
+   * @return The type. n
    */
-  public static KeyValue.Type fromDeleteType(
-      DeleteType type) throws IOException {
+  public static KeyValue.Type fromDeleteType(DeleteType type) throws IOException {
     switch (type) {
-    case DELETE_ONE_VERSION:
-      return KeyValue.Type.Delete;
-    case DELETE_MULTIPLE_VERSIONS:
-      return KeyValue.Type.DeleteColumn;
-    case DELETE_FAMILY:
-      return KeyValue.Type.DeleteFamily;
-    case DELETE_FAMILY_VERSION:
-      return KeyValue.Type.DeleteFamilyVersion;
-    default:
-      throw new IOException("Unknown delete type: " + type);
+      case DELETE_ONE_VERSION:
+        return KeyValue.Type.Delete;
+      case DELETE_MULTIPLE_VERSIONS:
+        return KeyValue.Type.DeleteColumn;
+      case DELETE_FAMILY:
+        return KeyValue.Type.DeleteFamily;
+      case DELETE_FAMILY_VERSION:
+        return KeyValue.Type.DeleteFamilyVersion;
+      default:
+        throw new IOException("Unknown delete type: " + type);
     }
   }
 
   /**
    * Convert a stringified protocol buffer exception Parameter to a Java Exception
-   *
    * @param parameter the protocol buffer Parameter to convert
    * @return the converted Exception
    * @throws IOException if failed to deserialize the parameter
@@ -1526,7 +1435,7 @@ public final class ProtobufUtil {
     String type = parameter.getName();
     try {
       Class<? extends Throwable> c =
-        (Class<? extends Throwable>)Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
+        (Class<? extends Throwable>) Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Constructor<? extends Throwable> cn = null;
       try {
         cn = c.getDeclaredConstructor(String.class);
@@ -1541,25 +1450,24 @@ public final class ProtobufUtil {
     }
   }
 
-// Start helpers for Client
+  // Start helpers for Client
 
   @SuppressWarnings("unchecked")
   public static <T extends Service> T newServiceStub(Class<T> service, RpcChannel channel)
-      throws Exception {
-    return (T)Methods.call(service, null, "newStub",
-        new Class[]{ RpcChannel.class }, new Object[]{ channel });
+    throws Exception {
+    return (T) Methods.call(service, null, "newStub", new Class[] { RpcChannel.class },
+      new Object[] { channel });
   }
 
-// End helpers for Client
-// Start helpers for Admin
+  // End helpers for Client
+  // Start helpers for Admin
 
   /**
    * A helper to get the info of a region server using admin protocol.
    * @return the server name
    */
   public static ServerInfo getServerInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin)
-  throws IOException {
+    final AdminService.BlockingInterface admin) throws IOException {
     GetServerInfoRequest request = buildGetServerInfoRequest();
     try {
       GetServerInfoResponse response = admin.getServerInfo(controller, request);
@@ -1569,7 +1477,6 @@ public final class ProtobufUtil {
     }
   }
 
-
   /**
    * @see #buildGetServerInfoRequest()
    */
@@ -1578,7 +1485,6 @@ public final class ProtobufUtil {
 
   /**
    * Create a new GetServerInfoRequest
-   *
    * @return a GetServerInfoRequest
    */
   public static GetServerInfoRequest buildGetServerInfoRequest() {
@@ -1591,7 +1497,7 @@ public final class ProtobufUtil {
     try {
       pScanMetrics = parser.parseFrom(bytes);
     } catch (InvalidProtocolBufferException e) {
-      //Ignored there are just no key values to add.
+      // Ignored there are just no key values to add.
     }
     ScanMetrics scanMetrics = new ScanMetrics();
     if (pScanMetrics != null) {
@@ -1605,8 +1511,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Unwraps an exception from a protobuf service into the underlying (expected) IOException.
-   * This method will <strong>always</strong> throw an exception.
+   * Unwraps an exception from a protobuf service into the underlying (expected) IOException. This
+   * method will <strong>always</strong> throw an exception.
    * @param se the {@code ServiceException} instance to convert into an {@code IOException}
    */
   public static void toIOException(ServiceException se) throws IOException {
@@ -1616,7 +1522,7 @@ public final class ProtobufUtil {
 
     Throwable cause = se.getCause();
     if (cause != null && cause instanceof IOException) {
-      throw (IOException)cause;
+      throw (IOException) cause;
     }
     throw new IOException(se);
   }
@@ -1625,28 +1531,23 @@ public final class ProtobufUtil {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
-    kvbuilder.setRow(ByteStringer.wrap(kv.getRowArray(), kv.getRowOffset(),
-        kv.getRowLength()));
-    kvbuilder.setFamily(ByteStringer.wrap(kv.getFamilyArray(),
-        kv.getFamilyOffset(), kv.getFamilyLength()));
-    kvbuilder.setQualifier(ByteStringer.wrap(kv.getQualifierArray(),
-        kv.getQualifierOffset(), kv.getQualifierLength()));
+    kvbuilder.setRow(ByteStringer.wrap(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
+    kvbuilder.setFamily(
+      ByteStringer.wrap(kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength()));
+    kvbuilder.setQualifier(
+      ByteStringer.wrap(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
     kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
     kvbuilder.setTimestamp(kv.getTimestamp());
-    kvbuilder.setValue(ByteStringer.wrap(kv.getValueArray(), kv.getValueOffset(),
-        kv.getValueLength()));
+    kvbuilder
+      .setValue(ByteStringer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
     return kvbuilder.build();
   }
 
   public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
-    return cellBuilder.clear()
-            .setRow(cell.getRow().toByteArray())
-            .setFamily(cell.getFamily().toByteArray())
-            .setQualifier(cell.getQualifier().toByteArray())
-            .setTimestamp(cell.getTimestamp())
-            .setType((byte) cell.getCellType().getNumber())
-            .setValue(cell.getValue().toByteArray())
-            .build();
+    return cellBuilder.clear().setRow(cell.getRow().toByteArray())
+      .setFamily(cell.getFamily().toByteArray()).setQualifier(cell.getQualifier().toByteArray())
+      .setTimestamp(cell.getTimestamp()).setType((byte) cell.getCellType().getNumber())
+      .setValue(cell.getValue().toByteArray()).build();
   }
 
   /**
@@ -1655,27 +1556,26 @@ public final class ProtobufUtil {
    * @return Short String of mutation proto
    */
   static String toShortString(final MutationProto proto) {
-    return "row=" + Bytes.toString(proto.getRow().toByteArray()) +
-        ", type=" + proto.getMutateType().toString();
+    return "row=" + Bytes.toString(proto.getRow().toByteArray()) + ", type="
+      + proto.getMutateType().toString();
   }
 
   public static TableName toTableName(TableProtos.TableName tableNamePB) {
     return TableName.valueOf(tableNamePB.getNamespace().asReadOnlyByteBuffer(),
-        tableNamePB.getQualifier().asReadOnlyByteBuffer());
+      tableNamePB.getQualifier().asReadOnlyByteBuffer());
   }
 
   public static TableProtos.TableName toProtoTableName(TableName tableName) {
     return TableProtos.TableName.newBuilder()
-        .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
-        .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
+      .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
+      .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
   }
 
   /**
-   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding
-   * buffers when working with byte arrays
+   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
+   * working with byte arrays
    * @param builder current message builder
-   * @param b byte array
-   * @throws IOException
+   * @param b       byte array n
    */
   public static void mergeFrom(Message.Builder builder, byte[] b) throws IOException {
     final CodedInputStream codedInput = CodedInputStream.newInstance(b);
@@ -1685,16 +1585,13 @@ public final class ProtobufUtil {
   }
 
   /**
-   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding
-   * buffers when working with byte arrays
+   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
+   * working with byte arrays
    * @param builder current message builder
-   * @param b byte array
-   * @param offset
-   * @param length
-   * @throws IOException
+   * @param b       byte array nnn
    */
   public static void mergeFrom(Message.Builder builder, byte[] b, int offset, int length)
-      throws IOException {
+    throws IOException {
     final CodedInputStream codedInput = CodedInputStream.newInstance(b, offset, length);
     codedInput.setSizeLimit(length);
     builder.mergeFrom(codedInput);
@@ -1702,14 +1599,14 @@ public final class ProtobufUtil {
   }
 
   private static TimeRange protoToTimeRange(HBaseProtos.TimeRange timeRange) throws IOException {
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
+    long minStamp = 0;
+    long maxStamp = Long.MAX_VALUE;
+    if (timeRange.hasFrom()) {
+      minStamp = timeRange.getFrom();
+    }
+    if (timeRange.hasTo()) {
+      maxStamp = timeRange.getTo();
+    }
     return new TimeRange(minStamp, maxStamp);
   }
 
@@ -1720,19 +1617,18 @@ public final class ProtobufUtil {
    * @return the protobuf SnapshotDescription type
    */
   public static HBaseProtos.SnapshotDescription.Type
-      createProtosSnapShotDescType(SnapshotType type) {
+    createProtosSnapShotDescType(SnapshotType type) {
     return HBaseProtos.SnapshotDescription.Type.valueOf(type.name());
   }
 
   /**
    * Convert a byte array to a protocol buffer RegionSpecifier
-   *
-   * @param type the region specifier type
+   * @param type  the region specifier type
    * @param value the region specifier byte array value
    * @return a protocol buffer RegionSpecifier
    */
-  public static RegionSpecifier buildRegionSpecifier(
-      final RegionSpecifierType type, final byte[] value) {
+  public static RegionSpecifier buildRegionSpecifier(final RegionSpecifierType type,
+    final byte[] value) {
     RegionSpecifier.Builder regionBuilder = RegionSpecifier.newBuilder();
     regionBuilder.setValue(ByteStringer.wrap(value));
     regionBuilder.setType(type);
@@ -1741,29 +1637,27 @@ public final class ProtobufUtil {
 
   /**
    * Get a ServerName from the passed in data bytes.
-   * @param data Data with a serialize server name in it; can handle the old style
-   * servername where servername was host and port.  Works too with data that
-   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
-   * has a serialized {@link ServerName} in it.
-   * @return Returns null if <code>data</code> is null else converts passed data
-   * to a ServerName instance.
-   * @throws DeserializationException
+   * @param data Data with a serialize server name in it; can handle the old style servername where
+   *             servername was host and port. Works too with data that begins w/ the pb 'PBUF'
+   *             magic and that is then followed by a protobuf that has a serialized
+   *             {@link ServerName} in it.
+   * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
+   *         instance. n
    */
-  public static ServerName toServerName(final byte [] data) throws DeserializationException {
+  public static ServerName toServerName(final byte[] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;
     if (ProtobufMagic.isPBMagicPrefix(data)) {
       int prefixLen = ProtobufMagic.lengthOfPBMagic();
       try {
         ZooKeeperProtos.Master rss =
           ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn =
-            rss.getMaster();
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getMaster();
         return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
-      } catch (/*InvalidProtocolBufferException*/IOException e) {
+      } catch (/* InvalidProtocolBufferException */IOException e) {
         // A failed parse of the znode is pretty catastrophic. Rather than loop
         // retrying hoping the bad bytes will changes, and rather than change
         // the signature on this method to add an IOE which will send ripples all
-        // over the code base, throw a RuntimeException.  This should "never" happen.
+        // over the code base, throw a RuntimeException. This should "never" happen.
         // Fail fast if it does.
         throw new DeserializationException(e);
       }
@@ -1801,8 +1695,7 @@ public final class ProtobufUtil {
     if (timeRange == null) {
       timeRange = TimeRange.allTime();
     }
-    return HBaseProtos.TimeRange.newBuilder().setFrom(timeRange.getMin())
-      .setTo(timeRange.getMax())
+    return HBaseProtos.TimeRange.newBuilder().setFrom(timeRange.getMin()).setTo(timeRange.getMax())
       .build();
   }
 
@@ -1825,17 +1718,16 @@ public final class ProtobufUtil {
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
     final TimeRange timeRange) throws IOException {
 
-    ClientProtos.Condition.Builder builder = ClientProtos.Condition.newBuilder()
-      .setRow(ByteStringer.wrap(row));
+    ClientProtos.Condition.Builder builder =
+      ClientProtos.Condition.newBuilder().setRow(ByteStringer.wrap(row));
 
     if (filter != null) {
       builder.setFilter(ProtobufUtil.toFilter(filter));
     } else {
       builder.setFamily(ByteStringer.wrap(family))
-        .setQualifier(ByteStringer.wrap(
-          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
-        .setComparator(
-          ProtobufUtil.toComparator(new BinaryComparator(value)))
+        .setQualifier(
+          ByteStringer.wrap(qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
+        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
         .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
     }
 
@@ -1848,8 +1740,8 @@ public final class ProtobufUtil {
   }
 
   public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
-    final byte[] qualifier, final CompareOperator op, final byte[] value,
-    final TimeRange timeRange) throws IOException {
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final TimeRange timeRange)
+    throws IOException {
     return toCondition(row, family, qualifier, op, value, null, timeRange);
   }
 }

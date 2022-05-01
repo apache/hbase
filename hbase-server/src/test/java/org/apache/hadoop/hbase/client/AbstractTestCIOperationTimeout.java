@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,8 +40,8 @@ public abstract class AbstractTestCIOperationTimeout extends AbstractTestCITimeo
   public void setUp() throws IOException {
     tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .setCoprocessor(SleepAndFailFirstTime.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
+      .setCoprocessor(SleepAndFailFirstTime.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
     TEST_UTIL.getAdmin().createTable(htd);
   }
 
@@ -61,7 +61,7 @@ public abstract class AbstractTestCIOperationTimeout extends AbstractTestCITimeo
   public void testOperationTimeout() throws IOException {
     TableBuilder builder =
       TEST_UTIL.getConnection().getTableBuilder(tableName, null).setRpcTimeout(Integer.MAX_VALUE)
-          .setReadRpcTimeout(Integer.MAX_VALUE).setWriteRpcTimeout(Integer.MAX_VALUE);
+        .setReadRpcTimeout(Integer.MAX_VALUE).setWriteRpcTimeout(Integer.MAX_VALUE);
     // Check that it works if the timeout is big enough
     SleepAndFailFirstTime.ct.set(0);
     try (Table table = builder.setOperationTimeout(120 * 1000).build()) {

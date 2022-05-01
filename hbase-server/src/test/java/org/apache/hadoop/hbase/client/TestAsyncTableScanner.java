@@ -56,7 +56,7 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScanner.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScanner.class);
 
   @Parameter(0)
   public String tableType;
@@ -83,7 +83,7 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     AsyncTable<?> table =
-        connectionRule.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
+      connectionRule.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
     List<Result> results = new ArrayList<>();
     // these tests batch settings with the sample data result in each result being
     // split in two. so we must allow twice the expected results in order to reach
@@ -109,18 +109,18 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
   protected void assertTraceContinuity() {
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher =
-        allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     assertThat(spans,
       hasItem(allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
@@ -134,19 +134,19 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
-          hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
+        hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
   }
 }

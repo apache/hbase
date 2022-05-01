@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +49,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -95,18 +96,17 @@ public class TestSnapshotProcedure {
     TEST_UTIL.loadTable(table, CF, false);
   }
 
-  public <T extends Procedure<MasterProcedureEnv>> T waitProcedureRunnableAndGetFirst(
-    Class<T> clazz, long timeout) throws IOException {
-    TEST_UTIL.waitFor(timeout, () -> master.getProcedures().stream()
-      .anyMatch(clazz::isInstance));
-    Optional<T> procOpt =  master.getMasterProcedureExecutor().getProcedures().stream()
+  public <T extends Procedure<MasterProcedureEnv>> T
+    waitProcedureRunnableAndGetFirst(Class<T> clazz, long timeout) throws IOException {
+    TEST_UTIL.waitFor(timeout, () -> master.getProcedures().stream().anyMatch(clazz::isInstance));
+    Optional<T> procOpt = master.getMasterProcedureExecutor().getProcedures().stream()
       .filter(clazz::isInstance).map(clazz::cast).findFirst();
     assertTrue(procOpt.isPresent());
     return procOpt.get();
   }
 
-  protected SnapshotProcedure getDelayedOnSpecificStateSnapshotProcedure(
-    SnapshotProcedure sp, MasterProcedureEnv env, SnapshotState state)
+  protected SnapshotProcedure getDelayedOnSpecificStateSnapshotProcedure(SnapshotProcedure sp,
+    MasterProcedureEnv env, SnapshotState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     SnapshotProcedure spySp = Mockito.spy(sp);
     Mockito.doAnswer(new AnswersWithDelay(60000, new Answer<Object>() {
@@ -121,8 +121,8 @@ public class TestSnapshotProcedure {
   @After
   public void teardown() throws Exception {
     if (this.master != null) {
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
-        master.getMasterProcedureExecutor(), false);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
+        false);
     }
     TEST_UTIL.shutdownMiniCluster();
   }

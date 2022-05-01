@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,24 +19,23 @@ package org.apache.hadoop.hbase.errorhandling;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The dispatcher acts as the state holding entity for foreign error handling.  The first
- * exception received by the dispatcher get passed directly to the listeners.  Subsequent
- * exceptions are dropped.
+ * The dispatcher acts as the state holding entity for foreign error handling. The first exception
+ * received by the dispatcher get passed directly to the listeners. Subsequent exceptions are
+ * dropped.
  * <p>
  * If there are multiple dispatchers that are all in the same foreign exception monitoring group,
  * ideally all these monitors are "peers" -- any error on one dispatcher should get propagated to
- * all others (via rpc, or some other mechanism).  Due to racing error conditions the exact reason
- * for failure may be different on different peers, but the fact that they are in error state
- * should eventually hold on all.
+ * all others (via rpc, or some other mechanism). Due to racing error conditions the exact reason
+ * for failure may be different on different peers, but the fact that they are in error state should
+ * eventually hold on all.
  * <p>
- * This is thread-safe and must be because this is expected to be used to propagate exceptions
- * from foreign threads.
+ * This is thread-safe and must be because this is expected to be used to propagate exceptions from
+ * foreign threads.
  */
 @InterfaceAudience.Private
 public class ForeignExceptionDispatcher implements ForeignExceptionListener, ForeignExceptionSnare {
@@ -62,7 +61,7 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
     // if we already have an exception, then ignore it
     if (exception != null) return;
 
-    LOG.debug(name + " accepting received exception" , e);
+    LOG.debug(name + " accepting received exception", e);
     // mark that we got the error
     if (e != null) {
       exception = e;
@@ -95,19 +94,19 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
 
   /**
    * Sends an exception to all listeners.
-   * @param e {@link ForeignException} containing the cause.  Can be null.
+   * @param e {@link ForeignException} containing the cause. Can be null.
    */
   private void dispatch(ForeignException e) {
     // update all the listeners with the passed error
-    for (ForeignExceptionListener l: listeners) {
+    for (ForeignExceptionListener l : listeners) {
       l.receive(e);
     }
   }
 
   /**
-   * Listen for failures to a given process.  This method should only be used during
-   * initialization and not added to after exceptions are accepted.
-   * @param errorable listener for the errors.  may be null.
+   * Listen for failures to a given process. This method should only be used during initialization
+   * and not added to after exceptions are accepted.
+   * @param errorable listener for the errors. may be null.
    */
   public synchronized void addListener(ForeignExceptionListener errorable) {
     this.listeners.add(errorable);

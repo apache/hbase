@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,8 +79,8 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
         ReplicationSourceManager manager =
           ((Replication) rs.getReplicationSourceService()).getReplicationManager();
         // Make sure replication moves to the new file.
-        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1) &&
-          !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
+        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1)
+          && !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
       }
 
       @Override

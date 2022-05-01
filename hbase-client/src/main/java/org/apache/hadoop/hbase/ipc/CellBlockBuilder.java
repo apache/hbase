@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,27 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
@@ -50,6 +42,13 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
 
 /**
  * Helper class for building cell block.
@@ -71,13 +70,13 @@ class CellBlockBuilder {
 
   public CellBlockBuilder(Configuration conf) {
     this.conf = conf;
-    this.cellBlockDecompressionMultiplier = conf
-        .getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
+    this.cellBlockDecompressionMultiplier =
+      conf.getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
 
     // Guess that 16k is a good size for rpc buffer. Could go bigger. See the TODO below in
     // #buildCellBlock.
-    this.cellBlockBuildingInitialBufferSize = ClassSize
-        .align(conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024));
+    this.cellBlockBuildingInitialBufferSize =
+      ClassSize.align(conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024));
   }
 
   private interface OutputStreamSupplier {
@@ -105,17 +104,12 @@ class CellBlockBuilder {
 
   /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
-   * <code>compressor</code>.
-   * @param codec
-   * @param compressor
-   * @param cellScanner
-   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
-   *         passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has
-   *         been flipped and is ready for reading. Use limit to find total size.
-   * @throws IOException
+   * <code>compressor</code>. nnn * @return Null or byte buffer filled with a cellblock filled with
+   * passed-in Cells encoded using passed in <code>codec</code> and/or <code>compressor</code>; the
+   * returned buffer has been flipped and is ready for reading. Use limit to find total size. n
    */
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-      final CellScanner cellScanner) throws IOException {
+    final CellScanner cellScanner) throws IOException {
     ByteBufferOutputStreamSupplier supplier = new ByteBufferOutputStreamSupplier();
     if (buildCellBlock(codec, compressor, cellScanner, supplier)) {
       ByteBuffer bb = supplier.baos.getByteBuffer();
@@ -150,7 +144,7 @@ class CellBlockBuilder {
   }
 
   public ByteBuf buildCellBlock(Codec codec, CompressionCodec compressor, CellScanner cellScanner,
-      ByteBufAllocator alloc) throws IOException {
+    ByteBufAllocator alloc) throws IOException {
     ByteBufOutputStreamSupplier supplier = new ByteBufOutputStreamSupplier(alloc);
     if (buildCellBlock(codec, compressor, cellScanner, supplier)) {
       return supplier.buf;
@@ -160,7 +154,7 @@ class CellBlockBuilder {
   }
 
   private boolean buildCellBlock(final Codec codec, final CompressionCodec compressor,
-      final CellScanner cellScanner, OutputStreamSupplier supplier) throws IOException {
+    final CellScanner cellScanner, OutputStreamSupplier supplier) throws IOException {
     if (cellScanner == null) {
       return false;
     }
@@ -171,13 +165,13 @@ class CellBlockBuilder {
     encodeCellsTo(supplier.get(bufferSize), cellScanner, codec, compressor);
     if (LOG.isTraceEnabled() && bufferSize < supplier.size()) {
       LOG.trace("Buffer grew from initial bufferSize=" + bufferSize + " to " + supplier.size()
-          + "; up hbase.ipc.cellblock.building.initial.buffersize?");
+        + "; up hbase.ipc.cellblock.building.initial.buffersize?");
     }
     return true;
   }
 
   private void encodeCellsTo(OutputStream os, CellScanner cellScanner, Codec codec,
-      CompressionCodec compressor) throws IOException {
+    CompressionCodec compressor) throws IOException {
     Compressor poolCompressor = null;
     try {
       if (compressor != null) {
@@ -205,10 +199,10 @@ class CellBlockBuilder {
   /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
    * <code>compressor</code>.
-   * @param codec to use for encoding
-   * @param compressor to use for encoding
+   * @param codec       to use for encoding
+   * @param compressor  to use for encoding
    * @param cellScanner to encode
-   * @param allocator to allocate the {@link ByteBuff}.
+   * @param allocator   to allocate the {@link ByteBuff}.
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
    *         passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has
    *         been flipped and is ready for reading. Use limit to find total size. If
@@ -217,7 +211,7 @@ class CellBlockBuilder {
    * @throws IOException if encoding the cells fail
    */
   public ByteBufferListOutputStream buildCellBlockStream(Codec codec, CompressionCodec compressor,
-      CellScanner cellScanner, ByteBuffAllocator allocator) throws IOException {
+    CellScanner cellScanner, ByteBuffAllocator allocator) throws IOException {
     if (cellScanner == null) {
       return null;
     }
@@ -234,13 +228,13 @@ class CellBlockBuilder {
   }
 
   /**
-   * @param codec to use for cellblock
+   * @param codec     to use for cellblock
    * @param cellBlock to encode
    * @return CellScanner to work against the content of <code>cellBlock</code>
    * @throws IOException if encoding fails
    */
   public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
-      final byte[] cellBlock) throws IOException {
+    final byte[] cellBlock) throws IOException {
     // Use this method from Client side to create the CellScanner
     if (compressor != null) {
       ByteBuffer cellBlockBuf = decompress(compressor, cellBlock);
@@ -254,15 +248,15 @@ class CellBlockBuilder {
   }
 
   /**
-   * @param codec to use for cellblock
+   * @param codec     to use for cellblock
    * @param cellBlock ByteBuffer containing the cells written by the Codec. The buffer should be
-   *          position()'ed at the start of the cell block and limit()'ed at the end.
+   *                  position()'ed at the start of the cell block and limit()'ed at the end.
    * @return CellScanner to work against the content of <code>cellBlock</code>. All cells created
    *         out of the CellScanner will share the same ByteBuffer being passed.
    * @throws IOException if cell encoding fails
    */
   public CellScanner createCellScannerReusingBuffers(final Codec codec,
-      final CompressionCodec compressor, ByteBuff cellBlock) throws IOException {
+    final CompressionCodec compressor, ByteBuff cellBlock) throws IOException {
     // Use this method from HRS to create the CellScanner
     // If compressed, decompress it first before passing it on else we will leak compression
     // resources if the stream is not closed properly after we let it out.
@@ -273,21 +267,21 @@ class CellBlockBuilder {
   }
 
   private ByteBuffer decompress(CompressionCodec compressor, byte[] compressedCellBlock)
-      throws IOException {
+    throws IOException {
     ByteBuffer cellBlock = decompress(compressor, new ByteArrayInputStream(compressedCellBlock),
-        compressedCellBlock.length * this.cellBlockDecompressionMultiplier);
+      compressedCellBlock.length * this.cellBlockDecompressionMultiplier);
     return cellBlock;
   }
 
   private ByteBuff decompress(CompressionCodec compressor, ByteBuff compressedCellBlock)
-      throws IOException {
+    throws IOException {
     ByteBuffer cellBlock = decompress(compressor, new ByteBuffInputStream(compressedCellBlock),
-        compressedCellBlock.remaining() * this.cellBlockDecompressionMultiplier);
+      compressedCellBlock.remaining() * this.cellBlockDecompressionMultiplier);
     return new SingleByteBuff(cellBlock);
   }
 
   private ByteBuffer decompress(CompressionCodec compressor, InputStream cellBlockStream,
-      int osInitialSize) throws IOException {
+    int osInitialSize) throws IOException {
     // GZIPCodec fails w/ NPE if no configuration.
     if (compressor instanceof Configurable) {
       ((Configurable) compressor).setConf(this.conf);

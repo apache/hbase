@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.lang.reflect.Field;
@@ -41,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests to validate if HMaster default chores are scheduled
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterChoreScheduled {
 
   @ClassRule
@@ -84,8 +83,8 @@ public class TestMasterChoreScheduled {
 
     // test if clusterStatusChore chore is scheduled by default in HMaster init
     TestChoreField<ClusterStatusChore> clusterStatusChoreTestChoreField = new TestChoreField<>();
-    ClusterStatusChore clusterStatusChore = clusterStatusChoreTestChoreField
-      .getChoreObj("clusterStatusChore");
+    ClusterStatusChore clusterStatusChore =
+      clusterStatusChoreTestChoreField.getChoreObj("clusterStatusChore");
     clusterStatusChoreTestChoreField.testIfChoreScheduled(clusterStatusChore);
 
     // test if balancerChore chore is scheduled by default in HMaster init
@@ -94,16 +93,14 @@ public class TestMasterChoreScheduled {
     balancerChoreTestChoreField.testIfChoreScheduled(balancerChore);
 
     // test if normalizerChore chore is scheduled by default in HMaster init
-    ScheduledChore regionNormalizerChore = hMaster.getRegionNormalizerManager()
-      .getRegionNormalizerChore();
-    TestChoreField<ScheduledChore> regionNormalizerChoreTestChoreField =
-      new TestChoreField<>();
+    ScheduledChore regionNormalizerChore =
+      hMaster.getRegionNormalizerManager().getRegionNormalizerChore();
+    TestChoreField<ScheduledChore> regionNormalizerChoreTestChoreField = new TestChoreField<>();
     regionNormalizerChoreTestChoreField.testIfChoreScheduled(regionNormalizerChore);
 
     // test if catalogJanitorChore chore is scheduled by default in HMaster init
     TestChoreField<CatalogJanitor> catalogJanitorTestChoreField = new TestChoreField<>();
-    CatalogJanitor catalogJanitor = catalogJanitorTestChoreField
-      .getChoreObj("catalogJanitorChore");
+    CatalogJanitor catalogJanitor = catalogJanitorTestChoreField.getChoreObj("catalogJanitorChore");
     catalogJanitorTestChoreField.testIfChoreScheduled(catalogJanitor);
 
     // test if hbckChore chore is scheduled by default in HMaster init
@@ -113,8 +110,8 @@ public class TestMasterChoreScheduled {
   }
 
   /**
-   * Reflect into the {@link HMaster} instance and find by field name a specified instance
-   * of {@link ScheduledChore}.
+   * Reflect into the {@link HMaster} instance and find by field name a specified instance of
+   * {@link ScheduledChore}.
    */
   private static class TestChoreField<E extends ScheduledChore> {
 

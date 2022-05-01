@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -43,12 +44,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestStressWALProcedureStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStressWALProcedureStore.class);
+    HBaseClassTestRule.forClass(TestStressWALProcedureStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
 
@@ -115,7 +116,8 @@ public class TestStressWALProcedureStore {
             for (int i = 0, nupdates = rand.nextInt(10); i <= nupdates; ++i) {
               try {
                 Thread.sleep(0, rand.nextInt(15));
-              } catch (InterruptedException e) {}
+              } catch (InterruptedException e) {
+              }
               procStore.update(proc);
             }
             // Delete
@@ -136,7 +138,8 @@ public class TestStressWALProcedureStore {
     assertEquals(1, procStore.getActiveLogs().size());
   }
 
-  @Ignore @Test // REENABLE after merge of
+  @Ignore
+  @Test // REENABLE after merge of
   // https://github.com/google/protobuf/issues/2228#issuecomment-252058282
   public void testEntrySizeLimit() throws Exception {
     final int NITEMS = 20;

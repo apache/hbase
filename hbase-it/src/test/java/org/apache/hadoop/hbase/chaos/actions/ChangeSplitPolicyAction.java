@@ -36,14 +36,12 @@ public class ChangeSplitPolicyAction extends Action {
 
   public ChangeSplitPolicyAction(TableName tableName) {
     this.tableName = tableName;
-    possiblePolicies = new String[] {
-        IncreasingToUpperBoundRegionSplitPolicy.class.getName(),
-        ConstantSizeRegionSplitPolicy.class.getName(),
-        DisabledRegionSplitPolicy.class.getName()
-    };
+    possiblePolicies = new String[] { IncreasingToUpperBoundRegionSplitPolicy.class.getName(),
+      ConstantSizeRegionSplitPolicy.class.getName(), DisabledRegionSplitPolicy.class.getName() };
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -57,7 +55,7 @@ public class ChangeSplitPolicyAction extends Action {
     String chosenPolicy =
       possiblePolicies[ThreadLocalRandom.current().nextInt(possiblePolicies.length)];
     builder.setRegionSplitPolicyClassName(chosenPolicy);
-    getLogger().info("Changing "  + tableName + " split policy to " + chosenPolicy);
+    getLogger().info("Changing " + tableName + " split policy to " + chosenPolicy);
     admin.modifyTable(builder.build());
   }
 }

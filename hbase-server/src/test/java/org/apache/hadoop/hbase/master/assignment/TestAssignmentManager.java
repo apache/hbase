@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -295,20 +295,21 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     try {
       this.util.startMiniCluster();
       final AssignmentManager am = this.util.getHBaseCluster().getMaster().getAssignmentManager();
-      final TableName tableName = TableName.
-        valueOf("testLoadRegionFromMetaAfterRegionManuallyAdded");
+      final TableName tableName =
+        TableName.valueOf("testLoadRegionFromMetaAfterRegionManuallyAdded");
       this.util.createTable(tableName, "f");
       RegionInfo hri = createRegionInfo(tableName, 1);
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
         1);
-      assertNull("RegionInfo was manually added in META, but "
-        + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
+      assertNull(
+        "RegionInfo was manually added in META, but " + "shouldn't be in AM regionStates yet.",
+        am.getRegionStates().getRegionState(hri));
       hri = am.loadRegionFromMeta(hri.getEncodedName());
       assertEquals(hri.getEncodedName(),
         am.getRegionStates().getRegionState(hri).getRegion().getEncodedName());
-    }finally {
+    } finally {
       this.util.killMiniHBaseCluster();
     }
   }
@@ -325,7 +326,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       assertNull("RegionInfo was never added in META, should had returned null.",
         am.loadRegionFromMeta(hri.getEncodedName()));
-    }finally {
+    } finally {
       this.util.killMiniHBaseCluster();
     }
   }

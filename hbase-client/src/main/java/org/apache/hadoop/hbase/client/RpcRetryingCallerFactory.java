@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class RpcRetryingCallerFactory {
   private final ConnectionConfiguration connectionConf;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
-  /* These below data members are UNUSED!!!*/
+  /* These below data members are UNUSED!!! */
   private final boolean enableBackPressure;
   private ServerStatisticTracker stats;
 
@@ -46,10 +46,10 @@ public class RpcRetryingCallerFactory {
     this.conf = conf;
     this.connectionConf = new ConnectionConfiguration(conf);
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
-        AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
+      AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
     enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
-        HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+      HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
   }
 
   /**
@@ -64,11 +64,9 @@ public class RpcRetryingCallerFactory {
    */
   public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
     // We store the values in the factory instance. This way, constructing new objects
-    //  is cheap as it does not require parsing a complex structure.
-    return new RpcRetryingCallerImpl<>(
-      connectionConf.getPauseMillis(),
-      connectionConf.getPauseMillisForServerOverloaded(),
-      connectionConf.getRetriesNumber(),
+    // is cheap as it does not require parsing a complex structure.
+    return new RpcRetryingCallerImpl<>(connectionConf.getPauseMillis(),
+      connectionConf.getPauseMillisForServerOverloaded(), connectionConf.getRetriesNumber(),
       interceptor, startLogErrorsCnt, rpcTimeout);
   }
 
@@ -77,13 +75,10 @@ public class RpcRetryingCallerFactory {
    */
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
-    //  is cheap as it does not require parsing a complex structure.
-    return new RpcRetryingCallerImpl<>(
-      connectionConf.getPauseMillis(),
-      connectionConf.getPauseMillisForServerOverloaded(),
-      connectionConf.getRetriesNumber(),
-      interceptor, startLogErrorsCnt,
-      connectionConf.getRpcTimeout());
+    // is cheap as it does not require parsing a complex structure.
+    return new RpcRetryingCallerImpl<>(connectionConf.getPauseMillis(),
+      connectionConf.getPauseMillisForServerOverloaded(), connectionConf.getRetriesNumber(),
+      interceptor, startLogErrorsCnt, connectionConf.getRpcTimeout());
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
@@ -91,22 +86,21 @@ public class RpcRetryingCallerFactory {
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-      ServerStatisticTracker stats) {
+    ServerStatisticTracker stats) {
     return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-      RetryingCallerInterceptor interceptor, ServerStatisticTracker stats) {
+    RetryingCallerInterceptor interceptor, ServerStatisticTracker stats) {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
-        configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
+      configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
     RpcRetryingCallerFactory factory;
     if (rpcCallerFactoryClazz.equals(clazzName)) {
       factory = new RpcRetryingCallerFactory(configuration, interceptor);
     } else {
-      factory = ReflectionUtils.instantiateWithCustomCtor(
-          rpcCallerFactoryClazz, new Class[] { Configuration.class },
-          new Object[] { configuration });
+      factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
+        new Class[] { Configuration.class }, new Object[] { configuration });
     }
 
     // setting for backwards compat with existing caller factories, rather than in the ctor

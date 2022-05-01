@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,16 +46,17 @@ public class TestZKSecretWatcherRefreshKeys {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKSecretWatcherRefreshKeys.class);
+    HBaseClassTestRule.forClass(TestZKSecretWatcherRefreshKeys.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcherRefreshKeys.class);
   private static HBaseTestingUtility TEST_UTIL;
 
   private static class MockAbortable implements Abortable {
     private boolean abort;
+
     @Override
     public void abort(String reason, Throwable e) {
-      LOG.info("Aborting: "+reason, e);
+      LOG.info("Aborting: " + reason, e);
       abort = true;
     }
 
@@ -76,8 +77,8 @@ public class TestZKSecretWatcherRefreshKeys {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  private static ZKWatcher newZK(Configuration conf, String name,
-                                 Abortable abort) throws Exception {
+  private static ZKWatcher newZK(Configuration conf, String name, Abortable abort)
+    throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
     ZKWatcher zk = new ZKWatcher(copy, name, abort);
     return zk;
@@ -88,17 +89,15 @@ public class TestZKSecretWatcherRefreshKeys {
     Configuration conf = TEST_UTIL.getConfiguration();
     ZKWatcher zk = newZK(conf, "127.0.0.1", new MockAbortable());
     AuthenticationTokenSecretManager keyManager =
-        new AuthenticationTokenSecretManager(conf, zk, "127.0.0.1",
-            60 * 60 * 1000, 60 * 1000);
+      new AuthenticationTokenSecretManager(conf, zk, "127.0.0.1", 60 * 60 * 1000, 60 * 1000);
     ZKSecretWatcher watcher = new ZKSecretWatcher(conf, zk, keyManager);
     ZKUtil.deleteChildrenRecursively(zk, watcher.getKeysParentZNode());
     Integer[] keys = { 1, 2, 3, 4, 5, 6 };
     for (Integer key : keys) {
-      AuthenticationKey ak = new AuthenticationKey(key,
-        EnvironmentEdgeManager.currentTime() + 600 * 1000, null);
+      AuthenticationKey ak =
+        new AuthenticationKey(key, EnvironmentEdgeManager.currentTime() + 600 * 1000, null);
       ZKUtil.createWithParents(zk,
-        ZNodePaths.joinZNode(watcher.getKeysParentZNode(), key.toString()),
-        Writables.getBytes(ak));
+        ZNodePaths.joinZNode(watcher.getKeysParentZNode(), key.toString()), Writables.getBytes(ak));
     }
     Assert.assertNull(keyManager.getCurrentKey());
     watcher.refreshKeys();

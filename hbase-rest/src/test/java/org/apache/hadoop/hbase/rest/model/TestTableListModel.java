@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,12 +27,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestTableListModel extends TestModelBase<TableListModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableListModel.class);
+    HBaseClassTestRule.forClass(TestTableListModel.class);
 
   private static final String TABLE1 = "table1";
   private static final String TABLE2 = "table2";
@@ -40,14 +40,12 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
 
   public TestTableListModel() throws Exception {
     super(TableListModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableList><table " +
-          "name=\"table1\"/><table name=\"table2\"/><table name=\"table3\"/></TableList>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableList><table "
+      + "name=\"table1\"/><table name=\"table2\"/><table name=\"table3\"/></TableList>";
 
     AS_PB = "CgZ0YWJsZTEKBnRhYmxlMgoGdGFibGUz";
 
-    AS_JSON =
-      "{\"table\":[{\"name\":\"table1\"},{\"name\":\"table2\"},{\"name\":\"table3\"}]}";
+    AS_JSON = "{\"table\":[{\"name\":\"table1\"},{\"name\":\"table2\"},{\"name\":\"table3\"}]}";
   }
 
   @Override
@@ -71,4 +69,3 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
     assertFalse(tables.hasNext());
   }
 }
-

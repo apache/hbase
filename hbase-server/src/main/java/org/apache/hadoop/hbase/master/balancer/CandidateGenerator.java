@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Map;
@@ -35,19 +34,17 @@ abstract class CandidateGenerator {
    * From a list of regions pick a random one. Null can be returned which
    * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
    * rather than swap.
-   *
-   * @param cluster The state of the cluster
-   * @param server index of the server
-   * @param chanceOfNoSwap Chance that this will decide to try a move rather
-   *   than a swap.
-   * @return a random {@link RegionInfo} or null if an asymmetrical move is
-   *   suggested.
+   * @param cluster        The state of the cluster
+   * @param server         index of the server
+   * @param chanceOfNoSwap Chance that this will decide to try a move rather than a swap.
+   * @return a random {@link RegionInfo} or null if an asymmetrical move is suggested.
    */
-  int pickRandomRegion(BalancerClusterState cluster, int server,
-    double chanceOfNoSwap) {
+  int pickRandomRegion(BalancerClusterState cluster, int server, double chanceOfNoSwap) {
     // Check to see if this is just a move.
-    if (cluster.regionsPerServer[server].length == 0
-        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap) {
+    if (
+      cluster.regionsPerServer[server].length == 0
+        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap
+    ) {
       // signal a move only.
       return -1;
     }
@@ -95,8 +92,7 @@ abstract class CandidateGenerator {
     }
   }
 
-  BalanceAction pickRandomRegions(BalancerClusterState cluster,
-    int thisServer, int otherServer) {
+  BalanceAction pickRandomRegions(BalancerClusterState cluster, int thisServer, int otherServer) {
     if (thisServer < 0 || otherServer < 0) {
       return BalanceAction.NULL_ACTION;
     }
@@ -115,14 +111,12 @@ abstract class CandidateGenerator {
     return getAction(thisServer, thisRegion, otherServer, otherRegion);
   }
 
-  protected BalanceAction getAction(int fromServer, int fromRegion,
-      int toServer, int toRegion) {
+  protected BalanceAction getAction(int fromServer, int fromRegion, int toServer, int toRegion) {
     if (fromServer < 0 || toServer < 0) {
       return BalanceAction.NULL_ACTION;
     }
     if (fromRegion >= 0 && toRegion >= 0) {
-      return new SwapRegionsAction(fromServer, fromRegion,
-        toServer, toRegion);
+      return new SwapRegionsAction(fromServer, fromRegion, toServer, toRegion);
     } else if (fromRegion >= 0) {
       return new MoveRegionAction(fromRegion, fromServer, toServer);
     } else if (toRegion >= 0) {

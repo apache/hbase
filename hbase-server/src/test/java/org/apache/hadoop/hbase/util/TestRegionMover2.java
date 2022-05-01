@@ -15,9 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -44,16 +47,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category({ MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class TestRegionMover2 {
 
   @ClassRule
@@ -104,8 +103,8 @@ public class TestRegionMover2 {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 10; i < 50000; i++) {
-      puts.add(new Put(Bytes.toBytes(i))
-        .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
+      puts.add(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"),
+        Bytes.toBytes("val_" + i)));
     }
     table.put(puts);
     admin.flush(tableName);
@@ -138,8 +137,8 @@ public class TestRegionMover2 {
         endKey = Bytes.toInt(hRegion.getRegionInfo().getEndKey());
       }
       int midKey = startKey + (endKey - startKey) / 2;
-      admin.splitRegionAsync(hRegion.getRegionInfo().getRegionName(), Bytes.toBytes(midKey))
-        .get(5, TimeUnit.SECONDS);
+      admin.splitRegionAsync(hRegion.getRegionInfo().getRegionName(), Bytes.toBytes(midKey)).get(5,
+        TimeUnit.SECONDS);
       Assert.assertTrue(rm.load());
       Assert.assertEquals(numRegions - 1, regionServer.getNumberOfOnlineRegions());
     }
@@ -153,8 +152,8 @@ public class TestRegionMover2 {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 1000; i++) {
-      puts.add(new Put(Bytes.toBytes("rowkey_" + i))
-        .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
+      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes("fam1"),
+        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
     }
     table.put(puts);
     admin.flush(tableName);

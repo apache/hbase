@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -40,15 +41,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Testing, info servers are disabled.  This test enables then and checks that
- * they serve pages.
+ * Testing, info servers are disabled. This test enables then and checks that they serve pages.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestInfoServers {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestInfoServers.class);
+    HBaseClassTestRule.forClass(TestInfoServers.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -63,7 +63,7 @@ public class TestInfoServers {
     UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
     UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
 
-    //We need to make sure that the server can be started as read only.
+    // We need to make sure that the server can be started as read only.
     UTIL.getConfiguration().setBoolean("hbase.master.ui.readonly", true);
     UTIL.startMiniCluster();
     if (!UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000)) {
@@ -94,24 +94,22 @@ public class TestInfoServers {
     UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master-status");
-    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .getInfoServer().getPort();
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
+      .getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
   }
 
   /**
-   * Test that the status pages in the minicluster load properly.
-   *
-   * This is somewhat a duplicate of TestRSStatusServlet and
-   * TestMasterStatusServlet, but those are true unit tests
-   * whereas this uses a cluster.
+   * Test that the status pages in the minicluster load properly. This is somewhat a duplicate of
+   * TestRSStatusServlet and TestMasterStatusServlet, but those are true unit tests whereas this
+   * uses a cluster.
    */
   @Test
   public void testInfoServersStatusPages() throws Exception {
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "meta");
-    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .getInfoServer().getPort();
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
+      .getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
   }
 
@@ -123,8 +121,9 @@ public class TestInfoServers {
     UTIL.waitTableAvailable(tableName);
     HMaster master = UTIL.getHBaseCluster().getMaster();
     int port = master.getRegionServerInfoPort(master.getServerName());
-    assertDoesNotContainContent(new URL("http://localhost:" + port + "/table.jsp?name=" +
-      tableName + "&action=split&key="), "Table action request accepted");
+    assertDoesNotContainContent(
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),
+      "Table action request accepted");
     assertDoesNotContainContent(
       new URL("http://localhost:" + port + "/table.jsp?name=" + tableName), "Actions:");
   }

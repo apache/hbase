@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,7 @@ class TableQueue extends Queue<TableName> {
   private final LockStatus namespaceLockStatus;
 
   public TableQueue(TableName tableName, int priority, LockStatus tableLock,
-      LockStatus namespaceLockStatus) {
+    LockStatus namespaceLockStatus) {
     super(tableName, priority, tableLock);
     this.namespaceLockStatus = namespaceLockStatus;
   }

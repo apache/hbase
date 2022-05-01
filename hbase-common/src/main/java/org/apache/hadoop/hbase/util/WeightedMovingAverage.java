@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -54,9 +53,8 @@ public class WeightedMovingAverage extends WindowMovingAverage {
     int coIndex = 0;
     int length = getNumberOfStatistics();
     // tmIndex, it points to the oldest data.
-    for (int tmIndex = (getMostRecentPosistion() + 1) % length;
-         coIndex < length;
-         coIndex++, tmIndex = (++tmIndex) % length) {
+    for (int tmIndex = (getMostRecentPosistion() + 1) % length; coIndex
+        < length; coIndex++, tmIndex = (++tmIndex) % length) {
       // start the multiplication from oldest to newest
       average += coefficient[coIndex] * getStatisticsAtIndex(tmIndex);
     }

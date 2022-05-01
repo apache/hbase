@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -163,8 +163,10 @@ public class BootstrapNodeManager {
 
   // this method is also used to test whether a given region server is still alive.
   private void getFromRegionServer() {
-    if (EnvironmentEdgeManager.currentTime() - lastRequestMasterTime >= TimeUnit.SECONDS
-      .toMillis(requestMasterIntervalSecs)) {
+    if (
+      EnvironmentEdgeManager.currentTime() - lastRequestMasterTime
+          >= TimeUnit.SECONDS.toMillis(requestMasterIntervalSecs)
+    ) {
       // schedule a get from master task immediately if haven't request master for more than
       // requestMasterIntervalSecs
       executor.execute(this::getFromMaster);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -44,17 +42,15 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 /**
  * Performs authorization checks for a given user's assigned permissions.
  * <p>
- *   There're following scopes: <b>Global</b>, <b>Namespace</b>, <b>Table</b>, <b>Family</b>,
- *   <b>Qualifier</b>, <b>Cell</b>.
- *   Generally speaking, higher scopes can overrides lower scopes,
- *   except for Cell permission can be granted even a user has not permission on specified table,
- *   which means the user can get/scan only those granted cells parts.
+ * There're following scopes: <b>Global</b>, <b>Namespace</b>, <b>Table</b>, <b>Family</b>,
+ * <b>Qualifier</b>, <b>Cell</b>. Generally speaking, higher scopes can overrides lower scopes,
+ * except for Cell permission can be granted even a user has not permission on specified table,
+ * which means the user can get/scan only those granted cells parts.
  * </p>
- * e.g, if user A has global permission R(ead), he can
- * read table T without checking table scope permission, so authorization checks alway starts from
- * Global scope.
+ * e.g, if user A has global permission R(ead), he can read table T without checking table scope
+ * permission, so authorization checks alway starts from Global scope.
  * <p>
- *   For each scope, not only user but also groups he belongs to will be checked.
+ * For each scope, not only user but also groups he belongs to will be checked.
  * </p>
  */
 @InterfaceAudience.Private
@@ -91,12 +87,13 @@ public final class AuthManager {
       }
     }
   }
+
   PermissionCache<NamespacePermission> NS_NO_PERMISSION = new PermissionCache<>();
   PermissionCache<TablePermission> TBL_NO_PERMISSION = new PermissionCache<>();
 
   /**
-   * Cache for global permission excluding superuser and supergroup.
-   * Since every user/group can only have one global permission, no need to use PermissionCache.
+   * Cache for global permission excluding superuser and supergroup. Since every user/group can only
+   * have one global permission, no need to use PermissionCache.
    */
   private Map<String, GlobalPermission> globalCache = new ConcurrentHashMap<>();
   /** Cache for namespace permission. */
@@ -118,7 +115,7 @@ public final class AuthManager {
   /**
    * Update acl info for table.
    * @param table name of table
-   * @param data updated acl data
+   * @param data  updated acl data
    * @throws IOException exception when deserialize data
    */
   public void refreshTableCacheFromWritable(TableName table, byte[] data) throws IOException {
@@ -143,7 +140,7 @@ public final class AuthManager {
   /**
    * Update acl info for namespace.
    * @param namespace namespace
-   * @param data updated acl data
+   * @param data      updated acl data
    * @throws IOException exception when deserialize data
    */
   public void refreshNamespaceCacheFromWritable(String namespace, byte[] data) throws IOException {
@@ -183,7 +180,7 @@ public final class AuthManager {
 
   /**
    * Updates the internal table permissions cache for specified table.
-   * @param table updated table name
+   * @param table      updated table name
    * @param tablePerms new table permissions
    */
   private void updateTableCache(TableName table, ListMultimap<String, Permission> tablePerms) {
@@ -198,10 +195,9 @@ public final class AuthManager {
   /**
    * Updates the internal namespace permissions cache for specified namespace.
    * @param namespace updated namespace
-   * @param nsPerms new namespace permissions
+   * @param nsPerms   new namespace permissions
    */
-  private void updateNamespaceCache(String namespace,
-      ListMultimap<String, Permission> nsPerms) {
+  private void updateNamespaceCache(String namespace, ListMultimap<String, Permission> nsPerms) {
     PermissionCache<NamespacePermission> cacheToUpdate =
       namespaceCache.getOrDefault(namespace, new PermissionCache<>());
     clearCache(cacheToUpdate);
@@ -216,7 +212,7 @@ public final class AuthManager {
 
   @SuppressWarnings("unchecked")
   private void updateCache(ListMultimap<String, ? extends Permission> newPermissions,
-      PermissionCache cacheToUpdate) {
+    PermissionCache cacheToUpdate) {
     for (String name : newPermissions.keySet()) {
       for (Permission permission : newPermissions.get(name)) {
         cacheToUpdate.put(name, permission);
@@ -226,7 +222,7 @@ public final class AuthManager {
 
   /**
    * Check if user has given action privilige in global scope.
-   * @param user user name
+   * @param user   user name
    * @param action one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
@@ -254,9 +250,9 @@ public final class AuthManager {
 
   /**
    * Check if user has given action privilige in namespace scope.
-   * @param user user name
+   * @param user      user name
    * @param namespace namespace
-   * @param action one of action in [Read, Write, Create, Exec, Admin]
+   * @param action    one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
   public boolean authorizeUserNamespace(User user, String namespace, Permission.Action action) {
@@ -266,8 +262,8 @@ public final class AuthManager {
     if (authorizeUserGlobal(user, action)) {
       return true;
     }
-    PermissionCache<NamespacePermission> nsPermissions = namespaceCache.getOrDefault(namespace,
-      NS_NO_PERMISSION);
+    PermissionCache<NamespacePermission> nsPermissions =
+      namespaceCache.getOrDefault(namespace, NS_NO_PERMISSION);
     if (authorizeNamespace(nsPermissions.get(user.getShortName()), namespace, action)) {
       return true;
     }
@@ -279,8 +275,8 @@ public final class AuthManager {
     return false;
   }
 
-  private boolean authorizeNamespace(Set<NamespacePermission> permissions,
-      String namespace, Permission.Action action) {
+  private boolean authorizeNamespace(Set<NamespacePermission> permissions, String namespace,
+    Permission.Action action) {
     if (permissions == null) {
       return false;
     }
@@ -293,10 +289,10 @@ public final class AuthManager {
   }
 
   /**
-   * Checks if the user has access to the full table or at least a family/qualifier
-   * for the specified action.
-   * @param user user name
-   * @param table table name
+   * Checks if the user has access to the full table or at least a family/qualifier for the
+   * specified action.
+   * @param user   user name
+   * @param table  table name
    * @param action action in one of [Read, Write, Create, Exec, Admin]
    * @return true if the user has access to the table, false otherwise
    */
@@ -310,8 +306,8 @@ public final class AuthManager {
     if (authorizeUserNamespace(user, table.getNamespaceAsString(), action)) {
       return true;
     }
-    PermissionCache<TablePermission> tblPermissions = tableCache.getOrDefault(table,
-      TBL_NO_PERMISSION);
+    PermissionCache<TablePermission> tblPermissions =
+      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
     if (hasAccessTable(tblPermissions.get(user.getShortName()), action)) {
       return true;
     }
@@ -337,8 +333,8 @@ public final class AuthManager {
 
   /**
    * Check if user has given action privilige in table scope.
-   * @param user user name
-   * @param table table name
+   * @param user   user name
+   * @param table  table name
    * @param action one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
@@ -348,28 +344,28 @@ public final class AuthManager {
 
   /**
    * Check if user has given action privilige in table:family scope.
-   * @param user user name
-   * @param table table name
+   * @param user   user name
+   * @param table  table name
    * @param family family name
    * @param action one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
   public boolean authorizeUserTable(User user, TableName table, byte[] family,
-      Permission.Action action) {
+    Permission.Action action) {
     return authorizeUserTable(user, table, family, null, action);
   }
 
   /**
    * Check if user has given action privilige in table:family:qualifier scope.
-   * @param user user name
-   * @param table table name
-   * @param family family name
+   * @param user      user name
+   * @param table     table name
+   * @param family    family name
    * @param qualifier qualifier name
-   * @param action one of action in [Read, Write, Create, Exec, Admin]
+   * @param action    one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
-  public boolean authorizeUserTable(User user, TableName table, byte[] family,
-      byte[] qualifier, Permission.Action action) {
+  public boolean authorizeUserTable(User user, TableName table, byte[] family, byte[] qualifier,
+    Permission.Action action) {
     if (user == null) {
       return false;
     }
@@ -379,22 +375,24 @@ public final class AuthManager {
     if (authorizeUserNamespace(user, table.getNamespaceAsString(), action)) {
       return true;
     }
-    PermissionCache<TablePermission> tblPermissions = tableCache.getOrDefault(table,
-      TBL_NO_PERMISSION);
+    PermissionCache<TablePermission> tblPermissions =
+      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
     if (authorizeTable(tblPermissions.get(user.getShortName()), table, family, qualifier, action)) {
       return true;
     }
     for (String group : user.getGroupNames()) {
-      if (authorizeTable(tblPermissions.get(AuthUtil.toGroupEntry(group)),
-          table, family, qualifier, action)) {
+      if (
+        authorizeTable(tblPermissions.get(AuthUtil.toGroupEntry(group)), table, family, qualifier,
+          action)
+      ) {
         return true;
       }
     }
     return false;
   }
 
-  private boolean authorizeTable(Set<TablePermission> permissions,
-      TableName table, byte[] family, byte[] qualifier, Permission.Action action) {
+  private boolean authorizeTable(Set<TablePermission> permissions, TableName table, byte[] family,
+    byte[] qualifier, Permission.Action action) {
     if (permissions == null) {
       return false;
     }
@@ -407,32 +405,33 @@ public final class AuthManager {
   }
 
   /**
-   * Check if user has given action privilige in table:family scope.
-   * This method is for backward compatibility.
-   * @param user user name
-   * @param table table name
+   * Check if user has given action privilige in table:family scope. This method is for backward
+   * compatibility.
+   * @param user   user name
+   * @param table  table name
    * @param family family names
    * @param action one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
-  public boolean authorizeUserFamily(User user, TableName table,
-      byte[] family, Permission.Action action) {
-    PermissionCache<TablePermission> tblPermissions = tableCache.getOrDefault(table,
-      TBL_NO_PERMISSION);
+  public boolean authorizeUserFamily(User user, TableName table, byte[] family,
+    Permission.Action action) {
+    PermissionCache<TablePermission> tblPermissions =
+      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
     if (authorizeFamily(tblPermissions.get(user.getShortName()), table, family, action)) {
       return true;
     }
     for (String group : user.getGroupNames()) {
-      if (authorizeFamily(tblPermissions.get(AuthUtil.toGroupEntry(group)),
-          table, family, action)) {
+      if (
+        authorizeFamily(tblPermissions.get(AuthUtil.toGroupEntry(group)), table, family, action)
+      ) {
         return true;
       }
     }
     return false;
   }
 
-  private boolean authorizeFamily(Set<TablePermission> permissions,
-      TableName table, byte[] family, Permission.Action action) {
+  private boolean authorizeFamily(Set<TablePermission> permissions, TableName table, byte[] family,
+    Permission.Action action) {
     if (permissions == null) {
       return false;
     }
@@ -446,9 +445,9 @@ public final class AuthManager {
 
   /**
    * Check if user has given action privilige in cell scope.
-   * @param user user name
-   * @param table table name
-   * @param cell cell to be checked
+   * @param user   user name
+   * @param table  table name
+   * @param cell   cell to be checked
    * @param action one of action in [Read, Write, Create, Exec, Admin]
    * @return true if user has, false otherwise
    */
@@ -456,11 +455,11 @@ public final class AuthManager {
     try {
       List<Permission> perms = PermissionStorage.getCellPermissionsForUser(user, cell);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Perms for user {} in table {} in cell {}: {}",
-          user.getShortName(), table, cell, (perms != null ? perms : ""));
+        LOG.trace("Perms for user {} in table {} in cell {}: {}", user.getShortName(), table, cell,
+          (perms != null ? perms : ""));
       }
       if (perms != null) {
-        for (Permission p: perms) {
+        for (Permission p : perms) {
           if (p.implies(action)) {
             return true;
           }
@@ -492,8 +491,7 @@ public final class AuthManager {
   }
 
   /**
-   * Last modification logical time
-   * @return time
+   * Last modification logical time n
    */
   public long getMTime() {
     return mtime.get();

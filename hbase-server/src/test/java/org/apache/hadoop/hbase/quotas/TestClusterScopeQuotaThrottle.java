@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -52,14 +51,14 @@ public class TestClusterScopeQuotaThrottle {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClusterScopeQuotaThrottle.class);
+    HBaseClassTestRule.forClass(TestClusterScopeQuotaThrottle.class);
 
   private final static int REFRESH_TIME = 30 * 60000;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final static TableName[] TABLE_NAMES =
-      new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
-          TableName.valueOf("TestQuotaAdmin2") };
+    new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
+      TableName.valueOf("TestQuotaAdmin2") };
   private final static byte[] FAMILY = Bytes.toBytes("cf");
   private final static byte[] QUALIFIER = Bytes.toBytes("q");
   private final static byte[][] SPLITS = new byte[][] { Bytes.toBytes("1") };
@@ -181,7 +180,8 @@ public class TestClusterScopeQuotaThrottle {
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAMES);
   }
 
-  @org.junit.Ignore @Test // Spews the log w/ triggering of scheduler? HBASE-24035
+  @org.junit.Ignore
+  @Test // Spews the log w/ triggering of scheduler? HBASE-24035
   public void testUserNamespaceClusterScopeQuota() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();

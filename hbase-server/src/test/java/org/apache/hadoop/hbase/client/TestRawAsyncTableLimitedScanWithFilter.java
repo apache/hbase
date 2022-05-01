@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawAsyncTableLimitedScanWithFilter.class);
+    HBaseClassTestRule.forClass(TestRawAsyncTableLimitedScanWithFilter.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -57,7 +57,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   private static final byte[] FAMILY = Bytes.toBytes("cf");
 
   private static final byte[][] CQS =
-      { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3"), Bytes.toBytes("cq4") };
+    { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3"), Bytes.toBytes("cq4") };
 
   private static int ROW_COUNT = 10;
 
@@ -74,7 +74,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
     TABLE.putAll(IntStream.range(0, ROW_COUNT).mapToObj(i -> {
       Put put = new Put(Bytes.toBytes(i));
       IntStream.range(0, CQS.length)
-          .forEach(j -> put.addColumn(FAMILY, CQS[j], Bytes.toBytes((j + 1) * i)));
+        .forEach(j -> put.addColumn(FAMILY, CQS[j], Bytes.toBytes((j + 1) * i)));
       return put;
     }).collect(Collectors.toList())).get();
   }
@@ -91,7 +91,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   public void testCompleteResult() throws InterruptedException, ExecutionException {
     int limit = 5;
     Scan scan =
-        new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1).setLimit(limit);
+      new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1).setLimit(limit);
     List<Result> results = TABLE.scanAll(scan).get();
     assertEquals(limit, results.size());
     IntStream.range(0, limit).forEach(i -> {
@@ -108,7 +108,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   public void testAllowPartial() throws InterruptedException, ExecutionException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1)
-        .setAllowPartialResults(true).setLimit(limit);
+      .setAllowPartialResults(true).setLimit(limit);
     List<Result> results = TABLE.scanAll(scan).get();
     assertEquals(2 * limit, results.size());
     IntStream.range(0, 2 * limit).forEach(i -> {
@@ -126,7 +126,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   public void testBatchAllowPartial() throws InterruptedException, ExecutionException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(3)).setBatch(2).setMaxResultSize(1)
-        .setAllowPartialResults(true).setLimit(limit);
+      .setAllowPartialResults(true).setLimit(limit);
     List<Result> results = TABLE.scanAll(scan).get();
     assertEquals(3 * limit, results.size());
     IntStream.range(0, 3 * limit).forEach(i -> {
@@ -144,7 +144,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   public void testBatch() throws InterruptedException, ExecutionException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(2)).setBatch(2).setMaxResultSize(1)
-        .setLimit(limit);
+      .setLimit(limit);
     List<Result> results = TABLE.scanAll(scan).get();
     assertEquals(limit, results.size());
     IntStream.range(0, limit).forEach(i -> {
@@ -161,7 +161,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
   public void testBatchAndFilterDiffer() throws InterruptedException, ExecutionException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(3)).setBatch(2).setMaxResultSize(1)
-        .setLimit(limit);
+      .setLimit(limit);
     List<Result> results = TABLE.scanAll(scan).get();
     assertEquals(2 * limit, results.size());
     IntStream.range(0, limit).forEach(i -> {

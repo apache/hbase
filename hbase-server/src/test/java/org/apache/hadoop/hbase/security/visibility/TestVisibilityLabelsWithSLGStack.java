@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsWithSLGStack {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsWithSLGStack.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsWithSLGStack.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -75,7 +75,7 @@ public class TestVisibilityLabelsWithSLGStack {
     conf = TEST_UTIL.getConfiguration();
     VisibilityTestUtil.enableVisiblityLabels(conf);
     String classes = SimpleScanLabelGenerator.class.getCanonicalName() + " , "
-        + LabelFilteringScanLabelGenerator.class.getCanonicalName();
+      + LabelFilteringScanLabelGenerator.class.getCanonicalName();
     conf.setStrings(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, classes);
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(1);
@@ -111,18 +111,18 @@ public class TestVisibilityLabelsWithSLGStack {
 
   private static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, CONFIDENTIAL };
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityClient.addLabels(conn, labels);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 

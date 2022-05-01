@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,54 +61,53 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests writing Bloom filter blocks in the same part of the file as data
- * blocks.
+ * Tests writing Bloom filter blocks in the same part of the file as data blocks.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompoundBloomFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
+    HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
 
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestCompoundBloomFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompoundBloomFilter.class);
 
   private static final int NUM_TESTS = 9;
-  private static final BloomType BLOOM_TYPES[] = { BloomType.ROW,
-      BloomType.ROW, BloomType.ROWCOL, BloomType.ROWCOL, BloomType.ROW,
+  private static final BloomType BLOOM_TYPES[] =
+    { BloomType.ROW, BloomType.ROW, BloomType.ROWCOL, BloomType.ROWCOL, BloomType.ROW,
       BloomType.ROWCOL, BloomType.ROWCOL, BloomType.ROWCOL, BloomType.ROW };
 
   private static final int NUM_KV[];
   static {
     final int N = 10000; // Only used in initialization.
-    NUM_KV = new int[] { 21870, N, N, N, N, 1000, N, 7500, 7500};
+    NUM_KV = new int[] { 21870, N, N, N, N, 1000, N, 7500, 7500 };
     assert NUM_KV.length == NUM_TESTS;
   }
 
   private static final int BLOCK_SIZES[];
   static {
     final int blkSize = 65536;
-    BLOCK_SIZES = new int[] { 512, 1000, blkSize, blkSize, blkSize, 128, 300,
-        blkSize, blkSize };
+    BLOCK_SIZES = new int[] { 512, 1000, blkSize, blkSize, blkSize, 128, 300, blkSize, blkSize };
     assert BLOCK_SIZES.length == NUM_TESTS;
   }
 
   /**
-   * Be careful not to specify too high a Bloom filter block size, otherwise
-   * there will only be one oversized chunk and the observed false positive
-   * rate will be too low.
+   * Be careful not to specify too high a Bloom filter block size, otherwise there will only be one
+   * oversized chunk and the observed false positive rate will be too low.
    */
-  private static final int BLOOM_BLOCK_SIZES[] = { 1000, 4096, 4096, 4096,
-      8192, 128, 1024, 600, 600 };
-  static { assert BLOOM_BLOCK_SIZES.length == NUM_TESTS; }
+  private static final int BLOOM_BLOCK_SIZES[] =
+    { 1000, 4096, 4096, 4096, 8192, 128, 1024, 600, 600 };
+  static {
+    assert BLOOM_BLOCK_SIZES.length == NUM_TESTS;
+  }
 
-  private static final double TARGET_ERROR_RATES[] = { 0.025, 0.01, 0.015,
-      0.01, 0.03, 0.01, 0.01, 0.07, 0.07 };
-  static { assert TARGET_ERROR_RATES.length == NUM_TESTS; }
+  private static final double TARGET_ERROR_RATES[] =
+    { 0.025, 0.01, 0.015, 0.01, 0.03, 0.01, 0.01, 0.07, 0.07 };
+  static {
+    assert TARGET_ERROR_RATES.length == NUM_TESTS;
+  }
 
   /** A false positive rate that is obviously too high. */
   private static final double TOO_HIGH_ERROR_RATE;
@@ -156,7 +155,7 @@ public class TestCompoundBloomFilter {
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
     for (int t = 0; t < NUM_TESTS; ++t) {
       conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
-          (float) TARGET_ERROR_RATES[t]);
+        (float) TARGET_ERROR_RATES[t]);
 
       testIdMsg = "in test #" + t + ":";
       Random generationRand = new Random(GENERATION_SEED);
@@ -168,40 +167,36 @@ public class TestCompoundBloomFilter {
   }
 
   /**
-   * Validates the false positive ratio by computing its z-value and comparing
-   * it to the provided threshold.
-   *
-   * @param falsePosRate experimental positive rate
-   * @param nTrials the number of Bloom filter checks
-   * @param zValueBoundary z-value boundary, positive for an upper bound and
-   *          negative for a lower bound
-   * @param cbf the compound Bloom filter we are using
-   * @param additionalMsg additional message to include in log output and
-   *          assertion failures
+   * Validates the false positive ratio by computing its z-value and comparing it to the provided
+   * threshold.
+   * @param falsePosRate   experimental positive rate
+   * @param nTrials        the number of Bloom filter checks
+   * @param zValueBoundary z-value boundary, positive for an upper bound and negative for a lower
+   *                       bound
+   * @param cbf            the compound Bloom filter we are using
+   * @param additionalMsg  additional message to include in log output and assertion failures
    */
-  private void validateFalsePosRate(double falsePosRate, int nTrials,
-      double zValueBoundary, CompoundBloomFilter cbf, String additionalMsg) {
+  private void validateFalsePosRate(double falsePosRate, int nTrials, double zValueBoundary,
+    CompoundBloomFilter cbf, String additionalMsg) {
     double p = BloomFilterFactory.getErrorRate(conf);
     double zValue = (falsePosRate - p) / Math.sqrt(p * (1 - p) / nTrials);
 
-    String assortedStatsStr = " (targetErrorRate=" + p + ", falsePosRate="
-        + falsePosRate + ", nTrials=" + nTrials + ")";
+    String assortedStatsStr =
+      " (targetErrorRate=" + p + ", falsePosRate=" + falsePosRate + ", nTrials=" + nTrials + ")";
     LOG.info("z-value is " + zValue + assortedStatsStr);
 
     boolean isUpperBound = zValueBoundary > 0;
 
-    if (isUpperBound && zValue > zValueBoundary ||
-        !isUpperBound && zValue < zValueBoundary) {
+    if (isUpperBound && zValue > zValueBoundary || !isUpperBound && zValue < zValueBoundary) {
       String errorMsg = "False positive rate z-value " + zValue + " is "
-          + (isUpperBound ? "higher" : "lower") + " than " + zValueBoundary
-          + assortedStatsStr + ". Per-chunk stats:\n"
-          + cbf.formatTestingStats();
+        + (isUpperBound ? "higher" : "lower") + " than " + zValueBoundary + assortedStatsStr
+        + ". Per-chunk stats:\n" + cbf.formatTestingStats();
       fail(errorMsg + additionalMsg);
     }
   }
 
-  private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
-      Path sfPath) throws IOException {
+  private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs, Path sfPath)
+    throws IOException {
     HStoreFile sf = new HStoreFile(fs, sfPath, conf, cacheConf, bt, true);
     sf.initReader();
     StoreFileReader r = sf.getReader();
@@ -214,9 +209,8 @@ public class TestCompoundBloomFilter {
       for (KeyValue kv : kvs) {
         byte[] row = CellUtil.cloneRow(kv);
         boolean present = isInBloom(scanner, row, CellUtil.cloneQualifier(kv));
-        assertTrue(testIdMsg + " Bloom filter false negative on row "
-            + Bytes.toStringBinary(row) + " after " + numChecked
-            + " successful checks", present);
+        assertTrue(testIdMsg + " Bloom filter false negative on row " + Bytes.toStringBinary(row)
+          + " after " + numChecked + " successful checks", present);
         ++numChecked;
       }
     }
@@ -228,8 +222,8 @@ public class TestCompoundBloomFilter {
         BloomFilterUtil.setRandomGeneratorForTest(new Random(283742987L));
       }
       try {
-        String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
-            "enabled" : "disabled");
+        String fakeLookupModeStr =
+          ", fake lookup is " + (fakeLookupEnabled ? "enabled" : "disabled");
         CompoundBloomFilter cbf = (CompoundBloomFilter) r.getGeneralBloomFilter();
         cbf.enableTestingStats();
         int numFalsePos = 0;
@@ -242,14 +236,12 @@ public class TestCompoundBloomFilter {
           }
         }
         double falsePosRate = numFalsePos * 1.0 / nTrials;
-        LOG.debug(String.format(testIdMsg
-            + " False positives: %d out of %d (%f)",
-            numFalsePos, nTrials, falsePosRate) + fakeLookupModeStr);
+        LOG.debug(String.format(testIdMsg + " False positives: %d out of %d (%f)", numFalsePos,
+          nTrials, falsePosRate) + fakeLookupModeStr);
 
         // Check for obvious Bloom filter crashes.
-        assertTrue("False positive is too high: " + falsePosRate + " (greater "
-            + "than " + TOO_HIGH_ERROR_RATE + ")" + fakeLookupModeStr,
-            falsePosRate < TOO_HIGH_ERROR_RATE);
+        assertTrue("False positive is too high: " + falsePosRate + " (greater " + "than "
+          + TOO_HIGH_ERROR_RATE + ")" + fakeLookupModeStr, falsePosRate < TOO_HIGH_ERROR_RATE);
 
         // Now a more precise check to see if the false positive rate is not
         // too high. The reason we use a relaxed restriction for the real-world
@@ -257,8 +249,7 @@ public class TestCompoundBloomFilter {
         // are not completely independent.
 
         double maxZValue = fakeLookupEnabled ? 1.96 : 2.5;
-        validateFalsePosRate(falsePosRate, nTrials, maxZValue, cbf,
-            fakeLookupModeStr);
+        validateFalsePosRate(falsePosRate, nTrials, maxZValue, cbf, fakeLookupModeStr);
 
         // For checking the lower bound we need to eliminate the last chunk,
         // because it is frequently smaller and the false positive rate in it
@@ -269,12 +260,11 @@ public class TestCompoundBloomFilter {
           numFalsePos -= cbf.getNumPositivesForTesting(nChunks - 1);
           nTrials -= cbf.getNumQueriesForTesting(nChunks - 1);
           falsePosRate = numFalsePos * 1.0 / nTrials;
-          LOG.info(testIdMsg + " False positive rate without last chunk is " +
-              falsePosRate + fakeLookupModeStr);
+          LOG.info(testIdMsg + " False positive rate without last chunk is " + falsePosRate
+            + fakeLookupModeStr);
         }
 
-        validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf,
-            fakeLookupModeStr);
+        validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf, fakeLookupModeStr);
       } finally {
         BloomFilterUtil.setRandomGeneratorForTest(null);
       }
@@ -283,38 +273,30 @@ public class TestCompoundBloomFilter {
     r.close(true); // end of test so evictOnClose
   }
 
-  private boolean isInBloom(StoreFileScanner scanner, byte[] row, BloomType bt,
-      Random rand) {
+  private boolean isInBloom(StoreFileScanner scanner, byte[] row, BloomType bt, Random rand) {
     return isInBloom(scanner, row, RandomKeyValueUtil.randomRowOrQualifier(rand));
   }
 
-  private boolean isInBloom(StoreFileScanner scanner, byte[] row,
-      byte[] qualifier) {
+  private boolean isInBloom(StoreFileScanner scanner, byte[] row, byte[] qualifier) {
     Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
     scan.addColumn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME), qualifier);
     HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor())
-        .thenReturn(ColumnFamilyDescriptorBuilder.of(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
+      .thenReturn(ColumnFamilyDescriptorBuilder.of(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
     return scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
   }
 
-  private Path writeStoreFile(int t, BloomType bt, List<KeyValue> kvs)
-      throws IOException {
-    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
-        BLOOM_BLOCK_SIZES[t]);
+  private Path writeStoreFile(int t, BloomType bt, List<KeyValue> kvs) throws IOException {
+    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZES[t]);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     cacheConf = new CacheConfig(conf, blockCache);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCK_SIZES[t]).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs)
-            .withOutputDir(TEST_UTIL.getDataTestDir())
-            .withBloomType(bt)
-            .withFileContext(meta)
-            .build();
+      .withOutputDir(TEST_UTIL.getDataTestDir()).withBloomType(bt).withFileContext(meta).build();
 
     assertTrue(w.hasGeneralBloom());
     assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
-    CompoundBloomFilterWriter cbbf =
-        (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
+    CompoundBloomFilterWriter cbbf = (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
 
     int keyCount = 0;
     KeyValue prev = null;
@@ -325,11 +307,11 @@ public class TestCompoundBloomFilter {
       // Validate the key count in the Bloom filter.
       boolean newKey = true;
       if (prev != null) {
-        newKey = !(bt == BloomType.ROW ? CellUtil.matchingRows(kv,
-            prev) : CellUtil.matchingRowColumn(kv, prev));
+        newKey = !(bt == BloomType.ROW
+          ? CellUtil.matchingRows(kv, prev)
+          : CellUtil.matchingRowColumn(kv, prev));
       }
-      if (newKey)
-        ++keyCount;
+      if (newKey) ++keyCount;
       assertEquals(keyCount, cbbf.getKeyCount());
 
       prev = kv;
@@ -344,12 +326,10 @@ public class TestCompoundBloomFilter {
     int bloomBlockByteSize = 4096;
     int bloomBlockBitSize = bloomBlockByteSize * 8;
     double targetErrorRate = 0.01;
-    long maxKeysPerChunk = BloomFilterUtil.idealMaxKeys(bloomBlockBitSize,
-        targetErrorRate);
+    long maxKeysPerChunk = BloomFilterUtil.idealMaxKeys(bloomBlockBitSize, targetErrorRate);
 
     long bloomSize1 = bloomBlockByteSize * 8;
-    long bloomSize2 = BloomFilterUtil.computeBitSize(maxKeysPerChunk,
-        targetErrorRate);
+    long bloomSize2 = BloomFilterUtil.computeBitSize(maxKeysPerChunk, targetErrorRate);
 
     double bloomSizeRatio = (bloomSize2 * 1.0 / bloomSize1);
     assertTrue(Math.abs(bloomSizeRatio - 0.9999) < 0.0001);
@@ -360,16 +340,17 @@ public class TestCompoundBloomFilter {
     byte[] row = "myRow".getBytes();
     byte[] qualifier = "myQualifier".getBytes();
     // Mimic what Storefile.createBloomKeyValue() does
-    byte[] rowKey = KeyValueUtil.createFirstOnRow(row, 0, row.length, new byte[0], 0, 0, row, 0, 0).getKey();
-    byte[] rowColKey = KeyValueUtil.createFirstOnRow(row, 0, row.length,
-        new byte[0], 0, 0, qualifier, 0, qualifier.length).getKey();
+    byte[] rowKey =
+      KeyValueUtil.createFirstOnRow(row, 0, row.length, new byte[0], 0, 0, row, 0, 0).getKey();
+    byte[] rowColKey = KeyValueUtil
+      .createFirstOnRow(row, 0, row.length, new byte[0], 0, 0, qualifier, 0, qualifier.length)
+      .getKey();
     KeyValue rowKV = KeyValueUtil.createKeyValueFromKey(rowKey);
     KeyValue rowColKV = KeyValueUtil.createKeyValueFromKey(rowColKey);
     assertEquals(rowKV.getTimestamp(), rowColKV.getTimestamp());
-    assertEquals(Bytes.toStringBinary(rowKV.getRowArray(), rowKV.getRowOffset(),
-      rowKV.getRowLength()), Bytes.toStringBinary(rowColKV.getRowArray(), rowColKV.getRowOffset(),
-      rowColKV.getRowLength()));
+    assertEquals(
+      Bytes.toStringBinary(rowKV.getRowArray(), rowKV.getRowOffset(), rowKV.getRowLength()), Bytes
+        .toStringBinary(rowColKV.getRowArray(), rowColKV.getRowOffset(), rowColKV.getRowLength()));
     assertEquals(0, rowKV.getQualifierLength());
   }
 }
-

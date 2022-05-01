@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A table split corresponds to a key range (low, high) and an optional scanner.
- * All references to row below refer to the key of the row.
+ * A table split corresponds to a key range (low, high) and an optional scanner. All references to
+ * row below refer to the key of the row.
  */
 @InterfaceAudience.Public
-public class TableSplit extends InputSplit
-  implements Writable, Comparable<TableSplit> {
+public class TableSplit extends InputSplit implements Writable, Comparable<TableSplit> {
   /** @deprecated LOG variable would be made private. fix in hbase 3.0 */
   @Deprecated
   public static final Logger LOG = LoggerFactory.getLogger(TableSplit.class);
@@ -79,76 +77,68 @@ public class TableSplit extends InputSplit
 
   private static final Version VERSION = Version.WITH_ENCODED_REGION_NAME;
   private TableName tableName;
-  private byte [] startRow;
-  private byte [] endRow;
+  private byte[] startRow;
+  private byte[] endRow;
   private String regionLocation;
   private String encodedRegionName = "";
 
   /**
-   * The scan object may be null but the serialized form of scan is never null
-   * or empty since we serialize the scan object with default values then.
-   * Having no scanner in TableSplit doesn't necessarily mean there is no scanner
-   * for mapreduce job, it just means that we do not need to set it for each split.
-   * For example, it is not required to have a scan object for
-   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use the scan from the
-   * job conf and scanner is supposed to be same for all the splits of table.
+   * The scan object may be null but the serialized form of scan is never null or empty since we
+   * serialize the scan object with default values then. Having no scanner in TableSplit doesn't
+   * necessarily mean there is no scanner for mapreduce job, it just means that we do not need to
+   * set it for each split. For example, it is not required to have a scan object for
+   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use the scan from the job
+   * conf and scanner is supposed to be same for all the splits of table.
    */
   private String scan = ""; // stores the serialized form of the Scan
   private long length; // Contains estimation of region size in bytes
 
   /** Default constructor. */
   public TableSplit() {
-    this((TableName)null, null, HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.EMPTY_BYTE_ARRAY, "");
+    this((TableName) null, null, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, "");
   }
 
   /**
-   * Creates a new instance while assigning all variables.
-   * Length of region is set to 0
-   * Encoded name of the region is set to blank
-   *
-   * @param tableName  The name of the current table.
-   * @param scan The scan associated with this split.
+   * Creates a new instance while assigning all variables. Length of region is set to 0 Encoded name
+   * of the region is set to blank
+   * @param tableName The name of the current table.
+   * @param scan      The scan associated with this split.
    * @param startRow  The start row of the split.
-   * @param endRow  The end row of the split.
+   * @param endRow    The end row of the split.
    * @param location  The location of the region.
    */
-  public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
-                    final String location) {
+  public TableSplit(TableName tableName, Scan scan, byte[] startRow, byte[] endRow,
+    final String location) {
     this(tableName, scan, startRow, endRow, location, 0L);
   }
 
   /**
-   * Creates a new instance while assigning all variables.
-   * Encoded name of region is set to blank
-   *
-   * @param tableName  The name of the current table.
-   * @param scan The scan associated with this split.
+   * Creates a new instance while assigning all variables. Encoded name of region is set to blank
+   * @param tableName The name of the current table.
+   * @param scan      The scan associated with this split.
    * @param startRow  The start row of the split.
-   * @param endRow  The end row of the split.
+   * @param endRow    The end row of the split.
    * @param location  The location of the region.
    */
-  public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
-      final String location, long length) {
+  public TableSplit(TableName tableName, Scan scan, byte[] startRow, byte[] endRow,
+    final String location, long length) {
     this(tableName, scan, startRow, endRow, location, "", length);
   }
 
   /**
    * Creates a new instance while assigning all variables.
-   *
-   * @param tableName  The name of the current table.
-   * @param scan The scan associated with this split.
-   * @param startRow  The start row of the split.
-   * @param endRow  The end row of the split.
+   * @param tableName         The name of the current table.
+   * @param scan              The scan associated with this split.
+   * @param startRow          The start row of the split.
+   * @param endRow            The end row of the split.
    * @param encodedRegionName The region ID.
-   * @param location  The location of the region.
+   * @param location          The location of the region.
    */
-  public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
-      final String location, final String encodedRegionName, long length) {
+  public TableSplit(TableName tableName, Scan scan, byte[] startRow, byte[] endRow,
+    final String location, final String encodedRegionName, long length) {
     this.tableName = tableName;
     try {
-      this.scan =
-        (null == scan) ? "" : TableMapReduceUtil.convertScanToString(scan);
+      this.scan = (null == scan) ? "" : TableMapReduceUtil.convertScanToString(scan);
     } catch (IOException e) {
       LOG.warn("Failed to convert Scan to String", e);
     }
@@ -160,36 +150,31 @@ public class TableSplit extends InputSplit
   }
 
   /**
-   * Creates a new instance without a scanner.
-   * Length of region is set to 0
-   *
+   * Creates a new instance without a scanner. Length of region is set to 0
    * @param tableName The name of the current table.
-   * @param startRow The start row of the split.
-   * @param endRow The end row of the split.
-   * @param location The location of the region.
+   * @param startRow  The start row of the split.
+   * @param endRow    The end row of the split.
+   * @param location  The location of the region.
    */
-  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
-      final String location) {
+  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow, final String location) {
     this(tableName, null, startRow, endRow, location);
   }
 
   /**
    * Creates a new instance without a scanner.
-   *
    * @param tableName The name of the current table.
-   * @param startRow The start row of the split.
-   * @param endRow The end row of the split.
-   * @param location The location of the region.
-   * @param length Size of region in bytes
+   * @param startRow  The start row of the split.
+   * @param endRow    The end row of the split.
+   * @param location  The location of the region.
+   * @param length    Size of region in bytes
    */
-  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
-                    final String location, long length) {
+  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow, final String location,
+    long length) {
     this(tableName, null, startRow, endRow, location, length);
   }
 
   /**
    * Returns a Scan object from the stored string representation.
-   *
    * @return Returns a Scan object based on the stored scanner.
    * @throws IOException throws IOException if deserialization fails
    */
@@ -199,9 +184,9 @@ public class TableSplit extends InputSplit
 
   /**
    * Returns a scan string
-   * @return scan as string. Should be noted that this is not same as getScan().toString()
-   *    because Scan object will have the default values when empty scan string is
-   *    deserialized. Thus, getScan().toString() can never be empty
+   * @return scan as string. Should be noted that this is not same as getScan().toString() because
+   *         Scan object will have the default values when empty scan string is deserialized. Thus,
+   *         getScan().toString() can never be empty
    */
   @InterfaceAudience.Private
   public String getScanAsString() {
@@ -213,17 +198,16 @@ public class TableSplit extends InputSplit
    * @see #getTable()
    * @return The table name.
    */
-  public byte [] getTableName() {
+  public byte[] getTableName() {
     return tableName.getName();
   }
 
   /**
    * Returns the table name.
-   *
    * @return The table name.
    */
   public TableName getTable() {
-    // It is ugly that usually to get a TableName, the method is called getTableName.  We can't do
+    // It is ugly that usually to get a TableName, the method is called getTableName. We can't do
     // that in here though because there was an existing getTableName in place already since
     // deprecated.
     return tableName;
@@ -231,25 +215,22 @@ public class TableSplit extends InputSplit
 
   /**
    * Returns the start row.
-   *
    * @return The start row.
    */
-  public byte [] getStartRow() {
+  public byte[] getStartRow() {
     return startRow;
   }
 
   /**
    * Returns the end row.
-   *
    * @return The end row.
    */
-  public byte [] getEndRow() {
+  public byte[] getEndRow() {
     return endRow;
   }
 
   /**
    * Returns the region location.
-   *
    * @return The region's location.
    */
   public String getRegionLocation() {
@@ -258,18 +239,16 @@ public class TableSplit extends InputSplit
 
   /**
    * Returns the region's location as an array.
-   *
    * @return The array containing the region location.
    * @see org.apache.hadoop.mapreduce.InputSplit#getLocations()
    */
   @Override
   public String[] getLocations() {
-    return new String[] {regionLocation};
+    return new String[] { regionLocation };
   }
 
   /**
    * Returns the region's encoded name.
-   *
    * @return The region's encoded name.
    */
   public String getEncodedRegionName() {
@@ -278,7 +257,6 @@ public class TableSplit extends InputSplit
 
   /**
    * Returns the length of the split.
-   *
    * @return The length of the split.
    * @see org.apache.hadoop.mapreduce.InputSplit#getLength()
    */
@@ -289,8 +267,7 @@ public class TableSplit extends InputSplit
 
   /**
    * Reads the values of each field.
-   *
-   * @param in  The input to read from.
+   * @param in The input to read from.
    * @throws IOException When reading the input fails.
    */
   @Override
@@ -327,8 +304,7 @@ public class TableSplit extends InputSplit
 
   /**
    * Writes the field values to the output.
-   *
-   * @param out  The output to write to.
+   * @param out The output to write to.
    * @throws IOException When writing the values to the output fails.
    */
   @Override
@@ -345,7 +321,6 @@ public class TableSplit extends InputSplit
 
   /**
    * Returns the details about this instance as a string.
-   *
    * @return The values of this instance as a string.
    * @see java.lang.Object#toString()
    */
@@ -360,8 +335,7 @@ public class TableSplit extends InputSplit
       try {
         // get the real scan here in toString, not the Base64 string
         printScan = TableMapReduceUtil.convertStringToScan(scan).toString();
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         printScan = "";
       }
       sb.append(", scan=").append(printScan);
@@ -376,8 +350,7 @@ public class TableSplit extends InputSplit
 
   /**
    * Compares this split against the given one.
-   *
-   * @param split  The split to compare to.
+   * @param split The split to compare to.
    * @return The result of the comparison.
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
@@ -385,10 +358,10 @@ public class TableSplit extends InputSplit
   public int compareTo(TableSplit split) {
     // If The table name of the two splits is the same then compare start row
     // otherwise compare based on table names
-    int tableNameComparison =
-        getTable().compareTo(split.getTable());
-    return tableNameComparison != 0 ? tableNameComparison : Bytes.compareTo(
-        getStartRow(), split.getStartRow());
+    int tableNameComparison = getTable().compareTo(split.getTable());
+    return tableNameComparison != 0
+      ? tableNameComparison
+      : Bytes.compareTo(getStartRow(), split.getStartRow());
   }
 
   @Override
@@ -396,10 +369,10 @@ public class TableSplit extends InputSplit
     if (o == null || !(o instanceof TableSplit)) {
       return false;
     }
-    return tableName.equals(((TableSplit)o).tableName) &&
-      Bytes.equals(startRow, ((TableSplit)o).startRow) &&
-      Bytes.equals(endRow, ((TableSplit)o).endRow) &&
-      regionLocation.equals(((TableSplit)o).regionLocation);
+    return tableName.equals(((TableSplit) o).tableName)
+      && Bytes.equals(startRow, ((TableSplit) o).startRow)
+      && Bytes.equals(endRow, ((TableSplit) o).endRow)
+      && regionLocation.equals(((TableSplit) o).regionLocation);
   }
 
   @Override

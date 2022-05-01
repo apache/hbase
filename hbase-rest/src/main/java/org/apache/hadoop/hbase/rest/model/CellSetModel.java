@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,24 +21,21 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 import org.apache.hadoop.hbase.util.ByteStringer;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Representation of a grouping of cells. May contain cells from more than
- * one row. Encapsulates RowModel and CellModel models.
+ * Representation of a grouping of cells. May contain cells from more than one row. Encapsulates
+ * RowModel and CellModel models.
  *
  * <pre>
  * &lt;complexType name="CellSet"&gt;
@@ -70,13 +66,13 @@ import org.apache.yetus.audience.InterfaceAudience;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="CellSet")
+@XmlRootElement(name = "CellSet")
 @XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
 
-  @XmlElement(name="Row")
+  @XmlElement(name = "Row")
   private List<RowModel> rows;
 
   /**
@@ -130,8 +126,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     for (CellSet.Row row : builder.getRowsList()) {
@@ -142,8 +137,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
           timestamp = cell.getTimestamp();
         }
         rowModel.addCell(
-            new CellModel(cell.getColumn().toByteArray(), timestamp,
-                  cell.getData().toByteArray()));
+          new CellModel(cell.getColumn().toByteArray(), timestamp, cell.getData().toByteArray()));
       }
       addRow(rowModel);
     }

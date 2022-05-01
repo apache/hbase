@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -42,12 +42,12 @@ import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
-
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
-import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
 
 /**
  * Utility for doing JSON and MBeans.
@@ -67,12 +67,12 @@ public class JSONBean {
     void write(String key, String value) throws IOException;
 
     default int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
-        boolean description) throws IOException {
+      boolean description) throws IOException {
       return write(mBeanServer, qry, attribute, description, null);
     }
 
     int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description,
-        ObjectName excluded) throws IOException;
+      ObjectName excluded) throws IOException;
 
     void flush() throws IOException;
   }
@@ -123,7 +123,7 @@ public class JSONBean {
 
       @Override
       public int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
-          boolean description, ObjectName excluded) throws IOException {
+        boolean description, ObjectName excluded) throws IOException {
         return JSONBean.write(jsonWriter, mBeanServer, qry, attribute, description, excluded);
       }
     };
@@ -133,7 +133,7 @@ public class JSONBean {
    * @return Return non-zero if failed to find bean. 0
    */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
-      String attribute, boolean description, ObjectName excluded) throws IOException {
+    String attribute, boolean description, ObjectName excluded) throws IOException {
     LOG.debug("Listing beans for {}", qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
@@ -255,7 +255,7 @@ public class JSONBean {
   }
 
   private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
-      boolean description, Pattern pattern[], MBeanAttributeInfo attr) throws IOException {
+    boolean description, Pattern pattern[], MBeanAttributeInfo attr) throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -332,7 +332,7 @@ public class JSONBean {
   }
 
   private static void writeAttribute(JsonWriter writer, String attName, String descriptionStr,
-      Object value) throws IOException {
+    Object value) throws IOException {
     if (descriptionStr != null && descriptionStr.length() > 0 && !attName.equals(descriptionStr)) {
       writer.name(attName);
       writer.beginObject();

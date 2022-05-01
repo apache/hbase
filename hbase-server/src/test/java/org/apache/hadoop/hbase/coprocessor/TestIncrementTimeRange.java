@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,17 +52,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * This test runs batch mutation with Increments which have custom TimeRange.
- * Custom Observer records the TimeRange.
- * We then verify that the recorded TimeRange has same bounds as the initial TimeRange.
- * See HBASE-15698
+ * This test runs batch mutation with Increments which have custom TimeRange. Custom Observer
+ * records the TimeRange. We then verify that the recorded TimeRange has same bounds as the initial
+ * TimeRange. See HBASE-15698
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestIncrementTimeRange {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementTimeRange.class);
+    HBaseClassTestRule.forClass(TestIncrementTimeRange.class);
 
   private static final HBaseTestingUtility util = new HBaseTestingUtility();
   private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
@@ -86,7 +85,7 @@ public class TestIncrementTimeRange {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MyObserver.class.getName());
+      MyObserver.class.getName());
     // Make general delay zero rather than default. Timing is off in this
     // test that depends on an evironment edge that is manually moved forward.
     util.getConfiguration().setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 0);
@@ -132,14 +131,15 @@ public class TestIncrementTimeRange {
 
   public static class MyObserver extends SimpleRegionObserver {
     static TimeRange tr10 = null, tr2 = null;
+
     @Override
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Increment increment) throws IOException {
-      NavigableMap<byte [], List<Cell>> map = increment.getFamilyCellMap();
-      for (Map.Entry<byte [], List<Cell>> entry : map.entrySet()) {
+      final Increment increment) throws IOException {
+      NavigableMap<byte[], List<Cell>> map = increment.getFamilyCellMap();
+      for (Map.Entry<byte[], List<Cell>> entry : map.entrySet()) {
         for (Cell cell : entry.getValue()) {
-          long incr = Bytes.toLong(cell.getValueArray(), cell.getValueOffset(),
-              cell.getValueLength());
+          long incr =
+            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
           if (incr == 10) {
             tr10 = increment.getTimeRange();
           } else if (incr == 2 && !increment.getTimeRange().isAllTime()) {
@@ -165,21 +165,21 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range10 = new TimeRange(1, time+10);
+    TimeRange range10 = new TimeRange(1, time + 10);
     hTableInterface.increment(new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 10L)
-        .setTimeRange(range10.getMin(), range10.getMax()));
+      .setTimeRange(range10.getMin(), range10.getMax()));
     checkRowValue(ROW_A, Bytes.toBytes(11L));
     assertEquals(MyObserver.tr10.getMin(), range10.getMin());
     assertEquals(MyObserver.tr10.getMax(), range10.getMax());
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range2 = new TimeRange(1, time+20);
-    List<Row> actions =
-        Arrays.asList(new Row[] { new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L)
-            .setTimeRange(range2.getMin(), range2.getMax()),
-            new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L)
-            .setTimeRange(range2.getMin(), range2.getMax()) });
+    TimeRange range2 = new TimeRange(1, time + 20);
+    List<Row> actions = Arrays.asList(new Row[] {
+      new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L).setTimeRange(range2.getMin(),
+        range2.getMax()),
+      new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L).setTimeRange(range2.getMin(),
+        range2.getMax()) });
     Object[] results3 = new Object[actions.size()];
     Object[] results1 = results3;
     hTableInterface.batch(actions, results1);

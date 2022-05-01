@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -38,7 +39,7 @@ public class TestSpaceQuotaSwitchPolicies {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotaSwitchPolicies.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotaSwitchPolicies.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -67,38 +68,38 @@ public class TestSpaceQuotaSwitchPolicies {
   @Test
   public void testSetQuotaFirstWithDisableNextNoWrites() throws Exception {
     setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
-        SpaceViolationPolicy.NO_WRITES);
+      SpaceViolationPolicy.NO_WRITES);
   }
 
   @Test
   public void testSetQuotaFirstWithDisableNextAgainDisable() throws Exception {
     setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
-        SpaceViolationPolicy.DISABLE);
+      SpaceViolationPolicy.DISABLE);
   }
 
   @Test
   public void testSetQuotaFirstWithDisableNextNoInserts() throws Exception {
     setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
-        SpaceViolationPolicy.NO_INSERTS);
+      SpaceViolationPolicy.NO_INSERTS);
   }
 
   @Test
   public void testSetQuotaFirstWithDisableNextNoWritesCompaction() throws Exception {
     setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
-        SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+      SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
   }
 
   @Test
   public void testSetQuotaFirstWithNoWritesNextWithDisable() throws Exception {
     setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.NO_WRITES,
-        SpaceViolationPolicy.DISABLE);
+      SpaceViolationPolicy.DISABLE);
   }
 
   private void setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy policy1,
-      SpaceViolationPolicy policy2) throws Exception {
+    SpaceViolationPolicy policy2) throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     // Do puts until we violate space violation policy1
     final TableName tn = helper.writeUntilViolationAndVerifyViolation(policy1, put);
@@ -114,4 +115,3 @@ public class TestSpaceQuotaSwitchPolicies {
     helper.verifyViolation(policy2, tn, put);
   }
 }
-

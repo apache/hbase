@@ -36,12 +36,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Performs Append operations on a single row.
  * <p>
- * This operation ensures atomicty to readers. Appends are done
- * under a single row lock, so write operations to a row are synchronized, and
- * readers are guaranteed to see this operation fully completed.
+ * This operation ensures atomicty to readers. Appends are done under a single row lock, so write
+ * operations to a row are synchronized, and readers are guaranteed to see this operation fully
+ * completed.
  * <p>
- * To append to a set of columns of a row, instantiate an Append object with the
- * row to append to. At least one column to append must be specified using the
+ * To append to a set of columns of a row, instantiate an Append object with the row to append to.
+ * At least one column to append must be specified using the
  * {@link #addColumn(byte[], byte[], byte[])} method.
  */
 @InterfaceAudience.Public
@@ -53,17 +53,15 @@ public class Append extends Mutation {
   /**
    * Sets the TimeRange to be used on the Get for this append.
    * <p>
-   * This is useful for when you have counters that only last for specific
-   * periods of time (ie. counters that are partitioned by time).  By setting
-   * the range of valid times for this append, you can potentially gain
-   * some performance with a more optimal Get operation.
-   * Be careful adding the time range to this class as you will update the old cell if the
-   * time range doesn't include the latest cells.
+   * This is useful for when you have counters that only last for specific periods of time (ie.
+   * counters that are partitioned by time). By setting the range of valid times for this append,
+   * you can potentially gain some performance with a more optimal Get operation. Be careful adding
+   * the time range to this class as you will update the old cell if the time range doesn't include
+   * the latest cells.
    * <p>
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive
-   * @return this
+   * @param maxStamp maximum timestamp value, exclusive n
    */
   public Append setTimeRange(long minStamp, long maxStamp) {
     tr = new TimeRange(minStamp, maxStamp);
@@ -71,23 +69,20 @@ public class Append extends Mutation {
   }
 
   /**
-   * Gets the TimeRange used for this append.
-   * @return TimeRange
+   * Gets the TimeRange used for this append. n
    */
   public TimeRange getTimeRange() {
     return this.tr;
   }
 
   @Override
-  protected long extraHeapSize(){
+  protected long extraHeapSize() {
     return HEAP_OVERHEAD;
   }
 
   /**
-   * @param returnResults
-   *          True (default) if the append operation should return the results.
-   *          A client that is not interested in the result can save network
-   *          bandwidth setting this to false.
+   * n * True (default) if the append operation should return the results. A client that is not
+   * interested in the result can save network bandwidth setting this to false.
    */
   @Override
   public Append setReturnResults(boolean returnResults) {
@@ -113,6 +108,7 @@ public class Append extends Mutation {
   public Append(byte[] row) {
     this(row, 0, row.length);
   }
+
   /**
    * Copy constructor
    * @param appendToCopy append to copy
@@ -122,50 +118,46 @@ public class Append extends Mutation {
     this.tr = appendToCopy.getTimeRange();
   }
 
-  /** Create a Append operation for the specified row.
+  /**
+   * Create a Append operation for the specified row.
    * <p>
    * At least one column must be appended to.
-   * @param rowArray Makes a copy out of this buffer.
-   * @param rowOffset
-   * @param rowLength
+   * @param rowArray Makes a copy out of this buffer. nn
    */
-  public Append(final byte [] rowArray, final int rowOffset, final int rowLength) {
+  public Append(final byte[] rowArray, final int rowOffset, final int rowLength) {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
   }
 
   /**
-   * Construct the Append with user defined data. NOTED:
-   * 1) all cells in the familyMap must have the Type.Put
-   * 2) the row of each cell must be same with passed row.
-   * @param row row. CAN'T be null
-   * @param ts timestamp
+   * Construct the Append with user defined data. NOTED: 1) all cells in the familyMap must have the
+   * Type.Put 2) the row of each cell must be same with passed row.
+   * @param row       row. CAN'T be null
+   * @param ts        timestamp
    * @param familyMap the map to collect all cells internally. CAN'T be null
    */
-  public Append(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+  public Append(byte[] row, long ts, NavigableMap<byte[], List<Cell>> familyMap) {
     super(row, ts, familyMap);
   }
 
   /**
    * Add the specified column and value to this Append operation.
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   * @param value value to append to specified column
-   * @return this
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #addColumn(byte[], byte[], byte[])} instead
+   * @param value     value to append to specified column n * @deprecated As of release 2.0.0, this
+   *                  will be removed in HBase 3.0.0. Use {@link #addColumn(byte[], byte[], byte[])}
+   *                  instead
    */
   @Deprecated
-  public Append add(byte [] family, byte [] qualifier, byte [] value) {
+  public Append add(byte[] family, byte[] qualifier, byte[] value) {
     return this.addColumn(family, qualifier, value);
   }
 
   /**
    * Add the specified column and value to this Append operation.
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   * @param value value to append to specified column
-   * @return this
+   * @param value     value to append to specified column n
    */
   public Append addColumn(byte[] family, byte[] qualifier, byte[] value) {
     KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);
@@ -173,9 +165,7 @@ public class Append extends Mutation {
   }
 
   /**
-   * Add column and value to this Append operation.
-   * @param cell
-   * @return This instance
+   * Add column and value to this Append operation. n * @return This instance
    */
   @SuppressWarnings("unchecked")
   public Append add(final Cell cell) {
@@ -211,8 +201,8 @@ public class Append extends Mutation {
 
   /**
    * Method for setting the Append's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Append#Append(byte[], long, NavigableMap)} instead
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link Append#Append(byte[], long, NavigableMap)} instead
    */
   @Deprecated
   @Override

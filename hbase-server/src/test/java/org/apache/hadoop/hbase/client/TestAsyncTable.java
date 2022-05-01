@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -442,39 +442,43 @@ public class TestAsyncTable {
     table.put(put).get();
 
     // Put with success
-    boolean ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
-      .get();
+    boolean ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+          Bytes.toBytes("a")))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))).get();
     assertTrue(ok);
 
     Result result = table.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D"))).get();
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
 
     // Put with failure
-    ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("b")))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")))
-      .get();
+    ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+          Bytes.toBytes("b")))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))).get();
     assertFalse(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("E"))).get());
 
     // Delete with success
-    ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
-      .thenDelete(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D")))
-      .get();
+    ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+          Bytes.toBytes("a")))
+      .thenDelete(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D"))).get();
     assertTrue(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("D"))).get());
 
     // Mutate with success
-    ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"),
-        CompareOperator.EQUAL, Bytes.toBytes("b")))
+    ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+          Bytes.toBytes("b")))
       .thenMutate(new RowMutations(row)
-        .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+        .add((Mutation) new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))))
       .get();
     assertTrue(ok);
@@ -498,55 +502,55 @@ public class TestAsyncTable {
     table.put(put).get();
 
     // Put with success
-    boolean ok = table.checkAndMutate(row, new FilterList(
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a")),
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
-          Bytes.toBytes("b"))
-      ))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
-      .get();
+    boolean ok = table
+      .checkAndMutate(row,
+        new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))).get();
     assertTrue(ok);
 
     Result result = table.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D"))).get();
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
 
     // Put with failure
-    ok = table.checkAndMutate(row, new FilterList(
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a")),
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
-          Bytes.toBytes("c"))
-      ))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")))
-      .get();
+    ok = table
+      .checkAndMutate(row,
+        new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("c"))))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))).get();
     assertFalse(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("E"))).get());
 
     // Delete with success
-    ok = table.checkAndMutate(row, new FilterList(
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a")),
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
-          Bytes.toBytes("b"))
-      ))
-      .thenDelete(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D")))
-      .get();
+    ok = table
+      .checkAndMutate(row,
+        new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))))
+      .thenDelete(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D"))).get();
     assertTrue(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("D"))).get());
 
     // Mutate with success
-    ok = table.checkAndMutate(row, new FilterList(
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a")),
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
-          Bytes.toBytes("b"))
-      ))
+    ok = table
+      .checkAndMutate(row,
+        new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))))
       .thenMutate(new RowMutations(row)
-        .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+        .add((Mutation) new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))))
       .get();
     assertTrue(ok);
@@ -566,26 +570,24 @@ public class TestAsyncTable {
     table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a"))).get();
 
     // Put with success
-    boolean ok = table.checkAndMutate(row, new FilterList(
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
-        new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
-        new TimestampsFilter(Collections.singletonList(100L))
-      ))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))
-      .get();
+    boolean ok = table
+      .checkAndMutate(row,
+        new FilterList(new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(100L))))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))).get();
     assertTrue(ok);
 
     Result result = table.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("B"))).get();
     assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
 
     // Put with failure
-    ok = table.checkAndMutate(row, new FilterList(
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
-        new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
-        new TimestampsFilter(Collections.singletonList(101L))
-      ))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))
-      .get();
+    ok = table
+      .checkAndMutate(row,
+        new FilterList(new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(101L))))
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))).get();
     assertFalse(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
@@ -597,26 +599,27 @@ public class TestAsyncTable {
     AsyncTable<?> table = getTable.get();
 
     // Put with specifying the timestamp
-    table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")))
-      .get();
+    table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a"))).get();
 
     // Put with success
-    boolean ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
+    boolean ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+          Bytes.toBytes("a")))
       .timeRange(TimeRange.between(0, 101))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))
-      .get();
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))).get();
     assertTrue(ok);
 
     Result result = table.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("B"))).get();
     assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
 
     // Put with failure
-    ok = table.checkAndMutate(row, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
+    ok = table
+      .checkAndMutate(row,
+        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+          Bytes.toBytes("a")))
       .timeRange(TimeRange.between(0, 100))
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))
-      .get();
+      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))).get();
     assertFalse(ok);
 
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
@@ -640,11 +643,9 @@ public class TestAsyncTable {
     int count = 10;
     CountDownLatch latch = new CountDownLatch(count);
 
-    IntStream.range(0, count)
-      .forEach(i -> table.checkAndMutate(CheckAndMutate.newBuilder(row)
-          .ifNotExists(FAMILY, QUALIFIER)
-          .build(new Put(row).addColumn(FAMILY, QUALIFIER, concat(VALUE, i))))
-        .thenAccept(x -> {
+    IntStream.range(0, count).forEach(
+      i -> table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+        .build(new Put(row).addColumn(FAMILY, QUALIFIER, concat(VALUE, i)))).thenAccept(x -> {
           if (x.isSuccess()) {
             successCount.incrementAndGet();
             successIndex.set(i);
@@ -675,10 +676,9 @@ public class TestAsyncTable {
     CountDownLatch deleteLatch = new CountDownLatch(count);
 
     IntStream.range(0, count)
-      .forEach(i -> table.checkAndMutate(CheckAndMutate.newBuilder(row)
-          .ifEquals(FAMILY, QUALIFIER, VALUE)
-          .build(
-            new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i))))
+      .forEach(i -> table
+        .checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE).build(
+          new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i))))
         .thenAccept(x -> {
           if (x.isSuccess()) {
             successCount.incrementAndGet();
@@ -724,9 +724,9 @@ public class TestAsyncTable {
         throw new UncheckedIOException(e);
       }
 
-      table.checkAndMutate(CheckAndMutate.newBuilder(row)
-          .ifEquals(FAMILY, QUALIFIER, VALUE)
-          .build(mutation))
+      table
+        .checkAndMutate(
+          CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE).build(mutation))
         .thenAccept(x -> {
           if (x.isSuccess()) {
             successCount.incrementAndGet();
@@ -755,55 +755,43 @@ public class TestAsyncTable {
     Put put = new Put(row);
     put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER)
-      .build(put)).get();
+    CheckAndMutateResult result =
+      table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(put))
+        .get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts + 10000))
-      .build(put)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts + 10000)).build(put)).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts))
-      .build(put)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts)).build(put)).get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
     RowMutations rm = new RowMutations(row).add((Mutation) put);
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts + 10000))
-      .build(rm)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts + 10000)).build(rm)).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts))
-      .build(rm)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts)).build(rm)).get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
     Delete delete = new Delete(row).addColumn(FAMILY, QUALIFIER);
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts + 10000))
-      .build(delete)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts + 10000)).build(delete)).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
 
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, QUALIFIER, VALUE)
-      .timeRange(TimeRange.at(ts))
-      .build(delete)).get();
+    result = table.checkAndMutate(CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, VALUE)
+      .timeRange(TimeRange.at(ts)).build(delete)).get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
   }
@@ -821,8 +809,8 @@ public class TestAsyncTable {
 
     // Put with success
     CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
+      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+        Bytes.toBytes("a")))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))).get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
@@ -832,8 +820,8 @@ public class TestAsyncTable {
 
     // Put with failure
     result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("b")))
+      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+        Bytes.toBytes("b")))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")))).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
@@ -841,10 +829,13 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("E"))).get());
 
     // Delete with success
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
-      .build(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D")))).get();
+    result =
+      table
+        .checkAndMutate(CheckAndMutate.newBuilder(row)
+          .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")))
+          .build(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D"))))
+        .get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
@@ -852,12 +843,12 @@ public class TestAsyncTable {
 
     // Mutate with success
     result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"),
-        CompareOperator.EQUAL, Bytes.toBytes("b")))
+      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+        Bytes.toBytes("b")))
       .build(new RowMutations(row)
-        .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
-        .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))))).get();
+        .add((Mutation) new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+        .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A")))))
+      .get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
@@ -906,13 +897,15 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("E"))).get());
 
     // Delete with success
-    result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new FilterList(
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a")),
-        new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
-          Bytes.toBytes("b"))))
-      .build(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D")))).get();
+    result = table
+      .checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifMatches(new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))))
+        .build(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D"))))
+      .get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
@@ -926,9 +919,9 @@ public class TestAsyncTable {
         new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
           Bytes.toBytes("b"))))
       .build(new RowMutations(row)
-        .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
-        .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))))).get();
+        .add((Mutation) new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+        .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A")))))
+      .get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
 
@@ -947,10 +940,10 @@ public class TestAsyncTable {
 
     // Put with success
     CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new FilterList(
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
-        new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
-        new TimestampsFilter(Collections.singletonList(100L))))
+      .ifMatches(
+        new FilterList(new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(100L))))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))).get();
     assertTrue(result.isSuccess());
     assertNull(result.getResult());
@@ -960,10 +953,10 @@ public class TestAsyncTable {
 
     // Put with failure
     result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new FilterList(
-        new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
-        new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
-        new TimestampsFilter(Collections.singletonList(101L))))
+      .ifMatches(
+        new FilterList(new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(101L))))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
@@ -976,13 +969,12 @@ public class TestAsyncTable {
     AsyncTable<?> table = getTable.get();
 
     // Put with specifying the timestamp
-    table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")))
-      .get();
+    table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a"))).get();
 
     // Put with success
     CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
+      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+        Bytes.toBytes("a")))
       .timeRange(TimeRange.between(0, 101))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))).get();
     assertTrue(result.isSuccess());
@@ -993,11 +985,10 @@ public class TestAsyncTable {
 
     // Put with failure
     result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a")))
+      .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+        Bytes.toBytes("a")))
       .timeRange(TimeRange.between(0, 100))
-      .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))))
-      .get();
+      .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))).get();
     assertFalse(result.isSuccess());
     assertNull(result.getResult());
 
@@ -1011,9 +1002,10 @@ public class TestAsyncTable {
     table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))).get();
 
     // CheckAndIncrement with correct value
-    CheckAndMutateResult res = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1))).get();
+    CheckAndMutateResult res = table.checkAndMutate(
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1)))
+      .get();
     assertTrue(res.isSuccess());
     assertEquals(1, Bytes.toLong(res.getResult().getValue(FAMILY, Bytes.toBytes("B"))));
 
@@ -1021,9 +1013,10 @@ public class TestAsyncTable {
     assertEquals(1, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("B"))));
 
     // CheckAndIncrement with wrong value
-    res = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("b"))
-      .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1))).get();
+    res = table.checkAndMutate(
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("b"))
+        .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1)))
+      .get();
     assertFalse(res.isSuccess());
     assertNull(res.getResult());
 
@@ -1068,9 +1061,12 @@ public class TestAsyncTable {
     table.put(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))).get();
 
     // CheckAndAppend with correct value
-    CheckAndMutateResult res = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))).get();
+    CheckAndMutateResult res =
+      table
+        .checkAndMutate(
+          CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+            .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))))
+        .get();
     assertTrue(res.isSuccess());
     assertEquals("b", Bytes.toString(res.getResult().getValue(FAMILY, Bytes.toBytes("B"))));
 
@@ -1078,9 +1074,12 @@ public class TestAsyncTable {
     assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
 
     // CheckAndAppend with correct value
-    res = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("b"))
-      .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")))).get();
+    res =
+      table
+        .checkAndMutate(
+          CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("b"))
+            .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))))
+        .get();
     assertFalse(res.isSuccess());
     assertNull(res.getResult());
 
@@ -1129,20 +1128,15 @@ public class TestAsyncTable {
     AsyncTable<?> table = getTable.get();
 
     // Initial values
-    table.putAll(Arrays.asList(
-      new Put(row).addColumn(FAMILY, q2, Bytes.toBytes("toBeDeleted")),
+    table.putAll(Arrays.asList(new Put(row).addColumn(FAMILY, q2, Bytes.toBytes("toBeDeleted")),
       new Put(row).addColumn(FAMILY, q3, Bytes.toBytes(5L)),
       new Put(row).addColumn(FAMILY, q4, Bytes.toBytes("a")))).get();
 
     // Do CheckAndRowMutations
-    CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, q1)
-      .build(new RowMutations(row).add(Arrays.asList(
-        new Put(row).addColumn(FAMILY, q1, Bytes.toBytes(v1)),
-        new Delete(row).addColumns(FAMILY, q2),
-        new Increment(row).addColumn(FAMILY, q3, 1),
-        new Append(row).addColumn(FAMILY, q4, Bytes.toBytes("b"))))
-      );
+    CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, q1).build(
+      new RowMutations(row).add(Arrays.asList(new Put(row).addColumn(FAMILY, q1, Bytes.toBytes(v1)),
+        new Delete(row).addColumns(FAMILY, q2), new Increment(row).addColumn(FAMILY, q3, 1),
+        new Append(row).addColumn(FAMILY, q4, Bytes.toBytes("b")))));
 
     CheckAndMutateResult result = table.checkAndMutate(checkAndMutate).get();
     assertTrue(result.isSuccess());
@@ -1157,14 +1151,11 @@ public class TestAsyncTable {
     assertEquals("ab", Bytes.toString(r.getValue(FAMILY, q4)));
 
     // Do CheckAndRowMutations again
-    checkAndMutate = CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, q1)
-      .build(new RowMutations(row).add(Arrays.asList(
-        new Delete(row).addColumns(FAMILY, q1),
+    checkAndMutate = CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, q1)
+      .build(new RowMutations(row).add(Arrays.asList(new Delete(row).addColumns(FAMILY, q1),
         new Put(row).addColumn(FAMILY, q2, Bytes.toBytes(v1)),
         new Increment(row).addColumn(FAMILY, q3, 1),
-        new Append(row).addColumn(FAMILY, q4, Bytes.toBytes("b"))))
-      );
+        new Append(row).addColumn(FAMILY, q4, Bytes.toBytes("b")))));
 
     result = table.checkAndMutate(checkAndMutate).get();
     assertFalse(result.isSuccess());
@@ -1187,20 +1178,21 @@ public class TestAsyncTable {
     byte[] row3 = Bytes.toBytes(Bytes.toString(row) + "3");
     byte[] row4 = Bytes.toBytes(Bytes.toString(row) + "4");
 
-    table.putAll(Arrays.asList(
-      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
-      new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
-      new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
-      new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))).get();
+    table
+      .putAll(Arrays.asList(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+        new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
+        new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
+        new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))))
+      .get();
 
     // Test for Put
-    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e")));
+    CheckAndMutate checkAndMutate1 =
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e")));
 
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("a"))
-      .build(new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
+    CheckAndMutate checkAndMutate2 =
+      CheckAndMutate.newBuilder(row2).ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("a"))
+        .build(new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
 
     List<CheckAndMutateResult> results =
       table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
@@ -1218,12 +1210,10 @@ public class TestAsyncTable {
 
     // Test for Delete
     checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e"))
-      .build(new Delete(row));
+      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e")).build(new Delete(row));
 
     checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("a"))
-      .build(new Delete(row2));
+      .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("a")).build(new Delete(row2));
 
     results = table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
 
@@ -1238,19 +1228,17 @@ public class TestAsyncTable {
     assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
 
     // Test for RowMutations
-    checkAndMutate1 = CheckAndMutate.newBuilder(row3)
-      .ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))
-      .build(new RowMutations(row3)
-        .add((Mutation) new Put(row3)
-          .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
-        .add((Mutation) new Delete(row3).addColumns(FAMILY, Bytes.toBytes("C"))));
+    checkAndMutate1 =
+      CheckAndMutate.newBuilder(row3).ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))
+        .build(new RowMutations(row3)
+          .add((Mutation) new Put(row3).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
+          .add((Mutation) new Delete(row3).addColumns(FAMILY, Bytes.toBytes("C"))));
 
-    checkAndMutate2 = CheckAndMutate.newBuilder(row4)
-      .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("f"))
-      .build(new RowMutations(row4)
-        .add((Mutation) new Put(row4)
-          .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
-        .add((Mutation) new Delete(row4).addColumns(FAMILY, Bytes.toBytes("D"))));
+    checkAndMutate2 =
+      CheckAndMutate.newBuilder(row4).ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("f"))
+        .build(new RowMutations(row4)
+          .add((Mutation) new Put(row4).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
+          .add((Mutation) new Delete(row4).addColumns(FAMILY, Bytes.toBytes("D"))));
 
     results = table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
 
@@ -1275,20 +1263,21 @@ public class TestAsyncTable {
     byte[] row3 = Bytes.toBytes(Bytes.toString(row) + "3");
     byte[] row4 = Bytes.toBytes(Bytes.toString(row) + "4");
 
-    table.putAll(Arrays.asList(
-      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
-      new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
-      new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), 100, Bytes.toBytes("c")),
-      new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), 100, Bytes.toBytes("d")))).get();
+    table
+      .putAll(Arrays.asList(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+        new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
+        new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), 100, Bytes.toBytes("c")),
+        new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), 100, Bytes.toBytes("d"))))
+      .get();
 
     // Test for ifNotExists()
-    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, Bytes.toBytes("B"))
-      .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e")));
+    CheckAndMutate checkAndMutate1 =
+      CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, Bytes.toBytes("B"))
+        .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("e")));
 
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifNotExists(FAMILY, Bytes.toBytes("B"))
-      .build(new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
+    CheckAndMutate checkAndMutate2 =
+      CheckAndMutate.newBuilder(row2).ifNotExists(FAMILY, Bytes.toBytes("B"))
+        .build(new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
 
     List<CheckAndMutateResult> results =
       table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
@@ -1328,13 +1317,11 @@ public class TestAsyncTable {
 
     // Test for timeRange()
     checkAndMutate1 = CheckAndMutate.newBuilder(row3)
-      .ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))
-      .timeRange(TimeRange.between(0, 101))
+      .ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")).timeRange(TimeRange.between(0, 101))
       .build(new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("e")));
 
     checkAndMutate2 = CheckAndMutate.newBuilder(row4)
-      .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))
-      .timeRange(TimeRange.between(0, 100))
+      .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")).timeRange(TimeRange.between(0, 100))
       .build(new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("f")));
 
     results = table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
@@ -1357,14 +1344,13 @@ public class TestAsyncTable {
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
 
     table.putAll(Arrays.asList(
-      new Put(row)
-        .addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
         .addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))
         .addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
-      new Put(row2)
-        .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))
+      new Put(row2).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))
         .addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))
-        .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))).get();
+        .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f"))))
+      .get();
 
     // Test for Put
     CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
@@ -1434,8 +1420,7 @@ public class TestAsyncTable {
         new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
           Bytes.toBytes("b"))))
       .build(new RowMutations(row)
-        .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))
+        .add((Mutation) new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))));
 
     checkAndMutate2 = CheckAndMutate.newBuilder(row2)
@@ -1445,8 +1430,7 @@ public class TestAsyncTable {
         new SingleColumnValueFilter(FAMILY, Bytes.toBytes("E"), CompareOperator.EQUAL,
           Bytes.toBytes("b"))))
       .build(new RowMutations(row2)
-        .add((Mutation) new Put(row2)
-          .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("g")))
+        .add((Mutation) new Put(row2).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("g")))
         .add((Mutation) new Delete(row2).addColumns(FAMILY, Bytes.toBytes("D"))));
 
     results = table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
@@ -1476,7 +1460,8 @@ public class TestAsyncTable {
         .addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
       new Put(row2).addColumn(FAMILY, Bytes.toBytes("D"), 100, Bytes.toBytes("d"))
         .addColumn(FAMILY, Bytes.toBytes("E"), 100, Bytes.toBytes("e"))
-        .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))).get();
+        .addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f"))))
+      .get();
 
     CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
       .ifMatches(new FilterList(
@@ -1517,27 +1502,27 @@ public class TestAsyncTable {
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
 
     table.putAll(Arrays.asList(
-      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-        .addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes(0L)),
-      new Put(row2).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))
-        .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes(0L)))).get();
+      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")).addColumn(FAMILY,
+        Bytes.toBytes("B"), Bytes.toBytes(0L)),
+      new Put(row2).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")).addColumn(FAMILY,
+        Bytes.toBytes("D"), Bytes.toBytes(0L))))
+      .get();
 
     // CheckAndIncrement with correct value
-    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1));
+    CheckAndMutate checkAndMutate1 =
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new Increment(row).addColumn(FAMILY, Bytes.toBytes("B"), 1));
 
     // CheckAndIncrement with wrong value
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("d"))
-      .build(new Increment(row2).addColumn(FAMILY, Bytes.toBytes("D"), 1));
+    CheckAndMutate checkAndMutate2 =
+      CheckAndMutate.newBuilder(row2).ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("d"))
+        .build(new Increment(row2).addColumn(FAMILY, Bytes.toBytes("D"), 1));
 
     List<CheckAndMutateResult> results =
       table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
 
     assertTrue(results.get(0).isSuccess());
-    assertEquals(1, Bytes.toLong(results.get(0).getResult()
-      .getValue(FAMILY, Bytes.toBytes("B"))));
+    assertEquals(1, Bytes.toLong(results.get(0).getResult().getValue(FAMILY, Bytes.toBytes("B"))));
     assertFalse(results.get(1).isSuccess());
     assertNull(results.get(1).getResult());
 
@@ -1554,27 +1539,28 @@ public class TestAsyncTable {
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
 
     table.putAll(Arrays.asList(
-      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-        .addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
-      new Put(row2).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))
-        .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))).get();
+      new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")).addColumn(FAMILY,
+        Bytes.toBytes("B"), Bytes.toBytes("b")),
+      new Put(row2).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")).addColumn(FAMILY,
+        Bytes.toBytes("D"), Bytes.toBytes("d"))))
+      .get();
 
     // CheckAndAppend with correct value
-    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
+    CheckAndMutate checkAndMutate1 =
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new Append(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
 
     // CheckAndAppend with wrong value
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("d"))
-      .build(new Append(row2).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+    CheckAndMutate checkAndMutate2 =
+      CheckAndMutate.newBuilder(row2).ifEquals(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("d"))
+        .build(new Append(row2).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
 
     List<CheckAndMutateResult> results =
       table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
 
     assertTrue(results.get(0).isSuccess());
-    assertEquals("bb", Bytes.toString(results.get(0).getResult()
-      .getValue(FAMILY, Bytes.toBytes("B"))));
+    assertEquals("bb",
+      Bytes.toString(results.get(0).getResult().getValue(FAMILY, Bytes.toBytes("B"))));
     assertFalse(results.get(1).isSuccess());
     assertNull(results.get(1).getResult());
 
@@ -1596,37 +1582,34 @@ public class TestAsyncTable {
         .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
       new Put(row2).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f"))
         .addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes(1L))
-        .addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h")))
-    ).get();
+        .addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h"))))
+      .get();
 
     // CheckAndIncrement with correct value
-    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
-      .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))
-      .build(new RowMutations(row).add(Arrays.asList(
-        new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
-        new Delete(row).addColumns(FAMILY, Bytes.toBytes("B")),
-        new Increment(row).addColumn(FAMILY, Bytes.toBytes("C"), 1L),
-        new Append(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))
-      )));
+    CheckAndMutate checkAndMutate1 =
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))
+        .build(new RowMutations(row)
+          .add(Arrays.asList(new Put(row).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+            new Delete(row).addColumns(FAMILY, Bytes.toBytes("B")),
+            new Increment(row).addColumn(FAMILY, Bytes.toBytes("C"), 1L),
+            new Append(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))));
 
     // CheckAndIncrement with wrong value
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
-      .ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("a"))
-      .build(new RowMutations(row2).add(Arrays.asList(
-        new Put(row2).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
-        new Delete(row2).addColumns(FAMILY, Bytes.toBytes("F")),
-        new Increment(row2).addColumn(FAMILY, Bytes.toBytes("G"), 1L),
-        new Append(row2).addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h"))
-      )));
+    CheckAndMutate checkAndMutate2 =
+      CheckAndMutate.newBuilder(row2).ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("a"))
+        .build(new RowMutations(row2).add(
+          Arrays.asList(new Put(row2).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
+            new Delete(row2).addColumns(FAMILY, Bytes.toBytes("F")),
+            new Increment(row2).addColumn(FAMILY, Bytes.toBytes("G"), 1L),
+            new Append(row2).addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h")))));
 
     List<CheckAndMutateResult> results =
       table.checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2)).get();
 
     assertTrue(results.get(0).isSuccess());
-    assertEquals(2, Bytes.toLong(results.get(0).getResult()
-      .getValue(FAMILY, Bytes.toBytes("C"))));
-    assertEquals("dd", Bytes.toString(results.get(0).getResult()
-      .getValue(FAMILY, Bytes.toBytes("D"))));
+    assertEquals(2, Bytes.toLong(results.get(0).getResult().getValue(FAMILY, Bytes.toBytes("C"))));
+    assertEquals("dd",
+      Bytes.toString(results.get(0).getResult().getValue(FAMILY, Bytes.toBytes("D"))));
 
     assertFalse(results.get(1).isSuccess());
     assertNull(results.get(1).getResult());
@@ -1686,9 +1669,8 @@ public class TestAsyncTable {
     }
 
     try {
-      getTable.get()
-        .mutateRow(new RowMutations(row).add((Mutation) new Put(row)
-          .addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
+      getTable.get().mutateRow(new RowMutations(row)
+        .add((Mutation) new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
       fail("Should fail since the put exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
@@ -1699,8 +1681,7 @@ public class TestAsyncTable {
   public void testInvalidPutInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
     try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row)
-        .ifNotExists(FAMILY, QUALIFIER)
+      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
         .build(new RowMutations(row).add((Mutation) new Put(row))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
@@ -1708,10 +1689,10 @@ public class TestAsyncTable {
     }
 
     try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row)
-        .ifNotExists(FAMILY, QUALIFIER)
-        .build(new RowMutations(row).add((Mutation) new Put(row)
-          .addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
+      getTable.get()
+        .checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+          .build(new RowMutations(row).add(
+            (Mutation) new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
       fail("Should fail since the put exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));

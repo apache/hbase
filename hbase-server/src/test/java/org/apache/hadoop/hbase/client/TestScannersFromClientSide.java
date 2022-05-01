@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,23 +80,24 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * A client-side test, mostly testing scanners with various parameters. Parameterized on different
  * registry implementations.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
 public class TestScannersFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannersFromClientSide.class);
+    HBaseClassTestRule.forClass(TestScannersFromClientSide.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannersFromClientSide.class);
 
   private static HBaseTestingUtility TEST_UTIL;
-  private static byte [] ROW = Bytes.toBytes("testRow");
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static byte [] VALUE = Bytes.toBytes("testValue");
+  private static byte[] ROW = Bytes.toBytes("testRow");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static byte[] VALUE = Bytes.toBytes("testValue");
 
-  @Rule public TableNameTestRule name = new TableNameTestRule();
+  @Rule
+  public TableNameTestRule name = new TableNameTestRule();
 
   /**
    * @throws java.lang.Exception
@@ -118,23 +119,18 @@ public class TestScannersFromClientSide {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] {
-        { MasterRegistry.class, 1},
-        { MasterRegistry.class, 2},
-        { ZKConnectionRegistry.class, 1}
-    });
+    return Arrays.asList(new Object[][] { { MasterRegistry.class, 1 }, { MasterRegistry.class, 2 },
+      { ZKConnectionRegistry.class, 1 } });
   }
 
   /**
    * JUnit does not provide an easy way to run a hook after each parameterized run. Without that
    * there is no easy way to restart the test cluster after each parameterized run. Annotation
    * BeforeParam does not work either because it runs before parameterization and hence does not
-   * have access to the test parameters (which is weird).
-   *
-   * This *hack* checks if the current instance of test cluster configuration has the passed
-   * parameterized configs. In such a case, we can just reuse the cluster for test and do not need
-   * to initialize from scratch. While this is a hack, it saves a ton of time for the full
-   * test and de-flakes it.
+   * have access to the test parameters (which is weird). This *hack* checks if the current instance
+   * of test cluster configuration has the passed parameterized configs. In such a case, we can just
+   * reuse the cluster for test and do not need to initialize from scratch. While this is a hack, it
+   * saves a ton of time for the full test and de-flakes it.
    */
   private static boolean isSameParameterizedCluster(Class<?> registryImpl, int numHedgedReqs) {
     // initialize() is called for every unit test, however we only want to reset the cluster state
@@ -162,7 +158,7 @@ public class TestScannersFromClientSide {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
-        ConnectionRegistry.class);
+      ConnectionRegistry.class);
     Preconditions.checkArgument(numHedgedReqs > 0);
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
     StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
@@ -172,14 +168,12 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for batch of scan
-   *
-   * @throws Exception
+   * Test from client side for batch of scan n
    */
   @Test
   public void testScanBatch() throws Exception {
     final TableName tableName = name.getTableName();
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
@@ -193,7 +187,7 @@ public class TestScannersFromClientSide {
 
     // table: row, family, c0:0, c1:1, ... , c7:7
     put = new Put(ROW);
-    for (int i=0; i < QUALIFIERS.length; i++) {
+    for (int i = 0; i < QUALIFIERS.length; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILY, QUALIFIERS[i], i, VALUE);
       put.add(kv);
     }
@@ -225,7 +219,7 @@ public class TestScannersFromClientSide {
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
 
     // with batch
-    scan =  new Scan().withStartRow(ROW);
+    scan = new Scan().withStartRow(ROW);
     scan.setMaxVersions();
     scan.setBatch(2);
     scanner = ht.getScanner(scan);
@@ -253,8 +247,8 @@ public class TestScannersFromClientSide {
 
     // The max result size we expect the scan to use by default.
     long expectedMaxResultSize =
-        TEST_UTIL.getConfiguration().getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+      TEST_UTIL.getConfiguration().getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
     int numRows = 5;
     byte[][] ROWS = HTestConst.makeNAscii(ROW, numRows);
@@ -301,8 +295,8 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScannerForNotExistingTable() {
-    String[] tableNames = {"A", "Z", "A:A", "Z:Z"};
-    for(String tableName : tableNames) {
+    String[] tableNames = { "A", "Z", "A:A", "Z:Z" };
+    for (String tableName : tableNames) {
       try {
         Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf(tableName));
         testSmallScan(table, true, 1, 5);
@@ -350,15 +344,10 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Run through a variety of test configurations with a small scan
-   * @param table
-   * @param reversed
-   * @param rows
-   * @param columns
-   * @throws Exception
+   * Run through a variety of test configurations with a small scan nnnnn
    */
-  private void testSmallScan(
-      Table table, boolean reversed, int rows, int columns) throws Exception {
+  private void testSmallScan(Table table, boolean reversed, int rows, int columns)
+    throws Exception {
     Scan baseScan = new Scan();
     baseScan.setReversed(reversed);
     baseScan.setSmall(true);
@@ -377,7 +366,7 @@ public class TestScannersFromClientSide {
   }
 
   private void verifyExpectedCounts(Table table, Scan scan, int expectedRowCount,
-      int expectedCellCount) throws Exception {
+    int expectedCellCount) throws Exception {
     ResultScanner scanner = table.getScanner(scan);
 
     int rowCount = 0;
@@ -389,22 +378,20 @@ public class TestScannersFromClientSide {
     }
 
     assertTrue("Expected row count: " + expectedRowCount + " Actual row count: " + rowCount,
-        expectedRowCount == rowCount);
+      expectedRowCount == rowCount);
     assertTrue("Expected cell count: " + expectedCellCount + " Actual cell count: " + cellCount,
-        expectedCellCount == cellCount);
+      expectedCellCount == cellCount);
     scanner.close();
   }
 
   /**
-   * Test from client side for get with maxResultPerCF set
-   *
-   * @throws Exception
+   * Test from client side for get with maxResultPerCF set n
    */
   @Test
   public void testGetMaxResults() throws Exception {
     final TableName tableName = name.getTableName();
-    byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
+    byte[][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
@@ -417,7 +404,7 @@ public class TestScannersFromClientSide {
     kvListExp = new ArrayList<>();
     // Insert one CF for row[0]
     put = new Put(ROW);
-    for (int i=0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
       kvListExp.add(kv);
@@ -439,8 +426,7 @@ public class TestScannersFromClientSide {
     // Filters: ColumnRangeFilter
     get = new Get(ROW);
     get.setMaxResultsPerColumnFamily(5);
-    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
-                                        true));
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5], true));
     result = ht.get(get);
     kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[2], 1, VALUE));
@@ -452,14 +438,14 @@ public class TestScannersFromClientSide {
     // Insert two more CF for row[0]
     // 20 columns for CF2, 10 columns for CF1
     put = new Put(ROW);
-    for (int i=0; i < QUALIFIERS.length; i++) {
+    for (int i = 0; i < QUALIFIERS.length; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
     }
     ht.put(put);
 
     put = new Put(ROW);
-    for (int i=0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
     }
@@ -471,14 +457,14 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
     kvListExp = new ArrayList<>();
-    //Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
-    for (int i=0; i < 10; i++) {
+    // Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
+    for (int i = 0; i < 10; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=10; i < 20; i++) {
+    for (int i = 10; i < 20; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs");
@@ -489,13 +475,13 @@ public class TestScannersFromClientSide {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, null, true));
     result = ht.get(get);
     kvListExp = new ArrayList<>();
-    for (int i=2; i < 5; i++) {
+    for (int i = 2; i < 5; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=2; i < 5; i++) {
+    for (int i = 2; i < 5; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=2; i < 5; i++) {
+    for (int i = 2; i < 5; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs + CRF");
@@ -508,7 +494,7 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[1], 1, VALUE));
-    for (int i=10; i < 16; i++) {
+    for (int i = 10; i < 16; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs + PFF");
@@ -516,16 +502,14 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
+   * Test from client side for scan with maxResultPerCF set n
    */
   @Test
   public void testScanMaxResults() throws Exception {
     final TableName tableName = name.getTableName();
-    byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
-    byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
+    byte[][] ROWS = HTestConst.makeNAscii(ROW, 2);
+    byte[][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
@@ -537,10 +521,10 @@ public class TestScannersFromClientSide {
 
     kvListExp = new ArrayList<>();
 
-    for (int r=0; r < ROWS.length; r++) {
+    for (int r = 0; r < ROWS.length; r++) {
       put = new Put(ROWS[r]);
-      for (int c=0; c < FAMILIES.length; c++) {
-        for (int q=0; q < QUALIFIERS.length; q++) {
+      for (int c = 0; c < FAMILIES.length; c++) {
+        for (int q = 0; q < QUALIFIERS.length; q++) {
           KeyValue kv = new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1, VALUE);
           put.add(kv);
           if (q < 4) {
@@ -566,15 +550,13 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for get with rowOffset
-   *
-   * @throws Exception
+   * Test from client side for get with rowOffset n
    */
   @Test
   public void testGetRowOffset() throws Exception {
     final TableName tableName = name.getTableName();
-    byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
+    byte[][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
@@ -587,7 +569,7 @@ public class TestScannersFromClientSide {
     // Insert one CF for row
     kvListExp = new ArrayList<>();
     put = new Put(ROW);
-    for (int i=0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
       // skipping first two kvs
@@ -598,36 +580,34 @@ public class TestScannersFromClientSide {
     }
     ht.put(put);
 
-    //setting offset to 2
+    // setting offset to 2
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(2);
     result = ht.get(get);
     verifyResult(result, kvListExp, toLog, "Testing basic setRowOffset");
 
-    //setting offset to 20
+    // setting offset to 20
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(20);
     result = ht.get(get);
     kvListExp = new ArrayList<>();
     verifyResult(result, kvListExp, toLog, "Testing offset > #kvs");
 
-    //offset + maxResultPerCF
+    // offset + maxResultPerCF
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(4);
     get.setMaxResultsPerColumnFamily(5);
     result = ht.get(get);
     kvListExp = new ArrayList<>();
-    for (int i=4; i < 9; i++) {
+    for (int i = 4; i < 9; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
-    verifyResult(result, kvListExp, toLog,
-      "Testing offset + setMaxResultsPerCF");
+    verifyResult(result, kvListExp, toLog, "Testing offset + setMaxResultsPerCF");
 
     // Filters: ColumnRangeFilter
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(1);
-    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
-                                        true));
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5], true));
     result = ht.get(get);
     kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
@@ -637,9 +617,9 @@ public class TestScannersFromClientSide {
 
     // Insert into two more CFs for row
     // 10 columns for CF2, 10 columns for CF1
-    for(int j=2; j > 0; j--) {
+    for (int j = 2; j > 0; j--) {
       put = new Put(ROW);
-      for (int i=0; i < 10; i++) {
+      for (int i = 0; i < 10; i++) {
         KeyValue kv = new KeyValue(ROW, FAMILIES[j], QUALIFIERS[i], 1, VALUE);
         put.add(kv);
       }
@@ -653,13 +633,12 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
     kvListExp = new ArrayList<>();
-    //Exp: CF1:q4, q5, CF2: q4, q5
+    // Exp: CF1:q4, q5, CF2: q4, q5
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[5], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
-    verifyResult(result, kvListExp, toLog,
-       "Testing offset + multiple CFs + maxResults");
+    verifyResult(result, kvListExp, toLog, "Testing offset + multiple CFs + maxResults");
   }
 
   @Test
@@ -670,7 +649,7 @@ public class TestScannersFromClientSide {
     conf.set(RPC_CODEC_CONF_KEY, "");
     conf.set(DEFAULT_CODEC_CLASS, "");
     try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(tableName)) {
+      Table table = connection.getTable(tableName)) {
       Delete delete = new Delete(ROW);
       delete.addFamilyVersion(FAMILY, 0L);
       table.delete(delete);
@@ -687,15 +666,12 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for scan while the region is reopened
-   * on the same region server.
-   *
-   * @throws Exception
+   * Test from client side for scan while the region is reopened on the same region server. n
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
     final TableName tableName = name.getTableName();
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
@@ -708,7 +684,7 @@ public class TestScannersFromClientSide {
 
     // table: row, family, c0:0, c1:1
     put = new Put(ROW);
-    for (int i=0; i < QUALIFIERS.length; i++) {
+    for (int i = 0; i < QUALIFIERS.length; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILY, QUALIFIERS[i], i, VALUE);
       put.add(kv);
     }
@@ -765,41 +741,26 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithSmallData() throws Exception {
-    testAsyncScanner(name.getTableName(),
-      2,
-      3,
-      10,
-      -1,
-      null);
+    testAsyncScanner(name.getTableName(), 2, 3, 10, -1, null);
   }
 
   @Test
   public void testAsyncScannerWithManyRows() throws Exception {
-    testAsyncScanner(name.getTableName(),
-      30000,
-      1,
-      1,
-      -1,
-      null);
+    testAsyncScanner(name.getTableName(), 30000, 1, 1, -1, null);
   }
 
   @Test
   public void testAsyncScannerWithoutCaching() throws Exception {
-    testAsyncScanner(name.getTableName(),
-      5,
-      1,
-      1,
-      1,
-      (b) -> {
-        try {
-          TimeUnit.MILLISECONDS.sleep(500);
-        } catch (InterruptedException ex) {
-        }
-      });
+    testAsyncScanner(name.getTableName(), 5, 1, 1, 1, (b) -> {
+      try {
+        TimeUnit.MILLISECONDS.sleep(500);
+      } catch (InterruptedException ex) {
+      }
+    });
   }
 
   private void testAsyncScanner(TableName table, int rowNumber, int familyNumber,
-      int qualifierNumber, int caching, Consumer<Boolean> listener) throws Exception {
+    int qualifierNumber, int caching, Consumer<Boolean> listener) throws Exception {
     assert rowNumber > 0;
     assert familyNumber > 0;
     assert qualifierNumber > 0;
@@ -842,7 +803,7 @@ public class TestScannersFromClientSide {
       scan.setCaching(caching);
     }
     try (ResultScanner scanner = ht.getScanner(scan)) {
-      assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
+      assertTrue("Not instance of async scanner", scanner instanceof ClientAsyncPrefetchScanner);
       ((ClientAsyncPrefetchScanner) scanner).setPrefetchListener(listener);
       List<Cell> kvListScan = new ArrayList<>();
       Result result;
@@ -871,7 +832,7 @@ public class TestScannersFromClientSide {
 
   private static byte[][] makeNAsciiWithZeroPrefix(byte[] base, int n) {
     int maxLength = Integer.toString(n).length();
-    byte [][] ret = new byte[n][];
+    byte[][] ret = new byte[n][];
     for (int i = 0; i < n; i++) {
       int length = Integer.toString(i).length();
       StringBuilder buf = new StringBuilder(Integer.toString(i));
@@ -882,8 +843,7 @@ public class TestScannersFromClientSide {
     return ret;
   }
 
-  static void verifyResult(Result result, List<Cell> expKvList, boolean toLog,
-      String msg) {
+  static void verifyResult(Result result, List<Cell> expKvList, boolean toLog, String msg) {
 
     LOG.info(msg);
     LOG.info("Expected count: " + expKvList.size());
@@ -895,7 +855,7 @@ public class TestScannersFromClientSide {
     int i = 0;
     for (Cell kv : result.rawCells()) {
       if (i >= expKvList.size()) {
-        break;  // we will check the size later
+        break; // we will check the size later
       }
 
       Cell kvExp = expKvList.get(i++);
@@ -1034,8 +994,7 @@ public class TestScannersFromClientSide {
   @Test
   public void testScannerWithPartialResults() throws Exception {
     TableName tableName = TableName.valueOf("testScannerWithPartialResults");
-    try (Table table = TEST_UTIL.createMultiRegionTable(tableName,
-      Bytes.toBytes("c"), 4)) {
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("c"), 4)) {
       List<Put> puts = new ArrayList<>();
       byte[] largeArray = new byte[10000];
       Put put = new Put(Bytes.toBytes("aaaa0"));
@@ -1060,7 +1019,7 @@ public class TestScannersFromClientSide {
       Result result;
       int expectedKvNumber = 6;
       int returnedKvNumber = 0;
-      while((result = rs.next()) != null) {
+      while ((result = rs.next()) != null) {
         returnedKvNumber += result.listCells().size();
       }
       rs.close();
@@ -1096,8 +1055,8 @@ public class TestScannersFromClientSide {
       return this.getClass().getSimpleName();
     }
 
-    public static LimitKVsReturnFilter parseFrom(final byte [] pbBytes)
-        throws DeserializationException {
+    public static LimitKVsReturnFilter parseFrom(final byte[] pbBytes)
+      throws DeserializationException {
       return new LimitKVsReturnFilter();
     }
   }

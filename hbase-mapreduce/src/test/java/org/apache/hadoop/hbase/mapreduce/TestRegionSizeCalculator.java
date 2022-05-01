@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,28 +41,25 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestRegionSizeCalculator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSizeCalculator.class);
+    HBaseClassTestRule.forClass(TestRegionSizeCalculator.class);
 
   private Configuration configuration = new Configuration();
   private final long megabyte = 1024L * 1024L;
-  private final ServerName sn = ServerName.valueOf("local-rs", DEFAULT_REGIONSERVER_PORT,
-      ServerName.NON_STARTCODE);
+  private final ServerName sn =
+    ServerName.valueOf("local-rs", DEFAULT_REGIONSERVER_PORT, ServerName.NON_STARTCODE);
 
   @Test
   public void testSimpleTestCase() throws Exception {
 
     RegionLocator regionLocator = mockRegionLocator("region1", "region2", "region3");
 
-    Admin admin = mockAdmin(
-        mockRegion("region1", 123),
-        mockRegion("region3", 1232),
-        mockRegion("region2",  54321)
-    );
+    Admin admin = mockAdmin(mockRegion("region1", 123), mockRegion("region3", 1232),
+      mockRegion("region2", 54321));
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
 
@@ -75,40 +72,36 @@ public class TestRegionSizeCalculator {
     assertEquals(3, calculator.getRegionSizeMap().size());
   }
 
-
   /**
-   * When size of region in megabytes is larger than largest possible integer there could be
-   * error caused by lost of precision.
-   * */
+   * When size of region in megabytes is larger than largest possible integer there could be error
+   * caused by lost of precision.
+   */
   @Test
   public void testLargeRegion() throws Exception {
 
     RegionLocator regionLocator = mockRegionLocator("largeRegion");
 
-    Admin admin = mockAdmin(
-        mockRegion("largeRegion", Integer.MAX_VALUE)
-    );
+    Admin admin = mockAdmin(mockRegion("largeRegion", Integer.MAX_VALUE));
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
 
-    assertEquals(((long) Integer.MAX_VALUE) * megabyte, calculator.getRegionSize("largeRegion".getBytes()));
+    assertEquals(((long) Integer.MAX_VALUE) * megabyte,
+      calculator.getRegionSize("largeRegion".getBytes()));
   }
 
-  /** When calculator is disabled, it should return 0 for each request.*/
+  /** When calculator is disabled, it should return 0 for each request. */
   @Test
   public void testDisabled() throws Exception {
     String regionName = "cz.goout:/index.html";
     RegionLocator table = mockRegionLocator(regionName);
 
-    Admin admin = mockAdmin(
-        mockRegion(regionName, 999)
-    );
+    Admin admin = mockAdmin(mockRegion(regionName, 999));
 
-    //first request on enabled calculator
+    // first request on enabled calculator
     RegionSizeCalculator calculator = new RegionSizeCalculator(table, admin);
     assertEquals(999 * megabyte, calculator.getRegionSize(regionName.getBytes()));
 
-    //then disabled calculator.
+    // then disabled calculator.
     configuration.setBoolean(RegionSizeCalculator.ENABLE_REGIONSIZECALCULATOR, false);
     RegionSizeCalculator disabledCalculator = new RegionSizeCalculator(table, admin);
     assertEquals(0 * megabyte, disabledCalculator.getRegionSize(regionName.getBytes()));
@@ -118,7 +111,7 @@ public class TestRegionSizeCalculator {
 
   /**
    * Makes some table with given region names.
-   * */
+   */
   private RegionLocator mockRegionLocator(String... regionNames) throws IOException {
     RegionLocator mockedTable = Mockito.mock(RegionLocator.class);
     when(mockedTable.getName()).thenReturn(TableName.valueOf("sizeTestTable"));
@@ -136,7 +129,7 @@ public class TestRegionSizeCalculator {
 
   /**
    * Creates mock returning RegionLoad info about given servers.
-  */
+   */
   private Admin mockAdmin(RegionMetrics... regionLoadArray) throws Exception {
     Admin mockAdmin = Mockito.mock(Admin.class);
     List<RegionMetrics> regionLoads = new ArrayList<>();
@@ -145,15 +138,14 @@ public class TestRegionSizeCalculator {
     }
     when(mockAdmin.getConfiguration()).thenReturn(configuration);
     when(mockAdmin.getRegionMetrics(sn, TableName.valueOf("sizeTestTable")))
-        .thenReturn(regionLoads);
+      .thenReturn(regionLoads);
     return mockAdmin;
   }
 
   /**
    * Creates mock of region with given name and size.
-   *
-   * @param  fileSizeMb number of megabytes occupied by region in file store in megabytes
-   * */
+   * @param fileSizeMb number of megabytes occupied by region in file store in megabytes
+   */
   private RegionMetrics mockRegion(String regionName, int fileSizeMb) {
     RegionMetrics region = Mockito.mock(RegionMetrics.class);
     when(region.getRegionName()).thenReturn(regionName.getBytes());

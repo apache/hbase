@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,15 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
-
-import org.apache.hadoop.hbase.ServerName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class BatchErrors {
   private static final Logger LOG = LoggerFactory.getLogger(BatchErrors.class);
@@ -33,7 +30,7 @@ class BatchErrors {
   final List<String> addresses = new ArrayList<>();
 
   public synchronized void add(Throwable ex, Row row, ServerName serverName) {
-    if (row == null){
+    if (row == null) {
       throw new IllegalArgumentException("row cannot be null. location=" + serverName);
     }
 
@@ -48,11 +45,10 @@ class BatchErrors {
 
   synchronized RetriesExhaustedWithDetailsException makeException(boolean logDetails) {
     if (logDetails) {
-      LOG.error("Exception occurred! Exception details: " + throwables + ";\nActions: "
-              + actions);
+      LOG.error("Exception occurred! Exception details: " + throwables + ";\nActions: " + actions);
     }
     return new RetriesExhaustedWithDetailsException(new ArrayList<>(throwables),
-            new ArrayList<>(actions), new ArrayList<>(addresses));
+      new ArrayList<>(actions), new ArrayList<>(addresses));
   }
 
   public synchronized void clear() {

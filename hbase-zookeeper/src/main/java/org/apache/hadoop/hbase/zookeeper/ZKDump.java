@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.BufferedReader;
@@ -38,7 +37,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
@@ -50,11 +51,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 public final class ZKDump {
   private static final Logger LOG = LoggerFactory.getLogger(ZKDump.class);
 
-  private ZKDump() {}
+  private ZKDump() {
+  }
 
   public static String dump(final ZKWatcher zkWatcher) {
-    final int zkDumpConnectionTimeOut = zkWatcher.getConfiguration()
-      .getInt("zookeeper.dump.connection.timeout", 1000);
+    final int zkDumpConnectionTimeOut =
+      zkWatcher.getConfiguration().getInt("zookeeper.dump.connection.timeout", 1000);
     StringBuilder sb = new StringBuilder();
     try {
       sb.append("HBase is rooted at ").append(zkWatcher.getZNodePaths().baseZNode);
@@ -65,8 +67,8 @@ public final class ZKDump {
         sb.append("<<FAILED LOOKUP: ").append(e.getMessage()).append(">>");
       }
       sb.append("\nBackup master addresses:");
-      final List<String> backupMasterChildrenNoWatchList = ZKUtil.listChildrenNoWatch(zkWatcher,
-        zkWatcher.getZNodePaths().backupMasterAddressesZNode);
+      final List<String> backupMasterChildrenNoWatchList =
+        ZKUtil.listChildrenNoWatch(zkWatcher, zkWatcher.getZNodePaths().backupMasterAddressesZNode);
       if (backupMasterChildrenNoWatchList != null) {
         for (String child : backupMasterChildrenNoWatchList) {
           sb.append("\n ").append(child);
@@ -76,8 +78,7 @@ public final class ZKDump {
       sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkWatcher));
       int numMetaReplicas = zkWatcher.getMetaReplicaNodes().size();
       for (int i = 1; i < numMetaReplicas; i++) {
-        sb.append("\n")
-          .append(" replica").append(i).append(": ")
+        sb.append("\n").append(" replica").append(i).append(": ")
           .append(MetaTableLocator.getMetaRegionLocation(zkWatcher, i));
       }
       sb.append("\nRegion servers:");
@@ -121,9 +122,8 @@ public final class ZKDump {
 
   /**
    * Appends replication znodes to the passed StringBuilder.
-   *
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
-   * @param sb the {@link StringBuilder} to append to
+   * @param sb  the {@link StringBuilder} to append to
    * @throws KeeperException if a ZooKeeper operation fails
    */
   private static void getReplicationZnodesDump(ZKWatcher zkw, StringBuilder sb)
@@ -152,8 +152,8 @@ public final class ZKDump {
     }
   }
 
-  private static void appendHFileRefsZNodes(ZKWatcher zkw, String hFileRefsZNode,
-    StringBuilder sb) throws KeeperException {
+  private static void appendHFileRefsZNodes(ZKWatcher zkw, String hFileRefsZNode, StringBuilder sb)
+    throws KeeperException {
     sb.append("\n").append(hFileRefsZNode).append(": ");
     final List<String> hFileRefChildrenNoWatchList =
       ZKUtil.listChildrenNoWatch(zkw, hFileRefsZNode);
@@ -211,8 +211,8 @@ public final class ZKDump {
     } while (stack.size() > 0);
   }
 
-  private static void appendPeersZnodes(ZKWatcher zkw, String peersZnode,
-    StringBuilder sb) throws KeeperException {
+  private static void appendPeersZnodes(ZKWatcher zkw, String peersZnode, StringBuilder sb)
+    throws KeeperException {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     sb.append("\n").append(peersZnode).append(": ");
     for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, peersZnode)) {
@@ -241,8 +241,8 @@ public final class ZKDump {
 
   private static void appendPeerState(ZKWatcher zkw, String znodeToProcess, StringBuilder sb)
     throws KeeperException, InvalidProtocolBufferException {
-    String peerState = zkw.getConfiguration().get("zookeeper.znode.replication.peers.state",
-      "peer-state");
+    String peerState =
+      zkw.getConfiguration().get("zookeeper.znode.replication.peers.state", "peer-state");
     int pblen = ProtobufUtil.lengthOfPBMagic();
     for (String child : ZKUtil.listChildrenNoWatch(zkw, znodeToProcess)) {
       if (!child.equals(peerState)) {
@@ -269,22 +269,19 @@ public final class ZKDump {
 
   /**
    * Gets the statistics from the given server.
-   *
    * @param server  The server to get the statistics from.
-   * @param timeout  The socket timeout to use.
+   * @param timeout The socket timeout to use.
    * @return The array of response strings.
    * @throws IOException When the socket communication fails.
    */
-  private static String[] getServerStats(String server, int timeout)
-    throws IOException {
+  private static String[] getServerStats(String server, int timeout) throws IOException {
     String[] sp = server.split(":");
     if (sp.length == 0) {
       return null;
     }
 
     String host = sp[0];
-    int port = sp.length > 1 ? Integer.parseInt(sp[1])
-      : HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
+    int port = sp.length > 1 ? Integer.parseInt(sp[1]) : HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
 
     try (Socket socket = new Socket()) {
       InetSocketAddress sockAddr = new InetSocketAddress(host, port);
@@ -293,8 +290,9 @@ public final class ZKDump {
       }
       socket.connect(sockAddr, timeout);
       socket.setSoTimeout(timeout);
-      try (PrintWriter out = new PrintWriter(new BufferedWriter(
-        new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)), true);
+      try (
+        PrintWriter out = new PrintWriter(new BufferedWriter(
+          new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)), true);
         BufferedReader in = new BufferedReader(
           new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
         out.println("stat");

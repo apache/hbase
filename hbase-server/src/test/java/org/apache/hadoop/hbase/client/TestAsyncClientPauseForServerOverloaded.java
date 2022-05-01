@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIEN
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 
@@ -74,8 +76,8 @@ public class TestAsyncClientPauseForServerOverloaded {
   private static byte[] QUALIFIER = Bytes.toBytes("Qualifier");
 
   private static long PAUSE_FOR_SERVER_OVERLOADED_NANOS = TimeUnit.SECONDS.toNanos(1);
-  private static long PAUSE_FOR_SERVER_OVERLOADED_MILLIS = TimeUnit.NANOSECONDS.toMillis(
-    PAUSE_FOR_SERVER_OVERLOADED_NANOS);
+  private static long PAUSE_FOR_SERVER_OVERLOADED_MILLIS =
+    TimeUnit.NANOSECONDS.toMillis(PAUSE_FOR_SERVER_OVERLOADED_NANOS);
 
   private static AsyncConnection CONN;
 
@@ -91,16 +93,15 @@ public class TestAsyncClientPauseForServerOverloaded {
     // expect that we hit CQTBE two times.
     private boolean shouldFail(CallRunner callRunner) {
       MethodDescriptor method = callRunner.getRpcCall().getMethod();
-      return invoked.computeIfAbsent(method,
-        k -> new AtomicInteger(0)).getAndIncrement() % 2 == 0;
+      return invoked.computeIfAbsent(method, k -> new AtomicInteger(0)).getAndIncrement() % 2 == 0;
     }
   }
 
   public static final class OverloadedRpcScheduler extends SimpleRpcScheduler {
 
     public OverloadedRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
-        int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
-        Abortable server, int highPriorityLevel) {
+      int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
+      Abortable server, int highPriorityLevel) {
       super(conf, handlerCount, priorityHandlerCount, replicationHandlerCount,
         metaTransitionHandler, priority, server, highPriorityLevel);
     }

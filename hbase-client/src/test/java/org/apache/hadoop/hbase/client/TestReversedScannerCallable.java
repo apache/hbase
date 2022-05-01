@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -52,7 +51,7 @@ public class TestReversedScannerCallable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReversedScannerCallable.class);
+    HBaseClassTestRule.forClass(TestReversedScannerCallable.class);
 
   private static final TableName TABLE_NAME = TableName.valueOf("TestReversedScannerCallable");
 
@@ -81,8 +80,7 @@ public class TestReversedScannerCallable {
 
   @Test
   public void testPrepareAlwaysUsesCache() throws Exception {
-    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0))
-      .thenReturn(regionLocations);
+    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0)).thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
       new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
@@ -97,7 +95,7 @@ public class TestReversedScannerCallable {
     when(connection.isTableDisabled(TABLE_NAME)).thenReturn(true);
 
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+      new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
 
     assertThrows(TableNotEnabledException.class, () -> callable.prepare(true));
   }
@@ -105,7 +103,7 @@ public class TestReversedScannerCallable {
   @Test
   public void testUpdateSearchKeyCacheLocation() throws IOException {
     byte[] regionName = RegionInfo.createRegionName(TABLE_NAME,
-        ConnectionUtils.createCloseRowBefore(ConnectionUtils.MAX_BYTE_ARRAY), "123", false);
+      ConnectionUtils.createCloseRowBefore(ConnectionUtils.MAX_BYTE_ARRAY), "123", false);
     HRegionInfo mockRegionInfo = mock(HRegionInfo.class);
     when(mockRegionInfo.containsRow(ConnectionUtils.MAX_BYTE_ARRAY)).thenReturn(true);
     when(mockRegionInfo.getEndKey()).thenReturn(HConstants.EMPTY_END_ROW);
@@ -115,17 +113,17 @@ public class TestReversedScannerCallable {
     IOException testThrowable = new IOException("test throwable");
 
     when(connection.locateRegion(TABLE_NAME, ConnectionUtils.MAX_BYTE_ARRAY, true, true, 0))
-        .thenReturn(regionLocations);
+      .thenReturn(regionLocations);
 
     Scan scan = new Scan().setReversed(true);
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, TABLE_NAME, scan, null, rpcFactory, 0);
+      new ReversedScannerCallable(connection, TABLE_NAME, scan, null, rpcFactory, 0);
 
     callable.prepare(false);
 
     callable.throwable(testThrowable, true);
 
-    verify(connection).updateCachedLocations(TABLE_NAME, regionName,
-        ConnectionUtils.MAX_BYTE_ARRAY, testThrowable, SERVERNAME);
+    verify(connection).updateCachedLocations(TABLE_NAME, regionName, ConnectionUtils.MAX_BYTE_ARRAY,
+      testThrowable, SERVERNAME);
   }
 }

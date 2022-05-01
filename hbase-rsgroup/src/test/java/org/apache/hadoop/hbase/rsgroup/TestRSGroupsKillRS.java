@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -177,26 +177,25 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     Set<Address> servers = rsGroupAdmin.getRSGroupInfo(groupName).getServers();
     assertEquals(2, servers.size());
     LOG.debug("group servers {}", servers);
-    for (RegionInfo tr :
-        master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName)) {
-      assertTrue(servers.contains(
-          master.getAssignmentManager().getRegionStates().getRegionAssignments()
-              .get(tr).getAddress()));
+    for (RegionInfo tr : master.getAssignmentManager().getRegionStates()
+      .getRegionsOfTable(tableName)) {
+      assertTrue(servers.contains(master.getAssignmentManager().getRegionStates()
+        .getRegionAssignments().get(tr).getAddress()));
     }
 
     // Move a region, to ensure there exists a region whose 'lastHost' is in my_group
     // ('lastHost' of other regions are in 'default' group)
     // and check if all table regions are online
     List<ServerName> gsn = new ArrayList<>();
-    for(Address addr : servers){
+    for (Address addr : servers) {
       gsn.add(getServerName(addr));
     }
     assertEquals(2, gsn.size());
-    for(Map.Entry<RegionInfo, ServerName> entry :
-        master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()){
-      if(entry.getKey().getTable().equals(tableName)){
+    for (Map.Entry<RegionInfo, ServerName> entry : master.getAssignmentManager().getRegionStates()
+      .getRegionAssignments().entrySet()) {
+      if (entry.getKey().getTable().equals(tableName)) {
         LOG.debug("move region {} from {} to {}", entry.getKey().getRegionNameAsString(),
-            entry.getValue(), gsn.get(1 - gsn.indexOf(entry.getValue())));
+          entry.getValue(), gsn.get(1 - gsn.indexOf(entry.getValue())));
         TEST_UTIL.moveRegionAndWait(entry.getKey(), gsn.get(1 - gsn.indexOf(entry.getValue())));
         break;
       }
@@ -205,32 +204,32 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
     // case 1: stop all the regionservers in my_group, and restart a regionserver in my_group,
     // and then check if all table regions are online
-    for(Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
+    for (Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
       TEST_UTIL.getMiniHBaseCluster().stopRegionServer(getServerName(addr));
     }
     // better wait for a while for region reassign
     sleep(10000);
     assertEquals(NUM_SLAVES_BASE - gsn.size(),
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     TEST_UTIL.getMiniHBaseCluster().startRegionServer(gsn.get(0).getHostname(),
-        gsn.get(0).getPort());
+      gsn.get(0).getPort());
     assertEquals(NUM_SLAVES_BASE - gsn.size() + 1,
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     TEST_UTIL.waitTableAvailable(tableName, 30000);
 
     // case 2: stop all the regionservers in my_group, and move another
     // regionserver(from the 'default' group) to my_group,
     // and then check if all table regions are online
-    for(JVMClusterUtil.RegionServerThread rst :
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()){
-      if(rst.getRegionServer().getServerName().getAddress().equals(gsn.get(0).getAddress())){
+    for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getMiniHBaseCluster()
+      .getLiveRegionServerThreads()) {
+      if (rst.getRegionServer().getServerName().getAddress().equals(gsn.get(0).getAddress())) {
         TEST_UTIL.getMiniHBaseCluster().stopRegionServer(rst.getRegionServer().getServerName());
         break;
       }
     }
     sleep(10000);
     assertEquals(NUM_SLAVES_BASE - gsn.size(),
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     ServerName newServer = master.getServerManager().getOnlineServersList().get(0);
     rsGroupAdmin.moveServers(Sets.newHashSet(newServer.getAddress()), groupName);
     // wait and check if table regions are online
@@ -238,7 +237,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
   }
 
   @Test
-  public void testLowerMetaGroupVersion() throws Exception{
+  public void testLowerMetaGroupVersion() throws Exception {
     // create a rsgroup and move one regionserver to it
     String groupName = "meta_group";
     int groupRSCount = 1;
@@ -249,12 +248,12 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     toAddTables.add(TableName.META_TABLE_NAME);
     rsGroupAdmin.moveTables(toAddTables, groupName);
     assertTrue(
-        rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(TableName.META_TABLE_NAME));
+      rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(TableName.META_TABLE_NAME));
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";
     Set<Address> servers = new HashSet<>();
-    for(Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
+    for (Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
       servers.add(addr);
       TEST_UTIL.getMiniHBaseCluster().stopRegionServer(getServerName(addr));
       originVersion = master.getRegionServerVersion(getServerName(addr));
@@ -262,7 +261,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     // better wait for a while for region reassign
     sleep(10000);
     assertEquals(NUM_SLAVES_BASE - groupRSCount,
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     Address address = servers.iterator().next();
     int majorVersion = VersionInfo.getMajorVersion(originVersion);
     assertTrue(majorVersion >= 1);
@@ -270,13 +269,13 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     setFinalStatic(Version.class.getField("version"), lowerVersion);
     TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostName(), address.getPort());
     assertEquals(NUM_SLAVES_BASE,
-        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     assertTrue(VersionInfo.compareVersion(originVersion,
-        master.getRegionServerVersion(getServerName(servers.iterator().next()))) > 0);
+      master.getRegionServerVersion(getServerName(servers.iterator().next()))) > 0);
     LOG.debug("wait for META assigned...");
     // SCP finished, which means all regions assigned too.
     TEST_UTIL.waitFor(60000, () -> !TEST_UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
+      .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
   }
 
   private static void setFinalStatic(Field field, Object newValue) throws Exception {

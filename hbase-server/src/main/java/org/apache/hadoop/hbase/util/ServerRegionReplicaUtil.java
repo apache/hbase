@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -49,25 +47,24 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   private static final Logger LOG = LoggerFactory.getLogger(ServerRegionReplicaUtil.class);
 
   /**
-   * Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
-   * If this is enabled, a replication peer named "region_replica_replication" will be created
-   * which will tail the logs and replicate the mutatations to region replicas for tables that
-   * have region replication &gt; 1. If this is enabled once, disabling this replication also
-   * requires disabling the replication peer using shell or {@link Admin} java class.
-   * Replication to secondary region replicas works over standard inter-cluster replication.·
+   * Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If
+   * this is enabled, a replication peer named "region_replica_replication" will be created which
+   * will tail the logs and replicate the mutatations to region replicas for tables that have region
+   * replication &gt; 1. If this is enabled once, disabling this replication also requires disabling
+   * the replication peer using shell or {@link Admin} java class. Replication to secondary region
+   * replicas works over standard inter-cluster replication.·
    */
-  public static final String REGION_REPLICA_REPLICATION_CONF_KEY
-    = "hbase.region.replica.replication.enabled";
+  public static final String REGION_REPLICA_REPLICATION_CONF_KEY =
+    "hbase.region.replica.replication.enabled";
   private static final boolean DEFAULT_REGION_REPLICA_REPLICATION = false;
   public static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
 
   /**
    * Same as for {@link #REGION_REPLICA_REPLICATION_CONF_KEY} but for catalog replication.
    */
-  public static final String REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY
-    = "hbase.region.replica.replication.catalog.enabled";
+  public static final String REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY =
+    "hbase.region.replica.replication.catalog.enabled";
   private static final boolean DEFAULT_REGION_REPLICA_REPLICATION_CATALOG = false;
-
 
   /**
    * Enables or disables refreshing store files of secondary region replicas when the memory is
@@ -75,8 +72,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * list of the primary regions store files, and pick up new files. Also depending on the store
    * files, we can drop some memstore contents which will free up memory.
    */
-  public static final String REGION_REPLICA_STORE_FILE_REFRESH
-    = "hbase.region.replica.storefile.refresh";
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH =
+    "hbase.region.replica.storefile.refresh";
   private static final boolean DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH = true;
 
   /**
@@ -84,8 +81,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * region. Default value assumes that for doing the file refresh, the biggest secondary should be
    * 4 times bigger than the biggest primary.
    */
-  public static final String REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER
-    = "hbase.region.replica.storefile.refresh.memstore.multiplier";
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER =
+    "hbase.region.replica.storefile.refresh.memstore.multiplier";
   private static final double DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER = 4;
 
   /**
@@ -105,15 +102,13 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @return whether the replica is read only
    */
   public static boolean isReadOnly(HRegion region) {
-    return region.getTableDescriptor().isReadOnly()
-      || !isDefaultReplica(region.getRegionInfo());
+    return region.getTableDescriptor().isReadOnly() || !isDefaultReplica(region.getRegionInfo());
   }
 
   /**
-   * Returns whether to replay the recovered edits to flush the results.
-   * Currently secondary region replicas do not replay the edits, since it would
-   * cause flushes which might affect the primary region. Primary regions even opened
-   * in read only mode should replay the edits.
+   * Returns whether to replay the recovered edits to flush the results. Currently secondary region
+   * replicas do not replay the edits, since it would cause flushes which might affect the primary
+   * region. Primary regions even opened in read only mode should replay the edits.
    * @param region the HRegion object
    * @return whether recovered edits should be replayed.
    */
@@ -122,14 +117,14 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   }
 
   /**
-   * Returns a StoreFileInfo from the given FileStatus. Secondary replicas refer to the
-   * files of the primary region, so an HFileLink is used to construct the StoreFileInfo. This
-   * way ensures that the secondary will be able to continue reading the store files even if
-   * they are moved to archive after compaction
+   * Returns a StoreFileInfo from the given FileStatus. Secondary replicas refer to the files of the
+   * primary region, so an HFileLink is used to construct the StoreFileInfo. This way ensures that
+   * the secondary will be able to continue reading the store files even if they are moved to
+   * archive after compaction
    */
   public static StoreFileInfo getStoreFileInfo(Configuration conf, FileSystem fs,
-      RegionInfo regionInfo, RegionInfo regionInfoForFs, String familyName, Path path)
-      throws IOException {
+    RegionInfo regionInfo, RegionInfo regionInfoForFs, String familyName, Path path)
+    throws IOException {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (RegionInfo.COMPARATOR.compare(regionInfo, regionInfoForFs) == 0) {
@@ -138,9 +133,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
     // else create a store file link. The link file does not exists on filesystem though.
     if (HFileLink.isHFileLink(path) || StoreFileInfo.isHFile(path)) {
-      HFileLink link = HFileLink
-          .build(conf, regionInfoForFs.getTable(), regionInfoForFs.getEncodedName(), familyName,
-              path.getName());
+      HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
+        regionInfoForFs.getEncodedName(), familyName, path.getName());
       return new StoreFileInfo(conf, fs, link.getFileStatus(fs), link);
     } else if (StoreFileInfo.isReference(path)) {
       Reference reference = Reference.read(fs, path);
@@ -151,9 +145,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
         return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference, link);
       } else {
         // Reference
-        HFileLink link = HFileLink
-            .build(conf, regionInfoForFs.getTable(), regionInfoForFs.getEncodedName(), familyName,
-                path.getName());
+        HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
+          regionInfoForFs.getEncodedName(), familyName, path.getName());
         return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference);
       }
     } else {
@@ -162,20 +155,22 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   }
 
   /**
-   * Create replication peer for replicating user-space Region Read Replicas.
-   * This methods should only be called at master side.
+   * Create replication peer for replicating user-space Region Read Replicas. This methods should
+   * only be called at master side.
    */
   public static void setupRegionReplicaReplication(MasterServices services)
     throws IOException, ReplicationException {
     if (!isRegionReplicaReplicationEnabled(services.getConfiguration())) {
       return;
     }
-    if (services.getReplicationPeerManager().getPeerConfig(REGION_REPLICA_REPLICATION_PEER)
-      .isPresent()) {
+    if (
+      services.getReplicationPeerManager().getPeerConfig(REGION_REPLICA_REPLICATION_PEER)
+        .isPresent()
+    ) {
       return;
     }
-    LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER +
-      " not exist. Creating...");
+    LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
+      + " not exist. Creating...");
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
       .setClusterKey(ZKConfig.getZooKeeperClusterKey(services.getConfiguration()))
       .setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName()).build();
@@ -184,11 +179,11 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
   /**
    * @return True if Region Read Replica is enabled for <code>tn</code> (whether hbase:meta or
-   *   user-space tables).
+   *         user-space tables).
    */
   public static boolean isRegionReplicaReplicationEnabled(Configuration conf, TableName tn) {
-    return isMetaRegionReplicaReplicationEnabled(conf, tn) ||
-      isRegionReplicaReplicationEnabled(conf);
+    return isMetaRegionReplicaReplicationEnabled(conf, tn)
+      || isRegionReplicaReplicationEnabled(conf);
   }
 
   /**
@@ -202,9 +197,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @return True if hbase:meta Region Read Replica is enabled.
    */
   public static boolean isMetaRegionReplicaReplicationEnabled(Configuration conf, TableName tn) {
-    return TableName.isMetaTableName(tn) &&
-      conf.getBoolean(REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY,
-        DEFAULT_REGION_REPLICA_REPLICATION_CATALOG);
+    return TableName.isMetaTableName(tn) && conf.getBoolean(
+      REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION_CATALOG);
   }
 
   /**

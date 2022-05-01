@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestMutateRowsRecovery {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMutateRowsRecovery.class);
+    HBaseClassTestRule.forClass(TestMutateRowsRecovery.class);
 
   private MiniHBaseCluster cluster = null;
   private Connection connection = null;

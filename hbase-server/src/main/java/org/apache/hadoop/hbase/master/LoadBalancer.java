@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,10 +44,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <p/>
  * About locking:
  * <ul>
- * <li>We will first call {@link #setMasterServices(MasterServices)} and then
- * {@link #initialize()} to initialize the balancer, and before calling {@link #initialize()}, we
- * will never call any methods of this balancer. So these two methods do not need to be
- * synchronized.</li>
+ * <li>We will first call {@link #setMasterServices(MasterServices)} and then {@link #initialize()}
+ * to initialize the balancer, and before calling {@link #initialize()}, we will never call any
+ * methods of this balancer. So these two methods do not need to be synchronized.</li>
  * <li>The {@link #balanceCluster(Map)} method will use the {@link ClusterMetrics} which is set by
  * {@link #updateClusterMetrics(ClusterMetrics)}, and also lots of configurations, which could be
  * changed by {@link #onConfigurationChange(Configuration)}, so the easier way is to make these
@@ -63,10 +61,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   /**
-   * Master can carry regions as of hbase-2.0.0.
-   * By default, it carries no tables.
-   * TODO: Add any | system as flags to indicate what it can do.
-   *
+   * Master can carry regions as of hbase-2.0.0. By default, it carries no tables. TODO: Add any |
+   * system as flags to indicate what it can do.
    * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
@@ -75,7 +71,6 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   /**
    * Master carries system tables.
-   *
    * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
@@ -92,8 +87,7 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   void updateClusterMetrics(ClusterMetrics metrics);
 
   /**
-   * Set the master service.
-   * @param masterServices
+   * Set the master service. n
    */
   void setMasterServices(MasterServices masterServices);
 
@@ -107,57 +101,43 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
     throws IOException;
 
   /**
-   * Perform a Round Robin assignment of regions.
-   * @param regions
-   * @param servers
-   * @return Map of servername to regioninfos
+   * Perform a Round Robin assignment of regions. nn * @return Map of servername to regioninfos
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-      List<ServerName> servers) throws HBaseIOException;
+    List<ServerName> servers) throws HBaseIOException;
 
   /**
-   * Assign regions to the previously hosting region server
-   * @param regions
-   * @param servers
-   * @return List of plans
+   * Assign regions to the previously hosting region server nn * @return List of plans
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-      List<ServerName> servers) throws HBaseIOException;
+    List<ServerName> servers) throws HBaseIOException;
 
   /**
    * Get a random region server from the list
-   * @param regionInfo Region for which this selection is being done.
-   * @param servers
-   * @return Servername
+   * @param regionInfo Region for which this selection is being done. nn
    */
-  ServerName randomAssignment(
-    RegionInfo regionInfo, List<ServerName> servers
-  ) throws HBaseIOException;
+  ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
+    throws HBaseIOException;
 
   /**
-   * Initialize the load balancer. Must be called after setters.
-   * @throws HBaseIOException
+   * Initialize the load balancer. Must be called after setters. n
    */
   void initialize() throws HBaseIOException;
 
   /**
-   * Marks the region as online at balancer.
-   * @param regionInfo
-   * @param sn
+   * Marks the region as online at balancer. nn
    */
   void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
-   * Marks the region as offline at balancer.
-   * @param regionInfo
+   * Marks the region as offline at balancer. n
    */
   void regionOffline(RegionInfo regionInfo);
 
   /*
-   * Notification that config has changed
-   * @param conf
+   * Notification that config has changed n
    */
   @Override
   void onConfigurationChange(Configuration conf);
@@ -167,17 +147,17 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   void postMasterStartupInitialize();
 
-  /*Updates balancer status tag reported to JMX*/
+  /* Updates balancer status tag reported to JMX */
   void updateBalancerStatus(boolean status);
 
   /**
    * In some scenarios, Balancer needs to update internal status or information according to the
    * current tables load
-   *
    * @param loadOfAllTable region load of servers for all table
    */
-  default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
-    loadOfAllTable){}
+  default void
+    updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  }
 
   /**
    * @return true if Master carries regions

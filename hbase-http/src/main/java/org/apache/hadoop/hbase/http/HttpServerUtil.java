@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,11 +31,11 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.util.security.Constraint;
 public final class HttpServerUtil {
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
-   * @param ctxHandler The context to modify
+   * @param ctxHandler         The context to modify
    * @param allowOptionsMethod if true then OPTIONS method will not be set in constraint mapping
    */
   public static void constrainHttpMethods(ServletContextHandler ctxHandler,
-      boolean allowOptionsMethod) {
+    boolean allowOptionsMethod) {
     Constraint c = new Constraint();
     c.setAuthenticate(true);
 
@@ -59,5 +59,6 @@ public final class HttpServerUtil {
     ctxHandler.setSecurityHandler(securityHandler);
   }
 
-  private HttpServerUtil() {}
+  private HttpServerUtil() {
+  }
 }

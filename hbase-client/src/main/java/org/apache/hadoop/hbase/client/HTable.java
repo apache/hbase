@@ -144,9 +144,9 @@ public class HTable implements Table {
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
     ThreadPoolExecutor pool =
-        new ThreadPoolExecutor(corePoolSize, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-            new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("htable-pool-%d")
-                .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      new ThreadPoolExecutor(corePoolSize, maxThreads, keepAliveTime, TimeUnit.SECONDS,
+        new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("htable-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     pool.allowCoreThreadTimeOut(true);
     return pool;
   }
@@ -155,16 +155,16 @@ public class HTable implements Table {
    * Creates an object to access a HBase table. Used by HBase internally. DO NOT USE. See
    * {@link ConnectionFactory} class comment for how to get a {@link Table} instance (use
    * {@link Table} instead of {@link HTable}).
-   * @param connection Connection to be used.
-   * @param builder The table builder
-   * @param rpcCallerFactory The RPC caller factory
+   * @param connection           Connection to be used.
+   * @param builder              The table builder
+   * @param rpcCallerFactory     The RPC caller factory
    * @param rpcControllerFactory The RPC controller factory
-   * @param pool ExecutorService to be used.
+   * @param pool                 ExecutorService to be used.
    */
   @InterfaceAudience.Private
   protected HTable(final ConnectionImplementation connection, final TableBuilderBase builder,
-      final RpcRetryingCallerFactory rpcCallerFactory,
-      final RpcControllerFactory rpcControllerFactory, final ExecutorService pool) {
+    final RpcRetryingCallerFactory rpcCallerFactory,
+    final RpcControllerFactory rpcControllerFactory, final ExecutorService pool) {
     this.connection = Preconditions.checkNotNull(connection, "connection is null");
     this.configuration = connection.getConfiguration();
     this.connConfiguration = connection.getConnectionConfiguration();
@@ -245,35 +245,35 @@ public class HTable implements Table {
   /**
    * Get the corresponding start keys and regions for an arbitrary range of keys.
    * <p>
-   * @param startKey Starting row in range, inclusive
-   * @param endKey Ending row in range
+   * @param startKey      Starting row in range, inclusive
+   * @param endKey        Ending row in range
    * @param includeEndKey true if endRow is inclusive, false if exclusive
    * @return A pair of list of start keys and list of HRegionLocations that contain the specified
    *         range
    * @throws IOException if a remote or network exception occurs
    */
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(final byte[] startKey,
-      final byte[] endKey, final boolean includeEndKey) throws IOException {
+    final byte[] endKey, final boolean includeEndKey) throws IOException {
     return getKeysAndRegionsInRange(startKey, endKey, includeEndKey, false);
   }
 
   /**
    * Get the corresponding start keys and regions for an arbitrary range of keys.
    * <p>
-   * @param startKey Starting row in range, inclusive
-   * @param endKey Ending row in range
+   * @param startKey      Starting row in range, inclusive
+   * @param endKey        Ending row in range
    * @param includeEndKey true if endRow is inclusive, false if exclusive
-   * @param reload true to reload information or false to use cached information
+   * @param reload        true to reload information or false to use cached information
    * @return A pair of list of start keys and list of HRegionLocations that contain the specified
    *         range
    * @throws IOException if a remote or network exception occurs
    */
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(final byte[] startKey,
-      final byte[] endKey, final boolean includeEndKey, final boolean reload) throws IOException {
+    final byte[] endKey, final boolean includeEndKey, final boolean reload) throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
-      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(startKey) + " > "
-          + Bytes.toStringBinary(endKey));
+      throw new IllegalArgumentException(
+        "Invalid range: " + Bytes.toStringBinary(startKey) + " > " + Bytes.toStringBinary(endKey));
     }
     List<byte[]> keysInRange = new ArrayList<>();
     List<HRegionLocation> regionsInRange = new ArrayList<>();
@@ -283,9 +283,11 @@ public class HTable implements Table {
       keysInRange.add(currentKey);
       regionsInRange.add(regionLocation);
       currentKey = regionLocation.getRegionInfo().getEndKey();
-    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
+    } while (
+      !Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
         && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
-            || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
+          || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0))
+    );
     return new Pair<>(keysInRange, regionsInRange);
   }
 
@@ -295,8 +297,8 @@ public class HTable implements Table {
    */
   @Override
   public ResultScanner getScanner(Scan scan) throws IOException {
-    final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
-        .setOperation(scan).build();
+    final Span span =
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(scan).build();
     try (Scope ignored = span.makeCurrent()) {
       if (scan.getCaching() <= 0) {
         scan.setCaching(scannerCaching);
@@ -308,20 +310,21 @@ public class HTable implements Table {
         // it is not supposed to be set by user, clear
         scan.resetMvccReadPoint();
       }
-      final boolean async = scan.isAsyncPrefetch() != null ? scan.isAsyncPrefetch()
-          : connConfiguration.isClientScannerAsyncPrefetch();
+      final boolean async = scan.isAsyncPrefetch() != null
+        ? scan.isAsyncPrefetch()
+        : connConfiguration.isClientScannerAsyncPrefetch();
       final int timeout = connConfiguration.getReplicaCallTimeoutMicroSecondScan();
 
       if (scan.isReversed()) {
         return new ReversedClientScanner(getConfiguration(), scan, getName(), connection,
-            rpcCallerFactory, rpcControllerFactory, pool, timeout);
+          rpcCallerFactory, rpcControllerFactory, pool, timeout);
       } else {
         if (async) {
           return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), connection,
-              rpcCallerFactory, rpcControllerFactory, pool, timeout);
+            rpcCallerFactory, rpcControllerFactory, pool, timeout);
         } else {
           return new ClientSimpleScanner(getConfiguration(), scan, getName(), connection,
-              rpcCallerFactory, rpcControllerFactory, pool, timeout);
+            rpcCallerFactory, rpcControllerFactory, pool, timeout);
         }
       }
     }
@@ -352,7 +355,7 @@ public class HTable implements Table {
   @Override
   public Result get(final Get get) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(get);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(get);
     return TraceUtil.trace(() -> get(get, get.isCheckExistenceOnly()), supplier);
   }
 
@@ -369,14 +372,15 @@ public class HTable implements Table {
     if (get.getConsistency() == Consistency.STRONG) {
       final Get configuredGet = get;
       ClientServiceCallable<Result> callable = new ClientServiceCallable<Result>(this.connection,
-          getName(), get.getRow(), this.rpcControllerFactory.newController(), get.getPriority()) {
+        getName(), get.getRow(), this.rpcControllerFactory.newController(), get.getPriority()) {
         @Override
         protected Result rpcCall() throws Exception {
           ClientProtos.GetRequest request = RequestConverter
-              .buildGetRequest(getLocation().getRegionInfo().getRegionName(), configuredGet);
+            .buildGetRequest(getLocation().getRegionInfo().getRegionName(), configuredGet);
           ClientProtos.GetResponse response = doGet(request);
-          return response == null ? null
-              : ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          return response == null
+            ? null
+            : ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         }
       };
       return rpcCallerFactory.<Result> newCaller(readRpcTimeoutMs).callWithRetries(callable,
@@ -385,17 +389,17 @@ public class HTable implements Table {
 
     // Call that takes into account the replica
     RpcRetryingCallerWithReadReplicas callable =
-        new RpcRetryingCallerWithReadReplicas(rpcControllerFactory, tableName, this.connection, get,
-            pool, connConfiguration.getRetriesNumber(), operationTimeoutMs, readRpcTimeoutMs,
-            connConfiguration.getPrimaryCallTimeoutMicroSecond());
+      new RpcRetryingCallerWithReadReplicas(rpcControllerFactory, tableName, this.connection, get,
+        pool, connConfiguration.getRetriesNumber(), operationTimeoutMs, readRpcTimeoutMs,
+        connConfiguration.getPrimaryCallTimeoutMicroSecond());
     return callable.call(operationTimeoutMs);
   }
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName)
-            .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(gets);
+      new TableOperationSpanBuilder(connection).setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(gets);
     return TraceUtil.trace(() -> {
       if (gets.size() == 1) {
         return new Result[] { get(gets.get(0)) };
@@ -419,7 +423,7 @@ public class HTable implements Table {
 
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     int rpcTimeout = writeRpcTimeoutMs;
     boolean hasRead = false;
     boolean hasWrite = false;
@@ -444,14 +448,14 @@ public class HTable implements Table {
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     AsyncProcessTask task =
-        AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName).setRowAccess(actions)
-            .setResults(results).setRpcTimeout(rpcTimeout).setOperationTimeout(operationTimeoutMs)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+      AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName).setRowAccess(actions)
+        .setResults(results).setRpcTimeout(rpcTimeout).setOperationTimeout(operationTimeoutMs)
+        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
     final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
-        .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
-        .build();
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
+      .build();
     try (Scope ignored = span.makeCurrent()) {
       AsyncRequestFuture ars = multiAp.submit(task);
       ars.waitUntilDone();
@@ -467,24 +471,24 @@ public class HTable implements Table {
 
   @Override
   public <R> void batchCallback(final List<? extends Row> actions, final Object[] results,
-      final Batch.Callback<R> callback) throws IOException, InterruptedException {
+    final Batch.Callback<R> callback) throws IOException, InterruptedException {
     doBatchWithCallback(actions, results, callback, connection, pool, tableName);
   }
 
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
-      Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
-      throws InterruptedIOException, RetriesExhaustedWithDetailsException {
+    Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
     int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
       connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    AsyncProcessTask<R> task = AsyncProcessTask.newBuilder(callback).setPool(pool)
-        .setTableName(tableName).setRowAccess(actions).setResults(results)
-        .setOperationTimeout(operationTimeout).setRpcTimeout(writeTimeout)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+    AsyncProcessTask<R> task =
+      AsyncProcessTask.newBuilder(callback).setPool(pool).setTableName(tableName)
+        .setRowAccess(actions).setResults(results).setOperationTimeout(operationTimeout)
+        .setRpcTimeout(writeTimeout).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
     final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
-        .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
-        .build();
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
+      .build();
     try (Scope ignored = span.makeCurrent()) {
       AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
       ars.waitUntilDone();
@@ -500,19 +504,19 @@ public class HTable implements Table {
   @Override
   public void delete(final Delete delete) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(delete);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(delete);
     TraceUtil.trace(() -> {
       ClientServiceCallable<Void> callable =
-          new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
-              this.rpcControllerFactory.newController(), delete.getPriority()) {
-            @Override
-            protected Void rpcCall() throws Exception {
-              MutateRequest request = RequestConverter
-                  .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
-              doMutate(request);
-              return null;
-            }
-          };
+        new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
+          this.rpcControllerFactory.newController(), delete.getPriority()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            MutateRequest request = RequestConverter
+              .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
+            doMutate(request);
+            return null;
+          }
+        };
       rpcCallerFactory.<Void> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }, supplier);
@@ -542,15 +546,15 @@ public class HTable implements Table {
   @Override
   public void put(final Put put) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(put);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(put);
     TraceUtil.trace(() -> {
       validatePut(put);
       ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(this.connection,
-          getName(), put.getRow(), this.rpcControllerFactory.newController(), put.getPriority()) {
+        getName(), put.getRow(), this.rpcControllerFactory.newController(), put.getPriority()) {
         @Override
         protected Void rpcCall() throws Exception {
-          MutateRequest request = RequestConverter
-              .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
+          MutateRequest request =
+            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
           doMutate(request);
           return null;
         }
@@ -576,37 +580,37 @@ public class HTable implements Table {
   @Override
   public Result mutateRow(final RowMutations rm) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName)
-            .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(rm);
+      new TableOperationSpanBuilder(connection).setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(rm);
     return TraceUtil.trace(() -> {
       long nonceGroup = getNonceGroup();
       long nonce = getNonce();
       CancellableRegionServerCallable<MultiResponse> callable =
-          new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(),
-              rm.getRow(), rpcControllerFactory.newController(), writeRpcTimeoutMs,
-              new RetryingTimeTracker().start(), rm.getMaxPriority()) {
-            @Override
-            protected MultiResponse rpcCall() throws Exception {
-              MultiRequest request = RequestConverter.buildMultiRequest(
-                getLocation().getRegionInfo().getRegionName(), rm, nonceGroup, nonce);
-              ClientProtos.MultiResponse response = doMulti(request);
-              ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-              if (res.hasException()) {
-                Throwable ex = ProtobufUtil.toException(res.getException());
-                if (ex instanceof IOException) {
-                  throw (IOException) ex;
-                }
-                throw new IOException("Failed to mutate row: " + Bytes.toStringBinary(rm.getRow()),
-                    ex);
+        new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
+          rpcControllerFactory.newController(), writeRpcTimeoutMs,
+          new RetryingTimeTracker().start(), rm.getMaxPriority()) {
+          @Override
+          protected MultiResponse rpcCall() throws Exception {
+            MultiRequest request = RequestConverter.buildMultiRequest(
+              getLocation().getRegionInfo().getRegionName(), rm, nonceGroup, nonce);
+            ClientProtos.MultiResponse response = doMulti(request);
+            ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+            if (res.hasException()) {
+              Throwable ex = ProtobufUtil.toException(res.getException());
+              if (ex instanceof IOException) {
+                throw (IOException) ex;
               }
-              return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+              throw new IOException("Failed to mutate row: " + Bytes.toStringBinary(rm.getRow()),
+                ex);
             }
-          };
+            return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+          }
+        };
       Object[] results = new Object[rm.getMutations().size()];
       AsyncProcessTask task = AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
-          .setRowAccess(rm.getMutations()).setCallable(callable).setRpcTimeout(writeRpcTimeoutMs)
-          .setOperationTimeout(operationTimeoutMs)
-          .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).setResults(results).build();
+        .setRowAccess(rm.getMutations()).setCallable(callable).setRpcTimeout(writeRpcTimeoutMs)
+        .setOperationTimeout(operationTimeoutMs)
+        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).setResults(results).build();
       AsyncRequestFuture ars = multiAp.submit(task);
       ars.waitUntilDone();
       if (ars.hasError()) {
@@ -627,24 +631,24 @@ public class HTable implements Table {
   @Override
   public Result append(final Append append) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(append);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(append);
     return TraceUtil.trace(() -> {
       checkHasFamilies(append);
       NoncedRegionServerCallable<Result> callable =
-          new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
-              this.rpcControllerFactory.newController(), append.getPriority()) {
-            @Override
-            protected Result rpcCall() throws Exception {
-              MutateRequest request =
-                  RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(),
-                    append, super.getNonceGroup(), super.getNonce());
-              MutateResponse response = doMutate(request);
-              if (!response.hasResult()) {
-                return null;
-              }
-              return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+        new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
+          this.rpcControllerFactory.newController(), append.getPriority()) {
+          @Override
+          protected Result rpcCall() throws Exception {
+            MutateRequest request =
+              RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(),
+                append, super.getNonceGroup(), super.getNonce());
+            MutateResponse response = doMutate(request);
+            if (!response.hasResult()) {
+              return null;
             }
-          };
+            return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          }
+        };
       return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }, supplier);
@@ -653,22 +657,22 @@ public class HTable implements Table {
   @Override
   public Result increment(final Increment increment) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(increment);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(increment);
     return TraceUtil.trace(() -> {
       checkHasFamilies(increment);
       NoncedRegionServerCallable<Result> callable =
-          new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
-              this.rpcControllerFactory.newController(), increment.getPriority()) {
-            @Override
-            protected Result rpcCall() throws Exception {
-              MutateRequest request =
-                  RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(),
-                    increment, super.getNonceGroup(), super.getNonce());
-              MutateResponse response = doMutate(request);
-              // Should this check for null like append does?
-              return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-            }
-          };
+        new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
+          this.rpcControllerFactory.newController(), increment.getPriority()) {
+          @Override
+          protected Result rpcCall() throws Exception {
+            MutateRequest request =
+              RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(),
+                increment, super.getNonceGroup(), super.getNonce());
+            MutateResponse response = doMutate(request);
+            // Should this check for null like append does?
+            return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          }
+        };
       return rpcCallerFactory.<Result> newCaller(writeRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }, supplier);
@@ -676,15 +680,15 @@ public class HTable implements Table {
 
   @Override
   public long incrementColumnValue(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long amount) throws IOException {
+    final long amount) throws IOException {
     return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
   }
 
   @Override
   public long incrementColumnValue(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long amount, final Durability durability) throws IOException {
+    final long amount, final Durability durability) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.INCREMENT);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.INCREMENT);
     return TraceUtil.trace(() -> {
       NullPointerException npe = null;
       if (row == null) {
@@ -697,19 +701,19 @@ public class HTable implements Table {
       }
 
       NoncedRegionServerCallable<Long> callable =
-          new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
-              this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
-            @Override
-            protected Long rpcCall() throws Exception {
-              MutateRequest request = RequestConverter.buildIncrementRequest(
-                getLocation().getRegionInfo().getRegionName(), row, family, qualifier, amount,
-                durability, super.getNonceGroup(), super.getNonce());
-              MutateResponse response = doMutate(request);
-              Result result =
-                  ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-              return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
-            }
-          };
+        new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
+          this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          @Override
+          protected Long rpcCall() throws Exception {
+            MutateRequest request = RequestConverter.buildIncrementRequest(
+              getLocation().getRegionInfo().getRegionName(), row, family, qualifier, amount,
+              durability, super.getNonceGroup(), super.getNonce());
+            MutateResponse response = doMutate(request);
+            Result result =
+              ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+            return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
+          }
+        };
       return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }, supplier);
@@ -718,25 +722,25 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
-      final byte[] value, final Put put) throws IOException {
+    final byte[] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.PUT);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null, put)
-          .isSuccess(),
+        .isSuccess(),
       supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOp compareOp, final byte[] value, final Put put) throws IOException {
+    final CompareOp compareOp, final byte[] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.PUT);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
       toCompareOperator(compareOp), value, null, null, put).isSuccess(), supplier);
   }
@@ -744,11 +748,11 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOperator op, final byte[] value, final Put put) throws IOException {
+    final CompareOperator op, final byte[] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.PUT);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess(),
       supplier);
@@ -757,11 +761,11 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-      final byte[] value, final Delete delete) throws IOException {
+    final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.DELETE);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL,
       value, null, null, delete).isSuccess(), supplier);
   }
@@ -769,11 +773,11 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
+    final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.DELETE);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
       toCompareOperator(compareOp), value, null, null, delete).isSuccess(), supplier);
   }
@@ -781,11 +785,11 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
+    final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
-          HBaseSemanticAttributes.Operation.DELETE);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
+        HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess(),
       supplier);
@@ -804,32 +808,32 @@ public class HTable implements Table {
   }
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-      final TimeRange timeRange, final RowMutations rm) throws IOException {
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange, final RowMutations rm) throws IOException {
     long nonceGroup = getNonceGroup();
     long nonce = getNonce();
     CancellableRegionServerCallable<MultiResponse> callable =
-        new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
-            rpcControllerFactory.newController(), writeRpcTimeoutMs,
-            new RetryingTimeTracker().start(), rm.getMaxPriority()) {
-          @Override
-          protected MultiResponse rpcCall() throws Exception {
-            MultiRequest request =
-                RequestConverter.buildMultiRequest(getLocation().getRegionInfo().getRegionName(),
-                  row, family, qualifier, op, value, filter, timeRange, rm, nonceGroup, nonce);
-            ClientProtos.MultiResponse response = doMulti(request);
-            ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-            if (res.hasException()) {
-              Throwable ex = ProtobufUtil.toException(res.getException());
-              if (ex instanceof IOException) {
-                throw (IOException) ex;
-              }
-              throw new IOException(
-                  "Failed to checkAndMutate row: " + Bytes.toStringBinary(rm.getRow()), ex);
+      new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
+        rpcControllerFactory.newController(), writeRpcTimeoutMs, new RetryingTimeTracker().start(),
+        rm.getMaxPriority()) {
+        @Override
+        protected MultiResponse rpcCall() throws Exception {
+          MultiRequest request =
+            RequestConverter.buildMultiRequest(getLocation().getRegionInfo().getRegionName(), row,
+              family, qualifier, op, value, filter, timeRange, rm, nonceGroup, nonce);
+          ClientProtos.MultiResponse response = doMulti(request);
+          ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+          if (res.hasException()) {
+            Throwable ex = ProtobufUtil.toException(res.getException());
+            if (ex instanceof IOException) {
+              throw (IOException) ex;
             }
-            return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+            throw new IOException(
+              "Failed to checkAndMutate row: " + Bytes.toStringBinary(rm.getRow()), ex);
           }
-        };
+          return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+        }
+      };
 
     /**
      * Currently, we use one array to store 'processed' flag which is returned by server. It is
@@ -837,11 +841,11 @@ public class HTable implements Table {
      */
     Object[] results = new Object[rm.getMutations().size()];
     AsyncProcessTask task = AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
-        .setRowAccess(rm.getMutations()).setResults(results).setCallable(callable)
-        // TODO any better timeout?
-        .setRpcTimeout(Math.max(readRpcTimeoutMs, writeRpcTimeoutMs))
-        .setOperationTimeout(operationTimeoutMs)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+      .setRowAccess(rm.getMutations()).setResults(results).setCallable(callable)
+      // TODO any better timeout?
+      .setRpcTimeout(Math.max(readRpcTimeoutMs, writeRpcTimeoutMs))
+      .setOperationTimeout(operationTimeoutMs).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+      .build();
     AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
@@ -854,10 +858,10 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOp compareOp, final byte[] value, final RowMutations rm) throws IOException {
+    final CompareOp compareOp, final byte[] value, final RowMutations rm) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(rm);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(rm);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
       toCompareOperator(compareOp), value, null, null, rm).isSuccess(), supplier);
   }
@@ -865,10 +869,10 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOperator op, final byte[] value, final RowMutations rm) throws IOException {
+    final CompareOperator op, final byte[] value, final RowMutations rm) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
-        .setContainerOperations(rm);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(rm);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess(),
       supplier);
@@ -876,13 +880,14 @@ public class HTable implements Table {
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
-    final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName)
-            .setOperation(checkAndMutate).setContainerOperations(checkAndMutate);
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
+      .setTableName(tableName).setOperation(checkAndMutate).setContainerOperations(checkAndMutate);
     return TraceUtil.trace(() -> {
       Row action = checkAndMutate.getAction();
-      if (action instanceof Put || action instanceof Delete || action instanceof Increment
-          || action instanceof Append) {
+      if (
+        action instanceof Put || action instanceof Delete || action instanceof Increment
+          || action instanceof Append
+      ) {
         if (action instanceof Put) {
           validatePut((Put) action);
         }
@@ -898,36 +903,36 @@ public class HTable implements Table {
   }
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-      final TimeRange timeRange, final Mutation mutation) throws IOException {
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange, final Mutation mutation) throws IOException {
     long nonceGroup = getNonceGroup();
     long nonce = getNonce();
     ClientServiceCallable<CheckAndMutateResult> callable =
-        new ClientServiceCallable<CheckAndMutateResult>(this.connection, getName(), row,
-            this.rpcControllerFactory.newController(), mutation.getPriority()) {
-          @Override
-          protected CheckAndMutateResult rpcCall() throws Exception {
-            MutateRequest request = RequestConverter.buildMutateRequest(
-              getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
-              filter, timeRange, mutation, nonceGroup, nonce);
-            MutateResponse response = doMutate(request);
-            if (response.hasResult()) {
-              return new CheckAndMutateResult(response.getProcessed(),
-                  ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner()));
-            }
-            return new CheckAndMutateResult(response.getProcessed(), null);
+      new ClientServiceCallable<CheckAndMutateResult>(this.connection, getName(), row,
+        this.rpcControllerFactory.newController(), mutation.getPriority()) {
+        @Override
+        protected CheckAndMutateResult rpcCall() throws Exception {
+          MutateRequest request =
+            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row,
+              family, qualifier, op, value, filter, timeRange, mutation, nonceGroup, nonce);
+          MutateResponse response = doMutate(request);
+          if (response.hasResult()) {
+            return new CheckAndMutateResult(response.getProcessed(),
+              ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner()));
           }
-        };
+          return new CheckAndMutateResult(response.getProcessed(), null);
+        }
+      };
     return rpcCallerFactory.<CheckAndMutateResult> newCaller(this.writeRpcTimeoutMs)
-        .callWithRetries(callable, this.operationTimeoutMs);
+      .callWithRetries(callable, this.operationTimeoutMs);
   }
 
   @Override
   public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
-      throws IOException {
+    throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.BATCH)
-        .setContainerOperations(checkAndMutates);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(checkAndMutates);
     return TraceUtil.trace(() -> {
       if (checkAndMutates.isEmpty()) {
         return Collections.emptyList();
@@ -984,7 +989,7 @@ public class HTable implements Table {
   @Override
   public boolean exists(final Get get) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(get);
+      new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(get);
     return TraceUtil.trace(() -> {
       Result r = get(get, true);
       assert r.getExists() != null;
@@ -995,8 +1000,8 @@ public class HTable implements Table {
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
     final Supplier<Span> supplier =
-        new TableOperationSpanBuilder(connection).setTableName(tableName)
-            .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(gets);
+      new TableOperationSpanBuilder(connection).setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(gets);
     return TraceUtil.trace(() -> {
       if (gets.isEmpty()) {
         return new boolean[] {};
@@ -1034,21 +1039,21 @@ public class HTable implements Table {
   /**
    * Process a mixed batch of Get, Put and Delete actions. All actions for a RegionServer are
    * forwarded in one RPC call. Queries are executed in parallel.
-   * @param list The collection of actions.
+   * @param list    The collection of actions.
    * @param results An empty array, same size as list. If an exception is thrown, you can test here
-   *          for partial results, and to determine which actions processed successfully.
+   *                for partial results, and to determine which actions processed successfully.
    * @throws IOException if there are problems talking to META. Per-item exceptions are stored in
-   *           the results array.
+   *                     the results array.
    */
   public <R> void processBatchCallback(final List<? extends Row> list, final Object[] results,
-      final Batch.Callback<R> callback) throws IOException, InterruptedException {
+    final Batch.Callback<R> callback) throws IOException, InterruptedException {
     this.batchCallback(list, results, callback);
   }
 
   @Override
   public void close() throws IOException {
     final Supplier<Span> supplier = new TableSpanBuilder(connection).setName("HTable.close")
-        .setTableName(tableName).setSpanKind(SpanKind.INTERNAL);
+      .setTableName(tableName).setSpanKind(SpanKind.INTERNAL);
     TraceUtil.trace(() -> {
       if (this.closed) {
         return;
@@ -1098,10 +1103,10 @@ public class HTable implements Table {
 
   @Override
   public <T extends Service, R> Map<byte[], R> coprocessorService(final Class<T> service,
-      byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
-      throws ServiceException, Throwable {
+    byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
+    throws ServiceException, Throwable {
     final Map<byte[], R> results =
-        Collections.synchronizedMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
+      Collections.synchronizedMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, (region, row, value) -> {
       if (region != null) {
         results.put(region, value);
@@ -1112,10 +1117,10 @@ public class HTable implements Table {
 
   @Override
   public <T extends Service, R> void coprocessorService(final Class<T> service, byte[] startKey,
-      byte[] endKey, final Batch.Call<T, R> callable, final Batch.Callback<R> callback)
-      throws ServiceException, Throwable {
+    byte[] endKey, final Batch.Call<T, R> callable, final Batch.Callback<R> callback)
+    throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       final ExecutorService wrappedPool = context.wrap(pool);
@@ -1124,10 +1129,10 @@ public class HTable implements Table {
       Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (final byte[] r : keys) {
         final RegionCoprocessorRpcChannel channel =
-            new RegionCoprocessorRpcChannel(connection, tableName, r);
+          new RegionCoprocessorRpcChannel(connection, tableName, r);
         Future<R> future = wrappedPool.submit(() -> {
           T instance =
-              org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
+            org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
           R result = callable.call(instance);
           byte[] region = channel.getLastRegion();
           if (callback != null) {
@@ -1146,7 +1151,7 @@ public class HTable implements Table {
           throw ee.getCause();
         } catch (InterruptedException ie) {
           throw new InterruptedIOException("Interrupted calling coprocessor service "
-              + service.getName() + " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
+            + service.getName() + " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
         }
       }
     }, supplier);
@@ -1238,10 +1243,10 @@ public class HTable implements Table {
 
   @Override
   public <R extends Message> Map<byte[], R> batchCoprocessorService(
-      Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
-      byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+    Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey, byte[] endKey,
+    R responsePrototype) throws ServiceException, Throwable {
     final Map<byte[], R> results =
-        Collections.synchronizedMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
+      Collections.synchronizedMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
     batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
       (region, row, result) -> {
         if (region != null) {
@@ -1253,20 +1258,20 @@ public class HTable implements Table {
 
   @Override
   public <R extends Message> void batchCoprocessorService(
-      final Descriptors.MethodDescriptor methodDescriptor, final Message request, byte[] startKey,
-      byte[] endKey, final R responsePrototype, final Callback<R> callback)
-      throws ServiceException, Throwable {
+    final Descriptors.MethodDescriptor methodDescriptor, final Message request, byte[] startKey,
+    byte[] endKey, final R responsePrototype, final Callback<R> callback)
+    throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+      .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
       final Context context = Context.current();
       final byte[] sanitizedStartKey =
-          Optional.ofNullable(startKey).orElse(HConstants.EMPTY_START_ROW);
+        Optional.ofNullable(startKey).orElse(HConstants.EMPTY_START_ROW);
       final byte[] sanitizedEndKey = Optional.ofNullable(endKey).orElse(HConstants.EMPTY_END_ROW);
 
       // get regions covered by the row range
       Pair<List<byte[]>, List<HRegionLocation>> keysAndRegions =
-          getKeysAndRegionsInRange(sanitizedStartKey, sanitizedEndKey, true);
+        getKeysAndRegionsInRange(sanitizedStartKey, sanitizedEndKey, true);
       List<byte[]> keys = keysAndRegions.getFirst();
       List<HRegionLocation> regions = keysAndRegions.getSecond();
 
@@ -1279,12 +1284,12 @@ public class HTable implements Table {
 
       List<RegionCoprocessorServiceExec> execs = new ArrayList<>(keys.size());
       final Map<byte[], RegionCoprocessorServiceExec> execsByRow =
-          new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (int i = 0; i < keys.size(); i++) {
         final byte[] rowKey = keys.get(i);
         final byte[] region = regions.get(i).getRegionInfo().getRegionName();
         RegionCoprocessorServiceExec exec =
-            new RegionCoprocessorServiceExec(region, rowKey, methodDescriptor, request);
+          new RegionCoprocessorServiceExec(region, rowKey, methodDescriptor, request);
         execs.add(exec);
         execsByRow.put(rowKey, exec);
       }
@@ -1297,34 +1302,34 @@ public class HTable implements Table {
       Object[] results = new Object[execs.size()];
 
       AsyncProcess asyncProcess = new AsyncProcess(connection, configuration,
-          RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
-          RpcControllerFactory.instantiate(configuration));
+        RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
+        RpcControllerFactory.instantiate(configuration));
 
       Callback<ClientProtos.CoprocessorServiceResult> resultsCallback =
-          (byte[] region, byte[] row, ClientProtos.CoprocessorServiceResult serviceResult) -> {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Received result for endpoint {}: region={}, row={}, value={}",
-                methodDescriptor.getFullName(), Bytes.toStringBinary(region),
-                Bytes.toStringBinary(row), serviceResult.getValue().getValue());
-            }
-            try {
-              Message.Builder builder = responsePrototype.newBuilderForType();
-              org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
-                serviceResult.getValue().getValue().toByteArray());
-              callback.update(region, row, (R) builder.build());
-            } catch (IOException e) {
-              LOG.error("Unexpected response type from endpoint {}", methodDescriptor.getFullName(),
-                e);
-              callbackErrorExceptions.add(e);
-              callbackErrorActions.add(execsByRow.get(row));
-              callbackErrorServers.add("null");
-            }
-          };
+        (byte[] region, byte[] row, ClientProtos.CoprocessorServiceResult serviceResult) -> {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Received result for endpoint {}: region={}, row={}, value={}",
+              methodDescriptor.getFullName(), Bytes.toStringBinary(region),
+              Bytes.toStringBinary(row), serviceResult.getValue().getValue());
+          }
+          try {
+            Message.Builder builder = responsePrototype.newBuilderForType();
+            org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+              serviceResult.getValue().getValue().toByteArray());
+            callback.update(region, row, (R) builder.build());
+          } catch (IOException e) {
+            LOG.error("Unexpected response type from endpoint {}", methodDescriptor.getFullName(),
+              e);
+            callbackErrorExceptions.add(e);
+            callbackErrorActions.add(execsByRow.get(row));
+            callbackErrorServers.add("null");
+          }
+        };
       AsyncProcessTask<ClientProtos.CoprocessorServiceResult> task =
-          AsyncProcessTask.newBuilder(resultsCallback).setPool(context.wrap(pool))
-              .setTableName(tableName).setRowAccess(execs).setResults(results)
-              .setRpcTimeout(readRpcTimeoutMs).setOperationTimeout(operationTimeoutMs)
-              .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+        AsyncProcessTask.newBuilder(resultsCallback).setPool(context.wrap(pool))
+          .setTableName(tableName).setRowAccess(execs).setResults(results)
+          .setRpcTimeout(readRpcTimeoutMs).setOperationTimeout(operationTimeoutMs)
+          .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
       AsyncRequestFuture future = asyncProcess.submit(task);
       future.waitUntilDone();
 
@@ -1332,7 +1337,7 @@ public class HTable implements Table {
         throw future.getErrors();
       } else if (!callbackErrorExceptions.isEmpty()) {
         throw new RetriesExhaustedWithDetailsException(callbackErrorExceptions,
-            callbackErrorActions, callbackErrorServers);
+          callbackErrorActions, callbackErrorServers);
       }
     }, supplier);
   }
@@ -1359,7 +1364,7 @@ public class HTable implements Table {
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
       this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using"
-          + " an empty byte array, or just do not call this method if you want a null qualifier");
+        + " an empty byte array, or just do not call this method if you want a null qualifier");
       return this;
     }
 
@@ -1385,40 +1390,40 @@ public class HTable implements Table {
 
     private void preCheck() {
       Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by"
-          + " calling ifNotExists/ifEquals/ifMatches before executing the request");
+        + " calling ifNotExists/ifEquals/ifMatches before executing the request");
     }
 
     @Override
     public boolean thenPut(Put put) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         validatePut(put);
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put)
-            .isSuccess();
+          .isSuccess();
       }, supplier);
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete)
-            .isSuccess();
+          .isSuccess();
       }, supplier);
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, mutation)
-            .isSuccess();
+          .isSuccess();
       }, supplier);
     }
   }
@@ -1443,7 +1448,7 @@ public class HTable implements Table {
     @Override
     public boolean thenPut(Put put) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         validatePut(put);
         return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put).isSuccess();
@@ -1453,7 +1458,7 @@ public class HTable implements Table {
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(
         () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete).isSuccess(),
         supplier);
@@ -1462,11 +1467,10 @@ public class HTable implements Table {
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-          .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil
-          .trace(() -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
-              .isSuccess(),
-            supplier);
+        .trace(() -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
+          .isSuccess(), supplier);
     }
   }
 }

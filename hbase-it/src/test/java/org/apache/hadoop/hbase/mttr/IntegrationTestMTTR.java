@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mttr;
 
 import static org.junit.Assert.assertEquals;
@@ -60,7 +59,6 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,32 +70,24 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
  * different threads:
  * <ol>
- * <li>
- * Load Test Tool.<br/>
- * This runs so that all RegionServers will have some load and WALs will be full.
- * </li>
- * <li>
- * Scan thread.<br/>
- * This thread runs a very short scan over and over again recording how log it takes to respond.
- * The longest response is assumed to be the time it took to recover.
- * </li>
- * <li>
- * Put thread.<br/>
- * This thread just like the scan thread except it does a very small put.
- * </li>
- * <li>
- * Admin thread. <br/>
- * This thread will continually go to the master to try and get the cluster status.  Just like the
- * put and scan threads, the time to respond is recorded.
- * </li>
- * <li>
- * Chaos Monkey thread.<br/>
- * This thread runs a ChaosMonkey.Action.
- * </li>
+ * <li>Load Test Tool.<br/>
+ * This runs so that all RegionServers will have some load and WALs will be full.</li>
+ * <li>Scan thread.<br/>
+ * This thread runs a very short scan over and over again recording how log it takes to respond. The
+ * longest response is assumed to be the time it took to recover.</li>
+ * <li>Put thread.<br/>
+ * This thread just like the scan thread except it does a very small put.</li>
+ * <li>Admin thread. <br/>
+ * This thread will continually go to the master to try and get the cluster status. Just like the
+ * put and scan threads, the time to respond is recorded.</li>
+ * <li>Chaos Monkey thread.<br/>
+ * This thread runs a ChaosMonkey.Action.</li>
  * </ol>
  * <p/>
  * The ChaosMonkey actions currently run are:
@@ -153,7 +143,6 @@ public class IntegrationTestMTTR {
    */
   private static LoadTestTool loadTool;
 
-
   @BeforeClass
   public static void setUp() throws Exception {
     // Set up the integration test util
@@ -187,19 +176,19 @@ public class IntegrationTestMTTR {
 
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new RestartRsHoldingTableAction(sleepTime,
-        util.getConnection().getRegionLocator(tableName));
+    restartRSAction =
+      new RestartRsHoldingTableAction(sleepTime, util.getConnection().getRegionLocator(tableName));
 
     // Set up the action that will kill the region holding meta.
     restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
 
     // Set up the action that will move the regions of meta.
     moveMetaRegionsAction = new MoveRegionsOfTableAction(sleepTime,
-        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, TableName.META_TABLE_NAME);
+      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, TableName.META_TABLE_NAME);
 
     // Set up the action that will move the regions of our table.
     moveRegionAction = new MoveRegionsOfTableAction(sleepTime,
-        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
+      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
 
     // Kill the master
     restartMasterAction = new RestartActiveMasterAction(1000);
@@ -215,11 +204,11 @@ public class IntegrationTestMTTR {
 
   private static void setupTables() throws IOException {
     // Get the table name.
-    tableName = TableName.valueOf(util.getConfiguration()
-        .get("hbase.IntegrationTestMTTR.tableName", "IntegrationTestMTTR"));
+    tableName = TableName.valueOf(
+      util.getConfiguration().get("hbase.IntegrationTestMTTR.tableName", "IntegrationTestMTTR"));
 
     loadTableName = TableName.valueOf(util.getConfiguration()
-        .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool"));
+      .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool"));
 
     if (util.getAdmin().tableExists(tableName)) {
       util.deleteTable(tableName);
@@ -229,20 +218,20 @@ public class IntegrationTestMTTR {
       util.deleteTable(loadTableName);
     }
 
-    // Create the table.  If this fails then fail everything.
+    // Create the table. If this fails then fail everything.
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     // Make the max file size huge so that splits don't happen during the test.
     builder.setMaxFileSize(Long.MAX_VALUE);
 
     ColumnFamilyDescriptorBuilder colDescriptorBldr =
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     colDescriptorBldr.setMaxVersions(1);
     builder.setColumnFamily(colDescriptorBldr.build());
     util.getAdmin().createTable(builder.build());
 
     // Setup the table for LoadTestTool
-    int ret = loadTool.run(new String[]{"-tn", loadTableName.getNameAsString(), "-init_only"});
+    int ret = loadTool.run(new String[] { "-tn", loadTableName.getNameAsString(), "-init_only" });
     assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }
 
@@ -269,7 +258,7 @@ public class IntegrationTestMTTR {
   private static boolean tablesOnMaster() {
     boolean ret = true;
     String value = util.getConfiguration().get("hbase.balancer.tablesOnMaster");
-    if( value != null && value.equalsIgnoreCase("none")) {
+    if (value != null && value.equalsIgnoreCase("none")) {
       ret = false;
     }
     return ret;
@@ -341,7 +330,8 @@ public class IntegrationTestMTTR {
         Thread.sleep(5000l);
       }
     } catch (Exception e) {
-      long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+      long runtimeMs =
+        TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
       LOG.info(testName + " failed after " + runtimeMs + "ms.", e);
       throw e;
     }
@@ -349,20 +339,15 @@ public class IntegrationTestMTTR {
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
 
     MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper("MTTRResults")
-        .add("putResults", resultPuts)
-        .add("scanResults", resultScan)
-        .add("adminResults", resultAdmin)
-        .add("totalRuntimeMs", runtimeMs)
-        .add("name", testName);
+      .add("putResults", resultPuts).add("scanResults", resultScan).add("adminResults", resultAdmin)
+      .add("totalRuntimeMs", runtimeMs).add("name", testName);
 
     // Log the info
     LOG.info(helper.toString());
   }
 
   /**
-   * Class to store results of TimingCallable.
-   *
-   * Stores times and trace id.
+   * Class to store results of TimingCallable. Stores times and trace id.
    */
   private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
@@ -371,7 +356,7 @@ public class IntegrationTestMTTR {
     /**
      * Add a result to this aggregate result.
      * @param time Time in nanoseconds
-     * @param span Span.  To be kept if the time taken was over 1 second
+     * @param span Span. To be kept if the time taken was over 1 second
      */
     public void addResult(long time, Span span) {
       stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
@@ -382,20 +367,14 @@ public class IntegrationTestMTTR {
 
     @Override
     public String toString() {
-      MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this)
-          .add("numResults", stats.getN())
-          .add("minTime", stats.getMin())
-          .add("meanTime", stats.getMean())
-          .add("maxTime", stats.getMax())
-          .add("25th", stats.getPercentile(25))
-          .add("50th", stats.getPercentile(50))
-          .add("75th", stats.getPercentile(75))
-          .add("90th", stats.getPercentile(90))
-          .add("95th", stats.getPercentile(95))
-          .add("99th", stats.getPercentile(99))
-          .add("99.9th", stats.getPercentile(99.9))
-          .add("99.99th", stats.getPercentile(99.99))
-          .add("traces", traces);
+      MoreObjects.ToStringHelper helper =
+        MoreObjects.toStringHelper(this).add("numResults", stats.getN())
+          .add("minTime", stats.getMin()).add("meanTime", stats.getMean())
+          .add("maxTime", stats.getMax()).add("25th", stats.getPercentile(25))
+          .add("50th", stats.getPercentile(50)).add("75th", stats.getPercentile(75))
+          .add("90th", stats.getPercentile(90)).add("95th", stats.getPercentile(95))
+          .add("99th", stats.getPercentile(99)).add("99.9th", stats.getPercentile(99.9))
+          .add("99.99th", stats.getPercentile(99.99)).add("traces", traces);
       return helper.toString();
     }
   }
@@ -426,11 +405,11 @@ public class IntegrationTestMTTR {
             numAfterDone++;
           }
 
-        // the following Exceptions derive from DoNotRetryIOException. They are considered
-        // fatal for the purpose of this test. If we see one of these, it means something is
-        // broken and needs investigation. This is not the case for all children of DNRIOE.
-        // Unfortunately, this is an explicit enumeration and will need periodically refreshed.
-        // See HBASE-9655 for further discussion.
+          // the following Exceptions derive from DoNotRetryIOException. They are considered
+          // fatal for the purpose of this test. If we see one of these, it means something is
+          // broken and needs investigation. This is not the case for all children of DNRIOE.
+          // Unfortunately, this is an explicit enumeration and will need periodically refreshed.
+          // See HBASE-9655 for further discussion.
         } catch (AccessDeniedException e) {
           throw e;
         } catch (CoprocessorException e) {
@@ -449,17 +428,18 @@ public class IntegrationTestMTTR {
           throw e;
         } catch (TableNotFoundException e) {
           throw e;
-        } catch (RetriesExhaustedException e){
+        } catch (RetriesExhaustedException e) {
           throw e;
-        // Everything else is potentially recoverable on the application side. For instance, a CM
-        // action kills the RS that hosted a scanner the client was using. Continued use of that
-        // scanner should be terminated, but a new scanner can be created and the read attempted
-        // again.
+          // Everything else is potentially recoverable on the application side. For instance, a CM
+          // action kills the RS that hosted a scanner the client was using. Continued use of that
+          // scanner should be terminated, but a new scanner can be created and the read attempted
+          // again.
         } catch (Exception e) {
           resetCount++;
           if (resetCount < maxIterations) {
-            LOG.info("Non-fatal exception while running " + this.toString()
-              + ". Resetting loop counter", e);
+            LOG.info(
+              "Non-fatal exception while running " + this.toString() + ". Resetting loop counter",
+              e);
             numAfterDone = 0;
           } else {
             LOG.info("Too many unexpected Exceptions. Aborting.", e);
@@ -486,8 +466,8 @@ public class IntegrationTestMTTR {
   }
 
   /**
-   * Callable that will keep putting small amounts of data into a table
-   * until  the future supplied returns.  It keeps track of the max time.
+   * Callable that will keep putting small amounts of data into a table until the future supplied
+   * returns. It keeps track of the max time.
    */
   static class PutCallable extends TimingCallable {
 
@@ -513,8 +493,8 @@ public class IntegrationTestMTTR {
   }
 
   /**
-   * Callable that will keep scanning for small amounts of data until the
-   * supplied future returns.  Returns the max time taken to scan.
+   * Callable that will keep scanning for small amounts of data until the supplied future returns.
+   * Returns the max time taken to scan.
    */
   static class ScanCallable extends TimingCallable {
     private final Table table;
@@ -543,6 +523,7 @@ public class IntegrationTestMTTR {
         }
       }
     }
+
     @Override
     protected String getSpanName() {
       return "MTTR Scan Test";
@@ -550,7 +531,7 @@ public class IntegrationTestMTTR {
   }
 
   /**
-   * Callable that will keep going to the master for cluster status.  Returns the max time taken.
+   * Callable that will keep going to the master for cluster status. Returns the max time taken.
    */
   static class AdminCallable extends TimingCallable {
 
@@ -578,7 +559,6 @@ public class IntegrationTestMTTR {
     }
   }
 
-
   static class ActionCallable implements Callable<Boolean> {
     private final Action action;
 
@@ -594,8 +574,7 @@ public class IntegrationTestMTTR {
   }
 
   /**
-   * Callable used to make sure the cluster has some load on it.
-   * This callable uses LoadTest tool to
+   * Callable used to make sure the cluster has some load on it. This callable uses LoadTest tool to
    */
   public static class LoadCallable implements Callable<Boolean> {
 
@@ -608,21 +587,17 @@ public class IntegrationTestMTTR {
     @Override
     public Boolean call() throws Exception {
       int colsPerKey = 10;
-      int numServers = util.getHBaseClusterInterface().getInitialClusterMetrics()
-        .getLiveServerMetrics().size();
+      int numServers =
+        util.getHBaseClusterInterface().getInitialClusterMetrics().getLiveServerMetrics().size();
       int numKeys = numServers * 5000;
       int writeThreads = 10;
-
 
       // Loop until the chaos monkey future is done.
       // But always go in just in case some action completes quickly
       do {
-        int ret = loadTool.run(new String[]{
-            "-tn", loadTableName.getNameAsString(),
-            "-write", String.format("%d:%d:%d", colsPerKey, 500, writeThreads),
-            "-num_keys", String.valueOf(numKeys),
-            "-skip_init"
-        });
+        int ret = loadTool.run(new String[] { "-tn", loadTableName.getNameAsString(), "-write",
+          String.format("%d:%d:%d", colsPerKey, 500, writeThreads), "-num_keys",
+          String.valueOf(numKeys), "-skip_init" });
         assertEquals("Load failed", 0, ret);
       } while (!future.isDone());
 

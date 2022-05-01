@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,11 +22,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.ServiceNotRunningException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -34,8 +32,10 @@ import org.apache.hadoop.hbase.master.procedure.ModifyNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 
 @InterfaceAudience.Private
 class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaService {
@@ -50,7 +50,6 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
   }
 
   // All below are synchronized so consistent view on whether running or not.
-
 
   private synchronized void checkIsRunning() throws ServiceNotRunningException {
     if (!isRunning()) throw new ServiceNotRunningException();
@@ -82,7 +81,7 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
   }
 
   private long submitProcedure(final Procedure<MasterProcedureEnv> procedure,
-      final NonceKey nonceKey) throws ServiceNotRunningException {
+    final NonceKey nonceKey) throws ServiceNotRunningException {
     checkIsRunning();
     ProcedureExecutor<MasterProcedureEnv> pe = this.masterServices.getMasterProcedureExecutor();
     return pe.submitProcedure(procedure, nonceKey);
@@ -90,27 +89,25 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
 
   @Override
   public long createNamespace(NamespaceDescriptor namespaceDescriptor, final NonceKey nonceKey,
-      final ProcedurePrepareLatch latch)
-      throws IOException {
+    final ProcedurePrepareLatch latch) throws IOException {
     return submitProcedure(new CreateNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor, latch),
-        nonceKey);
+      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor,
+      latch), nonceKey);
   }
 
   @Override
   public long modifyNamespace(NamespaceDescriptor namespaceDescriptor, final NonceKey nonceKey,
-      final ProcedurePrepareLatch latch) throws IOException {
+    final ProcedurePrepareLatch latch) throws IOException {
     return submitProcedure(new ModifyNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor, latch),
-        nonceKey);
+      this.masterServices.getMasterProcedureExecutor().getEnvironment(), namespaceDescriptor,
+      latch), nonceKey);
   }
 
   @Override
-  public long deleteNamespace(String name, final NonceKey nonceKey, final ProcedurePrepareLatch latch)
-      throws IOException {
+  public long deleteNamespace(String name, final NonceKey nonceKey,
+    final ProcedurePrepareLatch latch) throws IOException {
     return submitProcedure(new DeleteNamespaceProcedure(
-      this.masterServices.getMasterProcedureExecutor().getEnvironment(), name, latch),
-      nonceKey);
+      this.masterServices.getMasterProcedureExecutor().getEnvironment(), name, latch), nonceKey);
   }
 
   @Override

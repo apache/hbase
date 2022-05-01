@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,19 +66,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 
 /**
- * Standup the master and fake it to test various aspects of master function.
- * Does NOT spin up a mini hbase nor mini dfs cluster testing master (it does
- * put up a zk cluster but this is usually pretty fast compared).  Also, should
- * be possible to inject faults at points difficult to get at in cluster context.
- * TODO: Speed up the zk connection by Master.  It pauses 5 seconds establishing
+ * Standup the master and fake it to test various aspects of master function. Does NOT spin up a
+ * mini hbase nor mini dfs cluster testing master (it does put up a zk cluster but this is usually
+ * pretty fast compared). Also, should be possible to inject faults at points difficult to get at in
+ * cluster context. TODO: Speed up the zk connection by Master. It pauses 5 seconds establishing
  * session.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterNoCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterNoCluster.class);
+    HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
@@ -89,7 +88,7 @@ public class TestMasterNoCluster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
-    // We use local filesystem.  Set it so it writes into the testdir.
+    // We use local filesystem. Set it so it writes into the testdir.
     CommonFSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
     DefaultMetricsSystem.setMiniClusterMode(true);
     // Startup a mini zk cluster.
@@ -102,11 +101,9 @@ public class TestMasterNoCluster {
   }
 
   @After
-  public void tearDown()
-  throws KeeperException, ZooKeeperConnectionException, IOException {
+  public void tearDown() throws KeeperException, ZooKeeperConnectionException, IOException {
     // Make sure zk is clean before we run the next test.
-    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(),
-        "@Before", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@Before", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException(why, e);
@@ -120,7 +117,8 @@ public class TestMasterNoCluster {
     // Before fails sometimes so retry.
     try {
       TESTUTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-        @Override public boolean evaluate() throws Exception {
+        @Override
+        public boolean evaluate() throws Exception {
           try {
             ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
             return true;
@@ -137,86 +135,79 @@ public class TestMasterNoCluster {
   }
 
   /**
-   * Test starting master then stopping it before its fully up.
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
+   * Test starting master then stopping it before its fully up. nnn
    */
   @Test
-  public void testStopDuringStart()
-  throws IOException, KeeperException, InterruptedException {
+  public void testStopDuringStart() throws IOException, KeeperException, InterruptedException {
     HMaster master = new HMaster(TESTUTIL.getConfiguration());
     master.start();
-    // Immediately have it stop.  We used hang in assigning meta.
+    // Immediately have it stop. We used hang in assigning meta.
     master.stopMaster();
     master.join();
   }
 
   /**
-   * Test master failover.
-   * Start up three fake regionservers and a master.
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
-   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
+   * Test master failover. Start up three fake regionservers and a master. nnn * @throws
+   * org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
    */
-  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
+  @Ignore
+  @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
   public void testFailover() throws Exception {
     final long now = EnvironmentEdgeManager.currentTime();
-    // Names for our three servers.  Make the port numbers match hostname.
+    // Names for our three servers. Make the port numbers match hostname.
     // Will come in use down in the server when we need to figure how to respond.
     final ServerName sn0 = ServerName.valueOf("0.example.org", 0, now);
     final ServerName sn1 = ServerName.valueOf("1.example.org", 1, now);
     final ServerName sn2 = ServerName.valueOf("2.example.org", 2, now);
-    final ServerName [] sns = new ServerName [] {sn0, sn1, sn2};
+    final ServerName[] sns = new ServerName[] { sn0, sn1, sn2 };
     // Put up the mock servers
     final Configuration conf = TESTUTIL.getConfiguration();
     final MockRegionServer rs0 = new MockRegionServer(conf, sn0);
     final MockRegionServer rs1 = new MockRegionServer(conf, sn1);
     final MockRegionServer rs2 = new MockRegionServer(conf, sn2);
-    // Put some data into the servers.  Make it look like sn0 has the metaH
+    // Put some data into the servers. Make it look like sn0 has the metaH
     // Put data into sn2 so it looks like it has a few regions for a table named 't'.
-    MetaTableLocator.setMetaLocation(rs0.getZooKeeper(),
-      rs0.getServerName(), RegionState.State.OPEN);
+    MetaTableLocator.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName(),
+      RegionState.State.OPEN);
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Result [] results = new Result [] {
+    Result[] results = new Result[] {
       MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HBaseTestingUtility.KEYS[1]),
         rs2.getServerName()),
       MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HBaseTestingUtility.KEYS[1], HBaseTestingUtility.KEYS[2]),
         rs2.getServerName()),
-      MetaMockingUtil.getMetaTableRowResult(new HRegionInfo(tableName, HBaseTestingUtility.KEYS[2],
-          HConstants.EMPTY_END_ROW),
-        rs2.getServerName())
-    };
+      MetaMockingUtil.getMetaTableRowResult(
+        new HRegionInfo(tableName, HBaseTestingUtility.KEYS[2], HConstants.EMPTY_END_ROW),
+        rs2.getServerName()) };
     rs1.setNextResults(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), results);
 
-    // Create master.  Subclass to override a few methods so we can insert mocks
-    // and get notification on transitions.  We need to fake out any rpcs the
-    // master does opening/closing regions.  Also need to fake out the address
+    // Create master. Subclass to override a few methods so we can insert mocks
+    // and get notification on transitions. We need to fake out any rpcs the
+    // master does opening/closing regions. Also need to fake out the address
     // of the 'remote' mocked up regionservers.
     // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
     // the conf from the master; the conf will already have an ClusterConnection
     // associate so the below mocking of a connection will fail.
-    final ClusterConnection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
-        TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
-        HRegionInfo.FIRST_META_REGIONINFO);
+    final ClusterConnection mockedConnection =
+      HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(), rs0,
+        rs0, rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
     HMaster master = new HMaster(conf) {
       @Override
       InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
-      throws UnknownHostException {
+        throws UnknownHostException {
         // Return different address dependent on port passed.
         if (port > sns.length) {
           return super.getRemoteInetAddress(port, serverStartCode);
         }
         ServerName sn = sns[port];
         return InetAddress.getByAddress(sn.getHostname(),
-          new byte [] {10, 0, 0, (byte)sn.getPort()});
+          new byte[] { 10, 0, 0, (byte) sn.getPort() });
       }
 
       @Override
-      protected void initClusterSchemaService() throws IOException, InterruptedException {}
+      protected void initClusterSchemaService() throws IOException, InterruptedException {
+      }
 
       @Override
       protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
@@ -241,16 +232,18 @@ public class TestMasterNoCluster {
 
     try {
       // Wait till master is up ready for RPCs.
-      while (!master.serviceStarted) Threads.sleep(10);
-      // Fake master that there are regionservers out there.  Report in.
+      while (!master.serviceStarted)
+        Threads.sleep(10);
+      // Fake master that there are regionservers out there. Report in.
       for (int i = 0; i < sns.length; i++) {
-        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();;
+        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
+        ;
         ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
         request.setServer(ProtobufUtil.toServerName(sn));
         request.setLoad(ServerMetricsBuilder.toServerLoad(ServerMetricsBuilder.of(sn)));
         master.getMasterRpcServices().regionServerReport(null, request.build());
       }
-       // Master should now come up.
+      // Master should now come up.
       while (!master.isInitialized()) {
         Threads.sleep(100);
       }

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,7 +35,8 @@ public class TruncateTableAction extends Action {
     this.tableName = TableName.valueOf(tableName);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

@@ -1,12 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -17,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,7 +59,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 public class TestHBaseFsckCleanReplicationBarriers {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckCleanReplicationBarriers.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckCleanReplicationBarriers.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -86,7 +92,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
 
   @Test
   public void testCleanReplicationBarrierWithNonExistTable()
-      throws ClassNotFoundException, IOException {
+    throws ClassNotFoundException, IOException {
     TableName tableName = TableName.valueOf(TABLE_NAME + "_non");
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
@@ -100,7 +106,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
 
     for (int i = 0; i < 110; i++) {
       RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1)).build();
+        .setEndKey(Bytes.toBytes(i + 1)).build();
       regionInfos.add(regionInfo);
       addStateAndBarrier(regionInfo, RegionState.State.OPEN, 10, 100);
       updatePushedSeqId(regionInfo, 10);
@@ -113,13 +119,13 @@ public class TestHBaseFsckCleanReplicationBarriers {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-        .withStartRow(
-          MetaTableAccessor.getTableStartRowForMeta(tableName, MetaTableAccessor.QueryType.REGION))
-        .withStopRow(
-          MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
+      .withStartRow(
+        MetaTableAccessor.getTableStartRowForMeta(tableName, MetaTableAccessor.QueryType.REGION))
+      .withStopRow(
+        MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
-        MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
+      MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {
         assertTrue(MetaTableAccessor.getReplicationBarriers(result).length > 0);
       }
@@ -145,8 +151,8 @@ public class TestHBaseFsckCleanReplicationBarriers {
     TableName tableName = TableName.valueOf(TABLE_NAME);
     String cf = COLUMN_FAMILY;
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf)).build())
-        .setReplicationScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf)).build())
+      .setReplicationScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
     UTIL.createTable(tableDescriptor, Bytes.split(Bytes.toBytes(1), Bytes.toBytes(256), 123));
     assertTrue(UTIL.getAdmin().getRegions(tableName).size() > 0);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
@@ -174,15 +180,14 @@ public class TestHBaseFsckCleanReplicationBarriers {
   }
 
   public static void createPeer() throws IOException {
-    ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getClusterKey() + "-test")
-        .setSerial(true).build();
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(UTIL.getClusterKey() + "-test").setSerial(true).build();
     UTIL.getAdmin().addReplicationPeer(PEER_1, rpc);
     UTIL.getAdmin().addReplicationPeer(PEER_2, rpc);
   }
 
   private void addStateAndBarrier(RegionInfo region, RegionState.State state, long... barriers)
-      throws IOException {
+    throws IOException {
     Put put = new Put(region.getRegionName(), EnvironmentEdgeManager.currentTime());
     if (state != null) {
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,

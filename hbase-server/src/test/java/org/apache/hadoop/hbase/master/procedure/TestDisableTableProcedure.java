@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,16 +37,17 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDisableTableProcedure.class);
+    HBaseClassTestRule.forClass(TestDisableTableProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDisableTableProcedure.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testDisableTable() throws Exception {
@@ -56,8 +57,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
 
     // Disable the table
-    long procId = procExec.submitProcedure(
-      new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
+    long procId = procExec
+      .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -72,8 +73,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
 
     // Disable the table
-    long procId1 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false));
+    long procId1 = procExec
+      .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -84,8 +85,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     Throwable e = null;
     Throwable cause = null;
     try {
-      long procId2 = procExec.submitProcedure(new DisableTableProcedure(
-          procExec.getEnvironment(), tableName, false));
+      long procId2 = procExec
+        .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
       // Wait the completion
       ProcedureTestingUtility.waitProcedure(procExec, procId2);
       Procedure<?> result = procExec.getResult(procId2);
@@ -104,8 +105,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     try {
       final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
 
-      long procId3 = procExec.submitProcedure(new DisableTableProcedure(
-          procExec.getEnvironment(), tableName, false, prepareLatch));
+      long procId3 = procExec.submitProcedure(
+        new DisableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch));
       prepareLatch.await();
       Assert.fail("Disable should throw exception through latch.");
     } catch (TableNotEnabledException tnee) {
@@ -115,8 +116,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
 
     // Disable the table again with skipping table state check flag (simulate recovery scenario)
     try {
-      long procId4 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, true));
+      long procId4 = procExec
+        .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, true));
       // Wait the completion
       ProcedureTestingUtility.waitProcedure(procExec, procId4);
       ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
@@ -132,16 +133,15 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Disable procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
+    long procId = procExec
+      .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);

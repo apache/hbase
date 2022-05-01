@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,7 +49,7 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsFallback.class);
+    HBaseClassTestRule.forClass(TestRSGroupsFallback.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsFallback.class);
 
@@ -88,8 +87,8 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     addGroup(groupName, 1);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
+      .build();
     admin.createTable(desc);
     rsGroupAdmin.moveTables(Collections.singleton(tableName), groupName);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -105,8 +104,8 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     JVMClusterUtil.RegionServerThread t =
       TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     Address startRSAddress = t.getRegionServer().getServerName().getAddress();
-    TEST_UTIL.waitFor(3000, () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
-      .containsServer(startRSAddress));
+    TEST_UTIL.waitFor(3000,
+      () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).containsServer(startRSAddress));
     assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
@@ -121,12 +120,12 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
   }
 
   private void assertRegionsInGroup(TableName tableName, String group) throws IOException {
-    ProcedureTestingUtility.waitAllProcedures(
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
+    ProcedureTestingUtility
+      .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     RSGroupInfo groupInfo = rsGroupAdmin.getRSGroupInfo(group);
     master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName).forEach(region -> {
       Address regionOnServer = master.getAssignmentManager().getRegionStates()
-          .getRegionAssignments().get(region).getAddress();
+        .getRegionAssignments().get(region).getAddress();
       assertTrue(groupInfo.getServers().contains(regionOnServer));
     });
   }

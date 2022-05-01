@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
+
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import java.net.InetSocketAddress;
@@ -48,12 +49,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
-@Category({RPCTests.class, SmallTests.class})
+@Category({ RPCTests.class, SmallTests.class })
 public class TestCallRunner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCallRunner.class);
+    HBaseClassTestRule.forClass(TestCallRunner.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -84,15 +85,11 @@ public class TestCallRunner {
       cr.run();
     }, testName.getMethodName());
 
-    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      otelRule::getSpans, hasItem(allOf(
-        hasName(testName.getMethodName()),
-        hasEnded()))));
+    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
+      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
 
-    assertThat(otelRule.getSpans(), hasItem(allOf(
-      hasName(testName.getMethodName()),
-      hasStatusWithCode(StatusCode.OK),
-      hasEnded())));
+    assertThat(otelRule.getSpans(), hasItem(
+      allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 
   @Test
@@ -124,16 +121,12 @@ public class TestCallRunner {
     }, testName.getMethodName());
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
 
-    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      otelRule::getSpans, hasItem(allOf(
-      hasName(testName.getMethodName()),
-      hasEnded()))));
+    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
+      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
 
-    assertThat(otelRule.getSpans(), hasItem(allOf(
-      hasName(testName.getMethodName()),
-      hasStatusWithCode(StatusCode.OK),
-      hasEvents(hasItem(EventMatchers.hasName("Client disconnect detected"))),
-      hasEnded())));
+    assertThat(otelRule.getSpans(),
+      hasItem(allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.OK),
+        hasEvents(hasItem(EventMatchers.hasName("Client disconnect detected"))), hasEnded())));
   }
 
   @Test
@@ -155,18 +148,14 @@ public class TestCallRunner {
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
     Mockito.verify(mockMetrics).exception(Mockito.any(CallDroppedException.class));
 
-    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      otelRule::getSpans, hasItem(allOf(
-      hasName(testName.getMethodName()),
-      hasEnded()))));
+    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
+      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
 
-    assertThat(otelRule.getSpans(), hasItem(allOf(
-      hasName(testName.getMethodName()),
-      hasStatusWithCode(StatusCode.ERROR),
-      hasEvents(hasItem(allOf(
-        EventMatchers.hasName("exception"),
-        EventMatchers.hasAttributes(
-          containsEntry("exception.type", CallDroppedException.class.getName()))))),
-      hasEnded())));
+    assertThat(otelRule.getSpans(),
+      hasItem(allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.ERROR),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("exception"),
+          EventMatchers.hasAttributes(
+            containsEntry("exception.type", CallDroppedException.class.getName()))))),
+        hasEnded())));
   }
 }

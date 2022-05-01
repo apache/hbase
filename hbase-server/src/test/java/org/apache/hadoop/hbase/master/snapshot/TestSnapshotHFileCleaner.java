@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,12 +49,12 @@ import org.junit.rules.TestName;
 /**
  * Test that the snapshot hfile cleaner finds hfiles referenced in a snapshot
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSnapshotHFileCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotHFileCleaner.class);
+    HBaseClassTestRule.forClass(TestSnapshotHFileCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TABLE_NAME_STR = "testSnapshotManifest";
@@ -76,7 +76,6 @@ public class TestSnapshotHFileCleaner {
     fs = FileSystem.get(conf);
   }
 
-
   @AfterClass
   public static void cleanup() throws IOException {
     // cleanup
@@ -87,7 +86,8 @@ public class TestSnapshotHFileCleaner {
   public void testFindsSnapshotFilesWhenCleaning() throws IOException {
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     Path rootDir = CommonFSUtils.getRootDir(conf);
-    Path archivedHfileDir = new Path(TEST_UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path archivedHfileDir =
+      new Path(TEST_UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
     FileSystem fs = FileSystem.get(conf);
     SnapshotHFileCleaner cleaner = new SnapshotHFileCleaner();
@@ -118,9 +118,9 @@ public class TestSnapshotHFileCleaner {
 
   static class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     @Override
-    public Collection<String> filesUnderSnapshot(final FileSystem workingFs,
-      final Path snapshotDir) throws IOException {
-      Collection<String> files =  new HashSet<>();
+    public Collection<String> filesUnderSnapshot(final FileSystem workingFs, final Path snapshotDir)
+      throws IOException {
+      Collection<String> files = new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(conf, workingFs, snapshotDir));
       return files;
     }
@@ -132,16 +132,16 @@ public class TestSnapshotHFileCleaner {
    */
   @Test
   public void testCorruptedRegionManifest() throws IOException {
-    SnapshotTestingUtils.SnapshotMock
-        snapshotMock = new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
-    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    SnapshotTestingUtils.SnapshotMock snapshotMock =
+      new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV2(SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     builder.corruptOneRegionManifest();
 
     long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+      "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
       cache.getSnapshotsInProgress();
     } finally {
@@ -150,15 +150,15 @@ public class TestSnapshotHFileCleaner {
   }
 
   /**
-   * If there is a corrupted data manifest, it should throw out CorruptedSnapshotException,
-   * instead of an IOException
+   * If there is a corrupted data manifest, it should throw out CorruptedSnapshotException, instead
+   * of an IOException
    */
   @Test
   public void testCorruptedDataManifest() throws IOException {
-    SnapshotTestingUtils.SnapshotMock
-        snapshotMock = new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
-    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    SnapshotTestingUtils.SnapshotMock snapshotMock =
+      new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV2(SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     // consolidate to generate a data.manifest file
     builder.consolidate();
@@ -166,26 +166,27 @@ public class TestSnapshotHFileCleaner {
 
     long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+      "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
       cache.getSnapshotsInProgress();
     } finally {
-      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
-          TEST_UTIL.getConfiguration()), true);
+      fs.delete(
+        SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, TEST_UTIL.getConfiguration()),
+        true);
     }
   }
 
   @Test
   public void testMissedTmpSnapshot() throws IOException {
     SnapshotTestingUtils.SnapshotMock snapshotMock =
-        new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
-    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+      new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV2(SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     builder.missOneRegionSnapshotFile();
     long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+      "test-snapshot-file-cache-refresh", new SnapshotFiles());
     cache.getSnapshotsInProgress();
     assertTrue(fs.exists(builder.getSnapshotsDir()));
   }

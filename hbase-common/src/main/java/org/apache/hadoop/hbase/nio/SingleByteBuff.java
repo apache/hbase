@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -382,7 +382,7 @@ public class SingleByteBuff extends ByteBuff {
   public int write(FileChannel channel, long offset) throws IOException {
     checkRefCount();
     int total = 0;
-    while(buf.hasRemaining()) {
+    while (buf.hasRemaining()) {
       int len = channel.write(buf, offset);
       total += len;
       offset += len;

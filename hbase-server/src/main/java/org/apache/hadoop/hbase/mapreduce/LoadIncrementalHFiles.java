@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -49,7 +47,7 @@ public class LoadIncrementalHFiles extends org.apache.hadoop.hbase.tool.LoadIncr
   @Deprecated
   @InterfaceAudience.Public
   public static class LoadQueueItem
-      extends org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem {
+    extends org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem {
 
     public LoadQueueItem(byte[] family, Path hfilePath) {
       super(family, hfilePath);
@@ -61,7 +59,7 @@ public class LoadIncrementalHFiles extends org.apache.hadoop.hbase.tool.LoadIncr
   }
 
   public Map<LoadQueueItem, ByteBuffer> run(String dirPath, Map<byte[], List<Path>> map,
-      TableName tableName) throws IOException {
+    TableName tableName) throws IOException {
     Map<org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> originRet;
     if (dirPath != null) {
       originRet = run(dirPath, tableName);

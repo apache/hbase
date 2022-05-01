@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ public abstract class FilterInitializer {
   /**
    * Initialize a Filter to a FilterContainer.
    * @param container The filter container
-   * @param conf Configuration for run-time parameters
+   * @param conf      Configuration for run-time parameters
    */
   public abstract void initFilter(FilterContainer container, Configuration conf);
 }

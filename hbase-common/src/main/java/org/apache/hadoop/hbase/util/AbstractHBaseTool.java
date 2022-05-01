@@ -1,18 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -21,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
@@ -41,8 +41,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
- * Common base class used for HBase command-line tools. Simplifies workflow and
- * command-line argument parsing.
+ * Common base class used for HBase command-line tools. Simplifies workflow and command-line
+ * argument parsing.
  */
 @InterfaceAudience.Private
 public abstract class AbstractHBaseTool implements Tool {
@@ -52,8 +52,8 @@ public abstract class AbstractHBaseTool implements Tool {
   public static final String SHORT_HELP_OPTION = "h";
   public static final String LONG_HELP_OPTION = "help";
 
-  private static final Option HELP_OPTION = new Option("h", "help", false,
-      "Prints help for this tool.");
+  private static final Option HELP_OPTION =
+    new Option("h", "help", false, "Prints help for this tool.");
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractHBaseTool.class);
 
@@ -75,8 +75,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   /**
-   * Override this to add command-line options using {@link #addOptWithArg}
-   * and similar methods.
+   * Override this to add command-line options using {@link #addOptWithArg} and similar methods.
    */
   protected abstract void addOptions();
 
@@ -89,15 +88,14 @@ public abstract class AbstractHBaseTool implements Tool {
   protected abstract int doWork() throws Exception;
 
   /**
-   * For backward compatibility. DO NOT use it for new tools.
-   * We have options in existing tools which can't be ported to Apache CLI's {@link Option}.
-   * (because they don't pass validation, for e.g. "-copy-to". "-" means short name
-   * which doesn't allow '-' in name). This function is to allow tools to have, for time being,
-   * parameters which can't be parsed using {@link Option}.
+   * For backward compatibility. DO NOT use it for new tools. We have options in existing tools
+   * which can't be ported to Apache CLI's {@link Option}. (because they don't pass validation, for
+   * e.g. "-copy-to". "-" means short name which doesn't allow '-' in name). This function is to
+   * allow tools to have, for time being, parameters which can't be parsed using {@link Option}.
    * Overrides should consume all valid legacy arguments. If the param 'args' is not empty on
-   * return, it means there were invalid options, in which case we'll exit from the tool.
-   * Note that it's called before {@link #processOptions(CommandLine)}, which means new options'
-   * values will override old ones'.
+   * return, it means there were invalid options, in which case we'll exit from the tool. Note that
+   * it's called before {@link #processOptions(CommandLine)}, which means new options' values will
+   * override old ones'.
    */
   protected void processOldArgs(List<String> args) {
   }
@@ -188,7 +186,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   protected void printUsage(final String usageStr, final String usageHeader,
-      final String usageFooter) {
+    final String usageFooter) {
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.setWidth(120);
     helpFormatter.setOptionComparator(new OptionsOrderComparator());
@@ -271,8 +269,8 @@ public abstract class AbstractHBaseTool implements Tool {
   public static long parseLong(String s, long minValue, long maxValue) {
     long l = Long.parseLong(s);
     if (l < minValue || l > maxValue) {
-      throw new IllegalArgumentException("The value " + l
-          + " is out of range [" + minValue + ", " + maxValue + "]");
+      throw new IllegalArgumentException(
+        "The value " + l + " is out of range [" + minValue + ", " + maxValue + "]");
     }
     return l;
   }

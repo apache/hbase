@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This interface contains constants for configuration keys used
- * in the hbase http server code.
+ * This interface contains constants for configuration keys used in the hbase http server code.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -34,11 +33,9 @@ public interface ServerConfigurationKeys {
   public static final boolean HBASE_SSL_ENABLED_DEFAULT = false;
 
   /** Enable/Disable aliases serving from jetty */
-  public static final String HBASE_JETTY_LOGS_SERVE_ALIASES =
-      "hbase.jetty.logs.serve.aliases";
+  public static final String HBASE_JETTY_LOGS_SERVE_ALIASES = "hbase.jetty.logs.serve.aliases";
 
-  public static final boolean DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES =
-      true;
+  public static final boolean DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES = true;
 
   public static final String HBASE_HTTP_STATIC_USER = "hbase.http.staticuser.user";
 

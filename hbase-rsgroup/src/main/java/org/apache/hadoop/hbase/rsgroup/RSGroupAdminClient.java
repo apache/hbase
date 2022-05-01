@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -78,8 +76,8 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   public RSGroupInfo getRSGroupInfo(String groupName) throws IOException {
     try {
       GetRSGroupInfoResponse resp = stub.getRSGroupInfo(null,
-          GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build());
-      if(resp.hasRSGroupInfo()) {
+        GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build());
+      if (resp.hasRSGroupInfo()) {
         return RSGroupProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
@@ -90,8 +88,8 @@ public class RSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
-    GetRSGroupInfoOfTableRequest request = GetRSGroupInfoOfTableRequest.newBuilder().setTableName(
-        ProtobufUtil.toProtoTableName(tableName)).build();
+    GetRSGroupInfoOfTableRequest request = GetRSGroupInfoOfTableRequest.newBuilder()
+      .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
     try {
       GetRSGroupInfoOfTableResponse resp = stub.getRSGroupInfoOfTable(null, request);
       if (resp.hasRSGroupInfo()) {
@@ -106,16 +104,12 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   @Override
   public void moveServers(Set<Address> servers, String targetGroup) throws IOException {
     Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
-    for(Address el: servers) {
-      hostPorts.add(HBaseProtos.ServerName.newBuilder()
-        .setHostName(el.getHostname())
-        .setPort(el.getPort())
-        .build());
+    for (Address el : servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+        .setPort(el.getPort()).build());
     }
-    MoveServersRequest request = MoveServersRequest.newBuilder()
-            .setTargetGroup(targetGroup)
-            .addAllServers(hostPorts)
-            .build();
+    MoveServersRequest request =
+      MoveServersRequest.newBuilder().setTargetGroup(targetGroup).addAllServers(hostPorts).build();
     try {
       stub.moveServers(null, request);
     } catch (ServiceException e) {
@@ -126,7 +120,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   @Override
   public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
     MoveTablesRequest.Builder builder = MoveTablesRequest.newBuilder().setTargetGroup(targetGroup);
-    for(TableName tableName: tables) {
+    for (TableName tableName : tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException(tableName);
@@ -160,7 +154,8 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     try {
       RSGroupAdminProtos.BalanceRSGroupRequest req =
         RSGroupProtobufUtil.createBalanceRSGroupRequest(groupName, request);
@@ -173,10 +168,10 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   @Override
   public List<RSGroupInfo> listRSGroups() throws IOException {
     try {
-      List<RSGroupProtos.RSGroupInfo> resp = stub.listRSGroupInfos(null,
-          ListRSGroupInfosRequest.getDefaultInstance()).getRSGroupInfoList();
+      List<RSGroupProtos.RSGroupInfo> resp = stub
+        .listRSGroupInfos(null, ListRSGroupInfosRequest.getDefaultInstance()).getRSGroupInfoList();
       List<RSGroupInfo> result = new ArrayList<>(resp.size());
-      for(RSGroupProtos.RSGroupInfo entry : resp) {
+      for (RSGroupProtos.RSGroupInfo entry : resp) {
         result.add(RSGroupProtobufUtil.toGroupInfo(entry));
       }
       return result;
@@ -187,12 +182,9 @@ public class RSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException {
-    GetRSGroupInfoOfServerRequest request = GetRSGroupInfoOfServerRequest.newBuilder()
-            .setServer(HBaseProtos.ServerName.newBuilder()
-                .setHostName(hostPort.getHostname())
-                .setPort(hostPort.getPort())
-                .build())
-            .build();
+    GetRSGroupInfoOfServerRequest request =
+      GetRSGroupInfoOfServerRequest.newBuilder().setServer(HBaseProtos.ServerName.newBuilder()
+        .setHostName(hostPort.getHostname()).setPort(hostPort.getPort()).build()).build();
     try {
       GetRSGroupInfoOfServerResponse resp = stub.getRSGroupInfoOfServer(null, request);
       if (resp.hasRSGroupInfo()) {
@@ -206,16 +198,14 @@ public class RSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
-      throws IOException {
+    throws IOException {
     MoveServersAndTablesRequest.Builder builder =
-            MoveServersAndTablesRequest.newBuilder().setTargetGroup(targetGroup);
-    for(Address el: servers) {
-      builder.addServers(HBaseProtos.ServerName.newBuilder()
-              .setHostName(el.getHostname())
-              .setPort(el.getPort())
-              .build());
+      MoveServersAndTablesRequest.newBuilder().setTargetGroup(targetGroup);
+    for (Address el : servers) {
+      builder.addServers(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+        .setPort(el.getPort()).build());
     }
-    for(TableName tableName: tables) {
+    for (TableName tableName : tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException(tableName);
@@ -231,15 +221,12 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   @Override
   public void removeServers(Set<Address> servers) throws IOException {
     Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
-    for(Address el: servers) {
-      hostPorts.add(HBaseProtos.ServerName.newBuilder()
-          .setHostName(el.getHostname())
-          .setPort(el.getPort())
-          .build());
+    for (Address el : servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+        .setPort(el.getPort()).build());
     }
-    RemoveServersRequest request = RemoveServersRequest.newBuilder()
-        .addAllServers(hostPorts)
-        .build();
+    RemoveServersRequest request =
+      RemoveServersRequest.newBuilder().addAllServers(hostPorts).build();
     try {
       stub.removeServers(null, request);
     } catch (ServiceException e) {
@@ -249,8 +236,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public void renameRSGroup(String oldName, String newName) throws IOException {
-    RenameRSGroupRequest request = RenameRSGroupRequest.newBuilder()
-      .setOldRsgroupName(oldName)
+    RenameRSGroupRequest request = RenameRSGroupRequest.newBuilder().setOldRsgroupName(oldName)
       .setNewRsgroupName(newName).build();
     try {
       stub.renameRSGroup(null, request);
@@ -261,13 +247,12 @@ public class RSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
-      throws IOException {
-    UpdateRSGroupConfigRequest.Builder builder = UpdateRSGroupConfigRequest.newBuilder()
-        .setGroupName(groupName);
+    throws IOException {
+    UpdateRSGroupConfigRequest.Builder builder =
+      UpdateRSGroupConfigRequest.newBuilder().setGroupName(groupName);
     if (configuration != null) {
-      configuration.entrySet().forEach(e ->
-          builder.addConfiguration(NameStringPair.newBuilder().setName(e.getKey())
-              .setValue(e.getValue()).build()));
+      configuration.entrySet().forEach(e -> builder.addConfiguration(
+        NameStringPair.newBuilder().setName(e.getKey()).setValue(e.getValue()).build()));
     }
     try {
       stub.updateRSGroupConfig(null, builder.build());
@@ -282,10 +267,9 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     if (rsGroupInfo == null) {
       throw new IllegalArgumentException("RSGroup does not exist: " + groupName);
     }
-    ClusterMetrics status =
-      admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME));
-    List<ServerName> groupServers = status.getServersName().stream().filter(
-      s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
+    ClusterMetrics status = admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME));
+    List<ServerName> groupServers = status.getServersName().stream()
+      .filter(s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
     for (ServerName server : groupServers) {
       admin.updateConfiguration(server);
     }

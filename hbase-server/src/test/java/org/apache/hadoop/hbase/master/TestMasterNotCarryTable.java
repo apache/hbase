@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,12 +33,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterNotCarryTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterNotCarryTable.class);
+    HBaseClassTestRule.forClass(TestMasterNotCarryTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNotCarryTable.class);
 
@@ -49,7 +49,7 @@ public class TestMasterNotCarryTable {
   @BeforeClass
   public static void setUp() throws Exception {
     Configuration c = UTIL.getConfiguration();
-    // We use local filesystem.  Set it so it writes into the testdir.
+    // We use local filesystem. Set it so it writes into the testdir.
     CommonFSUtils.setRootDir(c, UTIL.getDataTestDir());
     UTIL.startMiniZKCluster();
     master = new HMaster(UTIL.getConfiguration());

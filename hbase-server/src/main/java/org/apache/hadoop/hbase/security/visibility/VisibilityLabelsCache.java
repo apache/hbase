@@ -26,16 +26,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,14 +74,11 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * Creates the singleton instance, if not yet present, and returns the same.
-   * @param watcher
-   * @param conf
-   * @return Singleton instance of VisibilityLabelsCache
-   * @throws IOException
+   * Creates the singleton instance, if not yet present, and returns the same. nn * @return
+   * Singleton instance of VisibilityLabelsCache n
    */
   public synchronized static VisibilityLabelsCache createAndGet(ZKWatcher watcher,
-      Configuration conf) throws IOException {
+    Configuration conf) throws IOException {
     // VisibilityLabelService#init() for different regions (in same RS) passes same instance of
     // watcher as all get the instance from RS.
     // watcher != instance.zkVisibilityWatcher.getWatcher() - This check is needed only in UTs with
@@ -96,10 +92,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * @return Singleton instance of VisibilityLabelsCache
-   * @throws IllegalStateException
-   *           when this is called before calling
-   *           {@link #createAndGet(ZKWatcher, Configuration)}
+   * @return Singleton instance of VisibilityLabelsCache n * when this is called before calling
+   *         {@link #createAndGet(ZKWatcher, Configuration)}
    */
   public static VisibilityLabelsCache get() {
     // By the time this method is called, the singleton instance of VisibilityLabelsCache should
@@ -239,7 +233,6 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * Returns the list of ordinals of labels associated with the user
-   *
    * @param user Not null value.
    * @return the list of ordinals
    */
@@ -254,10 +247,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * Returns the list of ordinals of labels associated with the groups
-   *
-   * @param groups
-   * @return the list of ordinals
+   * Returns the list of ordinals of labels associated with the groups n * @return the list of
+   * ordinals
    */
   public Set<Integer> getGroupAuthsAsOrdinals(String[] groups) {
     this.lock.readLock().lock();

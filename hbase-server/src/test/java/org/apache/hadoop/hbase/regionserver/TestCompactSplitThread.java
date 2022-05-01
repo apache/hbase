@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestCompactSplitThread {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactSplitThread.class);
+    HBaseClassTestRule.forClass(TestCompactSplitThread.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -59,8 +59,6 @@ public class TestCompactSplitThread {
   private static final int blockingStoreFiles = 3;
   private static Path rootDir;
   private static FileSystem fs;
-
-
 
   /**
    * Setup the config for the cluster
@@ -164,14 +162,14 @@ public class TestCompactSplitThread {
     TEST_UTIL.createTable(htd, new byte[][] { family }, null);
 
     // load the table
-    for (int i = 0; i < blockingStoreFiles + 1; i ++) {
+    for (int i = 0; i < blockingStoreFiles + 1; i++) {
       TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(tableName), family);
       TEST_UTIL.flush(tableName);
     }
 
     // Make sure that store file number is greater than blockingStoreFiles + 1
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
-    Collection<String> hfiles =  SnapshotTestingUtils.listHFileNames(fs, tableDir);
-    assert(hfiles.size() > blockingStoreFiles + 1);
+    Collection<String> hfiles = SnapshotTestingUtils.listHFileNames(fs, tableDir);
+    assert (hfiles.size() > blockingStoreFiles + 1);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestLockManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLockManager.class);
+    HBaseClassTestRule.forClass(TestLockManager.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -70,7 +70,7 @@ public class TestLockManager {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    conf.setBoolean("hbase.procedure.check.owner.set", false);  // since rpc user will be null
+    conf.setBoolean("hbase.procedure.check.owner.set", false); // since rpc user will be null
     conf.setInt(LockProcedure.LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF, LOCAL_LOCKS_TIMEOUT);
   }
 
@@ -80,7 +80,7 @@ public class TestLockManager {
     UTIL.startMiniCluster(1);
     masterServices = UTIL.getMiniHBaseCluster().getMaster();
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    UTIL.createTable(tableName, new byte[][]{"fam".getBytes()}, new byte[][] {"1".getBytes()});
+    UTIL.createTable(tableName, new byte[][] { "fam".getBytes() }, new byte[][] { "1".getBytes() });
     List<HRegionInfo> regions = UTIL.getAdmin().getTableRegions(tableName);
     assert regions.size() > 0;
     tableRegions = new HRegionInfo[regions.size()];
@@ -116,8 +116,8 @@ public class TestLockManager {
    */
   @Test
   public void testMasterLockAcquire() throws Exception {
-    LockManager.MasterLock lock = masterServices.getLockManager().createMasterLock(namespace,
-        LockType.EXCLUSIVE, "desc");
+    LockManager.MasterLock lock =
+      masterServices.getLockManager().createMasterLock(namespace, LockType.EXCLUSIVE, "desc");
     assertTrue(lock.tryAcquire(2000));
     assertTrue(lock.getProc().isLocked());
     lock.release();
@@ -129,12 +129,12 @@ public class TestLockManager {
    */
   @Test
   public void testMasterLockAcquireTimeout() throws Exception {
-    LockManager.MasterLock lock = masterServices.getLockManager().createMasterLock(
-        tableName, LockType.EXCLUSIVE, "desc");
-    LockManager.MasterLock lock2 = masterServices.getLockManager().createMasterLock(
-        tableName, LockType.EXCLUSIVE, "desc");
+    LockManager.MasterLock lock =
+      masterServices.getLockManager().createMasterLock(tableName, LockType.EXCLUSIVE, "desc");
+    LockManager.MasterLock lock2 =
+      masterServices.getLockManager().createMasterLock(tableName, LockType.EXCLUSIVE, "desc");
     assertTrue(lock.tryAcquire(2000));
-    assertFalse(lock2.tryAcquire(LOCAL_LOCKS_TIMEOUT/2));  // wait less than other lock's timeout
+    assertFalse(lock2.tryAcquire(LOCAL_LOCKS_TIMEOUT / 2)); // wait less than other lock's timeout
     assertEquals(null, lock2.getProc());
     lock.release();
     assertTrue(lock2.tryAcquire(2000));
@@ -147,12 +147,12 @@ public class TestLockManager {
    */
   @Test
   public void testMasterLockAcquireTimeoutRegionVsTableExclusive() throws Exception {
-    LockManager.MasterLock lock = masterServices.getLockManager().createMasterLock(
-        tableRegions, "desc");
-    LockManager.MasterLock lock2 = masterServices.getLockManager().createMasterLock(
-        tableName, LockType.EXCLUSIVE, "desc");
+    LockManager.MasterLock lock =
+      masterServices.getLockManager().createMasterLock(tableRegions, "desc");
+    LockManager.MasterLock lock2 =
+      masterServices.getLockManager().createMasterLock(tableName, LockType.EXCLUSIVE, "desc");
     assertTrue(lock.tryAcquire(2000));
-    assertFalse(lock2.tryAcquire(LOCAL_LOCKS_TIMEOUT/2));  // wait less than other lock's timeout
+    assertFalse(lock2.tryAcquire(LOCAL_LOCKS_TIMEOUT / 2)); // wait less than other lock's timeout
     assertEquals(null, lock2.getProc());
     lock.release();
     assertTrue(lock2.tryAcquire(2000));

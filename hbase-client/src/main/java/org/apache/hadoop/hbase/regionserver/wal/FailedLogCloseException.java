@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +18,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when we fail close of the write-ahead-log file.
- * Package private.  Only used inside this package.
+ * Thrown when we fail close of the write-ahead-log file. Package private. Only used inside this
+ * package.
  */
 @InterfaceAudience.Public
 public class FailedLogCloseException extends IOException {
@@ -35,7 +33,7 @@ public class FailedLogCloseException extends IOException {
   }
 
   /**
-   * @param msg
+   * n
    */
   public FailedLogCloseException(String msg) {
     super(msg);

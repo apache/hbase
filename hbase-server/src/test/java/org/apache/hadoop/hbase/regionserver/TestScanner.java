@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,43 +66,39 @@ import org.slf4j.LoggerFactory;
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestScanner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanner.class);
+    HBaseClassTestRule.forClass(TestScanner.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
-  private static final byte [][] COLS = { HConstants.CATALOG_FAMILY };
-  private static final byte [][] EXPLICIT_COLS = {
-    HConstants.REGIONINFO_QUALIFIER, HConstants.SERVER_QUALIFIER,
-      // TODO ryan
-      //HConstants.STARTCODE_QUALIFIER
-  };
+  private static final byte[] FIRST_ROW = HConstants.EMPTY_START_ROW;
+  private static final byte[][] COLS = { HConstants.CATALOG_FAMILY };
+  private static final byte[][] EXPLICIT_COLS =
+    { HConstants.REGIONINFO_QUALIFIER, HConstants.SERVER_QUALIFIER,
+    // TODO ryan
+    // HConstants.STARTCODE_QUALIFIER
+    };
 
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor(TableName.valueOf("testscanner"));
   static {
-    TESTTABLEDESC.addFamily(
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-            // Ten is an arbitrary number.  Keep versions to help debugging.
-            .setMaxVersions(10)
-            .setBlockCacheEnabled(false)
-            .setBlocksize(8 * 1024)
-    );
+    TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+      // Ten is an arbitrary number. Keep versions to help debugging.
+      .setMaxVersions(10).setBlockCacheEnabled(false).setBlocksize(8 * 1024));
   }
   /** HRegionInfo for root region */
-  public static final HRegionInfo REGION_INFO =
-    new HRegionInfo(TESTTABLEDESC.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
-    HConstants.EMPTY_BYTE_ARRAY);
+  public static final HRegionInfo REGION_INFO = new HRegionInfo(TESTTABLEDESC.getTableName(),
+    HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
 
-  private static final byte [] ROW_KEY = REGION_INFO.getRegionName();
+  private static final byte[] ROW_KEY = REGION_INFO.getRegionName();
 
   private static final long START_CODE = Long.MAX_VALUE;
 
@@ -119,7 +116,7 @@ public class TestScanner {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
     thirdRowBytes[START_KEY_BYTES.length - 1] =
-        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
+      (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
   }
 
@@ -128,8 +125,8 @@ public class TestScanner {
    */
   @Test
   public void testStopRow() throws Exception {
-    byte [] startrow = Bytes.toBytes("bbb");
-    byte [] stoprow = Bytes.toBytes("ccc");
+    byte[] startrow = Bytes.toBytes("bbb");
+    byte[] stoprow = Bytes.toBytes("ccc");
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
       HTestConst.addContent(this.region, HConstants.CATALOG_FAMILY);
@@ -156,7 +153,7 @@ public class TestScanner {
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
-          assertTrue(CellUtil.matchingRows(kv,  startrow));
+          assertTrue(CellUtil.matchingRows(kv, startrow));
           first = false;
         }
         count++;
@@ -178,8 +175,8 @@ public class TestScanner {
     while (hasMore) {
       hasMore = s.next(results);
       for (Cell kv : results) {
-        assertEquals((byte)'a', CellUtil.cloneRow(kv)[0]);
-        assertEquals((byte)'b', CellUtil.cloneRow(kv)[1]);
+        assertEquals((byte) 'a', CellUtil.cloneRow(kv)[0]);
+        assertEquals((byte) 'b', CellUtil.cloneRow(kv)[1]);
       }
       results.clear();
     }
@@ -206,7 +203,7 @@ public class TestScanner {
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
       HTestConst.addContent(this.region, HConstants.CATALOG_FAMILY);
-      byte [] prefix = Bytes.toBytes("ab");
+      byte[] prefix = Bytes.toBytes("ab");
       Filter newFilter = new PrefixFilter(prefix);
       Scan scan = new Scan();
       scan.setFilter(newFilter);
@@ -224,8 +221,8 @@ public class TestScanner {
   }
 
   /**
-   * Test that closing a scanner while a client is using it doesn't throw
-   * NPEs but instead a UnknownScannerException. HBASE-2503
+   * Test that closing a scanner while a client is using it doesn't throw NPEs but instead a
+   * UnknownScannerException. HBASE-2503
    */
   @Test
   public void testRaceBetweenClientAndTimeout() throws Exception {
@@ -249,7 +246,8 @@ public class TestScanner {
     }
   }
 
-  /** The test!
+  /**
+   * The test!
    */
   @Test
   public void testScanner() throws IOException {
@@ -262,7 +260,7 @@ public class TestScanner {
       Put put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
 
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          REGION_INFO.toByteArray());
+        REGION_INFO.toByteArray());
       table.put(put);
 
       // What we just committed is in the memstore. Verify that we can get
@@ -273,7 +271,7 @@ public class TestScanner {
 
       // Close and re-open
 
-      ((HRegion)region).close();
+      ((HRegion) region).close();
       region = HRegion.openHRegion(region, null);
       table = new RegionAsTable(region);
 
@@ -287,10 +285,9 @@ public class TestScanner {
       String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtility.randomFreePort();
 
       put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
-      put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-          Bytes.toBytes(address));
+      put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes.toBytes(address));
 
-//      put.add(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
+      // put.add(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
 
       table.put(put);
 
@@ -310,8 +307,8 @@ public class TestScanner {
 
       // Close and reopen
 
-      ((HRegion)region).close();
-      region = HRegion.openHRegion(region,null);
+      ((HRegion) region).close();
+      region = HRegion.openHRegion(region, null);
       table = new RegionAsTable(region);
 
       // Validate again
@@ -344,7 +341,7 @@ public class TestScanner {
 
       // Close and reopen
 
-      ((HRegion)this.region).close();
+      ((HRegion) this.region).close();
       this.region = HRegion.openHRegion(region, null);
       table = new RegionAsTable(this.region);
 
@@ -360,52 +357,50 @@ public class TestScanner {
   }
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
-  private void validateRegionInfo(byte [] regionBytes) throws IOException {
+  private void validateRegionInfo(byte[] regionBytes) throws IOException {
     HRegionInfo info = HRegionInfo.parseFromOrNull(regionBytes);
 
     assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
     assertEquals(0, info.getStartKey().length);
     assertEquals(0, info.getEndKey().length);
     assertEquals(0, Bytes.compareTo(info.getRegionName(), REGION_INFO.getRegionName()));
-    //assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
+    // assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
   }
 
   /** Use a scanner to get the region info and then validate the results */
-  private void scan(boolean validateStartcode, String serverName)
-      throws IOException {
+  private void scan(boolean validateStartcode, String serverName) throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
     List<Cell> results = new ArrayList<>();
-    byte [][][] scanColumns = {COLS, EXPLICIT_COLS};
-    for(int i = 0; i < scanColumns.length; i++) {
+    byte[][][] scanColumns = { COLS, EXPLICIT_COLS };
+    for (int i = 0; i < scanColumns.length; i++) {
       try {
         scan = new Scan(FIRST_ROW);
         for (int ii = 0; ii < EXPLICIT_COLS.length; ii++) {
-          scan.addColumn(COLS[0],  EXPLICIT_COLS[ii]);
+          scan.addColumn(COLS[0], EXPLICIT_COLS[ii]);
         }
         scanner = region.getScanner(scan);
         while (scanner.next(results)) {
-          assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
-          byte [] val = CellUtil.cloneValue(getColumn(results, HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
+          assertTrue(
+            hasColumn(results, HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+          byte[] val = CellUtil.cloneValue(
+            getColumn(results, HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
           validateRegionInfo(val);
-          if(validateStartcode) {
-//            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
-//                HConstants.STARTCODE_QUALIFIER));
-//            val = getColumn(results, HConstants.CATALOG_FAMILY,
-//                HConstants.STARTCODE_QUALIFIER).getValue();
+          if (validateStartcode) {
+            // assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
+            // HConstants.STARTCODE_QUALIFIER));
+            // val = getColumn(results, HConstants.CATALOG_FAMILY,
+            // HConstants.STARTCODE_QUALIFIER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             long startCode = Bytes.toLong(val);
             assertEquals(START_CODE, startCode);
           }
 
-          if(serverName != null) {
-            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
-                HConstants.SERVER_QUALIFIER));
-            val = CellUtil.cloneValue(getColumn(results, HConstants.CATALOG_FAMILY,
-                HConstants.SERVER_QUALIFIER));
+          if (serverName != null) {
+            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER));
+            val = CellUtil.cloneValue(
+              getColumn(results, HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER));
             assertNotNull(val);
             assertFalse(val.length == 0);
             String server = Bytes.toString(val);
@@ -415,16 +410,15 @@ public class TestScanner {
       } finally {
         InternalScanner s = scanner;
         scanner = null;
-        if(s != null) {
+        if (s != null) {
           s.close();
         }
       }
     }
   }
 
-  private boolean hasColumn(final List<Cell> kvs, final byte [] family,
-      final byte [] qualifier) {
-    for (Cell kv: kvs) {
+  private boolean hasColumn(final List<Cell> kvs, final byte[] family, final byte[] qualifier) {
+    for (Cell kv : kvs) {
       if (CellUtil.matchingFamily(kv, family) && CellUtil.matchingQualifier(kv, qualifier)) {
         return true;
       }
@@ -432,9 +426,8 @@ public class TestScanner {
     return false;
   }
 
-  private Cell getColumn(final List<Cell> kvs, final byte [] family,
-      final byte [] qualifier) {
-    for (Cell kv: kvs) {
+  private Cell getColumn(final List<Cell> kvs, final byte[] family, final byte[] qualifier) {
+    for (Cell kv : kvs) {
       if (CellUtil.matchingFamily(kv, family) && CellUtil.matchingQualifier(kv, qualifier)) {
         return kv;
       }
@@ -442,29 +435,26 @@ public class TestScanner {
     return null;
   }
 
-
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo(Table table) throws IOException {
     Get get = new Get(ROW_KEY);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     Result result = table.get(get);
-    byte [] bytes = result.value();
+    byte[] bytes = result.value();
     validateRegionInfo(bytes);
   }
 
   /**
-   * Tests to do a sync flush during the middle of a scan. This is testing the StoreScanner
-   * update readers code essentially.  This is not highly concurrent, since its all 1 thread.
-   * HBase-910.
+   * Tests to do a sync flush during the middle of a scan. This is testing the StoreScanner update
+   * readers code essentially. This is not highly concurrent, since its all 1 thread. HBase-910.
    */
   @Test
   public void testScanAndSyncFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-      LOG.info("Added: " +
-        HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " + HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+        Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, false)); // do a sync flush.
     } catch (Exception e) {
@@ -476,17 +466,16 @@ public class TestScanner {
   }
 
   /**
-   * Tests to do a concurrent flush (using a 2nd thread) while scanning.  This tests both
-   * the StoreScanner update readers and the transition from memstore -> snapshot -> store file.
+   * Tests to do a concurrent flush (using a 2nd thread) while scanning. This tests both the
+   * StoreScanner update readers and the transition from memstore -> snapshot -> store file.
    */
   @Test
   public void testScanAndRealConcurrentFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-      LOG.info("Added: " +
-        HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " + HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+        Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, true)); // do a true concurrent background thread flush
     } catch (Exception e) {
@@ -498,8 +487,7 @@ public class TestScanner {
   }
 
   /**
-   * Make sure scanner returns correct result when we run a major compaction
-   * with deletes.
+   * Make sure scanner returns correct result when we run a major compaction with deletes.
    */
   @Test
   @SuppressWarnings("deprecation")
@@ -509,10 +497,10 @@ public class TestScanner {
     Table hri = new RegionAsTable(region);
 
     try {
-      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
-          firstRowBytes, secondRowBytes);
-      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
-          firstRowBytes, secondRowBytes);
+      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,
+        secondRowBytes);
+      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes,
+        secondRowBytes);
 
       Delete dc = new Delete(firstRowBytes);
       /* delete column1 of firstRow */
@@ -520,10 +508,10 @@ public class TestScanner {
       region.delete(dc);
       region.flush(true);
 
-      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
-          secondRowBytes, thirdRowBytes);
-      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
-          secondRowBytes, thirdRowBytes);
+      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1), secondRowBytes,
+        thirdRowBytes);
+      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1), secondRowBytes,
+        thirdRowBytes);
       region.flush(true);
 
       InternalScanner s = region.getScanner(new Scan());
@@ -534,9 +522,8 @@ public class TestScanner {
       s.next(results);
 
       // make sure returns column2 of firstRow
-      assertTrue("result is not correct, keyValues : " + results,
-          results.size() == 1);
-      assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes)); 
+      assertTrue("result is not correct, keyValues : " + results, results.size() == 1);
+      assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
       results = new ArrayList<>();
@@ -552,19 +539,17 @@ public class TestScanner {
     }
   }
 
-
   /*
    * @param hri Region
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
-   * @return Count of rows found.
-   * @throws IOException
+   * @return Count of rows found. n
    */
   private int count(final Table countTable, final int flushIndex, boolean concurrent)
-      throws IOException {
+    throws IOException {
     LOG.info("Taking out counting scan");
     Scan scan = new Scan();
-    for (byte [] qualifier: EXPLICIT_COLS) {
+    for (byte[] qualifier : EXPLICIT_COLS) {
       scan.addColumn(HConstants.CATALOG_FAMILY, qualifier);
     }
     ResultScanner s = countTable.getScanner(scan);

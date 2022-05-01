@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,11 @@ public class TestZKLeaderManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKLeaderManager.class);
+    HBaseClassTestRule.forClass(TestZKLeaderManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKLeaderManager.class);
 
-  private static final String LEADER_ZNODE =
-      "/test/" + TestZKLeaderManager.class.getSimpleName();
+  private static final String LEADER_ZNODE = "/test/" + TestZKLeaderManager.class.getSimpleName();
 
   private static class MockAbortable implements Abortable {
     private boolean aborted;
@@ -60,7 +59,7 @@ public class TestZKLeaderManager {
     @Override
     public void abort(String why, Throwable e) {
       aborted = true;
-      LOG.error(HBaseMarkers.FATAL, "Aborting during test: "+why, e);
+      LOG.error(HBaseMarkers.FATAL, "Aborting during test: " + why, e);
       fail("Aborted during test: " + why);
     }
 
@@ -82,8 +81,7 @@ public class TestZKLeaderManager {
       setName("TestZKLeaderManager-leader-" + index);
       this.index = index;
       this.watcher = watcher;
-      this.zkLeader = new ZKLeaderManager(watcher, LEADER_ZNODE,
-          Bytes.toBytes(index), this);
+      this.zkLeader = new ZKLeaderManager(watcher, LEADER_ZNODE, Bytes.toBytes(index), this);
     }
 
     public boolean isMaster() {
@@ -108,7 +106,8 @@ public class TestZKLeaderManager {
         while (master.get() && !stopped) {
           try {
             Thread.sleep(10);
-          } catch (InterruptedException ignored) {}
+          } catch (InterruptedException ignored) {
+          }
         }
       }
     }
@@ -146,7 +145,7 @@ public class TestZKLeaderManager {
     int count = 5;
     CANDIDATES = new MockLeader[count];
     for (int i = 0; i < count; i++) {
-      ZKWatcher watcher = newZK(conf, "server"+i, abortable);
+      ZKWatcher watcher = newZK(conf, "server" + i, abortable);
       CANDIDATES[i] = new MockLeader(watcher, i);
       CANDIDATES[i].start();
     }
@@ -162,15 +161,14 @@ public class TestZKLeaderManager {
     MockLeader currentLeader = getCurrentLeader();
     // one leader should have been found
     assertNotNull("Leader should exist", currentLeader);
-    LOG.debug("Current leader index is "+currentLeader.getIndex());
+    LOG.debug("Current leader index is " + currentLeader.getIndex());
 
     byte[] znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     int storedIndex = Bytes.toInt(znodeData);
-    LOG.debug("Stored leader index in ZK is "+storedIndex);
-    assertEquals("Leader znode should match leader index",
-        currentLeader.getIndex(), storedIndex);
+    LOG.debug("Stored leader index in ZK is " + storedIndex);
+    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
 
     // force a leader transition
     currentLeader.abdicate();
@@ -179,15 +177,14 @@ public class TestZKLeaderManager {
     currentLeader = getCurrentLeader();
     // one leader should have been found
     assertNotNull("New leader should exist after abdication", currentLeader);
-    LOG.debug("New leader index is "+currentLeader.getIndex());
+    LOG.debug("New leader index is " + currentLeader.getIndex());
 
     znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     storedIndex = Bytes.toInt(znodeData);
-    LOG.debug("Stored leader index in ZK is "+storedIndex);
-    assertEquals("Leader znode should match leader index",
-        currentLeader.getIndex(), storedIndex);
+    LOG.debug("Stored leader index in ZK is " + storedIndex);
+    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
 
     // force another transition by stopping the current
     currentLeader.stop("Stopping for test");
@@ -196,15 +193,14 @@ public class TestZKLeaderManager {
     currentLeader = getCurrentLeader();
     // one leader should have been found
     assertNotNull("New leader should exist after stop", currentLeader);
-    LOG.debug("New leader index is "+currentLeader.getIndex());
+    LOG.debug("New leader index is " + currentLeader.getIndex());
 
     znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     storedIndex = Bytes.toInt(znodeData);
-    LOG.debug("Stored leader index in ZK is "+storedIndex);
-    assertEquals("Leader znode should match leader index",
-        currentLeader.getIndex(), storedIndex);
+    LOG.debug("Stored leader index in ZK is " + storedIndex);
+    assertEquals("Leader znode should match leader index", currentLeader.getIndex(), storedIndex);
 
     // with a second stop we can guarantee that a previous leader has resumed leading
     currentLeader.stop("Stopping for test");
@@ -223,7 +219,8 @@ public class TestZKLeaderManager {
         if (CANDIDATES[j].isMaster()) {
           // should only be one leader
           if (currentLeader != null) {
-            fail("Both candidate "+currentLeader.getIndex()+" and "+j+" claim to be leader!");
+            fail(
+              "Both candidate " + currentLeader.getIndex() + " and " + j + " claim to be leader!");
           }
           currentLeader = CANDIDATES[j];
         }
@@ -237,7 +234,7 @@ public class TestZKLeaderManager {
   }
 
   private static ZKWatcher newZK(Configuration conf, String name, Abortable abort)
-      throws Exception {
+    throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
     return new ZKWatcher(copy, name, abort);
   }

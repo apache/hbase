@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,7 +43,7 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompressedWALValueCompression.class);
+    HBaseClassTestRule.forClass(TestCompressedWALValueCompression.class);
 
   @Parameters
   public static List<Object[]> params() {
@@ -62,12 +61,10 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration()
-      .setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TEST_UTIL.getConfiguration()
-      .setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
-    TEST_UTIL.getConfiguration()
-      .set(CompressionContext.WAL_VALUE_COMPRESSION_TYPE, compression.getName());
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    TEST_UTIL.getConfiguration().setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
+    TEST_UTIL.getConfiguration().set(CompressionContext.WAL_VALUE_COMPRESSION_TYPE,
+      compression.getName());
     TEST_UTIL.startMiniDFSCluster(3);
   }
 

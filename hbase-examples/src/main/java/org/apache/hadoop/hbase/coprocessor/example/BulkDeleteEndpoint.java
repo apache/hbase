@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -56,16 +56,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Defines a protocol to delete data in bulk based on a scan. The scan can be range scan or with
- * conditions(filters) etc.This can be used to delete rows, column family(s), column qualifier(s)
- * or version(s) of columns.When delete type is FAMILY or COLUMN, which all family(s) or column(s)
+ * conditions(filters) etc.This can be used to delete rows, column family(s), column qualifier(s) or
+ * version(s) of columns.When delete type is FAMILY or COLUMN, which all family(s) or column(s)
  * getting deleted will be determined by the Scan. Scan need to select all the families/qualifiers
  * which need to be deleted.When delete type is VERSION, Which column(s) and version(s) to be
  * deleted will be determined by the Scan. Scan need to select all the qualifiers and its versions
  * which needs to be deleted.When a timestamp is passed only one version at that timestamp will be
  * deleted(even if Scan fetches many versions). When timestamp passed as null, all the versions
- * which the Scan selects will get deleted.
+ * which the Scan selects will get deleted. <br>
+ * Example:
  *
- * <br> Example: <pre><code>
+ * <pre>
+ * <code>
  * Scan scan = new Scan();
  * // set scan properties(rowkey range, filters, timerange etc).
  * HTable ht = ...;
@@ -92,7 +94,8 @@ import org.slf4j.LoggerFactory;
  * for (BulkDeleteResponse response : result.values()) {
  *   noOfDeletedRows += response.getRowsDeleted();
  * }
- * </code></pre>
+ * </code>
+ * </pre>
  */
 @InterfaceAudience.Private
 public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCoprocessor {
@@ -108,7 +111,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
 
   @Override
   public void delete(RpcController controller, BulkDeleteRequest request,
-      RpcCallback<BulkDeleteResponse> done) {
+    RpcCallback<BulkDeleteResponse> done) {
     long totalRowsDeleted = 0L;
     long totalVersionsDeleted = 0L;
     Region region = env.getRegion();
@@ -157,8 +160,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
             }
             totalRowsDeleted++;
             if (deleteType == DeleteType.VERSION) {
-              byte[] versionsDeleted = deleteArr[i].getAttribute(
-                  NO_OF_VERSIONS_TO_DELETE);
+              byte[] versionsDeleted = deleteArr[i].getAttribute(NO_OF_VERSIONS_TO_DELETE);
               if (versionsDeleted != null) {
                 totalVersionsDeleted += Bytes.toInt(versionsDeleted);
               }
@@ -188,8 +190,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
     done.run(result);
   }
 
-  private Delete createDeleteMutation(List<Cell> deleteRow, DeleteType deleteType,
-      Long timestamp) {
+  private Delete createDeleteMutation(List<Cell> deleteRow, DeleteType deleteType, Long timestamp) {
     long ts;
     if (timestamp == null) {
       ts = HConstants.LATEST_TIMESTAMP;
@@ -226,7 +227,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
       if (timestamp == null) {
         for (Cell kv : deleteRow) {
           delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-                  kv.getTimestamp());
+            kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {
@@ -261,7 +262,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
       }
       Column column = (Column) other;
       return Bytes.equals(this.family, column.family)
-          && Bytes.equals(this.qualifier, column.qualifier);
+        && Bytes.equals(this.qualifier, column.qualifier);
     }
 
     @Override

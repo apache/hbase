@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +28,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,21 +37,18 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.apache.zookeeper.server.DatadirCleanupManager;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
-import org.apache.zookeeper.server.DatadirCleanupManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
- * ZooKeeper, this class is used to start up QuorumPeer instances. By doing
- * things in here rather than directly calling to ZooKeeper, we have more
- * control over the process. This class uses {@link ZKConfig} to get settings
- * from the hbase-site.xml file.
+ * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage ZooKeeper, this class is
+ * used to start up QuorumPeer instances. By doing things in here rather than directly calling to
+ * ZooKeeper, we have more control over the process. This class uses {@link ZKConfig} to get
+ * settings from the hbase-site.xml file.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
@@ -75,8 +70,7 @@ public final class HQuorumPeer {
 
       // login the zookeeper server principal (if using security)
       ZKAuthentication.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
-        HConstants.ZK_SERVER_KERBEROS_PRINCIPAL,
-        zkConfig.getClientPortAddress().getHostName());
+        HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, zkConfig.getClientPortAddress().getHostName());
 
       runZKServer(zkConfig);
     } catch (Exception e) {
@@ -86,19 +80,16 @@ public final class HQuorumPeer {
   }
 
   private static void runZKServer(QuorumPeerConfig zkConfig)
-          throws IOException, AdminServer.AdminServerException {
+    throws IOException, AdminServer.AdminServerException {
 
     /**
-     *  Start and schedule the purge task
-     *  autopurge.purgeInterval is 0 by default,so in fact the DatadirCleanupManager task will not
-     *  be started to clean the logs by default. Config is recommended only for standalone server.
+     * Start and schedule the purge task autopurge.purgeInterval is 0 by default,so in fact the
+     * DatadirCleanupManager task will not be started to clean the logs by default. Config is
+     * recommended only for standalone server.
      */
 
-    DatadirCleanupManager purgeMgr=new DatadirCleanupManager(
-      zkConfig.getDataDir(),
-      zkConfig.getDataLogDir(),
-      zkConfig.getSnapRetainCount(),
-      zkConfig.getPurgeInterval());
+    DatadirCleanupManager purgeMgr = new DatadirCleanupManager(zkConfig.getDataDir(),
+      zkConfig.getDataLogDir(), zkConfig.getSnapRetainCount(), zkConfig.getPurgeInterval());
     purgeMgr.start();
 
     if (zkConfig.isDistributed()) {
@@ -120,23 +111,20 @@ public final class HQuorumPeer {
     long myId = -1;
 
     Configuration conf = HBaseConfiguration.create();
-    String myAddress = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase.zookeeper.dns.interface","default"),
-        conf.get("hbase.zookeeper.dns.nameserver","default")));
+    String myAddress = Strings.domainNamePointerToHostName(
+      DNS.getDefaultHost(conf.get("hbase.zookeeper.dns.interface", "default"),
+        conf.get("hbase.zookeeper.dns.nameserver", "default")));
 
     List<String> ips = new ArrayList<>();
 
     // Add what could be the best (configured) match
-    ips.add(myAddress.contains(".") ?
-        myAddress :
-        StringUtils.simpleHostname(myAddress));
+    ips.add(myAddress.contains(".") ? myAddress : StringUtils.simpleHostname(myAddress));
 
     // For all nics get all hostnames and IPs
     Enumeration<?> nics = NetworkInterface.getNetworkInterfaces();
-    while(nics.hasMoreElements()) {
-      Enumeration<?> rawAdrs =
-          ((NetworkInterface)nics.nextElement()).getInetAddresses();
-      while(rawAdrs.hasMoreElements()) {
+    while (nics.hasMoreElements()) {
+      Enumeration<?> rawAdrs = ((NetworkInterface) nics.nextElement()).getInetAddresses();
+      while (rawAdrs.hasMoreElements()) {
         InetAddress inet = (InetAddress) rawAdrs.nextElement();
         ips.add(StringUtils.simpleHostname(inet.getHostName()));
         ips.add(inet.getHostAddress());
@@ -160,11 +148,11 @@ public final class HQuorumPeer {
 
     // Set the max session timeout from the provided client-side timeout
     properties.setProperty("maxSessionTimeout", conf.get(HConstants.ZK_SESSION_TIMEOUT,
-            Integer.toString(HConstants.DEFAULT_ZK_SESSION_TIMEOUT)));
+      Integer.toString(HConstants.DEFAULT_ZK_SESSION_TIMEOUT)));
 
     if (myId == -1) {
-      throw new IOException("Could not find my address: " + myAddress +
-                            " in list of ZooKeeper quorum servers");
+      throw new IOException(
+        "Could not find my address: " + myAddress + " in list of ZooKeeper quorum servers");
     }
 
     String dataDirStr = properties.get("dataDir").toString().trim();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,15 +73,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ClientTests.class, MediumTests.class})
+@Category({ ClientTests.class, MediumTests.class })
 public class TestThriftHBaseServiceHandlerWithLabels {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithLabels.class);
+    HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithLabels.class);
 
-  private static final Logger LOG = LoggerFactory
-    .getLogger(TestThriftHBaseServiceHandlerWithLabels.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestThriftHBaseServiceHandlerWithLabels.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   // Static names for tables, columns, rows, and values
@@ -92,8 +92,8 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static HColumnDescriptor[] families = new HColumnDescriptor[] {
-      new HColumnDescriptor(familyAname).setMaxVersions(3),
+  private static HColumnDescriptor[] families =
+    new HColumnDescriptor[] { new HColumnDescriptor(familyAname).setMaxVersions(3),
       new HColumnDescriptor(familyBname).setMaxVersions(2) };
 
   private final static String TOPSECRET = "topsecret";
@@ -112,7 +112,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
       @Override
       public int compare(TColumnValue o1, TColumnValue o2) {
         return Bytes.compareTo(Bytes.add(o1.getFamily(), o1.getQualifier()),
-            Bytes.add(o2.getFamily(), o2.getQualifier()));
+          Bytes.add(o2.getFamily(), o2.getQualifier()));
       }
     };
     Collections.sort(columnValuesA, comparator);
@@ -130,11 +130,10 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   @BeforeClass
   public static void beforeClass() throws Exception {
 
-    SUPERUSER = User.createUserForTesting(conf, "admin",
-        new String[] { "supergroup" });
+    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     conf = UTIL.getConfiguration();
-    conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
-        SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
+    conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     UTIL.startMiniCluster(1);
@@ -142,8 +141,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
     Admin admin = UTIL.getAdmin();
-    HTableDescriptor tableDescriptor = new HTableDescriptor(
-        TableName.valueOf(tableAname));
+    HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
     for (HColumnDescriptor family : families) {
       tableDescriptor.addFamily(family);
     }
@@ -154,18 +152,18 @@ public class TestThriftHBaseServiceHandlerWithLabels {
 
   private static void createLabels() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityClient.addLabels(conn, labels);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
@@ -198,8 +196,8 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     ByteBuffer table = wrap(tableAname);
 
     // insert data
-    TColumnValue columnValue = new TColumnValue(wrap(familyAname),
-        wrap(qualifierAname), wrap(valueAname));
+    TColumnValue columnValue =
+      new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
     List<TColumnValue> columnValues = new ArrayList<>(1);
     columnValues.add(columnValue);
     for (int i = 0; i < 10; i++) {
@@ -207,8 +205,8 @@ public class TestThriftHBaseServiceHandlerWithLabels {
       if (i == 5) {
         put.setCellVisibility(new TCellVisibility().setExpression(PUBLIC));
       } else {
-        put.setCellVisibility(new TCellVisibility().setExpression("(" + SECRET
-            + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+        put.setCellVisibility(new TCellVisibility()
+          .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
       }
       handler.put(table, put);
     }
@@ -241,8 +239,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
       } else if (i == 5) {
         continue;
       } else {
-        assertArrayEquals(Bytes.toBytes("testScan" + (i + 1)), results.get(i)
-            .getRow());
+        assertArrayEquals(Bytes.toBytes("testScan" + (i + 1)), results.get(i).getRow());
       }
     }
 
@@ -265,18 +262,18 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     ByteBuffer table = wrap(tableAname);
 
     // insert data
-    TColumnValue columnValue = new TColumnValue(wrap(familyAname),
-        wrap(qualifierAname), wrap(valueAname));
+    TColumnValue columnValue =
+      new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
     List<TColumnValue> columnValues = new ArrayList<>(1);
     columnValues.add(columnValue);
     for (int i = 0; i < 20; i++) {
-      TPut put = new TPut(
-          wrap(Bytes.toBytes("testGetScannerResults" + pad(i, (byte) 2))), columnValues);
+      TPut put =
+        new TPut(wrap(Bytes.toBytes("testGetScannerResults" + pad(i, (byte) 2))), columnValues);
       if (i == 3) {
         put.setCellVisibility(new TCellVisibility().setExpression(PUBLIC));
       } else {
-        put.setCellVisibility(new TCellVisibility().setExpression("(" + SECRET
-            + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+        put.setCellVisibility(new TCellVisibility()
+          .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
       }
       handler.put(table, put);
     }
@@ -303,13 +300,13 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     assertEquals(4, results.size());
     for (int i = 0; i < 4; i++) {
       if (i < 3) {
-        assertArrayEquals(
-            Bytes.toBytes("testGetScannerResults" + pad(i, (byte) 2)), results.get(i).getRow());
+        assertArrayEquals(Bytes.toBytes("testGetScannerResults" + pad(i, (byte) 2)),
+          results.get(i).getRow());
       } else if (i == 3) {
         continue;
       } else {
-        assertArrayEquals(
-            Bytes.toBytes("testGetScannerResults" + pad(i + 1, (byte) 2)), results.get(i).getRow());
+        assertArrayEquals(Bytes.toBytes("testGetScannerResults" + pad(i + 1, (byte) 2)),
+          results.get(i).getRow());
       }
     }
   }
@@ -321,15 +318,13 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     ByteBuffer table = wrap(tableAname);
 
     List<TColumnValue> columnValues = new ArrayList<>(2);
-    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(valueAname)));
-    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname),
-        wrap(valueBname)));
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
     TPut put = new TPut(wrap(rowName), columnValues);
 
     put.setColumnValues(columnValues);
-    put.setCellVisibility(new TCellVisibility().setExpression("(" + SECRET + "|"
-        + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    put.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
     handler.put(table, put);
     TGet get = new TGet(wrap(rowName));
     TAuthorization tauth = new TAuthorization();
@@ -351,16 +346,15 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     ByteBuffer table = wrap(tableAname);
 
     List<TColumnValue> columnValues = new ArrayList<>(1);
-    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(Bytes.toBytes(1L))));
+    columnValues
+      .add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(Bytes.toBytes(1L))));
     TPut put = new TPut(wrap(rowName), columnValues);
     put.setColumnValues(columnValues);
     put.setCellVisibility(new TCellVisibility().setExpression(PRIVATE));
     handler.put(table, put);
 
     List<TColumnIncrement> incrementColumns = new ArrayList<>(1);
-    incrementColumns.add(new TColumnIncrement(wrap(familyAname),
-        wrap(qualifierAname)));
+    incrementColumns.add(new TColumnIncrement(wrap(familyAname), wrap(qualifierAname)));
     TIncrement increment = new TIncrement(wrap(rowName), incrementColumns);
     increment.setCellVisibility(new TCellVisibility().setExpression(SECRET));
     handler.increment(table, increment);
@@ -386,16 +380,15 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     ByteBuffer table = wrap(tableAname);
 
     List<TColumnValue> columnValues = new ArrayList<>(1);
-    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(Bytes.toBytes(1L))));
+    columnValues
+      .add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(Bytes.toBytes(1L))));
     TPut put = new TPut(wrap(rowName), columnValues);
     put.setColumnValues(columnValues);
     put.setCellVisibility(new TCellVisibility().setExpression(PRIVATE));
     handler.put(table, put);
 
     List<TColumnIncrement> incrementColumns = new ArrayList<>(1);
-    incrementColumns.add(new TColumnIncrement(wrap(familyAname),
-        wrap(qualifierAname)));
+    incrementColumns.add(new TColumnIncrement(wrap(familyAname), wrap(qualifierAname)));
     TIncrement increment = new TIncrement(wrap(rowName), incrementColumns);
     increment.setCellVisibility(new TCellVisibility().setExpression(SECRET));
     handler.increment(table, increment);
@@ -418,16 +411,15 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     byte[] v1 = Bytes.toBytes(1L);
     byte[] v2 = Bytes.toBytes(5L);
     List<TColumnValue> columnValues = new ArrayList<>(1);
-    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(Bytes.toBytes(1L))));
+    columnValues
+      .add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(Bytes.toBytes(1L))));
     TPut put = new TPut(wrap(rowName), columnValues);
     put.setColumnValues(columnValues);
     put.setCellVisibility(new TCellVisibility().setExpression(PRIVATE));
     handler.put(table, put);
 
     List<TColumnValue> appendColumns = new ArrayList<>(1);
-    appendColumns.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname),
-        wrap(v2)));
+    appendColumns.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(v2)));
     TAppend append = new TAppend(wrap(rowName), appendColumns);
     append.setCellVisibility(new TCellVisibility().setExpression(SECRET));
     handler.append(table, append);
@@ -447,12 +439,8 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   }
 
   /**
-   * Padding numbers to make comparison of sort order easier in a for loop
-   *
-   * @param n
-   *          The number to pad.
-   * @param pad
-   *          The length to pad up to.
+   * Padding numbers to make comparison of sort order easier in a for loop n * The number to pad. n
+   * * The length to pad up to.
    * @return The padded number as a string.
    */
   private String pad(int n, byte pad) {

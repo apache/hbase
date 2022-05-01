@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Collection;
@@ -23,10 +22,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,7 +52,7 @@ public class RSGroupInfo {
   RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
     this.name = name;
     this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
-    this.tables  = (tables  == null) ? new TreeSet<>() : new TreeSet<>(tables);
+    this.tables = (tables == null) ? new TreeSet<>() : new TreeSet<>(tables);
     configuration = new HashMap<>();
   }
 
@@ -74,14 +71,14 @@ public class RSGroupInfo {
   /**
    * Adds the given server to the group.
    */
-  public void addServer(Address hostPort){
+  public void addServer(Address hostPort) {
     servers.add(hostPort);
   }
 
   /**
    * Adds the given servers to the group.
    */
-  public void addAllServers(Collection<Address> hostPort){
+  public void addAllServers(Collection<Address> hostPort) {
     servers.addAll(hostPort);
   }
 
@@ -140,7 +137,7 @@ public class RSGroupInfo {
 
   /**
    * Setter for storing a configuration setting in {@link #configuration} map.
-   * @param key Config key.
+   * @param key   Config key.
    * @param value String value.
    */
   public void setConfiguration(String key, String value) {

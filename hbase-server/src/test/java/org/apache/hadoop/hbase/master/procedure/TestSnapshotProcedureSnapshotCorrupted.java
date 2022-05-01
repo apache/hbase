@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertFalse;
@@ -50,28 +49,25 @@ public class TestSnapshotProcedureSnapshotCorrupted extends TestSnapshotProcedur
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     SnapshotProcedure sp = new SnapshotProcedure(procExec.getEnvironment(), snapshotProto);
     procExec.submitProcedure(sp);
-    TEST_UTIL.waitFor(60000,
-      500,
+    TEST_UTIL.waitFor(60000, 500,
       () -> sp.getCurrentStateId() > SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT_VALUE);
     DistributedFileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
     Optional<HRegion> region = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
-      .filter(r -> !r.getStoreFileList(new byte[][] { CF }).isEmpty())
-      .findFirst();
+      .filter(r -> !r.getStoreFileList(new byte[][] { CF }).isEmpty()).findFirst();
     assertTrue(region.isPresent());
     region.get().getStoreFileList(new byte[][] { CF }).forEach(s -> {
-        try {
-          // delete real data files to trigger the CorruptedSnapshotException
-          dfs.delete(new Path(s), true);
-          LOG.info("delete {} to make snapshot corrupt", s);
-        } catch (Exception e) {
-          LOG.warn("Failed delete {} to make snapshot corrupt", s, e);
-        }
+      try {
+        // delete real data files to trigger the CorruptedSnapshotException
+        dfs.delete(new Path(s), true);
+        LOG.info("delete {} to make snapshot corrupt", s);
+      } catch (Exception e) {
+        LOG.warn("Failed delete {} to make snapshot corrupt", s, e);
       }
-    );
+    });
     TEST_UTIL.waitFor(60000, () -> sp.isFailed() && sp.isFinished());
     Configuration conf = master.getConfiguration();
-    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(
-      snapshotProto, CommonFSUtils.getRootDir(conf), conf);
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotProto,
+      CommonFSUtils.getRootDir(conf), conf);
     assertFalse(dfs.exists(workingDir));
     assertFalse(master.getSnapshotManager().isTakingSnapshot(TABLE_NAME));
     assertFalse(master.getSnapshotManager().isTakingAnySnapshot());

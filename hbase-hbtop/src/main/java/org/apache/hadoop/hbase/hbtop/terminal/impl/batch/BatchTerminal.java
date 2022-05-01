@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,11 +25,9 @@ import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 
 /**
- * An implementation of the {@link Terminal} interface for batch mode.
- *
- * This implementation produces output that's more sensible for collecting to a log file or for
- * parsing. There is no limit on the number of output lines, and the output doesn't contain any
- * escape sequences for formatting.
+ * An implementation of the {@link Terminal} interface for batch mode. This implementation produces
+ * output that's more sensible for collecting to a log file or for parsing. There is no limit on the
+ * number of output lines, and the output doesn't contain any escape sequences for formatting.
  */
 public class BatchTerminal implements Terminal {
 

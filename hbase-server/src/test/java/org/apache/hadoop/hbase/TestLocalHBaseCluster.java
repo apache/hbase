@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,38 +29,37 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestLocalHBaseCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLocalHBaseCluster.class);
+    HBaseClassTestRule.forClass(TestLocalHBaseCluster.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**
-   * Check that we can start a local HBase cluster specifying a custom master
-   * and regionserver class and then cast back to those classes; also that
-   * the cluster will launch and terminate cleanly. See HBASE-6011. Uses the
-   * HBaseTestingUtility facilities for creating a LocalHBaseCluster with
+   * Check that we can start a local HBase cluster specifying a custom master and regionserver class
+   * and then cast back to those classes; also that the cluster will launch and terminate cleanly.
+   * See HBASE-6011. Uses the HBaseTestingUtility facilities for creating a LocalHBaseCluster with
    * custom master and regionserver classes.
    */
   @Test
   public void testLocalHBaseCluster() throws Exception {
     // Set Master class and RegionServer class, and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .masterClass(MyHMaster.class).rsClass(MyHRegionServer.class).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().masterClass(MyHMaster.class)
+      .rsClass(MyHRegionServer.class).build();
     TEST_UTIL.startMiniCluster(option);
     // Can we cast back to our master class?
     try {
-      int val = ((MyHMaster)TEST_UTIL.getHBaseCluster().getMaster(0)).echo(42);
+      int val = ((MyHMaster) TEST_UTIL.getHBaseCluster().getMaster(0)).echo(42);
       assertEquals(42, val);
     } catch (ClassCastException e) {
       fail("Could not cast master to our class");
     }
     // Can we cast back to our regionserver class?
     try {
-      int val = ((MyHRegionServer)TEST_UTIL.getHBaseCluster().getRegionServer(0)).echo(42);
+      int val = ((MyHRegionServer) TEST_UTIL.getHBaseCluster().getRegionServer(0)).echo(42);
       assertEquals(42, val);
     } catch (ClassCastException e) {
       fail("Could not cast regionserver to our class");
@@ -69,12 +68,10 @@ public class TestLocalHBaseCluster {
   }
 
   /**
-   * A private master class similar to that used by HMasterCommandLine when
-   * running in local mode.
+   * A private master class similar to that used by HMasterCommandLine when running in local mode.
    */
   public static class MyHMaster extends HMaster {
-    public MyHMaster(Configuration conf) throws IOException, KeeperException,
-        InterruptedException {
+    public MyHMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 

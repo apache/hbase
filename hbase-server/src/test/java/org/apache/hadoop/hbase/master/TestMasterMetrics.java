@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,16 +52,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterMetrics.class);
+    HBaseClassTestRule.forClass(TestMasterMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetrics.class);
-  private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
-      .getInstance(MetricsAssertHelper.class);
+  private static final MetricsAssertHelper metricsHelper =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private static MiniHBaseCluster cluster;
   private static HMaster master;
@@ -71,9 +71,9 @@ public class TestMasterMetrics {
     public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
+
     @Override
-    protected void tryRegionServerReport(
-        long reportStartTime, long reportEndTime) {
+    protected void tryRegionServerReport(long reportStartTime, long reportEndTime) {
       // do nothing
     }
 
@@ -93,8 +93,7 @@ public class TestMasterMetrics {
                 serverManager.regionServerReport(sn,
                   ServerMetricsBuilder.newBuilder(sn).setVersionNumber(sm.getVersionNumber())
                     .setVersion(sm.getVersion())
-                      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime())
-                    .build());
+                    .setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
               } catch (YouAreDeadException e) {
                 throw new UncheckedIOException(e);
               }
@@ -111,8 +110,8 @@ public class TestMasterMetrics {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
     // Set master class and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .masterClass(MyMaster.class).build();
+    StartMiniClusterOption option =
+      StartMiniClusterOption.builder().masterClass(MyMaster.class).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -133,15 +132,14 @@ public class TestMasterMetrics {
     // sending fake request to master to see how metric value has changed
 
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
-        RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
+      RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
     ServerName serverName = cluster.getMaster(0).getServerName();
     request.setServer(ProtobufUtil.toServerName(serverName));
     long expectedRequestNumber = 10000;
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-                                           .setTotalNumberOfRequests(expectedRequestNumber)
-                                           .build();
+      .setTotalNumberOfRequests(expectedRequestNumber).build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -155,9 +153,8 @@ public class TestMasterMetrics {
 
     expectedRequestNumber = 15000;
 
-    sl = ClusterStatusProtos.ServerLoad.newBuilder()
-        .setTotalNumberOfRequests(expectedRequestNumber)
-        .build();
+    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber)
+      .build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -174,9 +171,9 @@ public class TestMasterMetrics {
   public void testDefaultMasterMetrics() throws Exception {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    metricsHelper.assertGauge( "numRegionServers",1 + (tablesOnMaster? 1: 0), masterSource);
-    metricsHelper.assertGauge( "averageLoad", 1 + (tablesOnMaster? 0: 1), masterSource);
-    metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
+    metricsHelper.assertGauge("numRegionServers", 1 + (tablesOnMaster ? 1 : 0), masterSource);
+    metricsHelper.assertGauge("averageLoad", 1 + (tablesOnMaster ? 0 : 1), masterSource);
+    metricsHelper.assertGauge("numDeadRegionServers", 0, masterSource);
     metricsHelper.assertGauge("numDrainingRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);
@@ -187,7 +184,7 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
 
-    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount",
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       0, masterSource);
   }
 

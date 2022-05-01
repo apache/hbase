@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,12 +57,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRegionLocationFinder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocationFinder.class);
+    HBaseClassTestRule.forClass(TestRegionLocationFinder.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
@@ -107,13 +108,13 @@ public class TestRegionLocationFinder {
         // get region's hdfs block distribution by region and RegionLocationFinder,
         // they should have same result
         HDFSBlocksDistribution blocksDistribution1 = region.getHDFSBlocksDistribution();
-        HDFSBlocksDistribution blocksDistribution2 = finder.getBlockDistribution(region
-            .getRegionInfo());
+        HDFSBlocksDistribution blocksDistribution2 =
+          finder.getBlockDistribution(region.getRegionInfo());
         assertEquals(blocksDistribution1.getUniqueBlocksTotalWeight(),
           blocksDistribution2.getUniqueBlocksTotalWeight());
         if (blocksDistribution1.getUniqueBlocksTotalWeight() != 0) {
-          assertEquals(blocksDistribution1.getTopHosts().get(0), blocksDistribution2.getTopHosts()
-              .get(0));
+          assertEquals(blocksDistribution1.getTopHosts().get(0),
+            blocksDistribution2.getTopHosts().get(0));
         }
       }
     }
@@ -143,8 +144,7 @@ public class TestRegionLocationFinder {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       for (HRegion region : server.getRegions(tableName)) {
-        List<ServerName> servers = finder.getTopBlockLocations(region
-            .getRegionInfo());
+        List<ServerName> servers = finder.getTopBlockLocations(region.getRegionInfo());
         // test table may have empty region
         if (region.getHDFSBlocksDistribution().getUniqueBlocksTotalWeight() == 0) {
           continue;
@@ -193,9 +193,8 @@ public class TestRegionLocationFinder {
     for (int i = 1; i <= numRegions; i++) {
       byte[] startKey = i == 0 ? HConstants.EMPTY_START_ROW : Bytes.toBytes(i);
       byte[] endKey = i == numRegions ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes(i + 1);
-      RegionInfo region =
-        RegionInfoBuilder.newBuilder(table.getTableName()).setStartKey(startKey).setEndKey(endKey)
-          .build();
+      RegionInfo region = RegionInfoBuilder.newBuilder(table.getTableName()).setStartKey(startKey)
+        .setEndKey(endKey).build();
       regions.add(region);
     }
 
@@ -216,8 +215,8 @@ public class TestRegionLocationFinder {
       cache.put(region, hbd);
     }
 
-    finder.setClusterMetrics(
-      getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
+    finder
+      .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
 
     // everything should be same as cached, because metrics were null before
     for (RegionInfo region : regions) {
@@ -225,8 +224,8 @@ public class TestRegionLocationFinder {
       assertSame(cache.get(region), hbd);
     }
 
-    finder.setClusterMetrics(
-      getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
+    finder
+      .setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
 
     // cache refresh happens in a background thread, so we need to wait for the value to
     // update before running assertions.

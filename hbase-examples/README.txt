@@ -64,7 +64,7 @@ Example code.
 
 ON PROTOBUFS
 This maven module has core protobuf definition files ('.protos') used by hbase
-examples. 
+examples.
 
 Generation of java files from protobuf .proto files included here is done as
 part of the build.

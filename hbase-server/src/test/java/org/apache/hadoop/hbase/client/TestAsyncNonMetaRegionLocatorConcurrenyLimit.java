@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,7 +90,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
         for (;;) {
@@ -109,7 +109,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
     @Override
     public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         CONCURRENCY.decrementAndGet();
       }
@@ -125,7 +125,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     ConnectionRegistry registry =
-        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), User.getCurrent());
     LOCATOR = new AsyncNonMetaRegionLocator(CONN);
@@ -142,7 +142,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
   }
 
   private void assertLocs(List<CompletableFuture<RegionLocations>> futures)
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     assertEquals(256, futures.size());
     for (int i = 0; i < futures.size(); i++) {
       HRegionLocation loc = futures.get(i).get().getDefaultRegionLocation();
@@ -161,11 +161,13 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
   @Test
   public void test() throws InterruptedException, ExecutionException {
-    List<CompletableFuture<RegionLocations>> futures =
-      IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
-        .map(r -> LOCATOR.getRegionLocations(TABLE_NAME, r, RegionReplicaUtil.DEFAULT_REPLICA_ID,
-          RegionLocateType.CURRENT, false))
-        .collect(toList());
+    List<
+      CompletableFuture<
+        RegionLocations>> futures =
+          IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
+            .map(r -> LOCATOR.getRegionLocations(TABLE_NAME, r,
+              RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false))
+            .collect(toList());
     assertLocs(futures);
     assertTrue("max allowed is " + MAX_ALLOWED + " but actual is " + MAX_CONCURRENCY.get(),
       MAX_CONCURRENCY.get() <= MAX_ALLOWED);

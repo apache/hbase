@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -64,91 +63,77 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
 
   /**
    * Increment the number of requests
-   *
    * @param inc Ammount to increment by
    */
   void incrementRequests(int inc);
 
   /**
    * Increment the number of successful Get requests.
-   *
    * @param inc Number of successful get requests.
    */
   void incrementSucessfulGetRequests(int inc);
 
   /**
    * Increment the number of successful Put requests.
-   *
    * @param inc Number of successful put requests.
    */
   void incrementSucessfulPutRequests(int inc);
 
   /**
-   * Increment the number of successful Delete requests.
-   *
-   * @param inc
+   * Increment the number of successful Delete requests. n
    */
   void incrementSucessfulDeleteRequests(int inc);
 
   /**
    * Increment the number of failed Put Requests.
-   *
    * @param inc Number of failed Put requests.
    */
   void incrementFailedPutRequests(int inc);
 
   /**
    * Increment the number of failed Get requests.
-   *
    * @param inc The number of failed Get Requests.
    */
   void incrementFailedGetRequests(int inc);
 
   /**
    * Increment the number of failed Delete requests.
-   *
    * @param inc The number of failed delete requests.
    */
   void incrementFailedDeleteRequests(int inc);
 
   /**
    * Increment the number of successful scan requests.
-   *
    * @param inc Number of successful scan requests.
    */
   void incrementSucessfulScanRequests(final int inc);
 
   /**
    * Increment the number failed scan requests.
-   *
    * @param inc Number of failed scan requests.
    */
   void incrementFailedScanRequests(final int inc);
 
   /**
    * Increment the number of successful append requests.
-   *
    * @param inc Number of successful append requests.
    */
   void incrementSucessfulAppendRequests(final int inc);
 
   /**
    * Increment the number failed append requests.
-   *
    * @param inc Number of failed append requests.
    */
   void incrementFailedAppendRequests(final int inc);
 
   /**
    * Increment the number of successful increment requests.
-   *
    * @param inc Number of successful increment requests.
    */
   void incrementSucessfulIncrementRequests(final int inc);
 
   /**
    * Increment the number failed increment requests.
-   *
    * @param inc Number of failed increment requests.
    */
   void incrementFailedIncrementRequests(final int inc);

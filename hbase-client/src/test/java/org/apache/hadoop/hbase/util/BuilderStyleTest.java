@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,32 +27,17 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Utility class to check whether a given class conforms to builder-style:
- * Foo foo =
- *   new Foo()
- *     .setBar(bar)
- *     .setBaz(baz)
+ * Utility class to check whether a given class conforms to builder-style: Foo foo = new Foo()
+ * .setBar(bar) .setBaz(baz)
  */
 public final class BuilderStyleTest {
-  private BuilderStyleTest() {}
+  private BuilderStyleTest() {
+  }
 
   /*
    * If a base class Foo declares a method setFoo() returning Foo, then the subclass should
-   * re-declare the methods overriding the return class with the subclass:
-   *
-   * class Foo {
-   *   Foo setFoo() {
-   *     ..
-   *     return this;
-   *   }
-   * }
-   *
-   * class Bar {
-   *   Bar setFoo() {
-   *     return (Bar) super.setFoo();
-   *   }
-   * }
-   *
+   * re-declare the methods overriding the return class with the subclass: class Foo { Foo setFoo()
+   * { .. return this; } } class Bar { Bar setFoo() { return (Bar) super.setFoo(); } }
    */
   @SuppressWarnings("rawtypes")
   public static void assertClassesAreBuilderStyle(Class... classes) {
@@ -66,13 +51,13 @@ public final class BuilderStyleTest {
         }
         Class<?> ret = method.getReturnType();
         if (method.getName().startsWith("set") || method.getName().startsWith("add")) {
-          System.out.println("  " + clazz.getSimpleName() + "." + method.getName() + "() : "
-            + ret.getSimpleName());
+          System.out.println(
+            "  " + clazz.getSimpleName() + "." + method.getName() + "() : " + ret.getSimpleName());
 
           // because of subclass / super class method overrides, we group the methods fitting the
           // same signatures because we get two method definitions from java reflection:
           // Mutation.setDurability() : Mutation
-          //   Delete.setDurability() : Mutation
+          // Delete.setDurability() : Mutation
           // Delete.setDurability() : Delete
           String sig = method.getName();
           for (Class<?> param : method.getParameterTypes()) {
@@ -97,8 +82,8 @@ public final class BuilderStyleTest {
           }
         }
         String errorMsg = "All setXXX()|addXX() methods in " + clazz.getSimpleName()
-            + " should return a " + clazz.getSimpleName() + " object in builder style. "
-            + "Offending method:" + e.getValue().iterator().next().getName();
+          + " should return a " + clazz.getSimpleName() + " object in builder style. "
+          + "Offending method:" + e.getValue().iterator().next().getName();
         assertTrue(errorMsg, found);
       }
     }

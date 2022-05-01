@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
@@ -34,13 +32,13 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -78,7 +76,7 @@ public class SnapshotFileCache implements Stoppable {
   interface SnapshotFileInspector {
     /**
      * Returns a collection of file names needed by the snapshot.
-     * @param fs {@link FileSystem} where snapshot mainifest files are stored
+     * @param fs          {@link FileSystem} where snapshot mainifest files are stored
      * @param snapshotDir {@link Path} to the snapshot directory to scan.
      * @return the collection of file names needed by the snapshot.
      */
@@ -104,19 +102,19 @@ public class SnapshotFileCache implements Stoppable {
    * filesystem.
    * <p>
    * Immediately loads the file cache.
-   * @param conf to extract the configured {@link FileSystem} where the snapshots are stored and
-   *          hbase root directory
-   * @param cacheRefreshPeriod frequency (ms) with which the cache should be refreshed
-   * @param cacheRefreshDelay amount of time to wait for the cache to be refreshed
-   * @param refreshThreadName name of the cache refresh thread
+   * @param conf                 to extract the configured {@link FileSystem} where the snapshots
+   *                             are stored and hbase root directory
+   * @param cacheRefreshPeriod   frequency (ms) with which the cache should be refreshed
+   * @param cacheRefreshDelay    amount of time to wait for the cache to be refreshed
+   * @param refreshThreadName    name of the cache refresh thread
    * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
    * @throws IOException if the {@link FileSystem} or root directory cannot be loaded
    */
   public SnapshotFileCache(Configuration conf, long cacheRefreshPeriod, long cacheRefreshDelay,
     String refreshThreadName, SnapshotFileInspector inspectSnapshotFiles) throws IOException {
     this(CommonFSUtils.getCurrentFileSystem(conf), CommonFSUtils.getRootDir(conf),
-      SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf).
-        getFileSystem(conf),
+      SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf)
+        .getFileSystem(conf),
       SnapshotDescriptionUtils.getWorkingSnapshotDir(CommonFSUtils.getRootDir(conf), conf),
       cacheRefreshPeriod, cacheRefreshDelay, refreshThreadName, inspectSnapshotFiles);
   }
@@ -124,13 +122,14 @@ public class SnapshotFileCache implements Stoppable {
   /**
    * Create a snapshot file cache for all snapshots under the specified [root]/.snapshot on the
    * filesystem
-   * @param fs {@link FileSystem} where the snapshots are stored
-   * @param rootDir hbase root directory
-   * @param workingFs {@link FileSystem} where ongoing snapshot mainifest files are stored
-   * @param workingDir Location to store ongoing snapshot manifest files
-   * @param cacheRefreshPeriod period (ms) with which the cache should be refreshed
-   * @param cacheRefreshDelay amount of time to wait for the cache to be refreshed
-   * @param refreshThreadName name of the cache refresh thread
+   * @param fs                   {@link FileSystem} where the snapshots are stored
+   * @param rootDir              hbase root directory
+   * @param workingFs            {@link FileSystem} where ongoing snapshot mainifest files are
+   *                             stored
+   * @param workingDir           Location to store ongoing snapshot manifest files
+   * @param cacheRefreshPeriod   period (ms) with which the cache should be refreshed
+   * @param cacheRefreshDelay    amount of time to wait for the cache to be refreshed
+   * @param refreshThreadName    name of the cache refresh thread
    * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
    */
   public SnapshotFileCache(FileSystem fs, Path rootDir, FileSystem workingFs, Path workingDir,
@@ -177,7 +176,7 @@ public class SnapshotFileCache implements Stoppable {
    * <tt>true</tt>, even if it is no longer present (false positive). However, if the file never was
    * on the filesystem, we will never find it and always return <tt>false</tt>.
    * @param files file to check, NOTE: Relies that files are loaded from hdfs before method is
-   *          called (NOT LAZY)
+   *              called (NOT LAZY)
    * @return <tt>unReferencedFiles</tt> the collection of files that do not have snapshot references
    * @throws IOException if there is an unexpected error reaching the filesystem.
    */
@@ -185,7 +184,7 @@ public class SnapshotFileCache implements Stoppable {
   // is an illegal access to the cache. Really we could do a mutex-guarded pointer swap on the
   // cache, but that seems overkill at the moment and isn't necessarily a bottleneck.
   public Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
-      final SnapshotManager snapshotManager) throws IOException {
+    final SnapshotManager snapshotManager) throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
     boolean refreshed = false;
@@ -196,8 +195,8 @@ public class SnapshotFileCache implements Stoppable {
     if (lock == null || lock.tryLock()) {
       try {
         if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
-          LOG.warn("Not checking unreferenced files since snapshot is running, it will " +
-            "skip to clean the HFiles this time");
+          LOG.warn("Not checking unreferenced files since snapshot is running, it will "
+            + "skip to clean the HFiles this time");
           return unReferencedFiles;
         }
         ImmutableSet<String> currentCache = cache;
@@ -262,8 +261,8 @@ public class SnapshotFileCache implements Stoppable {
       // that new snapshot, even though it has the same name as the files referenced have
       // probably changed.
       if (files == null || files.hasBeenModified(snapshotDir.getModificationTime())) {
-        Collection<String> storedFiles = fileInspector.filesUnderSnapshot(fs,
-          snapshotDir.getPath());
+        Collection<String> storedFiles =
+          fileInspector.filesUnderSnapshot(fs, snapshotDir.getPath());
         files = new SnapshotDirectoryInfo(snapshotDir.getModificationTime(), storedFiles);
       }
       // add all the files to cache
@@ -279,14 +278,14 @@ public class SnapshotFileCache implements Stoppable {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
 
-    FileStatus[] snapshotsInProgress = CommonFSUtils.listStatus(this.workingFs,
-      this.workingSnapshotDir);
+    FileStatus[] snapshotsInProgress =
+      CommonFSUtils.listStatus(this.workingFs, this.workingSnapshotDir);
 
     if (!ArrayUtils.isEmpty(snapshotsInProgress)) {
       for (FileStatus snapshot : snapshotsInProgress) {
         try {
-          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(workingFs,
-            snapshot.getPath()));
+          snapshotInProgress
+            .addAll(fileInspector.filesUnderSnapshot(workingFs, snapshot.getPath()));
         } catch (CorruptedSnapshotException cse) {
           LOG.info("Corrupted in-progress snapshot file exception, ignored.", cse);
         }

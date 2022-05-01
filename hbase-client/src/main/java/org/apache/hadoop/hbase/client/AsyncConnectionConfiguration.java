@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PE
 import static org.apache.hadoop.hbase.HConstants.HBASE_META_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY;
+
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,13 +35,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 class AsyncConnectionConfiguration {
 
   /**
-   * Configure the number of failures after which the client will start logging. A few failures
-   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
-   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
-   * this stage.
+   * Configure the number of failures after which the client will start logging. A few failures is
+   * fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at this
+   * stage.
    */
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
-      "hbase.client.start.log.errors.counter";
+    "hbase.client.start.log.errors.counter";
   public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   private final long metaOperationTimeoutNs;
@@ -106,28 +107,25 @@ class AsyncConnectionConfiguration {
     this.maxRetries = connectionConf.getRetriesNumber();
 
     // fields from connection configuration that need to be converted to nanos
-    this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      connectionConf.getMetaOperationTimeout());
+    this.metaOperationTimeoutNs =
+      TimeUnit.MILLISECONDS.toNanos(connectionConf.getMetaOperationTimeout());
     this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getOperationTimeout());
     this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getRpcTimeout());
-    this.readRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY,
-        connectionConf.getReadRpcTimeout()));
-    this.writeRpcTimeoutNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY,
-        connectionConf.getWriteRpcTimeout()));
+    this.readRpcTimeoutNs = TimeUnit.MILLISECONDS
+      .toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, connectionConf.getReadRpcTimeout()));
+    this.writeRpcTimeoutNs = TimeUnit.MILLISECONDS
+      .toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, connectionConf.getWriteRpcTimeout()));
     this.pauseNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillis());
-    this.pauseNsForServerOverloaded = TimeUnit.MILLISECONDS.toNanos(
-      connectionConf.getPauseMillisForServerOverloaded());
-    this.primaryCallTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
-      connectionConf.getPrimaryCallTimeoutMicroSecond());
-    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
-      connectionConf.getReplicaCallTimeoutMicroSecondScan());
+    this.pauseNsForServerOverloaded =
+      TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillisForServerOverloaded());
+    this.primaryCallTimeoutNs =
+      TimeUnit.MICROSECONDS.toNanos(connectionConf.getPrimaryCallTimeoutMicroSecond());
+    this.primaryScanTimeoutNs =
+      TimeUnit.MICROSECONDS.toNanos(connectionConf.getReplicaCallTimeoutMicroSecondScan());
     this.primaryMetaScanTimeoutNs =
       TimeUnit.MICROSECONDS.toNanos(connectionConf.getMetaReplicaCallTimeoutMicroSecondScan());
-    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      conf.getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-        DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
+    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf
+      .getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
 
     // fields not in connection configuration
     this.startLogErrorsCnt =

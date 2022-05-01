@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,31 +24,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Constructs a {@link ReplicationSourceInterface}
- * Note, not used to create specialized ReplicationSources
+ * Constructs a {@link ReplicationSourceInterface} Note, not used to create specialized
+ * ReplicationSources
  * @see CatalogReplicationSource
  */
 @InterfaceAudience.Private
 public final class ReplicationSourceFactory {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
 
-  private ReplicationSourceFactory() {}
+  private ReplicationSourceFactory() {
+  }
 
   static ReplicationSourceInterface create(Configuration conf, String queueId) {
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
     boolean isQueueRecovered = replicationQueueInfo.isQueueRecovered();
     ReplicationSourceInterface src;
     try {
-      String defaultReplicationSourceImpl =
-          isQueueRecovered ? RecoveredReplicationSource.class.getCanonicalName()
-              : ReplicationSource.class.getCanonicalName();
+      String defaultReplicationSourceImpl = isQueueRecovered
+        ? RecoveredReplicationSource.class.getCanonicalName()
+        : ReplicationSource.class.getCanonicalName();
       Class<?> c = Class.forName(
         conf.get("replication.replicationsource.implementation", defaultReplicationSourceImpl));
       src = c.asSubclass(ReplicationSourceInterface.class).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.warn("Passed replication source implementation throws errors, "
-          + "defaulting to ReplicationSource",
-        e);
+        + "defaulting to ReplicationSource", e);
       src = isQueueRecovered ? new RecoveredReplicationSource() : new ReplicationSource();
     }
     return src;

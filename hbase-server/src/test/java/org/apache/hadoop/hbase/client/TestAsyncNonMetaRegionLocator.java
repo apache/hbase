@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,8 +102,9 @@ public class TestAsyncNonMetaRegionLocator {
     admin.balancerSwitch(false, true);
     // Enable hbase:meta replication.
     HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, NUM_OF_META_REPLICA);
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
-      .getRegions(TableName.META_TABLE_NAME).size() >= NUM_OF_META_REPLICA);
+    TEST_UTIL.waitFor(30000,
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
+          >= NUM_OF_META_REPLICA);
 
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
@@ -288,8 +289,9 @@ public class TestAsyncNonMetaRegionLocator {
       .get();
 
     TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()), newServerName);
-    while (!TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName()
-      .equals(newServerName)) {
+    while (
+      !TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName().equals(newServerName)
+    ) {
       Thread.sleep(100);
     }
     // Should be same as it is in cache
@@ -464,13 +466,13 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testCacheLocationWhenGetAllLocations() throws Exception {
     createMultiRegionTable();
-    AsyncConnectionImpl conn = (AsyncConnectionImpl)
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     conn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
     List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
     for (RegionInfo region : regions) {
-      assertNotNull(conn.getLocator().getNonMetaRegionLocator()
-        .getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+      assertNotNull(conn.getLocator().getNonMetaRegionLocator().getRegionLocationInCache(TABLE_NAME,
+        region.getStartKey()));
     }
   }
 }

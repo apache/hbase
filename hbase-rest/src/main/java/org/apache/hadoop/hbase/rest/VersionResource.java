@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -55,8 +53,7 @@ public class VersionResource extends ResourceBase {
   }
 
   /**
-   * Constructor
-   * @throws IOException
+   * Constructor n
    */
   public VersionResource() throws IOException {
     super();
@@ -69,10 +66,9 @@ public class VersionResource extends ResourceBase {
    * @return a response for a version request
    */
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response get(final @Context ServletContext context,
-      final @Context UriInfo uriInfo) {
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF })
+  public Response get(final @Context ServletContext context, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
@@ -87,8 +83,7 @@ public class VersionResource extends ResourceBase {
    * Dispatch to StorageClusterVersionResource
    */
   @Path("cluster")
-  public StorageClusterVersionResource getClusterVersionResource()
-      throws IOException {
+  public StorageClusterVersionResource getClusterVersionResource() throws IOException {
     return new StorageClusterVersionResource();
   }
 

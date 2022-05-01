@@ -32,7 +32,7 @@ options:
    -h          Show this message
    -c          Run 'mvn clean' before running the tests
    -f FILE     Run the additional tests listed in the FILE
-   -u          Only run unit tests. Default is to run 
+   -u          Only run unit tests. Default is to run
                unit and integration tests
    -n N        Run each test N times. Default = 1.
    -s N        Print N slowest tests
@@ -92,7 +92,7 @@ do
         r)
             server=1
             ;;
-	 ?) 
+	 ?)
 	     usage
 	     exit 1
      esac
@@ -175,7 +175,7 @@ done
 
 # Print a report of the slowest running tests
 if [ ! -z $showSlowest ]; then
-    
+
     testNameIdx=0
     for (( i = 0; i < ${#test[@]}; i++ ))
     do

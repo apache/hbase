@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.http.QueryStringEncoder;
 
@@ -55,26 +56,26 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.http.QueryStringEncode
  * </p>
  * <p>
  * <b>Interface</b>. This class's intended consumer is {@code table.jsp}. As such, it's primary
- * interface is the active {@link HttpServletRequest}, from which it uses the {@code scan_*}
- * request parameters. This class supports paging through an optionally filtered view of the
- * contents of {@code hbase:meta}. Those filters and the pagination offset are specified via these
- * request parameters. It provides helper methods for constructing pagination links.
+ * interface is the active {@link HttpServletRequest}, from which it uses the {@code scan_*} request
+ * parameters. This class supports paging through an optionally filtered view of the contents of
+ * {@code hbase:meta}. Those filters and the pagination offset are specified via these request
+ * parameters. It provides helper methods for constructing pagination links.
  * <ul>
- *   <li>{@value #NAME_PARAM} - the name of the table requested. The only table of our concern here
- *   is {@code hbase:meta}; any other value is effectively ignored by the giant conditional in the
- *   jsp.</li>
- *   <li>{@value #SCAN_LIMIT_PARAM} - specifies a limit on the number of region (replicas) rendered
- *   on the by the table in a single request -- a limit on page size. This corresponds to the
- *   number of {@link RegionReplicaInfo} objects produced by {@link Results#iterator()}. When a
- *   value for {@code scan_limit} is invalid or not specified, the default value of
- *   {@value #SCAN_LIMIT_DEFAULT} is used. In order to avoid excessive resource consumption, a
- *   maximum value of {@value #SCAN_LIMIT_MAX} is enforced.</li>
- *   <li>{@value #SCAN_REGION_STATE_PARAM} - an optional filter on {@link RegionState}.</li>
- *   <li>{@value #SCAN_START_PARAM} - specifies the rowkey at which a scan should start. For usage
- *   details, see the below section on <b>Pagination</b>.</li>
- *   <li>{@value #SCAN_TABLE_PARAM} - specifies a filter on the values returned, limiting them to
- *   regions from a specified table. This parameter is implemented as a prefix filter on the
- *   {@link Scan}, so in effect it can be used for simple namespace and multi-table matches.</li>
+ * <li>{@value #NAME_PARAM} - the name of the table requested. The only table of our concern here is
+ * {@code hbase:meta}; any other value is effectively ignored by the giant conditional in the
+ * jsp.</li>
+ * <li>{@value #SCAN_LIMIT_PARAM} - specifies a limit on the number of region (replicas) rendered on
+ * the by the table in a single request -- a limit on page size. This corresponds to the number of
+ * {@link RegionReplicaInfo} objects produced by {@link Results#iterator()}. When a value for
+ * {@code scan_limit} is invalid or not specified, the default value of {@value #SCAN_LIMIT_DEFAULT}
+ * is used. In order to avoid excessive resource consumption, a maximum value of
+ * {@value #SCAN_LIMIT_MAX} is enforced.</li>
+ * <li>{@value #SCAN_REGION_STATE_PARAM} - an optional filter on {@link RegionState}.</li>
+ * <li>{@value #SCAN_START_PARAM} - specifies the rowkey at which a scan should start. For usage
+ * details, see the below section on <b>Pagination</b>.</li>
+ * <li>{@value #SCAN_TABLE_PARAM} - specifies a filter on the values returned, limiting them to
+ * regions from a specified table. This parameter is implemented as a prefix filter on the
+ * {@link Scan}, so in effect it can be used for simple namespace and multi-table matches.</li>
  * </ul>
  * </p>
  * <p>
@@ -83,8 +84,8 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.http.QueryStringEncode
  * {@link RegionReplicaInfo} instances, each of which represents a region or region replica. Helper
  * methods are provided for building page navigation controls preserving the user's selected filter
  * set: {@link #buildFirstPageUrl()}, {@link #buildNextPageUrl(byte[])}. Pagination is implemented
- * using a simple offset + limit system. Offset is provided by the {@value #SCAN_START_PARAM},
- * limit via {@value #SCAN_LIMIT_PARAM}. Under the hood, the {@link Scan} is constructed with
+ * using a simple offset + limit system. Offset is provided by the {@value #SCAN_START_PARAM}, limit
+ * via {@value #SCAN_LIMIT_PARAM}. Under the hood, the {@link Scan} is constructed with
  * {@link Scan#setMaxResultSize(long)} set to ({@value SCAN_LIMIT_PARAM} +1), while the
  * {@link Results} {@link Iterator} honors {@value #SCAN_LIMIT_PARAM}. The +1 allows the caller to
  * know if a "next page" is available via {@link Results#hasMoreResults()}. Note that this
@@ -94,7 +95,7 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.http.QueryStringEncode
  * <p>
  * <b>Error Messages</b>. Any time there's an error parsing user input, a message will be populated
  * in {@link #getErrorMessages()}. Any fields which produce an error will have their filter values
- * set to the default, except for a value of {@value  #SCAN_LIMIT_PARAM} that exceeds
+ * set to the default, except for a value of {@value #SCAN_LIMIT_PARAM} that exceeds
  * {@value #SCAN_LIMIT_MAX}, in which case {@value #SCAN_LIMIT_MAX} is used.
  * </p>
  */
@@ -162,11 +163,8 @@ public class MetaBrowser {
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("scanStart", scanStart)
-      .append("scanLimit", scanLimit)
-      .append("scanTable", scanTable)
-      .append("scanRegionState", scanRegionState)
-      .toString();
+      .append("scanStart", scanStart).append("scanLimit", scanLimit).append("scanTable", scanTable)
+      .append("scanRegionState", scanRegionState).toString();
   }
 
   private static String resolveName(final HttpServletRequest request) {
@@ -243,9 +241,7 @@ public class MetaBrowser {
   }
 
   private static Filter buildScanRegionStateFilter(final RegionState.State state) {
-    return new SingleColumnValueFilter(
-      HConstants.CATALOG_FAMILY,
-      HConstants.STATE_QUALIFIER,
+    return new SingleColumnValueFilter(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
       CompareOperator.EQUAL,
       // use the same serialization strategy as found in MetaTableAccessor#addRegionStateToPut
       Bytes.toBytes(state.name()));
@@ -270,9 +266,7 @@ public class MetaBrowser {
   }
 
   private Scan buildScan() {
-    final Scan metaScan = new Scan()
-      .addFamily(HConstants.CATALOG_FAMILY)
-      .readVersions(1)
+    final Scan metaScan = new Scan().addFamily(HConstants.CATALOG_FAMILY).readVersions(1)
       .setLimit((scanLimit != null ? scanLimit : SCAN_LIMIT_DEFAULT) + 1);
     if (scanStart != null) {
       metaScan.withStartRow(scanStart, false);
@@ -295,8 +289,7 @@ public class MetaBrowser {
   }
 
   private QueryStringEncoder buildFirstPageEncoder() {
-    final QueryStringEncoder encoder =
-      new QueryStringEncoder(request.getRequestURI());
+    final QueryStringEncoder encoder = new QueryStringEncoder(request.getRequestURI());
     addParam(encoder, NAME_PARAM, name);
     addParam(encoder, SCAN_LIMIT_PARAM, scanLimit);
     addParam(encoder, SCAN_REGION_STATE_PARAM, scanRegionState);
@@ -355,8 +348,7 @@ public class MetaBrowser {
     }
   }
 
-  private static <T extends Enum<T>> T tryValueOf(final Class<T> clazz,
-    final String value) {
+  private static <T extends Enum<T>> T tryValueOf(final Class<T> clazz, final String value) {
     if (clazz == null || value == null) {
       return null;
     }
@@ -368,13 +360,13 @@ public class MetaBrowser {
   }
 
   private static String buildScanLimitExceededErrorMessage(final int requestValue) {
-    return String.format(
-      "Requested SCAN_LIMIT value %d exceeds maximum value %d.", requestValue, SCAN_LIMIT_MAX);
+    return String.format("Requested SCAN_LIMIT value %d exceeds maximum value %d.", requestValue,
+      SCAN_LIMIT_MAX);
   }
 
   private static String buildScanLimitMalformedErrorMessage(final String requestValue) {
-    return String.format(
-      "Requested SCAN_LIMIT value '%s' cannot be parsed as an integer.", requestValue);
+    return String.format("Requested SCAN_LIMIT value '%s' cannot be parsed as an integer.",
+      requestValue);
   }
 
   private static String buildScanLimitLTEQZero(final int requestValue) {
@@ -396,15 +388,13 @@ public class MetaBrowser {
 
     private Results(final ResultScanner resultScanner) {
       this.resultScanner = resultScanner;
-      this.sourceIterator =  StreamSupport.stream(resultScanner.spliterator(), false)
-        .map(RegionReplicaInfo::from)
-        .flatMap(Collection::stream)
-        .iterator();
+      this.sourceIterator = StreamSupport.stream(resultScanner.spliterator(), false)
+        .map(RegionReplicaInfo::from).flatMap(Collection::stream).iterator();
     }
 
     /**
      * @return {@code true} when the underlying {@link ResultScanner} is not yet exhausted,
-     *   {@code false} otherwise.
+     *         {@code false} otherwise.
      */
     public boolean hasMoreResults() {
       return sourceIterator.hasNext();
@@ -417,7 +407,8 @@ public class MetaBrowser {
       }
     }
 
-    @Override public Iterator<RegionReplicaInfo> iterator() {
+    @Override
+    public Iterator<RegionReplicaInfo> iterator() {
       return Iterators.limit(sourceIterator, scanLimit != null ? scanLimit : SCAN_LIMIT_DEFAULT);
     }
   }

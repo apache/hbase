@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,20 +30,18 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * A write/read/verify load test on a mini HBase cluster. Tests reading
- * and writing at the same time.
+ * A write/read/verify load test on a mini HBase cluster. Tests reading and writing at the same
+ * time.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
-public class TestMiniClusterLoadParallel
-    extends TestMiniClusterLoadSequential {
+public class TestMiniClusterLoadParallel extends TestMiniClusterLoadSequential {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMiniClusterLoadParallel.class);
+    HBaseClassTestRule.forClass(TestMiniClusterLoadParallel.class);
 
-  public TestMiniClusterLoadParallel(boolean isMultiPut,
-      DataBlockEncoding encoding) {
+  public TestMiniClusterLoadParallel(boolean isMultiPut, DataBlockEncoding encoding) {
     super(isMultiPut, encoding);
   }
 

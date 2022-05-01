@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,19 +59,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test various seek optimizations for correctness and check if they are
- * actually saving I/O operations.
+ * Test various seek optimizations for correctness and check if they are actually saving I/O
+ * operations.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestSeekOptimizations {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSeekOptimizations.class);
+    HBaseClassTestRule.forClass(TestSeekOptimizations.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestSeekOptimizations.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSeekOptimizations.class);
 
   // Constants
   private static final String FAMILY = "myCF";
@@ -86,29 +85,17 @@ public class TestSeekOptimizations {
   private static final boolean VERBOSE = false;
 
   /**
-   * Disable this when this test fails hopelessly and you need to debug a
-   * simpler case.
+   * Disable this when this test fails hopelessly and you need to debug a simpler case.
    */
   private static final boolean USE_MANY_STORE_FILES = true;
 
-  private static final int[][] COLUMN_SETS = new int[][] {
-    {},  // All columns
-    {0},
-    {1},
-    {0, 2},
-    {1, 2},
-    {0, 1, 2},
-  };
+  private static final int[][] COLUMN_SETS = new int[][] { {}, // All columns
+    { 0 }, { 1 }, { 0, 2 }, { 1, 2 }, { 0, 1, 2 }, };
 
   // Both start row and end row are inclusive here for the purposes of this
   // test.
-  private static final int[][] ROW_RANGES = new int[][] {
-    {-1, -1},
-    {0, 1},
-    {1, 1},
-    {1, 2},
-    {0, 2}
-  };
+  private static final int[][] ROW_RANGES =
+    new int[][] { { -1, -1 }, { 0, 1 }, { 1, 1 }, { 1, 2 }, { 0, 2 } };
 
   private static final int[] MAX_VERSIONS_VALUES = new int[] { 1, 2 };
 
@@ -133,8 +120,7 @@ public class TestSeekOptimizations {
     return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
   }
 
-  public TestSeekOptimizations(Compression.Algorithm comprAlgo,
-      BloomType bloomType) {
+  public TestSeekOptimizations(Compression.Algorithm comprAlgo, BloomType bloomType) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
   }
@@ -151,12 +137,8 @@ public class TestSeekOptimizations {
     // enable seek counting
     StoreFileScanner.instrument();
 
-    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges",
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(comprAlgo)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(3)
-    );
+    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges", new HColumnDescriptor(FAMILY)
+      .setCompressionType(comprAlgo).setBloomFilterType(bloomType).setMaxVersions(3));
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -177,33 +159,28 @@ public class TestSeekOptimizations {
       for (int[] rowRange : ROW_RANGES) {
         for (int maxVersions : MAX_VERSIONS_VALUES) {
           for (boolean lazySeekEnabled : new boolean[] { false, true }) {
-            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1],
-                maxVersions);
+            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1], maxVersions);
           }
         }
       }
     }
 
     final double seekSavings = 1 - totalSeekLazy * 1.0 / totalSeekDiligent;
-    System.err.println("For bloom=" + bloomType + ", compr=" + comprAlgo +
-        " total seeks without optimization: " + totalSeekDiligent
-        + ", with optimization: " + totalSeekLazy + " (" +
-        String.format("%.2f%%", totalSeekLazy * 100.0 / totalSeekDiligent) +
-        "), savings: " + String.format("%.2f%%",
-            100.0 * seekSavings) + "\n");
+    System.err.println("For bloom=" + bloomType + ", compr=" + comprAlgo
+      + " total seeks without optimization: " + totalSeekDiligent + ", with optimization: "
+      + totalSeekLazy + " (" + String.format("%.2f%%", totalSeekLazy * 100.0 / totalSeekDiligent)
+      + "), savings: " + String.format("%.2f%%", 100.0 * seekSavings) + "\n");
 
     // Test that lazy seeks are buying us something. Without the actual
     // implementation of the lazy seek optimization this will be 0.
     final double expectedSeekSavings = 0.0;
-    assertTrue("Lazy seek is only saving " +
-        String.format("%.2f%%", seekSavings * 100) + " seeks but should " +
-        "save at least " + String.format("%.2f%%", expectedSeekSavings * 100),
-        seekSavings >= expectedSeekSavings);
+    assertTrue("Lazy seek is only saving " + String.format("%.2f%%", seekSavings * 100)
+      + " seeks but should " + "save at least "
+      + String.format("%.2f%%", expectedSeekSavings * 100), seekSavings >= expectedSeekSavings);
   }
 
-  private void testScan(final int[] columnArr, final boolean lazySeekEnabled,
-      final int startRow, final int endRow, int maxVersions)
-      throws IOException {
+  private void testScan(final int[] columnArr, final boolean lazySeekEnabled, final int startRow,
+    final int endRow, int maxVersions) throws IOException {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     final Scan scan = new Scan();
     final Set<String> qualSet = new HashSet<>();
@@ -217,8 +194,7 @@ public class TestSeekOptimizations {
 
     // Adjust for the fact that for multi-row queries the end row is exclusive.
     {
-      final byte[] scannerStopRow =
-          rowBytes(endRow + (startRow != endRow ? 1 : 0));
+      final byte[] scannerStopRow = rowBytes(endRow + (startRow != endRow ? 1 : 0));
       scan.setStopRow(scannerStopRow);
     }
 
@@ -237,25 +213,22 @@ public class TestSeekOptimizations {
       results.clear();
     } while (hasNext);
 
-    List<Cell> filteredKVs = filterExpectedResults(qualSet,
-        rowBytes(startRow), rowBytes(endRow), maxVersions);
-    final String rowRestrictionStr =
-        (startRow == -1 && endRow == -1) ? "all rows" : (
-            startRow == endRow ? ("row=" + startRow) : ("startRow="
-            + startRow + ", " + "endRow=" + endRow));
+    List<Cell> filteredKVs =
+      filterExpectedResults(qualSet, rowBytes(startRow), rowBytes(endRow), maxVersions);
+    final String rowRestrictionStr = (startRow == -1 && endRow == -1)
+      ? "all rows"
+      : (startRow == endRow
+        ? ("row=" + startRow)
+        : ("startRow=" + startRow + ", " + "endRow=" + endRow));
     final String columnRestrictionStr =
-        columnArr.length == 0 ? "all columns"
-            : ("columns=" + Arrays.toString(columnArr));
-    final String testDesc =
-        "Bloom=" + bloomType + ", compr=" + comprAlgo + ", "
-            + (scan.isGetScan() ? "Get" : "Scan") + ": "
-            + columnRestrictionStr + ", " + rowRestrictionStr
-            + ", maxVersions=" + maxVersions + ", lazySeek=" + lazySeekEnabled;
+      columnArr.length == 0 ? "all columns" : ("columns=" + Arrays.toString(columnArr));
+    final String testDesc = "Bloom=" + bloomType + ", compr=" + comprAlgo + ", "
+      + (scan.isGetScan() ? "Get" : "Scan") + ": " + columnRestrictionStr + ", " + rowRestrictionStr
+      + ", maxVersions=" + maxVersions + ", lazySeek=" + lazySeekEnabled;
     long seekCount = StoreFileScanner.getSeekCount() - initialSeekCount;
     if (VERBOSE) {
-      System.err.println("Seek count: " + seekCount + ", KVs returned: "
-        + actualKVs.size() + ". " + testDesc +
-        (lazySeekEnabled ? "\n" : ""));
+      System.err.println("Seek count: " + seekCount + ", KVs returned: " + actualKVs.size() + ". "
+        + testDesc + (lazySeekEnabled ? "\n" : ""));
     }
     if (lazySeekEnabled) {
       totalSeekLazy += seekCount;
@@ -265,33 +238,36 @@ public class TestSeekOptimizations {
     assertKVListsEqual(testDesc, filteredKVs, actualKVs);
   }
 
-  private List<Cell> filterExpectedResults(Set<String> qualSet,
-      byte[] startRow, byte[] endRow, int maxVersions) {
+  private List<Cell> filterExpectedResults(Set<String> qualSet, byte[] startRow, byte[] endRow,
+    int maxVersions) {
     final List<Cell> filteredKVs = new ArrayList<>();
     final Map<String, Integer> verCount = new HashMap<>();
     for (Cell kv : expectedKVs) {
-      if (startRow.length > 0 &&
-          Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-              startRow, 0, startRow.length) < 0) {
+      if (
+        startRow.length > 0 && Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(),
+          kv.getRowLength(), startRow, 0, startRow.length) < 0
+      ) {
         continue;
       }
 
       // In this unit test the end row is always inclusive.
-      if (endRow.length > 0 &&
-          Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-              endRow, 0, endRow.length) > 0) {
+      if (
+        endRow.length > 0 && Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          endRow, 0, endRow.length) > 0
+      ) {
         continue;
       }
 
-      if (!qualSet.isEmpty() && (!CellUtil.matchingFamily(kv, FAMILY_BYTES)
-          || !qualSet.contains(Bytes.toString(CellUtil.cloneQualifier(kv))))) {
+      if (
+        !qualSet.isEmpty() && (!CellUtil.matchingFamily(kv, FAMILY_BYTES)
+          || !qualSet.contains(Bytes.toString(CellUtil.cloneQualifier(kv))))
+      ) {
         continue;
       }
 
-      final String rowColStr =
-        Bytes.toStringBinary(CellUtil.cloneRow(kv)) + "/"
-            + Bytes.toStringBinary(CellUtil.cloneFamily(kv)) + ":"
-            + Bytes.toStringBinary(CellUtil.cloneQualifier(kv));
+      final String rowColStr = Bytes.toStringBinary(CellUtil.cloneRow(kv)) + "/"
+        + Bytes.toStringBinary(CellUtil.cloneFamily(kv)) + ":"
+        + Bytes.toStringBinary(CellUtil.cloneQualifier(kv));
       final Integer curNumVer = verCount.get(rowColStr);
       final int newNumVer = curNumVer != null ? (curNumVer + 1) : 1;
       if (newNumVer <= maxVersions) {
@@ -320,8 +296,8 @@ public class TestSeekOptimizations {
       putTimestamps.add(ts);
     }
     if (VERBOSE) {
-      LOG.info("put: row " + Bytes.toStringBinary(put.getRow())
-          + ", cf " + FAMILY + ", qualifier " + qual + ", ts " + ts);
+      LOG.info("put: row " + Bytes.toStringBinary(put.getRow()) + ", cf " + FAMILY + ", qualifier "
+        + qual + ", ts " + ts);
     }
   }
 
@@ -336,9 +312,8 @@ public class TestSeekOptimizations {
 
   private void logDelete(String qual, long ts, String delType) {
     if (VERBOSE) {
-      LOG.info("del " + delType + ": row "
-          + Bytes.toStringBinary(put.getRow()) + ", cf " + FAMILY
-          + ", qualifier " + qual + ", ts " + ts);
+      LOG.info("del " + delType + ": row " + Bytes.toStringBinary(put.getRow()) + ", cf " + FAMILY
+        + ", qualifier " + qual + ", ts " + ts);
     }
   }
 
@@ -349,8 +324,7 @@ public class TestSeekOptimizations {
 
   private long randLong(long n) {
     long l = RNG.nextLong();
-    if (l == Long.MIN_VALUE)
-      l = Long.MAX_VALUE;
+    if (l == Long.MIN_VALUE) l = Long.MAX_VALUE;
     return Math.abs(l) % n;
   }
 
@@ -375,11 +349,9 @@ public class TestSeekOptimizations {
     return ("qual" + i).intern();
   }
 
-  public void createTimestampRange(long minTS, long maxTS,
-      long deleteUpToTS) throws IOException {
+  public void createTimestampRange(long minTS, long maxTS, long deleteUpToTS) throws IOException {
     assertTrue(minTS < maxTS);
-    assertTrue(deleteUpToTS == -1
-        || (minTS <= deleteUpToTS && deleteUpToTS <= maxTS));
+    assertTrue(deleteUpToTS == -1 || (minTS <= deleteUpToTS && deleteUpToTS <= maxTS));
 
     for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
       final String row = rowStr(iRow);
@@ -435,8 +407,7 @@ public class TestSeekOptimizations {
         // Add remaining timestamps (those we have not deleted) to expected
         // results
         for (long ts : putTimestamps) {
-          expectedKVs.add(new KeyValue(rowBytes, FAMILY_BYTES, qualBytes, ts,
-              KeyValue.Type.Put));
+          expectedKVs.add(new KeyValue(rowBytes, FAMILY_BYTES, qualBytes, ts, KeyValue.Type.Put));
         }
       }
     }
@@ -452,22 +423,18 @@ public class TestSeekOptimizations {
 
     // We have to re-set the lazy seek flag back to the default so that other
     // unit tests are not affected.
-    StoreScanner.enableLazySeekGlobally(
-        StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
+    StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
   }
 
-
-  public void assertKVListsEqual(String additionalMsg,
-      final List<? extends Cell> expected,
-      final List<? extends Cell> actual) {
+  public void assertKVListsEqual(String additionalMsg, final List<? extends Cell> expected,
+    final List<? extends Cell> actual) {
     final int eLen = expected.size();
     final int aLen = actual.size();
     final int minLen = Math.min(eLen, aLen);
 
     int i;
-    for (i = 0; i < minLen
-        && PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expected.get(i),
-          actual.get(i)) == 0; ++i) {
+    for (i = 0; i < minLen && PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR,
+      expected.get(i), actual.get(i)) == 0; ++i) {
     }
 
     if (additionalMsg == null) {
@@ -478,11 +445,9 @@ public class TestSeekOptimizations {
     }
 
     if (eLen != aLen || i != minLen) {
-      throw new AssertionError(
-          "Expected and actual KV arrays differ at position " + i + ": " +
-          HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
-          HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+      throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": "
+        + HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen + ") vs. "
+        + HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
     }
   }
 }
-

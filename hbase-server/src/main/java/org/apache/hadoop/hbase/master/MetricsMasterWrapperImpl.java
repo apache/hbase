@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,14 +22,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Impl for exposing HMaster Information through JMX
@@ -125,7 +124,6 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return StringUtils.join(serverManager.getDeadServers().copyServerNames(), ";");
   }
 
-
   @Override
   public int getNumDeadRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
@@ -135,7 +133,8 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return serverManager.getDeadServers().size();
   }
 
-  @Override public boolean isRunning() {
+  @Override
+  public boolean isRunning() {
     return !(master.isStopped() || master.isStopping());
   }
 
@@ -143,16 +142,16 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   public String getDrainingRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
     if (serverManager == null) {
-        return "";
+      return "";
     }
-    return StringUtils.join(serverManager.getDrainingServersList()  , ";");
+    return StringUtils.join(serverManager.getDrainingServersList(), ";");
   }
 
   @Override
   public int getNumDrainingRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
     if (serverManager == null) {
-        return 0;
+      return 0;
     }
     return serverManager.getDrainingServersList().size();
   }
@@ -177,7 +176,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
-  public Map<String,Entry<Long,Long>> getTableSpaceUtilization() {
+  public Map<String, Entry<Long, Long>> getTableSpaceUtilization() {
     if (master == null) {
       return Collections.emptyMap();
     }
@@ -185,29 +184,29 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     if (quotaChore == null) {
       return Collections.emptyMap();
     }
-    Map<TableName,SpaceQuotaSnapshot> tableSnapshots = quotaChore.getTableQuotaSnapshots();
-    Map<String,Entry<Long,Long>> convertedData = new HashMap<>();
-    for (Entry<TableName,SpaceQuotaSnapshot> entry : tableSnapshots.entrySet()) {
+    Map<TableName, SpaceQuotaSnapshot> tableSnapshots = quotaChore.getTableQuotaSnapshots();
+    Map<String, Entry<Long, Long>> convertedData = new HashMap<>();
+    for (Entry<TableName, SpaceQuotaSnapshot> entry : tableSnapshots.entrySet()) {
       convertedData.put(entry.getKey().toString(), convertSnapshot(entry.getValue()));
     }
     return convertedData;
   }
 
   @Override
-  public Map<String,Entry<Long,Long>> getNamespaceSpaceUtilization() {
+  public Map<String, Entry<Long, Long>> getNamespaceSpaceUtilization() {
     QuotaObserverChore quotaChore = master.getQuotaObserverChore();
     if (quotaChore == null) {
       return Collections.emptyMap();
     }
-    Map<String,SpaceQuotaSnapshot> namespaceSnapshots = quotaChore.getNamespaceQuotaSnapshots();
-    Map<String,Entry<Long,Long>> convertedData = new HashMap<>();
-    for (Entry<String,SpaceQuotaSnapshot> entry : namespaceSnapshots.entrySet()) {
+    Map<String, SpaceQuotaSnapshot> namespaceSnapshots = quotaChore.getNamespaceQuotaSnapshots();
+    Map<String, Entry<Long, Long>> convertedData = new HashMap<>();
+    for (Entry<String, SpaceQuotaSnapshot> entry : namespaceSnapshots.entrySet()) {
       convertedData.put(entry.getKey(), convertSnapshot(entry.getValue()));
     }
     return convertedData;
   }
 
-  Entry<Long,Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
-    return new SimpleImmutableEntry<Long,Long>(snapshot.getUsage(), snapshot.getLimit());
+  Entry<Long, Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
+    return new SimpleImmutableEntry<Long, Long>(snapshot.getUsage(), snapshot.getLimit());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.LoadTestDataGeneratorWithVisibilityLabels;
@@ -36,11 +35,11 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
 
   private static final char COMMA = ',';
   private static final char COLON = ':';
-  private static final String[] LABELS = { "secret", "topsecret", "confidential", "public",
-      "private" };
-  private static final String[] VISIBILITY_EXPS = { "secret & confidential & !private",
-      "topsecret | confidential", "confidential & private", "public", "topsecret & private",
-      "!public | private", "(secret | topsecret) & private" };
+  private static final String[] LABELS =
+    { "secret", "topsecret", "confidential", "public", "private" };
+  private static final String[] VISIBILITY_EXPS =
+    { "secret & confidential & !private", "topsecret | confidential", "confidential & private",
+      "public", "topsecret & private", "!public | private", "(secret | topsecret) & private" };
   private static final List<List<String>> AUTHS = new ArrayList<>();
 
   static {
@@ -83,7 +82,7 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
 
   @Override
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
-      long numKeys) {
+    long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
     List<String> tmp = new ArrayList<>(Arrays.asList(args));
     tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
@@ -109,7 +108,7 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
     }
     return sb.toString();
   }
-  
+
   private void addLabels() throws Exception {
     try {
       VisibilityClient.addLabels(util.getConnection(), LABELS);

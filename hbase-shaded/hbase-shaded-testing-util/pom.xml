@@ -1,7 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!--
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
   /**
    * Licensed to the Apache Software Foundation (ASF) under one
    * or more contributor license agreements.  See the NOTICE file
@@ -22,8 +21,8 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-shaded</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-shaded</artifactId>
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
@@ -32,7 +31,7 @@
   <name>Apache HBase - Shaded - Testing Util</name>
 
   <dependencies>
-        <!-- test-jar dependencies -->
+    <!-- test-jar dependencies -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -128,7 +127,7 @@
         </configuration>
       </plugin>
       <plugin>
-                <!--Make it so assembly:single does nothing in here-->
+        <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <skipAssembly>true</skipAssembly>
@@ -143,7 +142,7 @@
             <configuration>
               <artifactSet>
                 <excludes>
-                                    <!-- exclude J2EE modules that come in for JDK11+ (since
+                  <!-- exclude J2EE modules that come in for JDK11+ (since
                                          hadoop-3.2.0) or modules that come in for JDK8+ but
                                          need not be included -->
                   <exclude>javax.annotation:javax.annotation-api</exclude>
@@ -152,11 +151,11 @@
                   <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
                   <exclude>jakarta.validation:jakarta.validation-api</exclude>
                   <exclude>org.glassfish.hk2.external:jakarta.inject</exclude>
-                                    <!--
+                  <!--
                                       Tell the shade plugin that in this case we want to include hadoop
                                       by leaving out the exclude.
                                       -->
-                                    <!-- The rest of these should be kept in sync with the parent pom -->
+                  <!-- The rest of these should be kept in sync with the parent pom -->
                   <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                   <exclude>org.slf4j:*</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>

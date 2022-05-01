@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.hbase.metrics.impl.GlobalMetricRegistriesAdapter;
@@ -33,16 +32,16 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop 2 implementation of BaseSource (using metrics2 framework).  It handles registration to
- * DefaultMetricsSystem and creation of the metrics registry.
- *
- * All MetricsSource's in hbase-hadoop2-compat should derive from this class.
+ * Hadoop 2 implementation of BaseSource (using metrics2 framework). It handles registration to
+ * DefaultMetricsSystem and creation of the metrics registry. All MetricsSource's in
+ * hbase-hadoop2-compat should derive from this class.
  */
 @InterfaceAudience.Private
 public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   private static enum DefaultMetricsSystemInitializer {
     INSTANCE;
+
     private boolean inited = false;
 
     synchronized void init(String name) {
@@ -62,10 +61,10 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
   }
 
   /**
-   * @deprecated Use hbase-metrics/hbase-metrics-api module interfaces for new metrics.
-   *             Defining BaseSources for new metric groups (WAL, RPC, etc) is not needed anymore,
-   *             however, for existing {@link BaseSource} implementations, please use the field
-   *             named "registry" which is a {@link MetricRegistry} instance together with the
+   * @deprecated Use hbase-metrics/hbase-metrics-api module interfaces for new metrics. Defining
+   *             BaseSources for new metric groups (WAL, RPC, etc) is not needed anymore, however,
+   *             for existing {@link BaseSource} implementations, please use the field named
+   *             "registry" which is a {@link MetricRegistry} instance together with the
    *             {@link HBaseMetrics2HadoopMetricsAdapter}.
    */
   @Deprecated
@@ -77,17 +76,16 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Note that there are at least 4 MetricRegistry definitions in the source code. The first one is
-   * Hadoop Metrics2 MetricRegistry, second one is DynamicMetricsRegistry which is HBase's fork
-   * of the Hadoop metrics2 class. The third one is the dropwizard metrics implementation of
+   * Hadoop Metrics2 MetricRegistry, second one is DynamicMetricsRegistry which is HBase's fork of
+   * the Hadoop metrics2 class. The third one is the dropwizard metrics implementation of
    * MetricRegistry, and finally a new API abstraction in HBase that is the
    * o.a.h.h.metrics.MetricRegistry class. This last one is the new way to use metrics within the
-   * HBase code. However, the others are in play because of existing metrics2 based code still
-   * needs to coexists until we get rid of all of our BaseSource and convert them to the new
-   * framework. Until that happens, new metrics can use the new API, but will be collected
-   * through the HBaseMetrics2HadoopMetricsAdapter class.
-   *
-   * BaseSourceImpl has two MetricRegistries. metricRegistry is for hadoop Metrics2 based
-   * metrics, while the registry is for hbase-metrics based metrics.
+   * HBase code. However, the others are in play because of existing metrics2 based code still needs
+   * to coexists until we get rid of all of our BaseSource and convert them to the new framework.
+   * Until that happens, new metrics can use the new API, but will be collected through the
+   * HBaseMetrics2HadoopMetricsAdapter class. BaseSourceImpl has two MetricRegistries.
+   * metricRegistry is for hadoop Metrics2 based metrics, while the registry is for hbase-metrics
+   * based metrics.
    */
   protected final MetricRegistry registry;
 
@@ -101,11 +99,8 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    */
   protected final HBaseMetrics2HadoopMetricsAdapter metricsAdapter;
 
-  public BaseSourceImpl(
-      String metricsName,
-      String metricsDescription,
-      String metricsContext,
-      String metricsJmxContext) {
+  public BaseSourceImpl(String metricsName, String metricsDescription, String metricsContext,
+    String metricsJmxContext) {
 
     this.metricsName = metricsName;
     this.metricsDescription = metricsDescription;
@@ -115,7 +110,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
     DefaultMetricsSystemInitializer.INSTANCE.init(metricsName);
 
-    //Register this instance.
+    // Register this instance.
     DefaultMetricsSystem.instance().register(metricsJmxContext, metricsDescription, this);
 
     // hbase-metrics module based metrics are registered in the hbase MetricsRegistry.
@@ -132,7 +127,6 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Set a single gauge to a value.
-   *
    * @param gaugeName gauge name
    * @param value     the new value of the gauge.
    */
@@ -143,7 +137,6 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Add some amount to a gauge.
-   *
    * @param gaugeName The name of the gauge to increment.
    * @param delta     The amount to increment the gauge by.
    */
@@ -154,7 +147,6 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Decrease the value of a named gauge.
-   *
    * @param gaugeName The name of the gauge.
    * @param delta     the ammount to subtract from a gauge value.
    */
@@ -165,7 +157,6 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Increment a named counter by some value.
-   *
    * @param key   the name of the counter
    * @param delta the ammount to increment
    */
@@ -183,7 +174,6 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * Remove a named gauge.
-   *
    * @param key the key of the gauge to remove
    */
   public void removeMetric(String key) {

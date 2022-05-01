@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -37,52 +35,45 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An integration test to detect regressions in HBASE-7220. Create
- * a table with many regions and verify it completes within a
- * reasonable amount of time.
+ * An integration test to detect regressions in HBASE-7220. Create a table with many regions and
+ * verify it completes within a reasonable amount of time.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7220">HBASE-7220</a>
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestManyRegions {
-  private static final String CLASS_NAME
-    = IntegrationTestManyRegions.class.getSimpleName();
+  private static final String CLASS_NAME = IntegrationTestManyRegions.class.getSimpleName();
 
-  protected static final Logger LOG
-    = LoggerFactory.getLogger(IntegrationTestManyRegions.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestManyRegions.class);
   protected static final TableName TABLE_NAME = TableName.valueOf(CLASS_NAME);
-  protected static final String REGION_COUNT_KEY
-    = String.format("hbase.%s.regions", CLASS_NAME);
-  protected static final String REGIONSERVER_COUNT_KEY
-    = String.format("hbase.%s.regionServers", CLASS_NAME);
-  protected static final String TIMEOUT_MINUTES_KEY
-    = String.format("hbase.%s.timeoutMinutes", CLASS_NAME);
+  protected static final String REGION_COUNT_KEY = String.format("hbase.%s.regions", CLASS_NAME);
+  protected static final String REGIONSERVER_COUNT_KEY =
+    String.format("hbase.%s.regionServers", CLASS_NAME);
+  protected static final String TIMEOUT_MINUTES_KEY =
+    String.format("hbase.%s.timeoutMinutes", CLASS_NAME);
 
-  protected static final IntegrationTestingUtility UTIL
-    = new IntegrationTestingUtility();
+  protected static final IntegrationTestingUtility UTIL = new IntegrationTestingUtility();
 
   protected static final int DEFAULT_REGION_COUNT = 1000;
-  protected static final int REGION_COUNT = UTIL.getConfiguration()
-    .getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
+  protected static final int REGION_COUNT =
+    UTIL.getConfiguration().getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
   protected static final int DEFAULT_REGIONSERVER_COUNT = 1;
-  protected static final int REGION_SERVER_COUNT = UTIL.getConfiguration()
-    .getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
+  protected static final int REGION_SERVER_COUNT =
+    UTIL.getConfiguration().getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
   // running on laptop, consistently takes about 2.5 minutes.
   // A timeout of 5 minutes should be reasonably safe.
   protected static final int DEFAULT_TIMEOUT_MINUTES = 5;
-  protected static final int TIMEOUT_MINUTES = UTIL.getConfiguration()
-      .getInt(TIMEOUT_MINUTES_KEY, DEFAULT_TIMEOUT_MINUTES);
-// This timeout is suitable since there is only single testcase in this test.
+  protected static final int TIMEOUT_MINUTES =
+    UTIL.getConfiguration().getInt(TIMEOUT_MINUTES_KEY, DEFAULT_TIMEOUT_MINUTES);
+  // This timeout is suitable since there is only single testcase in this test.
   @ClassRule
   public static final TestRule timeout = Timeout.builder()
-      .withTimeout(TIMEOUT_MINUTES, TimeUnit.MINUTES).withLookingForStuckThread(true)
-      .build();
+    .withTimeout(TIMEOUT_MINUTES, TimeUnit.MINUTES).withLookingForStuckThread(true).build();
 
   private Admin admin;
 
   @Before
   public void setUp() throws Exception {
-    LOG.info(String.format("Initializing cluster with %d region servers.",
-      REGION_SERVER_COUNT));
+    LOG.info(String.format("Initializing cluster with %d region servers.", REGION_SERVER_COUNT));
     UTIL.initializeCluster(REGION_SERVER_COUNT);
     LOG.info("Cluster initialized");
 
@@ -120,7 +111,7 @@ public class IntegrationTestManyRegions {
     try {
       admin.createTable(desc, splits);
       LOG.info(String.format("Pre-split table created successfully in %dms.",
-          (EnvironmentEdgeManager.currentTime() - startTime)));
+        (EnvironmentEdgeManager.currentTime() - startTime)));
     } catch (IOException e) {
       LOG.error("Failed to create table", e);
     }

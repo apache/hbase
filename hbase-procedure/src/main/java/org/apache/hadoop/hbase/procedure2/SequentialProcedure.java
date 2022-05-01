@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,24 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.SequentialProcedureData;
 
 /**
  * A SequentialProcedure describes one step in a procedure chain:
+ *
  * <pre>
  *   -&gt; Step 1 -&gt; Step 2 -&gt; Step 3
  * </pre>
- * The main difference from a base Procedure is that the execute() of a
- * SequentialProcedure will be called only once; there will be no second
- * execute() call once the children are finished. which means once the child
- * of a SequentialProcedure are completed the SequentialProcedure is completed too.
+ *
+ * The main difference from a base Procedure is that the execute() of a SequentialProcedure will be
+ * called only once; there will be no second execute() call once the children are finished. which
+ * means once the child of a SequentialProcedure are completed the SequentialProcedure is completed
+ * too.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -41,7 +42,7 @@ public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvir
 
   @Override
   protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     updateTimestamp();
     try {
       Procedure[] children = !executed ? execute(env) : null;
@@ -53,8 +54,7 @@ public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvir
   }
 
   @Override
-  protected void doRollback(final TEnvironment env)
-      throws IOException, InterruptedException {
+  protected void doRollback(final TEnvironment env) throws IOException, InterruptedException {
     updateTimestamp();
     if (executed) {
       try {
@@ -67,16 +67,14 @@ public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvir
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SequentialProcedureData.Builder data = SequentialProcedureData.newBuilder();
     data.setExecuted(executed);
     serializer.serialize(data.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SequentialProcedureData data = serializer.deserialize(SequentialProcedureData.class);
     executed = data.getExecuted();
   }

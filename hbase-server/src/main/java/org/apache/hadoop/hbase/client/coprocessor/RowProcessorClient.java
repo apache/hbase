@@ -15,31 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-import com.google.protobuf.Message;
 /**
- * Convenience class that is used to make RowProcessorEndpoint invocations.
- * For example usage, refer TestRowProcessorEndpoint
- *
+ * Convenience class that is used to make RowProcessorEndpoint invocations. For example usage, refer
+ * TestRowProcessorEndpoint
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class RowProcessorClient {
-  public static <S extends Message, T extends Message>
-  ProcessRequest getRowProcessorPB(RowProcessor<S,T> r)
-      throws IOException {
-    final ProcessRequest.Builder requestBuilder =
-        ProcessRequest.newBuilder();
+  public static <S extends Message, T extends Message> ProcessRequest
+    getRowProcessorPB(RowProcessor<S, T> r) throws IOException {
+    final ProcessRequest.Builder requestBuilder = ProcessRequest.newBuilder();
     requestBuilder.setRowProcessorClassName(r.getClass().getName());
     S s = r.getRequestData();
     if (s != null) {

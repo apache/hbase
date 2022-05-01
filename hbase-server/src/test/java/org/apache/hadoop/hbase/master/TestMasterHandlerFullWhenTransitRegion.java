@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,12 +41,12 @@ import org.slf4j.LoggerFactory;
 @Category({ MasterTests.class, LargeTests.class })
 public class TestMasterHandlerFullWhenTransitRegion {
 
-  private static Logger LOG = LoggerFactory
-      .getLogger(TestMasterHandlerFullWhenTransitRegion.class.getName());
+  private static Logger LOG =
+    LoggerFactory.getLogger(TestMasterHandlerFullWhenTransitRegion.class.getName());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterHandlerFullWhenTransitRegion.class);
+    HBaseClassTestRule.forClass(TestMasterHandlerFullWhenTransitRegion.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -56,8 +55,8 @@ public class TestMasterHandlerFullWhenTransitRegion {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        DelayOpenCP.class.getName());
-    //set handler number to 1.
+      DelayOpenCP.class.getName());
+    // set handler number to 1.
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 1);
     UTIL.startMiniCluster(2);
     UTIL.createTable(TableName.valueOf(TABLENAME), "fa");
@@ -66,13 +65,12 @@ public class TestMasterHandlerFullWhenTransitRegion {
   @Test
   public void test() throws Exception {
     RegionInfo regionInfo = UTIL.getAdmin().getRegions(TableName.valueOf(TABLENAME)).get(0);
-    //See HBASE-21754
-    //There is Only one handler, if ReportRegionStateTransitionRequest executes in the same kind
+    // See HBASE-21754
+    // There is Only one handler, if ReportRegionStateTransitionRequest executes in the same kind
     // of thread with moveRegion, it will lock each other. Making the move operation can not finish.
     UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes());
     LOG.info("Region move complete");
   }
-
 
   /**
    * Make open region very slow

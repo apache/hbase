@@ -72,10 +72,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // Only public so classes back in regionserver.wal can access
   public interface Reader extends WAL.Reader {
     /**
-     * @param fs File system.
+     * @param fs   File system.
      * @param path Path.
-     * @param c Configuration.
-     * @param s Input stream that may have been pre-opened by the caller; may be null.
+     * @param c    Configuration.
+     * @param s    Input stream that may have been pre-opened by the caller; may be null.
      */
     void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
   }
@@ -97,14 +97,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
   /**
-   * @param factory factory that made us, identity used for FS layout. may not be null
-   * @param conf may not be null
+   * @param factory    factory that made us, identity used for FS layout. may not be null
+   * @param conf       may not be null
    * @param providerId differentiate between providers from one factory, used for FS layout. may be
-   *          null
+   *                   null
    */
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+    throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -327,7 +327,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *         this log file otherwise.
    */
   public static ServerName getServerNameFromWALDirectoryName(Configuration conf, String path)
-      throws IOException {
+    throws IOException {
     if (path == null || path.length() <= HConstants.HREGION_LOGDIR_NAME.length()) {
       return null;
     }
@@ -418,8 +418,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Comparator used to compare WAL files together based on their start time.
-   * Just compares start times and nothing else.
+   * Comparator used to compare WAL files together based on their start time. Just compares start
+   * times and nothing else.
    */
   public static class WALStartTimeComparator implements Comparator<Path> {
     @Override
@@ -428,10 +428,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     /**
-     * Split a path to get the start time
-     * For example: 10.20.20.171%3A60020.1277499063250
-     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
-     * which adds a '.syncrep' suffix. Check.
+     * Split a path to get the start time For example: 10.20.20.171%3A60020.1277499063250 Could also
+     * be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL which adds a
+     * '.syncrep' suffix. Check.
      * @param p path to split
      * @return start time
      */
@@ -439,8 +438,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       return WAL.getTimestamp(p.getName());
     }
   }
-
-
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
@@ -471,9 +468,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
     // Try finding the log in separate old log dir
-    oldLogDir =
-      new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
-        .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
+    oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+      .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
     archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
@@ -490,7 +486,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @return WAL Reader instance
    */
   public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-      throws IOException {
+    throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;

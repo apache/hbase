@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -50,7 +49,7 @@ public class TestTableRecordReader {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableRecordReader.class);
+    HBaseClassTestRule.forClass(TestTableRecordReader.class);
 
   private static TableName TABLE_NAME = TableName.valueOf("TestTableRecordReader");
 
@@ -86,12 +85,12 @@ public class TestTableRecordReader {
   }
 
   private static void createTestTable(TableName name, byte[][] rows, byte[][] families,
-      byte[][] qualifiers, byte[] cellValue) throws IOException {
+    byte[][] qualifiers, byte[] cellValue) throws IOException {
     TEST_UTIL.createTable(name, families).put(createPuts(rows, families, qualifiers, cellValue));
   }
 
   private static List<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
-      byte[] value) throws IOException {
+    byte[] value) throws IOException {
     List<Put> puts = new ArrayList<>();
     for (int row = 0; row < rows.length; row++) {
       Put put = new Put(rows[row]);
@@ -114,11 +113,11 @@ public class TestTableRecordReader {
   @Test
   public void test() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-        Table table = conn.getTable(TABLE_NAME)) {
+      Table table = conn.getTable(TABLE_NAME)) {
       org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
-          new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
+        new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
       Scan scan =
-          new Scan().setMaxResultSize(1).setCaching(Integer.MAX_VALUE).setNeedCursorResult(true);
+        new Scan().setMaxResultSize(1).setCaching(Integer.MAX_VALUE).setNeedCursorResult(true);
       trr.setScan(scan);
       trr.setHTable(table);
       trr.initialize(null, null);
