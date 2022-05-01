@@ -57,6 +57,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
+  private long compactionsQueuedCount;
   private Map<String, Long> readsOnlyFromMemstore;
   private Map<String, Long> mixedReadsOnStore;
 
@@ -190,7 +191,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumCompactionsQueued() {
-    return this.region.compactionsQueued.sum();
+    return this.compactionsQueuedCount;
   }
 
   @Override
@@ -256,11 +257,13 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMinStoreFileAge = Long.MAX_VALUE;
       long tempNumReferenceFiles = 0;
       long tempMaxCompactionQueueSize = 0;
+      long tempCompactionsQueuedCount = 0;
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
+          tempCompactionsQueuedCount += store.getCompactionsQueuedCount();
           tempNumStoreFiles += store.getStorefilesCount();
           int currentStoreRefCount = store.getStoreRefCount();
           tempStoreRefCount += currentStoreRefCount;
@@ -339,6 +342,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (tempMaxFlushQueueSize > maxFlushQueueSize) {
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
+      compactionsQueuedCount = tempCompactionsQueuedCount;
     }
   }
 

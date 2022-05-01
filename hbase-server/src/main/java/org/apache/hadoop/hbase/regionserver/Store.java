@@ -252,4 +252,9 @@ public interface Store {
    * loaded.
    */
   long getBloomFilterEligibleRequestsCount();
+
+  /**
+   * @return the number of compactions queued for this store.
+   */
+  long getCompactionsQueuedCount();
 }

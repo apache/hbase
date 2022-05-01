@@ -405,7 +405,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
           + "store size is {}",
         getStoreNameForUnderCompaction(store), priority, underCompactionStores.size());
     }
-    region.incrementCompactionsQueuedCount();
+    store.incrementCompactionsQueuedCount();
     if (LOG.isDebugEnabled()) {
       String type = (pool == shortCompactions) ? "Small " : "Large ";
       LOG.debug(type + "Compaction requested: " + (selectNow ? compaction.toString() : "system")
@@ -630,11 +630,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         } catch (IOException ex) {
           LOG.error("Compaction selection failed " + this, ex);
           server.checkFileSystem();
-          region.decrementCompactionsQueuedCount();
+          store.decrementCompactionsQueuedCount();
           return;
         }
         if (!selected.isPresent()) {
-          region.decrementCompactionsQueuedCount();
+          store.decrementCompactionsQueuedCount();
           return; // nothing to do
         }
         c = selected.get();
@@ -697,7 +697,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       } finally {
         tracker.afterExecution(store);
         completeTracker.completed(store);
-        region.decrementCompactionsQueuedCount();
+        store.decrementCompactionsQueuedCount();
         LOG.debug("Status {}", CompactSplit.this);
       }
     }
@@ -710,7 +710,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
           server.isStopped() || (region.getTableDescriptor() != null
             && !region.getTableDescriptor().isCompactionEnabled())
         ) {
-          region.decrementCompactionsQueuedCount();
+          store.decrementCompactionsQueuedCount();
           return;
         }
         doCompaction(user);

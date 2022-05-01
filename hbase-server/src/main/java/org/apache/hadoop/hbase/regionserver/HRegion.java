@@ -363,7 +363,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder compactionsFailed = new LongAdder();
   final LongAdder compactionNumFilesCompacted = new LongAdder();
   final LongAdder compactionNumBytesCompacted = new LongAdder();
-  final LongAdder compactionsQueued = new LongAdder();
   final LongAdder flushesQueued = new LongAdder();
 
   private BlockCache blockCache;
@@ -8634,14 +8633,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void reportCompactionRequestFailure() {
     compactionsFailed.increment();
-  }
-
-  public void incrementCompactionsQueuedCount() {
-    compactionsQueued.increment();
-  }
-
-  public void decrementCompactionsQueuedCount() {
-    compactionsQueued.decrement();
   }
 
   public void incrementFlushesQueuedCount() {
