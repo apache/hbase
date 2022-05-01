@@ -4515,7 +4515,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     public WriteEntry writeMiniBatchOperationsToMemStore(
         final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
-        long now)throws IOException {
+        long now) throws IOException {
       super.writeMiniBatchOperationsToMemStore(miniBatchOp, getOrigLogSeqNum());
       return writeEntry;
     }
